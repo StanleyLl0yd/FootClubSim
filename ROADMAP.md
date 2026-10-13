@@ -40,7 +40,8 @@ See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 - [ ] Establish provenance/rights gates for real RPL data and assets.
 - [ ] Bootstrap TypeScript/Vite/React workspace and a dependency-locked, minimal CI with automated checks.
 - [ ] Verify browser storage capability and fallback/export strategy on representative Safari and Chromium versions.
-- [ ] Create a prioritized M1 implementation backlog and validate effort/risks.
+- [x] Open a [prioritized M1 implementation backlog](docs/M1_BACKLOG.md) with dependencies and preliminary effort/risks.
+- [ ] Validate the remaining M1 estimates, risks and open technical decisions before M0 exit.
 - [ ] Complete the [M0 whole-repository exit audit](https://github.com/StanleyLl0yd/FootClubSim/issues/2) **including second full pass** and attach results.
 
 M0 documentation may be merged incrementally without claiming M0 completion. Do not mark unverified tasks complete.
@@ -84,3 +85,4 @@ M3 introduces economy/transfer systems, not multiplayer. M4 introduces additiona
 - [Match simulation design](docs/MATCH_ENGINE.md)
 - [Data provenance and rights](docs/DATA_SOURCES.md)
 - [M0 exit criteria](docs/M0_ACCEPTANCE.md)
+- [Prioritized M1 tasks](docs/M1_BACKLOG.md)

@@ -1,3 +1,4 @@
+import { isStableId } from './identifiers.js';
 import {
   FIELD_ATTRIBUTE_KEYS, GOALKEEPER_ATTRIBUTE_KEYS, POSITIONS,
   type AttributeKey, type Catalog, type Club, type Player, type Position,
@@ -19,9 +20,6 @@ const positions = new Set<string>(POSITIONS);
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
-function isId(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0 && value.length <= 128;
-}
 function isName(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= 256;
 }
@@ -42,7 +40,7 @@ function readAttributes(value: unknown): Readonly<Record<AttributeKey, number>> 
   return attributes as Record<AttributeKey, number>;
 }
 function readPlayer(value: unknown): Player | null {
-  if (!isRecord(value) || !isId(value.id) || !isName(value.displayName) ||
+  if (!isRecord(value) || !isStableId(value.id) || !isName(value.displayName) ||
       !isPosition(value.primaryPosition) || typeof value.foreignerForCompetition !== 'boolean') return null;
   const attributes = readAttributes(value.attributes);
   if (!attributes) return null;
@@ -53,10 +51,10 @@ function readPlayer(value: unknown): Player | null {
   };
 }
 function readClub(value: unknown): Club | null {
-  if (!isRecord(value) || !isId(value.id) || !isName(value.displayName) ||
+  if (!isRecord(value) || !isStableId(value.id) || !isName(value.displayName) ||
       !Array.isArray(value.registeredPlayerIds) ||
       value.registeredPlayerIds.length > MAX_REGISTRATIONS ||
-      !value.registeredPlayerIds.every(isId)) return null;
+      !value.registeredPlayerIds.every(isStableId)) return null;
   return { id: value.id, displayName: value.displayName, registeredPlayerIds: value.registeredPlayerIds };
 }
 
@@ -69,7 +67,7 @@ export function importSyntheticCatalog(json: string): CatalogImportResult {
   if (!isRecord(value) || value.schemaVersion !== 1 || value.source !== 'synthetic') {
     return { ok: false, error: 'INVALID_SCHEMA' };
   }
-  if (!isId(value.packId) || !isId(value.packVersion) ||
+  if (!isStableId(value.packId) || !isStableId(value.packVersion) ||
       !Array.isArray(value.players) || value.players.length > MAX_PLAYERS ||
       !Array.isArray(value.clubs) || value.clubs.length > MAX_CLUBS) {
     return { ok: false, error: 'INVALID_DATA' };

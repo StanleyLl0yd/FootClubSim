@@ -1,4 +1,5 @@
 import { importSyntheticCatalog } from './import.js';
+import { isStableId } from './identifiers.js';
 import type { Catalog } from './model.js';
 import { RNG_VERSION, SeededRng } from './rng.js';
 
@@ -35,17 +36,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function validId(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0 && value.length <= 128;
-}
 
 /** Validate and copy a potential snapshot without trusting its static TypeScript type. */
 function readInitialCareer(value: unknown): InitialCareerSave | null {
   if (!isRecord(value) || Object.keys(value).length !== 10 ||
       value.saveSchemaVersion !== 1 || value.revision !== 0 ||
       value.engineVersion !== '0' || value.rngAlgorithmVersion !== RNG_VERSION ||
-      !validId(value.careerId) || !validId(value.basePackId) ||
-      !validId(value.basePackVersion) || !validId(value.selectedClubId) ||
+      !isStableId(value.careerId) || !isStableId(value.basePackId) ||
+      !isStableId(value.basePackVersion) || !isStableId(value.selectedClubId) ||
       !Number.isInteger(value.rngState) || (value.rngState as number) < 1 ||
       (value.rngState as number) > 0xffffffff) return null;
 

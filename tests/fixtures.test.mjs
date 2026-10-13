@@ -34,3 +34,11 @@ test('two clubs play opposite home and away games', () => {
     [['a', 'b'], ['b', 'a']],
   );
 });
+
+test('sparse club arrays must never generate fixtures with undefined participants', () => {
+  const withHole = [, 'a'];
+  assert.equal(withHole.length, 2);
+  assert.throws(() => generateDoubleRoundRobin(withHole), RangeError);
+  const sparseFour = ['a', 'b', , 'd'];
+  assert.throws(() => generateDoubleRoundRobin(sparseFour), RangeError);
+});

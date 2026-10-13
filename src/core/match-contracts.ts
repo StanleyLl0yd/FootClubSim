@@ -1,4 +1,5 @@
 import type { Fixture } from './fixtures.js';
+import { isStableId } from './identifiers.js';
 import type { Catalog, MatchLineup, MatchRosterRules } from './model.js';
 import { RNG_VERSION } from './rng.js';
 import { validateTacticalPlan, type TacticalPlan } from './tactics.js';
@@ -68,8 +69,6 @@ export type MatchLedgerResult =
 
 const MAX_EVENTS = 4096;
 const MAX_SECONDS = 130 * 60;
-const idOk = (value: unknown): value is string =>
-  typeof value === 'string' && value.trim().length > 0 && value.length <= 128;
 const fail = (code: string, at: string): ValidationError => ({ code, at });
 
 function emptyStats(): { goals: number; shots: number; shotsOnTarget: number; xgMilli: number } {
@@ -84,9 +83,9 @@ export function deriveMatchLedger(input: MatchLedgerInput): MatchLedgerResult {
   const errors: ValidationError[] = [];
   const { fixture, catalog, homeLineup, awayLineup, rosterRules, events } = input;
 
-  if (!idOk(fixture.id) || !Number.isInteger(fixture.round) || fixture.round < 1 ||
+  if (!isStableId(fixture.id) || !Number.isInteger(fixture.round) || fixture.round < 1 ||
       fixture.homeClubId === fixture.awayClubId ||
-      !idOk(fixture.homeClubId) || !idOk(fixture.awayClubId)) {
+      !isStableId(fixture.homeClubId) || !isStableId(fixture.awayClubId)) {
     errors.push(fail('INVALID_FIXTURE', 'fixture'));
   }
   if (input.schemaVersion !== MATCH_LEDGER_VERSION ||
@@ -120,7 +119,7 @@ export function deriveMatchLedger(input: MatchLedgerInput): MatchLedgerResult {
   let hasFullTime = false;
   for (const [index, event] of events.entries()) {
     const at = 'events[' + index + ']';
-    if (!idOk(event.id) || seenIds.has(event.id)) errors.push(fail('INVALID_EVENT_ID', at));
+    if (!isStableId(event.id) || seenIds.has(event.id)) errors.push(fail('INVALID_EVENT_ID', at));
     seenIds.add(event.id);
     if (!Number.isInteger(event.sequence) || event.sequence !== index + 1 ||
         !Number.isInteger(event.elapsedSeconds) ||

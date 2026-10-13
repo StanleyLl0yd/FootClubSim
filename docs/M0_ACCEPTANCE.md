@@ -39,6 +39,8 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 
 ## Repository-wide milestone exit
 
+Текущие подтверждённые находки и исправления документируются в [M0_AUDIT_PROGRESS.md](M0_AUDIT_PROGRESS.md). Этот отчёт промежуточный: полный первый и обязательный второй проходы ещё не приняты и галочки ниже остаются незакрытыми.
+
 - [ ] Inspect **entire repo**, including docs, scripts, source, tests, dependencies, build, workflows and settings.
 - [ ] Do a first complete audit and implement safe corrections/refactoring.
 - [ ] Do a mandatory second full pass over the already-refactored repo.

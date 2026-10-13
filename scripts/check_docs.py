@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 LINK = re.compile(r"(?<!!)\[[^\]]+\]\(([^\)]+)\)|!\[[^\]]*\]\(([^\)]+)\)")
-SKIP_DIRS = {".git", "node_modules", ".venv", "dist", "build"}
+SKIP_DIRS = {".git", "node_modules", ".venv", "dist", "web-dist", "build"}
 REQUIRED = {
     "AGENTS.md", "README.md", "ROADMAP.md", "ARCHITECTURE.md",
     "COPYRIGHT.md", "SECURITY.md", "CONTRIBUTING.md",

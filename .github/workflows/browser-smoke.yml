@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'src/**'
+      - 'scripts/chromium-e2e.mjs'
+      - 'scripts/macos-safari-smoke.py'
       - 'index.html'
       - 'package.json'
       - 'package-lock.json'
@@ -13,6 +15,8 @@ on:
     branches: [main]
     paths:
       - 'src/**'
+      - 'scripts/chromium-e2e.mjs'
+      - 'scripts/macos-safari-smoke.py'
       - 'index.html'
       - 'package.json'
       - 'package-lock.json'

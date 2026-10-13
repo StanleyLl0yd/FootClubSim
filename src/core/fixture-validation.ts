@@ -1,8 +1,6 @@
 import type { Round } from './fixtures.js';
+import { isStableId } from './identifiers.js';
 import type { ValidationError } from './validation.js';
-
-const validId = (value: unknown): value is string =>
-  typeof value === 'string' && value.trim().length > 0 && value.length <= 128;
 
 /** Validate any candidate home-and-away calendar without trusting a generator. */
 export function validateDoubleRoundRobin(
@@ -10,7 +8,7 @@ export function validateDoubleRoundRobin(
 ): readonly ValidationError[] {
   const errors: ValidationError[] = [];
   if (!Array.isArray(clubIds) || clubIds.length < 2 || clubIds.length > 64 ||
-      clubIds.length % 2 !== 0 || !clubIds.every(validId) ||
+      clubIds.length % 2 !== 0 || !clubIds.every(isStableId) ||
       new Set(clubIds).size !== clubIds.length) {
     return [{ code: 'INVALID_CLUBS', at: 'clubs' }];
   }
@@ -32,7 +30,7 @@ export function validateDoubleRoundRobin(
     const participants = new Set<string>();
     for (const [fixtureIndex, fixture] of round.fixtures.entries()) {
       const location = at + '.fixtures[' + fixtureIndex + ']';
-      if (!fixture || !validId(fixture.id) ||
+      if (!fixture || !isStableId(fixture.id) ||
           seenFixtures.has(fixture.id) || fixture.round !== round.number) {
         errors.push({ code: 'INVALID_FIXTURE_ID', at: location });
       } else seenFixtures.add(fixture.id);

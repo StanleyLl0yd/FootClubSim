@@ -1,3 +1,5 @@
+import { isStableId } from './identifiers.js';
+
 export interface Fixture {
   readonly id: string;
   readonly round: number;
@@ -12,7 +14,7 @@ export interface Round {
 export function generateDoubleRoundRobin(ids: readonly string[]): readonly Round[] {
   const n = ids.length;
   if (n < 2 || n > 64 || n % 2 !== 0 || new Set(ids).size !== n ||
-      ids.some(id => id.length < 1 || id.length > 128)) {
+      ids.some(id => !isStableId(id))) {
     throw new RangeError('Invalid clubs');
   }
   const rotation = [...ids];

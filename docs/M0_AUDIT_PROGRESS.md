@@ -112,6 +112,18 @@ Node tests**; actual browser smoke was previously green on worker-command PR
 heads #60 and #61. Final-main full security/rights scanning and both complete
 whole-repository review passes are still REQUIRED.
 
+## Further code review and browser CI evidence (2026-10-14)
+
+- [#65](https://github.com/StanleyLl0yd/FootClubSim/pull/65) caught synchronous IndexedDB object-store/add/get exceptions that escaped as raw errors. The adapter now returns typed `STORAGE_FAILED`, closes the database and preserves the active career. Its [Core CI run](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38472552450) passed **64/64 Node tests**; [browser CI](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38472552350) passed.
+- [#66](https://github.com/StanleyLl0yd/FootClubSim/pull/66) broadened dependency-security workflow to every main push. The change's own dependency audit, core and docs checks passed, but a **final-main** audit after all remaining changes is still required.
+- [#67](https://github.com/StanleyLl0yd/FootClubSim/pull/67) added independent Windows Chrome to the existing Edge job via a shared Windows matrix. [Browser run #38473107523](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38473107523) contains four separate completed SUCCESS jobs: actual macOS Safari, Windows Chrome, Windows Edge and Linux Chromium.
+- [#68](https://github.com/StanleyLl0yd/FootClubSim/pull/68) stopped Markdown validation from traversing generated `web-dist` after the earlier Vite-output isolation. Its [Core run #38473203752](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38473203752) passed **64/64 Node tests**, 0 failures, with web JS 237.57 kB (gzip 74.74 kB) and CSS 2.89 kB. This source-change run is not a performance benchmark.
+
+These are incremental reviewed changes, **not** a claim that the full required
+first and second source-by-source audit passes or the complete M0 acceptance
+criteria have been satisfied. Actual Safari/Chrome/Edge storage **quota,
+eviction and private browsing** scenarios remain untested.
+
 ## Gaps and blockers
 
 1. **Owner decisions:** the concrete [M0 product proposal](M0_PRODUCT_DECISIONS.md) from [#54](https://github.com/StanleyLl0yd/FootClubSim/pull/54) documents manager/coach/director responsibilities, tactics, economy and season scope, but each decision remains **unapproved** until the owner explicitly accepts/revises it.

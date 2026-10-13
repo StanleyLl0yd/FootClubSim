@@ -62,6 +62,24 @@ Evidence: [Core CI for #49](https://github.com/StanleyLl0yd/FootClubSim/actions/
 
 Production builds, typechecks, lint, source-format hygiene and Node tests are all included in Core CI. After [#55](https://github.com/StanleyLl0yd/FootClubSim/pull/55), [Core CI 38465738893](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38465738893) passed 50/50 Node tests and verified that `dist/core/save.js` and `web-dist/index.html` coexist. Vite reported web JS 237.47 kB (gzip 74.74 kB) and CSS 2.89 kB. [Browser smoke 38465738918](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38465738918) passed native Safari, Windows Edge and Linux Chromium against that build. Browser smoke is independent and uses actual Safari/macOS and Edge/Windows, plus Chromium/Linux. The dependency-vulnerability workflow has passed on previously reviewed dependency changes, but a final-main full security and rights verification remains necessary.
 
+## Automated Git inventory and safety heuristics (added for M0 review)
+
+`scripts/repo_audit.py` uses the **actual Git index**, not the working
+directory, to report reproducible file counts, tracked bytes, source file/line
+counts, test files and documentation files. It flags tracked generated files,
+symlinks, environment files, known token/private-key signatures (without
+printing suspected secret values), undeclared artwork/data assets and
+GitHub Actions not pinned to 40-character commit SHAs. The script runs in
+Documentation verification CI, with standalone Python negative tests.
+The manifest allowlist is the existing project-authored synthetic pack
+asset list.
+
+A passing scan **does not** establish absence of all secrets, legal
+authorization for data, copyright status, staff privacy clearance or image
+rights. These still require manual review. Measured counts must be recorded
+only after the successful CI job prints `TRACKED_REPO_METRICS`. The first
+and second required *whole-repo human/code* reviews remain OPEN.
+
 ## Gaps and blockers
 
 1. **Owner decisions:** the concrete [M0 product proposal](M0_PRODUCT_DECISIONS.md) from [#54](https://github.com/StanleyLl0yd/FootClubSim/pull/54) documents manager/coach/director responsibilities, tactics, economy and season scope, but each decision remains **unapproved** until the owner explicitly accepts/revises it.

@@ -23,3 +23,5 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
       - name: Validate documentation links
         run: python3 scripts/check_docs.py
+      - name: Audit tracked repository files and record metrics
+        run: python3 scripts/repo_audit.py

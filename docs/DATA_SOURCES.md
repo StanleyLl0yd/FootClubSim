@@ -50,6 +50,18 @@ Prefer actual official and rights-cleared factual player/club data. **Game attri
 
 Season 2026/27 data may be incomplete or inconsistent across sources; unresolved identities/contract terms must remain unknown rather than invented facts. Missing fields can receive explicitly labeled **gameplay estimates** where appropriate, but must not be represented as official facts.
 
+## Local repository review automation
+
+`python3 scripts/repo_audit.py` checks Git-tracked filenames, declared
+assets, suspicious credential patterns and external GitHub Actions pins;
+its deterministic inventory figures are recorded in CI. Undeclared
+images, logos, archive/database dumps and external datasets cause a
+review failure rather than silently shipping in the repository.
+Adding a path to the synthetic pack's `assetPaths` list is **not** itself
+permission or evidence of ownership. All real-world football facts,
+photography, crests and database records still require an independent
+documented provenance and redistribution-rights review.
+
 ## Repository and privacy boundaries
 
 This repository is public and proprietary. Copyright in our code does **not** transfer rights to external databases, player photos or club branding. Do not commit API credentials, unlicensed datasets or personally sensitive records. Review the handling of minors and publicity/privacy rights before publishing personal data about academy players.

@@ -14,7 +14,7 @@ export interface Round {
 export function generateDoubleRoundRobin(ids: readonly string[]): readonly Round[] {
   const n = ids.length;
   if (n < 2 || n > 64 || n % 2 !== 0 || new Set(ids).size !== n ||
-      ids.some(id => !isStableId(id))) {
+      Array.from(ids).some(id => !isStableId(id))) {
     throw new RangeError('Invalid clubs');
   }
   const rotation = [...ids];

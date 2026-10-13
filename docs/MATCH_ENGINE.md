@@ -2,7 +2,9 @@
 
 This document specifies a future headless football match simulation. No graphical match rendering is planned in early versions.
 
-**Implemented M0 subset:** `src/core/match-contracts.ts` validates a versioned, seeded pre-match snapshot and a bounded, ordered event ledger. It derives score, shots, on-target shots and fixed-point xG from `shot` events. The only terminal event is `full-time`. This is a contract/validator, **not a match generator**: own goals, penalties, substitutions, cards, injuries, abandoned matches and match-engine balancing remain deliberately unsupported until M1. Do not present these prototype records as complete RPL match rules.
+**Implemented M0 subset:** `src/core/match-contracts.ts` validates a versioned, seeded pre-match snapshot and a bounded, ordered event ledger. It derives score, shots, on-target shots and fixed-point xG from `shot` events. The only terminal event is `full-time`. This is a contract/validator, **not a match generator**: own goals, penalties, substitutions, cards, injuries, abandoned matches and match-engine balancing remain deliberately unsupported until M1.
+
+**Tactical input (M0):** `src/core/tactics.ts` supplies a versioned per-club plan. The formation's outfield line counts must sum to 10; mentality is an integer from -2 to 2, and pressing, compactness, defensive line, passing risk and tempo are integers from 0 to 100. Both teams' plans are required and checked with the fixture. These controls do not yet influence match outcomes; tactical response curves and formation/position fit are M1 design and calibration tasks. Do not present these prototype records as complete RPL match rules.
 
 ## Contract
 

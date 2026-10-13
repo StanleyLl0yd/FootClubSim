@@ -1,0 +1,32 @@
+name: M0 temporary dependency lockfile preparation
+
+on:
+  pull_request:
+    paths:
+      - package.json
+      - .github/workflows/m0-lockfile-generation.yml
+
+permissions: {}
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Resolve manifest to a lockfile without running dependency scripts
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Output generated lockfile for authenticated maintainer to commit
+        run: |
+          echo 'LOCKFILE_BEGIN'
+          base64 -w 1200 package-lock.json | sed 's/^/LOCK_PART:/'
+          echo 'LOCKFILE_END'

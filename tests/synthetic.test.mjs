@@ -12,6 +12,9 @@ test('seeded 16-club pack is reproducible and passes import', () => {
   assert.deepEqual(validateCatalog(pack), []);
   assert.deepEqual(createSyntheticRplScaleCatalog(123), pack);
   assert.notDeepEqual(createSyntheticRplScaleCatalog(124), pack);
+  assert.equal(pack.packVersion, '1-seed-123');
+  assert.equal(createSyntheticRplScaleCatalog(123).packVersion, pack.packVersion);
+  assert.notEqual(createSyntheticRplScaleCatalog(124).packVersion, pack.packVersion);
   assert.equal(importSyntheticCatalog(JSON.stringify(pack)).ok, true);
 });
 test('fictional squads generate valid default lineups', () => {

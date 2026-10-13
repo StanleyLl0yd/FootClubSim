@@ -23,7 +23,11 @@ export function createSyntheticRplScaleCatalog(seed: number): Catalog {
     }
     clubs.push({ id: clubId, displayName: 'Fictional Club ' + c, registeredPlayerIds: ids });
   }
-  return { schemaVersion: 1, source: 'synthetic', packId: 'fictional-rpl-scale', packVersion: '1', clubs, players };
+  return {
+    schemaVersion: 1, source: 'synthetic', packId: 'fictional-rpl-scale',
+    // Different seeds produce different attribute datasets and must not share a pack version.
+    packVersion: '1-seed-' + seed, clubs, players,
+  };
 }
 export function defaultSyntheticLineup(club: Club): MatchLineup {
   return { clubId: club.id, starters: club.registeredPlayerIds.slice(0, 11), bench: club.registeredPlayerIds.slice(11, 23) };

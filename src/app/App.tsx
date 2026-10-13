@@ -52,6 +52,11 @@ export function App() {
     setWorking(true);
     try {
       const restored = await loadInitialCareer(CAREER_ID);
+      if (restored.basePackId !== catalog.packId ||
+          restored.basePackVersion !== catalog.packVersion) {
+        setMessage('Восстановление отклонено: сохранение относится к другой версии тестовой базы. Существующее сохранение не изменено.');
+        return;
+      }
       setCareer(restored);
       setSelectedClubId(restored.selectedClubId);
       setMessage('Стартовая карьера восстановлена и проверена по SHA-256.');
@@ -96,6 +101,11 @@ export function App() {
       const imported = await importInitialCareer(await file.text());
       if (!imported.ok) {
         setMessage('Импорт отклонён: ' + imported.error + '. Текущее состояние не изменено.');
+        return;
+      }
+      if (imported.value.basePackId !== catalog.packId ||
+          imported.value.basePackVersion !== catalog.packVersion) {
+        setMessage('Импорт отклонён: версия тестовой базы отличается. Текущее состояние не изменено.');
         return;
       }
       setCareer(imported.value);

@@ -16,7 +16,7 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 
 ## Data readiness
 
-- [ ] Define and implement versioned catalog, career-save and source-provenance schemas.
+- [x] Define and implement the **M0 synthetic-only** catalog, revision-0 initial-career JSON/save and provenance declaration schemas with bounded validation: `src/core/import.ts`, `src/core/save.ts`, `src/core/provenance.ts`, and corresponding tests. This does **not** imply a full evolving career schema or a licensed real RPL data-pack provenance contract; both require new versions, tests and independent permission review.
 - [x] Add a **synthetic** fictional 16-club/368-player test dataset, seed-specific pack identity, author-origin manifest and runtime validation.
 - [x] Demonstrate duplicate identity detection, malformed/oversized data rejection and cross-reference checks in headless tests.
 - [ ] Decide what real RPL data/club imagery can legally be distributed, with recorded permission.

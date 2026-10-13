@@ -8,7 +8,7 @@ export function validateDoubleRoundRobin(
 ): readonly ValidationError[] {
   const errors: ValidationError[] = [];
   if (!Array.isArray(clubIds) || clubIds.length < 2 || clubIds.length > 64 ||
-      clubIds.length % 2 !== 0 || !clubIds.every(isStableId) ||
+      clubIds.length % 2 !== 0 || !Array.from(clubIds).every(isStableId) ||
       new Set(clubIds).size !== clubIds.length) {
     return [{ code: 'INVALID_CLUBS', at: 'clubs' }];
   }

@@ -12,6 +12,7 @@ export interface Round {
 }
 /** Generate synthetic fixtures, not a copy of the official RPL calendar. */
 export function generateDoubleRoundRobin(ids: readonly string[]): readonly Round[] {
+  if (!Array.isArray(ids)) throw new RangeError('Invalid clubs');
   const n = ids.length;
   if (n < 2 || n > 64 || n % 2 !== 0 || new Set(ids).size !== n ||
       Array.from(ids).some(id => !isStableId(id))) {

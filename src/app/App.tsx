@@ -52,6 +52,11 @@ export function App() {
     setWorking(true);
     try {
       const restored = await loadInitialCareer(CAREER_ID);
+      if (restored.basePackId !== catalog.packId ||
+          restored.basePackVersion !== catalog.packVersion) {
+        setMessage('Восстановление отклонено: сохранение относится к другой версии тестовой базы. Существующее сохранение не изменено.');
+        return;
+      }
       setCareer(restored);
       setSelectedClubId(restored.selectedClubId);
       setMessage('Стартовая карьера восстановлена и проверена по SHA-256.');

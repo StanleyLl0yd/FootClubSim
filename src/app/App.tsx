@@ -103,6 +103,11 @@ export function App() {
         setMessage('Импорт отклонён: ' + imported.error + '. Текущее состояние не изменено.');
         return;
       }
+      if (imported.value.basePackId !== catalog.packId ||
+          imported.value.basePackVersion !== catalog.packVersion) {
+        setMessage('Импорт отклонён: версия тестовой базы отличается. Текущее состояние не изменено.');
+        return;
+      }
       setCareer(imported.value);
       setSelectedClubId(imported.value.selectedClubId);
       setMessage('Стартовая карьера проверена и загружена в память, без перезаписи IndexedDB.');

@@ -4,6 +4,7 @@ import { createSyntheticRplScaleCatalog, defaultSyntheticLineup } from '../dist/
 import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
 import { MATCH_LEDGER_VERSION, deriveMatchLedger } from '../dist/core/match-contracts.js';
 import { RNG_VERSION } from '../dist/core/rng.js';
+import { defaultTacticalPlan } from '../dist/core/tactics.js';
 
 const catalog = createSyntheticRplScaleCatalog(77);
 const clubs = new Map(catalog.clubs.map(c => [c.id, c]));
@@ -14,6 +15,8 @@ const end = { id: 'end', sequence: 1, elapsedSeconds: 5400, type: 'full-time' };
 const base = {
   schemaVersion: MATCH_LEDGER_VERSION, fixture, catalog,
   homeLineup, awayLineup,
+  homeTactics: defaultTacticalPlan(fixture.homeClubId),
+  awayTactics: defaultTacticalPlan(fixture.awayClubId),
   rosterRules: { starterCount: 11, maxBench: 12, maxForeignersOnField: 7 },
   rngAlgorithmVersion: RNG_VERSION, rngSeed: 42,
   events: [end],
@@ -91,4 +94,15 @@ test('invalid event types, shooters, xG and RNG version cannot be accepted', () 
 test('long or empty ledger is rejected before simulation', () => {
   assert.equal(deriveMatchLedger({ ...base, events: [] }).ok, false);
   assert.equal(deriveMatchLedger({ ...base, events: Array(4097).fill(end) }).ok, false);
+});
+
+test('both club tactical plans must match the fixture and pass validated ranges', () => {
+  for (const change of [
+    { ...base.homeTactics, clubId: fixture.awayClubId },
+    { ...base.homeTactics, formation: '4-4-4' },
+    { ...base.homeTactics, pressing: 101 },
+    { ...base.homeTactics, tempo: NaN },
+  ]) {
+    assert.equal(deriveMatchLedger({ ...base, homeTactics: change }).ok, false);
+  }
 });

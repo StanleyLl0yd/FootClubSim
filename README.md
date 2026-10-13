@@ -40,6 +40,7 @@
 - [docs/DATA_MODEL.md](docs/DATA_MODEL.md): клубы, футболисты, карьеры, правила и сохранения.
 - [docs/MATCH_ENGINE.md](docs/MATCH_ENGINE.md): модель расчёта матчей, события, воспроизводимость.
 - [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md): происхождение футбольных данных и разрешения.
+- [docs/RPL_2026_27_RULES.md](docs/RPL_2026_27_RULES.md): проверенные правила сезона 2026/27.
 - [docs/USER_EXPERIENCE.md](docs/USER_EXPERIENCE.md): пользовательские сценарии.
 - [docs/M0_ACCEPTANCE.md](docs/M0_ACCEPTANCE.md): проверяемые критерии M0.
 - [docs/adr/0001-web-offline-first.md](docs/adr/0001-web-offline-first.md): предлагаемое архитектурное решение.

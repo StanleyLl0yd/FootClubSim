@@ -152,7 +152,14 @@ async function run() {
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
 
-    console.log('PASS: native Chromium/Edge rendered UI and preserved initial career in IndexedDB across reload');
+    // A blocked/disabled storage API must not silently drop the open career.
+    await evaluate("Object.defineProperty(window, 'indexedDB', { configurable: true, value: undefined });");
+    await click('Сохранить в браузере');
+    await waitText('Сохранение отклонено: UNAVAILABLE');
+    const stillActive = await evaluate("Boolean(document.querySelector('.career-info'))");
+    if (!stillActive) throw new Error('Active career lost after IndexedDB became unavailable');
+
+    console.log('PASS: browser initial career survives reload, duplicate save, and unavailable storage');
   } finally {
     socket?.close();
     browser.kill();

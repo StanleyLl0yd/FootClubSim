@@ -2,6 +2,8 @@
 
 Status: policy and proposed workflow; no third-party dataset has been imported or licensed for redistribution.
 
+**M0 synthetic manifest:** [`data/packs/m0-synthetic-manifest.json`](../data/packs/m0-synthetic-manifest.json) declares the authored fictional generator, seed, pack version and absence of third-party records/artwork. `tests/manifest.test.mjs` checks it against actual generated data. This is an auditable **project declaration**, not external license proof or an authorization to redistribute third-party records. A real RPL data pack requires independently verified rights and a separate release review.
+
 ## Data sources
 
 | Candidate | Possible facts | Status for bundling |

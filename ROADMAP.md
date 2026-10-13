@@ -38,7 +38,7 @@ See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 - [ ] Finalize minimum player/club data contract and a legally usable initial **synthetic** dataset.
 - [ ] Specify deterministic match simulation, game-calendar state transitions and calibration baselines.
 - [ ] Establish provenance/rights gates for real RPL data and assets.
-- [ ] Bootstrap TypeScript/Vite/React workspace and a dependency-locked, minimal CI with automated checks.
+- [x] Bootstrap TypeScript/Vite/React browser shell and a dependency-locked CI with type, headless test and production-build checks. Lint/format gating and real-browser verification remain separate.
 - [ ] Verify browser storage capability and fallback/export strategy on representative Safari and Chromium versions.
 - [x] Open a [prioritized M1 implementation backlog](docs/M1_BACKLOG.md) with dependencies and preliminary effort/risks.
 - [ ] Validate the remaining M1 estimates, risks and open technical decisions before M0 exit.

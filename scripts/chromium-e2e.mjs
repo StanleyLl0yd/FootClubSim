@@ -153,7 +153,7 @@ async function run() {
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
 
     // A blocked/disabled storage API must not silently drop the open career.
-    await evaluate("Object.defineProperty(window, 'indexedDB', { configurable: true, value: undefined });");
+    await evaluate("(() => { Object.defineProperty(window, 'indexedDB', { configurable: true, value: undefined }); return true; })()");
     await click('Сохранить в браузере');
     await waitText('Сохранение отклонено: UNAVAILABLE');
     const stillActive = await evaluate("Boolean(document.querySelector('.career-info'))");

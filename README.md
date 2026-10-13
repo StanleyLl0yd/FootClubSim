@@ -52,6 +52,7 @@ npm run check       # типы, headless-тесты, production-сборка о�
 ## Документация
 
 - [ROADMAP.md](ROADMAP.md): этапы и критерии завершения.
+- [docs/M0_AUDIT_PROGRESS.md](docs/M0_AUDIT_PROGRESS.md): подтверждённые исправления аудита M0, измерения CI и оставшиеся блокеры.
 - [ARCHITECTURE.md](ARCHITECTURE.md): границы модулей и архитектурные решения.
 - [docs/DATA_MODEL.md](docs/DATA_MODEL.md): клубы, футболисты, карьеры, правила и сохранения.
 - [docs/MATCH_ENGINE.md](docs/MATCH_ENGINE.md): модель расчёта матчей, события, воспроизводимость.

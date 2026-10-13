@@ -51,6 +51,6 @@ Version and store the PRNG algorithm, seed and continuation state. Same frozen i
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.
 
-Calibrate with thousands of seeded matches and documented source-permitted reference distributions: goals, draws, home/away results, shots, xG, cards, injuries and player attribute/tactics sensitivity. Preserve baselines and confidence intervals. Do not invent target realism metrics or claim successful calibration before running actual tests.
+Calibrate using the [M1 calibration protocol](M1_CALIBRATION_PROTOCOL.md), with 10,000 seeded matches per scenario and documented source-permitted reference distributions: goals, draws, home/away results, shots, xG, cards, injuries and player attribute/tactics sensitivity. Preserve baselines and confidence intervals. Do not invent target realism metrics or claim successful calibration before running actual tests.
 
 Open design choices: exact PRNG, probability curves, spatial zones, saved event detail, competition-specific disciplinary and abandonment policies.

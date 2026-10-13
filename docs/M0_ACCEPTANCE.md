@@ -33,7 +33,7 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 
 - [ ] Agree deterministic PRNG contract and exact input/event/output schema.
 - [ ] Establish a synthetic fixture matrix and tests for invariants before balancing.
-- [ ] Define measurable calibration distributions, sampling method, uncertainty/tolerances and permitted reference sources.
+- [ ] Approve the [M1 calibration protocol](M1_CALIBRATION_PROTOCOL.md) (metrics, 10,000-seed sampling, uncertainty and reference-rights gate drafted); select legally permitted external baselines and freeze tolerances before tuning.
 - [ ] Specify rule-pack handling of registration, standings and disciplinary differences.
 - [x] Open the [prioritized M1 implementation backlog](M1_BACKLOG.md); remaining effort estimates and technical risks still require approval.
 

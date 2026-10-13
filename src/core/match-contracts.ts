@@ -73,22 +73,33 @@ const fail = (code: string, at: string): ValidationError => ({ code, at });
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
-/** Guard the runtime shape before handing a candidate to typed domain validators. */
+/** Bound collection work and reject sparse or malformed arrays before typed validators. */
 function hasBasicMatchShape(input: MatchLedgerInput): boolean {
   const { fixture, catalog, homeLineup, awayLineup, homeTactics, awayTactics, rosterRules } = input;
-  return isRecord(fixture) && isRecord(catalog) &&
-    isRecord(homeLineup) && isRecord(awayLineup) &&
-    isRecord(homeTactics) && isRecord(awayTactics) && isRecord(rosterRules) &&
-    Array.isArray(catalog.players) && catalog.players.length <= 2048 &&
-    Array.isArray(catalog.clubs) && catalog.clubs.length <= 64 &&
-    catalog.players.every(player => isRecord(player) &&
-      typeof player.displayName === 'string' && isRecord(player.attributes)) &&
-    catalog.clubs.every(club => isRecord(club) &&
-      typeof club.displayName === 'string' && Array.isArray(club.registeredPlayerIds)) &&
-    Array.isArray(homeLineup.starters) && Array.isArray(homeLineup.bench) &&
-    Array.isArray(awayLineup.starters) && Array.isArray(awayLineup.bench) &&
-    homeLineup.starters.length <= 11 && awayLineup.starters.length <= 11 &&
-    homeLineup.bench.length <= 128 && awayLineup.bench.length <= 128;
+  if (!isRecord(fixture) || !isRecord(catalog) ||
+      !isRecord(homeLineup) || !isRecord(awayLineup) ||
+      !isRecord(homeTactics) || !isRecord(awayTactics) || !isRecord(rosterRules) ||
+      !Array.isArray(catalog.players) || catalog.players.length > 2048 ||
+      !Array.isArray(catalog.clubs) || catalog.clubs.length > 64 ||
+      !Array.isArray(homeLineup.starters) || !Array.isArray(homeLineup.bench) ||
+      !Array.isArray(awayLineup.starters) || !Array.isArray(awayLineup.bench) ||
+      homeLineup.starters.length > 11 || awayLineup.starters.length > 11 ||
+      homeLineup.bench.length > 128 || awayLineup.bench.length > 128) return false;
+
+  // Array.every skips holes; for..of yields undefined and catches sparse arrays.
+  for (const player of catalog.players) {
+    if (!isRecord(player) || typeof player.displayName !== 'string' ||
+        !isRecord(player.attributes)) return false;
+  }
+  for (const club of catalog.clubs) {
+    if (!isRecord(club) || typeof club.displayName !== 'string' ||
+        !Array.isArray(club.registeredPlayerIds) ||
+        club.registeredPlayerIds.length > 128) return false;
+    for (const id of club.registeredPlayerIds) {
+      if (!isStableId(id)) return false;
+    }
+  }
+  return true;
 }
 
 function emptyStats(): { goals: number; shots: number; shotsOnTarget: number; xgMilli: number } {

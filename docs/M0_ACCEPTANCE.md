@@ -36,7 +36,7 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 - [ ] Agree deterministic PRNG contract and exact input/event/output schema.
 - [x] Establish seeded synthetic double-round-robin fixture generation and invariant/negative tests in [PR #20](https://github.com/StanleyLl0yd/FootClubSim/pull/20), [PR #24](https://github.com/StanleyLl0yd/FootClubSim/pull/24) and [PR #51](https://github.com/StanleyLl0yd/FootClubSim/pull/51).
 - [ ] Approve the [M1 calibration protocol](M1_CALIBRATION_PROTOCOL.md) (metrics, 10,000-seed sampling, uncertainty and reference-rights gate drafted); select legally permitted external baselines and freeze tolerances before tuning.
-- [ ] Specify rule-pack handling of registration, standings and disciplinary differences.
+- [x] Specify **planned** rules-pack separation and dependencies for registration, standings, discipline and administrative outcomes in [M0_RPL_RULES_MATRIX.md](M0_RPL_RULES_MATRIX.md). Complete source/legal verification and executable rules remain **open** under issue #15.
 - [x] Open the [prioritized M1 implementation backlog](M1_BACKLOG.md); remaining effort estimates and technical risks still require approval.
 
 ## Repository-wide milestone exit

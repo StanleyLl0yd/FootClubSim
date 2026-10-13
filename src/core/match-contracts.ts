@@ -70,6 +70,26 @@ export type MatchLedgerResult =
 const MAX_EVENTS = 4096;
 const MAX_SECONDS = 130 * 60;
 const fail = (code: string, at: string): ValidationError => ({ code, at });
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/** Guard the runtime shape before handing a candidate to typed domain validators. */
+function hasBasicMatchShape(input: MatchLedgerInput): boolean {
+  const { fixture, catalog, homeLineup, awayLineup, homeTactics, awayTactics, rosterRules } = input;
+  return isRecord(fixture) && isRecord(catalog) &&
+    isRecord(homeLineup) && isRecord(awayLineup) &&
+    isRecord(homeTactics) && isRecord(awayTactics) && isRecord(rosterRules) &&
+    Array.isArray(catalog.players) && catalog.players.length <= 2048 &&
+    Array.isArray(catalog.clubs) && catalog.clubs.length <= 64 &&
+    catalog.players.every(player => isRecord(player) &&
+      typeof player.displayName === 'string' && isRecord(player.attributes)) &&
+    catalog.clubs.every(club => isRecord(club) &&
+      typeof club.displayName === 'string' && Array.isArray(club.registeredPlayerIds)) &&
+    Array.isArray(homeLineup.starters) && Array.isArray(homeLineup.bench) &&
+    Array.isArray(awayLineup.starters) && Array.isArray(awayLineup.bench) &&
+    homeLineup.starters.length <= 11 && awayLineup.starters.length <= 11 &&
+    homeLineup.bench.length <= 128 && awayLineup.bench.length <= 128;
+}
 
 function emptyStats(): { goals: number; shots: number; shotsOnTarget: number; xgMilli: number } {
   return { goals: 0, shots: 0, shotsOnTarget: 0, xgMilli: 0 };
@@ -80,6 +100,9 @@ function emptyStats(): { goals: number; shots: number; shotsOnTarget: number; xg
  * read external state, or mutate the source catalog/lineups.
  */
 export function deriveMatchLedger(input: MatchLedgerInput): MatchLedgerResult {
+  if (!isRecord(input) || !hasBasicMatchShape(input)) {
+    return { ok: false, errors: [fail('INVALID_MATCH_SHAPE', 'input')] };
+  }
   const errors: ValidationError[] = [];
   const { fixture, catalog, homeLineup, awayLineup, rosterRules, events } = input;
 
@@ -119,6 +142,10 @@ export function deriveMatchLedger(input: MatchLedgerInput): MatchLedgerResult {
   let hasFullTime = false;
   for (const [index, event] of events.entries()) {
     const at = 'events[' + index + ']';
+    if (!isRecord(event)) {
+      errors.push(fail('INVALID_EVENT_SHAPE', at));
+      continue;
+    }
     if (!isStableId(event.id) || seenIds.has(event.id)) errors.push(fail('INVALID_EVENT_ID', at));
     seenIds.add(event.id);
     if (!Number.isInteger(event.sequence) || event.sequence !== index + 1 ||

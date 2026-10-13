@@ -1,10 +1,10 @@
+import { isStableId } from './identifiers.js';
 import {
   FIELD_ATTRIBUTE_KEYS, GOALKEEPER_ATTRIBUTE_KEYS, POSITIONS,
   type Catalog, type Club, type MatchLineup, type MatchRosterRules, type Player,
 } from './model.js';
 
 export type ValidationError = Readonly<{ code: string; at: string }>;
-const validId = (id: string): boolean => id.length > 0 && id.length <= 128;
 
 /** Validates a typed model. JSON parsing needs a separate untrusted-data adapter. */
 export function validateCatalog(catalog: Catalog): readonly ValidationError[] {
@@ -12,12 +12,12 @@ export function validateCatalog(catalog: Catalog): readonly ValidationError[] {
   if (catalog.schemaVersion !== 1 || catalog.source !== 'synthetic') {
     errors.push({ code: 'UNSUPPORTED_CATALOG', at: 'catalog' });
   }
-  if (!validId(catalog.packId) || !validId(catalog.packVersion)) {
+  if (!isStableId(catalog.packId) || !isStableId(catalog.packVersion)) {
     errors.push({ code: 'INVALID_PACK_ID', at: 'catalog' });
   }
   const players = new Set<string>();
   for (const player of catalog.players) {
-    if (!validId(player.id) || players.has(player.id)) {
+    if (!isStableId(player.id) || players.has(player.id)) {
       errors.push({ code: 'DUPLICATE_OR_INVALID_PLAYER', at: 'player:' + player.id });
     }
     players.add(player.id);
@@ -34,7 +34,7 @@ export function validateCatalog(catalog: Catalog): readonly ValidationError[] {
   const clubs = new Set<string>();
   const owners = new Set<string>();
   for (const club of catalog.clubs) {
-    if (!validId(club.id) || clubs.has(club.id)) {
+    if (!isStableId(club.id) || clubs.has(club.id)) {
       errors.push({ code: 'DUPLICATE_OR_INVALID_CLUB', at: 'club:' + club.id });
     }
     clubs.add(club.id);

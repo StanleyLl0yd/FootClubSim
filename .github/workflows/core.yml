@@ -28,3 +28,7 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Typecheck and unit tests
         run: npm run check
+      - name: Assert independent core and browser outputs coexist
+        run: |
+          test -s dist/core/save.js
+          test -s web-dist/index.html

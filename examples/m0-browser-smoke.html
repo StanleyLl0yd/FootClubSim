@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FootClubSim - стенд M0</title>
+  <style>
+    :root { font: 16px/1.5 system-ui, -apple-system, sans-serif; color-scheme: light dark; }
+    body { max-width: 760px; margin: 3rem auto; padding: 0 1.25rem; }
+    h1 { font-size: 1.75rem; }
+    .note { border-inline-start: 3px solid currentColor; padding-inline-start: 1rem; }
+    button, select, input { font: inherit; margin: .35rem 0; padding: .5rem; }
+    label { display: block; margin-top: 1rem; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; }
+    pre { overflow: auto; white-space: pre-wrap; }
+    :focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <h1>FootClubSim: проверка ядра M0</h1>
+  <p class="note">Это технический стенд, а не игра. Здесь нет симуляции матчей, сохранения в браузере или реальных футболистов.</p>
+  <label for="club">Вымышленный клуб</label>
+  <select id="club"></select>
+  <div>
+    <button type="button" id="new">Создать стартовую карьеру</button>
+    <button type="button" id="export" disabled>Экспортировать JSON</button>
+  </div>
+  <label for="import">Импортировать стартовое сохранение JSON</label>
+  <input id="import" type="file" accept=".json,application/json">
+  <h2>Результат проверки</h2>
+  <pre role="status" aria-live="polite" id="result">Загрузка модулей...</pre>
+  <script type="module">
+    import { createSyntheticRplScaleCatalog } from '../dist/core/synthetic.js';
+    import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
+    import { validateDoubleRoundRobin } from '../dist/core/fixture-validation.js';
+    import { createInitialCareer, exportInitialCareer, importInitialCareer } from '../dist/core/save.js';
+
+    const result = document.getElementById('result');
+    const clubSelect = document.getElementById('club');
+    const exportButton = document.getElementById('export');
+    const input = document.getElementById('import');
+    const catalog = createSyntheticRplScaleCatalog(2026);
+    const fixtures = generateDoubleRoundRobin(catalog.clubs.map(club => club.id));
+    const problems = validateDoubleRoundRobin(fixtures, catalog.clubs.map(club => club.id));
+    let activeCareer = null;
+    for (const club of catalog.clubs) {
+      const option = document.createElement('option');
+      option.value = club.id;
+      option.textContent = club.displayName;
+      clubSelect.append(option);
+    }
+    result.textContent = problems.length ?
+      'Ошибка календаря: ' + JSON.stringify(problems) :
+      'Тестовая база: 16 клубов, 368 футболистов, 30 туров, 240 матчей. Проверка календаря пройдена.';
+
+    function describe(career, action) {
+      result.textContent = action + '\n' +
+        'Карьера: ' + career.careerId + '\n' +
+        'Клуб: ' + career.selectedClubId + '\n' +
+        'Ревизия: ' + career.revision + '\n' +
+        'Игроков: ' + career.catalog.players.length + '\n' +
+        'Номер схемы сохранения: ' + career.saveSchemaVersion;
+    }
+    document.getElementById('new').addEventListener('click', () => {
+      try {
+        activeCareer = createInitialCareer(catalog, clubSelect.value, 42, 'm0-manual-test');
+        exportButton.disabled = false;
+        describe(activeCareer, 'Создана новая стартовая карьера');
+      } catch (error) {
+        result.textContent = 'Не удалось создать карьеру: ' + String(error);
+      }
+    });
+    exportButton.addEventListener('click', async () => {
+      if (!activeCareer) return;
+      try {
+        const json = await exportInitialCareer(activeCareer);
+        const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'footclubsim-m0-save.json';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        describe(activeCareer, 'Сохранение экспортировано в JSON');
+      } catch (error) {
+        result.textContent = 'Не удалось экспортировать: ' + String(error);
+      }
+    });
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > 5_000_000) {
+        result.textContent = 'Файл слишком большой (максимум 5 МБ).';
+        input.value = '';
+        return;
+      }
+      try {
+        const parsed = await importInitialCareer(await file.text());
+        if (!parsed.ok) {
+          result.textContent = 'Импорт отклонён: ' + parsed.error;
+        } else {
+          activeCareer = parsed.value;
+          clubSelect.value = activeCareer.selectedClubId;
+          exportButton.disabled = false;
+          describe(activeCareer, 'Сохранение проверено и импортировано');
+        }
+      } catch (error) {
+        result.textContent = 'Ошибка чтения файла: ' + String(error);
+      } finally {
+        input.value = '';
+      }
+    });
+  </script>
+</body>
+</html>

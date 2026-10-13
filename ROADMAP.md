@@ -40,12 +40,14 @@ See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 - [ ] Specify deterministic match simulation and game-calendar transitions; [M1 calibration protocol](docs/M1_CALIBRATION_PROTOCOL.md) is drafted, but approved statistical reference baselines remain unavailable.
 - [ ] Establish provenance/rights gates for real RPL data and assets.
 - [x] Bootstrap TypeScript/Vite/React shell, locked dependencies and CI for types, ESLint, source formatting, tests and production build. Native Safari and Windows Edge smoke verification is also automated; exceptional storage cases remain tracked.
-- [ ] Verify browser storage capability and fallback/export strategy on representative Safari and Chromium versions.
+- [ ] Finish browser storage capability and fallback/export strategy testing: the initial career save/reload/restore and unavailable IndexedDB path are verified in actual Safari/macOS, Chrome/Edge Windows and Chromium/Linux (see [PR #67](https://github.com/StanleyLl0yd/FootClubSim/pull/67)); **actual private mode, quota/eviction, backup/recovery** remain unverified.
 - [x] Open a [prioritized M1 implementation backlog](docs/M1_BACKLOG.md) with dependencies and preliminary effort/risks.
 - [ ] Validate the remaining M1 estimates, risks and open technical decisions before M0 exit.
 - [ ] Complete the [M0 whole-repository exit audit](https://github.com/StanleyLl0yd/FootClubSim/issues/2) **including second full pass** and attach results.
 
 M0 documentation may be merged incrementally without claiming M0 completion. Do not mark unverified tasks complete.
+
+**Mandatory handoff pause:** when every M0 acceptance criterion and both complete audit passes really pass, publish a final M0 completion report, close the M0 exit issue #2, **STOP all implementation work, and notify the project owner**. Start no M1 feature, prototype or PR without the owner's explicit subsequent authorization.
 
 ## M1: simulation engine
 

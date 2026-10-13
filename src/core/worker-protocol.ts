@@ -125,7 +125,8 @@ function readStats(value: unknown): MatchTeamReport | null {
   const { goals, shots, shotsOnTarget, xgMilli } = value;
   if (![goals, shots, shotsOnTarget, xgMilli].every(
     n => Number.isSafeInteger(n) && typeof n === 'number' && n >= 0,
-  ) || (goals as number) > (shotsOnTarget as number) ||
+  ) || (shots as number) > 4096 || (xgMilli as number) > 4096000 ||
+      (goals as number) > (shotsOnTarget as number) ||
       (shotsOnTarget as number) > (shots as number) ||
       (xgMilli as number) > (shots as number) * 1000) return null;
   return {
@@ -149,7 +150,18 @@ export function readWorkerReply(
   if (value.jobId !== pending.jobId || value.careerId !== pending.careerId) {
     return fail('WRONG_JOB');
   }
-  if (pending.cancelled) return fail('CANCELLED_JOB');
+  if (pending.cancelled) {
+    if (value.kind === 'cancelled' && hasKeys(value, [
+      'protocolVersion', 'kind', 'jobId', 'careerId', 'basedOnRevision',
+    ])) {
+      return { ok: true, value: {
+        protocolVersion: 1, kind: 'cancelled',
+        jobId: value.jobId, careerId: value.careerId,
+        basedOnRevision: value.basedOnRevision,
+      } };
+    }
+    return fail('CANCELLED_JOB');
+  }
   if (!isRevision(currentRevision) || currentRevision !== pending.expectedRevision ||
       value.basedOnRevision !== pending.expectedRevision) return fail('STALE_RESULT');
 

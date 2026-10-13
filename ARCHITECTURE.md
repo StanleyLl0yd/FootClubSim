@@ -45,6 +45,10 @@ Starting data pack  --validated on load-->  new-career snapshot
 
 Direction of dependencies: platform adapters -> application -> domain. Pure domain code may not import React, browser globals, IndexedDB, Tauri, HTTP clients, or UI localization strings. Adapters implement narrow interfaces at the outside boundary.
 
+## Player/staff decision authority
+
+The player controls all implemented football decisions by default. Per [ADR-0002](docs/adr/0002-configurable-delegation.md), the player may independently delegate individual responsibilities to qualified staff; this is not a one-time choice of a fixed head-coach versus sporting-director role. The full responsibility map and current decision-maker belong to canonical career state once implemented. Both player and staff commands must use the same validated application transaction boundary, with explicit actor identity, authorization, revision checks and audit log. Manual areas cannot be changed autonomously by staff. The staff-delegation principle is owner-approved; its specific command/UI implementation in [#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58) remains proposed for M2/M3, not completed M0 gameplay.
+
 ## Core responsibilities
 
 | Boundary | Owns | Must not own |

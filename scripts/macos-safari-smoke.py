@@ -132,7 +132,12 @@ def main():
             wait_for_text(session, "Выберите вымышленный клуб")
             click(session, "Восстановить из браузера")
             wait_for_text(session, "Стартовая карьера восстановлена и проверена по SHA-256")
-            print("PASS: real Safari rendered M0 app, created career, saved IndexedDB and restored after reload")
+            run_script(session, "Object.defineProperty(window, 'indexedDB', {configurable: true, value: undefined});")
+            click(session, "Сохранить в браузере")
+            wait_for_text(session, "Сохранение отклонено: UNAVAILABLE")
+            if not run_script(session, "return Boolean(document.querySelector('.career-info'))"):
+                raise AssertionError("Active career disappeared after storage API failure")
+            print("PASS: Safari initial career survives reload and unavailable storage")
         except Exception:
             preview_log.flush()
             driver_log.flush()

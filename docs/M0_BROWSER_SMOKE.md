@@ -41,4 +41,4 @@ These automated cases are for the production React shell, not a claim that each 
 
 ## Remaining work
 
-The React/Vite technical shell and preliminary IndexedDB adapter already exist; however full career revisions/migrations, quota/eviction recovery, private-storage handling, Windows Chrome-specific compatibility and complete milestone exit audit remain open. The adapter currently writes only new initial careers, with no overwrite or in-place revision update. This page is a non-shipping diagnostics artifact and is **not** a playable game.
+The React/Vite technical shell and preliminary IndexedDB adapter already exist; however full career revisions/migrations, quota/eviction recovery, private-storage handling, Windows Chrome-specific initial-career compatibility is now automated; **actual private browsing, quota pressure, eviction and complete milestone exit audit** remain open. The adapter currently writes only new initial careers, with no overwrite or in-place revision update. This page is a non-shipping diagnostics artifact and is **not** a playable game.

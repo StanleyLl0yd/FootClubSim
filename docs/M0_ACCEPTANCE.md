@@ -35,7 +35,7 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 - [ ] Establish a synthetic fixture matrix and tests for invariants before balancing.
 - [ ] Define measurable calibration distributions, sampling method, uncertainty/tolerances and permitted reference sources.
 - [ ] Specify rule-pack handling of registration, standings and disciplinary differences.
-- [ ] Open a prioritized M1 implementation backlog.
+- [x] Open the [prioritized M1 implementation backlog](M1_BACKLOG.md); remaining effort estimates and technical risks still require approval.
 
 ## Repository-wide milestone exit
 

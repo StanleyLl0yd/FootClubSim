@@ -1,0 +1,58 @@
+:root {
+  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #19342e;
+  background: #eef2ee;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, select, input { font: inherit; }
+button:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 3px solid #2a745e;
+  outline-offset: 3px;
+}
+button {
+  border: 1px solid #1a6c51;
+  background: #17634b;
+  color: white;
+  border-radius: .5rem;
+  padding: .7rem 1rem;
+  cursor: pointer;
+  font-weight: 650;
+}
+button:hover:not(:disabled) { background: #114b39; }
+button:disabled { opacity: .54; cursor: not-allowed; }
+.shell { max-width: 1160px; margin: auto; padding: 0 1.5rem 2rem; }
+.masthead { min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.brand { display: flex; align-items: center; gap: .75rem; font-size: 1.28rem; font-weight: 800; letter-spacing: -.03em; }
+.brand-mark { display: inline-grid; place-items: center; width: 2.7rem; height: 2.7rem; border-radius: .75rem; background: #1b7457; color: white; }
+.edition { font-size: .85rem; color: #52685e; }
+.hero { border-radius: 1.25rem; padding: 2.5rem; background: #123e30; color: #fff; }
+.hero h1 { font-size: clamp(2.15rem, 4vw, 3.4rem); margin: .25rem 0 .8rem; letter-spacing: -.04em; }
+.hero p:last-child { max-width: 68ch; color: #d4e6db; margin-bottom: 0; }
+.eyebrow { text-transform: uppercase; letter-spacing: .14em; font-weight: 650; font-size: .75rem; }
+.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin: 1.25rem 0; }
+.metrics div { background: white; border: 1px solid #dce6dc; border-radius: .85rem; padding: 1rem 1.2rem; display: grid; gap: .1rem; }
+.metrics strong { font-size: 1.75rem; line-height: 1.2; }
+.metrics span, .subtle { color: #65776f; font-size: .92rem; }
+.columns { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.panel { border: 1px solid #dce6dc; background: #fff; border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.25rem; }
+.panel h2 { margin: 0 0 1rem; font-size: 1.4rem; }
+.panel label { display: block; font-weight: 650; margin-bottom: .45rem; }
+.panel select { width: 100%; padding: .7rem .8rem; background: white; color: inherit; border-radius: .5rem; border: 1px solid #b4c7b9; }
+.button-stack { display: flex; flex-wrap: wrap; gap: .5rem; }
+.file-label { margin-top: 1.25rem; }
+.career-info { margin-top: 1rem; border-radius: .7rem; padding: .85rem; background: #eff8f1; display: grid; gap: .3rem; font-size: .9rem; }
+.matches { list-style: none; padding: 0; margin: 0; display: grid; gap: .4rem; }
+.matches li { display: grid; grid-template-columns: minmax(0, 1fr) 3rem minmax(0, 1fr); gap: .75rem; align-items: center; padding: .72rem 0; border-bottom: 1px solid #ebf0eb; }
+.matches li span:last-child { text-align: right; }
+.versus { text-align: center; color: #77867a; font-size: .78rem; font-weight: 700; text-transform: uppercase; }
+.status { padding: 1rem 1.25rem; border-left: 4px solid #167b53; background: #dff0e4; border-radius: .3rem; }
+footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
+@media (max-width: 720px) {
+  .shell { padding: 0 1rem 1rem; }
+  .masthead { min-height: 76px; }
+  .edition { text-align: right; }
+  .hero { padding: 1.5rem; }
+  .columns { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

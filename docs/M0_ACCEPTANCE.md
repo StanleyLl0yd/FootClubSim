@@ -22,8 +22,8 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 
 ## Code and tooling foundation
 
-- [ ] Create the minimal TypeScript strict workspace with Vite/React browser shell and isolated headless domain packages/modules.
-- [ ] Commit dependency lockfile, define numeric-only versioning and safe production build.
+- [x] Create the minimal TypeScript strict workspace with Vite/React browser shell and isolated headless domain modules.
+- [x] Commit dependency lockfile, define numeric-only versioning and safe production build (CI verified).
 - [ ] Set formatting, lint, types, unit tests and CI, with least privilege and pinned external actions.
 - [ ] Implement/document worker orchestration contract and command/state validation in focused tests.
 - [ ] Test export/import prototype or document a reproducible proof-of-concept with bounded error handling.

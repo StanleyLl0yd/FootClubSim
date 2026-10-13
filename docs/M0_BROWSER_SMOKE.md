@@ -1,6 +1,6 @@
 # M0 browser smoke check (manual)
 
-This standalone QA page is deliberately **not** the planned React/Vite product UI. It exercises the existing headless domain modules in a real browser without introducing new dependencies, a hosted backend, real sports data or persistent browser storage.
+This standalone QA page is deliberately **not** the planned React/Vite product UI. It exercises the existing headless domain modules and the preliminary IndexedDB initial-career store in a real browser without introducing new dependencies, a hosted backend or real sports data.
 
 ## Start locally
 
@@ -29,6 +29,15 @@ Running from `file://` can fail because of browser ES module origin restrictions
 
 Record browser brand, exact version, operating system, each observed result and any console errors. Target macOS Safari and Windows Chrome/Edge individually. No real-browser acceptance can be claimed from Node CI or a WebKit substitute.
 
+## Existing automated browser evidence
+
+- [PR #38](https://github.com/StanleyLl0yd/FootClubSim/pull/38): actual Safari on GitHub macOS 15 verified UI rendering, creating an initial career, IndexedDB save, reload and recovery.
+- [PR #39](https://github.com/StanleyLl0yd/FootClubSim/pull/39): actual Windows Microsoft Edge verified the same initial-career flow and duplicate-save rejection.
+- [PR #40](https://github.com/StanleyLl0yd/FootClubSim/pull/40): Safari and Edge verified a simulated unavailable IndexedDB API does not erase the active in-memory career.
+- [PR #35](https://github.com/StanleyLl0yd/FootClubSim/pull/35): Linux Chromium renders the production-built React shell. This check alone does not exercise persistence.
+
+These automated cases are for the production React shell, not a claim that each manual exercise on this standalone diagnostics page has been performed. Browser versions and any remaining untested scenarios must be recorded explicitly before release.
+
 ## Remaining work
 
-M0 still requires a Vite/React shell, full IndexedDB migration and recovery behavior, real Safari/Chromium evidence and the complete milestone exit audit. The adapter currently writes only new initial careers, with no overwrite or in-place revision update. The page is a non-shipping diagnostics artifact for manual validation and should not be represented as a playable game.
+The React/Vite technical shell and preliminary IndexedDB adapter already exist; however full career revisions/migrations, quota/eviction recovery, private-storage handling, Windows Chrome-specific compatibility and complete milestone exit audit remain open. The adapter currently writes only new initial careers, with no overwrite or in-place revision update. This page is a non-shipping diagnostics artifact and is **not** a playable game.

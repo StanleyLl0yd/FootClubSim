@@ -23,10 +23,12 @@ Running from `file://` can fail because of browser ES module origin restrictions
 3. Export the JSON file; import the same file. The career ID and selected club should survive unchanged.
 4. Modify the inner payload string of the downloaded JSON without recomputing the checksum, then import. It must be rejected with `INTEGRITY_ERROR` rather than replacing the current displayed career.
 5. Import malformed JSON and an unsupported schema; verify a readable rejection and no loss of the current displayed career.
-6. Reload the page. The in-memory career intentionally disappears: no IndexedDB persistence is claimed.
+6. With an initial career created, click **Сохранить в IndexedDB** and confirm success. Repeating the action with the same career ID must return `DUPLICATE` and keep the existing stored value.
+7. Reload the page: in-memory state disappears. Click **Восстановить тестовую карьеру**, then verify the original club and ID are restored from IndexedDB.
+8. In private browsing or with storage blocked, confirm that storage errors are surfaced without replacing the active in-memory career. Do not interpret this as a successful persistence test without recording real-browser observations.
 
 Record browser brand, exact version, operating system, each observed result and any console errors. Target macOS Safari and Windows Chrome/Edge individually. No real-browser acceptance can be claimed from Node CI or a WebKit substitute.
 
 ## Remaining work
 
-M0 still requires a Vite/React shell, IndexedDB persistence and recovery tests, real Safari/Chromium evidence and the complete milestone exit audit. The page is a non-shipping diagnostics artifact for manual validation and should not be represented as a playable game.
+M0 still requires a Vite/React shell, full IndexedDB migration and recovery behavior, real Safari/Chromium evidence and the complete milestone exit audit. The adapter currently writes only new initial careers, with no overwrite or in-place revision update. The page is a non-shipping diagnostics artifact for manual validation and should not be represented as a playable game.

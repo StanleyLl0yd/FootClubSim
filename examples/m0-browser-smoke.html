@@ -25,6 +25,8 @@
   <div>
     <button type="button" id="new">Создать стартовую карьеру</button>
     <button type="button" id="export" disabled>Экспортировать JSON</button>
+    <button type="button" id="save-local" disabled>Сохранить в IndexedDB</button>
+    <button type="button" id="restore-local">Восстановить тестовую карьеру</button>
   </div>
   <label for="import">Импортировать стартовое сохранение JSON</label>
   <input id="import" type="file" accept=".json,application/json">
@@ -35,10 +37,12 @@
     import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
     import { validateDoubleRoundRobin } from '../dist/core/fixture-validation.js';
     import { createInitialCareer, exportInitialCareer, importInitialCareer } from '../dist/core/save.js';
+    import { saveNewInitialCareer, loadInitialCareer } from '../dist/browser/initial-career-store.js';
 
     const result = document.getElementById('result');
     const clubSelect = document.getElementById('club');
     const exportButton = document.getElementById('export');
+    const saveButton = document.getElementById('save-local');
     const input = document.getElementById('import');
     const catalog = createSyntheticRplScaleCatalog(2026);
     const fixtures = generateDoubleRoundRobin(catalog.clubs.map(club => club.id));
@@ -66,6 +70,7 @@
       try {
         activeCareer = createInitialCareer(catalog, clubSelect.value, 42, 'm0-manual-test');
         exportButton.disabled = false;
+        saveButton.disabled = false;
         describe(activeCareer, 'Создана новая стартовая карьера');
       } catch (error) {
         result.textContent = 'Не удалось создать карьеру: ' + String(error);
@@ -86,6 +91,27 @@
         result.textContent = 'Не удалось экспортировать: ' + String(error);
       }
     });
+    saveButton.addEventListener('click', async () => {
+      if (!activeCareer) return;
+      try {
+        await saveNewInitialCareer(activeCareer);
+        describe(activeCareer, 'Карьера сохранена в IndexedDB (без перезаписи)');
+      } catch (error) {
+        result.textContent = 'Запись отклонена: ' + (error.code || String(error));
+      }
+    });
+    document.getElementById('restore-local').addEventListener('click', async () => {
+      try {
+        const restored = await loadInitialCareer('m0-manual-test');
+        activeCareer = restored;
+        clubSelect.value = restored.selectedClubId;
+        exportButton.disabled = false;
+        saveButton.disabled = false;
+        describe(activeCareer, 'Карьера восстановлена из IndexedDB');
+      } catch (error) {
+        result.textContent = 'Восстановление отклонено: ' + (error.code || String(error));
+      }
+    });
     input.addEventListener('change', async () => {
       const file = input.files?.[0];
       if (!file) return;
@@ -102,6 +128,7 @@
           activeCareer = parsed.value;
           clubSelect.value = activeCareer.selectedClubId;
           exportButton.disabled = false;
+          saveButton.disabled = false;
           describe(activeCareer, 'Сохранение проверено и импортировано');
         }
       } catch (error) {

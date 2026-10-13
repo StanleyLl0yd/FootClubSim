@@ -14,7 +14,7 @@ This is a **headless prototype**, not a playable career and not a browser storag
 
 ## Required next steps
 
-1. Add an adapter for IndexedDB with transactional revision compare-and-swap, backup/export and quota/eviction handling; storage mutation must be atomic.
+1. A preliminary add-only IndexedDB adapter is implemented in `src/browser/initial-career-store.ts`. It stores verified initial JSON and rejects duplicate career IDs, waits for transaction commit, and validates on restore. Add revision compare-and-swap for actual evolving careers, migrations, storage quota/eviction recovery and meaningful backup/export UX before shipping.
 2. Integrate an explicit game-command and event-ledger contract, including idempotency and fixture transitions.
 3. Test export/import and browser storage in actual macOS Safari and Windows Chrome/Edge, including private/blocked storage.
 4. Add full career version migrations only when a genuine M1/M2 career state exists.

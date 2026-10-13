@@ -8,10 +8,6 @@ on:
       - '.github/workflows/dependency-security.yml'
   push:
     branches: [main]
-    paths:
-      - package.json
-      - package-lock.json
-      - '.github/workflows/dependency-security.yml'
   workflow_dispatch:
 
 permissions: {}

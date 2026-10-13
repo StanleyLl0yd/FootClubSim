@@ -126,3 +126,37 @@ test('match input binds the event ledger to a specific engine and rules version'
     }
   }
 });
+
+test('malformed runtime input reports typed errors instead of crashing', () => {
+  const invalidShapeCases = [
+    null,
+    { ...base, fixture: null },
+    { ...base, catalog: null },
+    { ...base, catalog: { ...catalog, players: [null] } },
+    { ...base, catalog: { ...catalog, clubs: [null] } },
+    { ...base, homeTactics: null },
+    { ...base, homeLineup: { ...homeLineup, starters: null } },
+    { ...base, rosterRules: null },
+  ];
+  for (const candidate of invalidShapeCases) {
+    const result = deriveMatchLedger(candidate);
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.ok(result.errors.some(error => error.code === 'INVALID_MATCH_SHAPE'));
+    }
+  }
+  for (const events of [null, 'bad', [], Array(4097).fill(end)]) {
+    const result = deriveMatchLedger({ ...base, events });
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.ok(result.errors.some(error => error.code === 'INVALID_EVENT_COUNT'));
+    }
+  }
+  for (const event of [null, false, 42]) {
+    const result = deriveMatchLedger({ ...base, events: [event, { ...end, sequence: 2 }] });
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.ok(result.errors.some(error => error.code === 'INVALID_EVENT_SHAPE'));
+    }
+  }
+});

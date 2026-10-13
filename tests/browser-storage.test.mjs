@@ -79,7 +79,7 @@ test('store resolves only after transaction commit; duplicate save never overwri
     assert.deepEqual(await loadInitialCareer(career.careerId), career);
     await assert.rejects(saveNewInitialCareer(career), { code: 'DUPLICATE' });
     assert.equal(stub.entries.get(career.careerId), written);
-    assert.equal(stub.closeCount, 4);
+    assert.equal(stub.closeCount, 3);
   } finally {
     if (original === undefined) delete globalThis.indexedDB;
     else globalThis.indexedDB = original;

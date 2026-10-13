@@ -10,7 +10,7 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 - [ ] Agree on how the user role splits manager/trainer/sporting director responsibilities.
 - [ ] Sign off player attributes, tactics, economy representation and minimum season rules.
 - [ ] Record decisions in ADRs and resolve identified incompatibilities in the specifications.
-- [ ] Verify official RPL 2026/27 rules from primary document and cite exact revision for each encoded rule.
+- [ ] Verify official RPL 2026/27 rules from primary document and cite exact revision for each encoded rule. [A sourced subset](RPL_2026_27_RULES.md) now includes match interruption, pre-kickoff substitution and cross-season discipline details; full rules, amendments and implementation checks remain open.
 
 ## Data readiness
 

@@ -1,0 +1,38 @@
+name: Dependency security
+
+on:
+  pull_request:
+    paths:
+      - package.json
+      - package-lock.json
+      - '.github/workflows/dependency-security.yml'
+  push:
+    branches: [main]
+    paths:
+      - package.json
+      - package-lock.json
+      - '.github/workflows/dependency-security.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  audit:
+    name: npm dependency vulnerability audit
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install locked dependency graph without scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Audit all runtime and development dependencies
+        run: npm audit --audit-level=high

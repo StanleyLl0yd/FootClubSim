@@ -1,6 +1,6 @@
 # FootClubSim M0 product decisions for owner review
 
-**Status: PROPOSAL, not approved.** Prepared 2026-10-13 from the documented project scope. The owner has **not** signed off the detailed role split, match-attribute balance, economy or minimum season behavior merely because they are described here. Approved decisions should receive dated status updates/ADRs and tests before the M0 exit gate.
+**Status: PARTIALLY APPROVED.** Initial proposal prepared 2026-10-13; on 2026-10-14 the owner confirmed D01-D02: all implemented coach/director responsibilities start under player control, but the player chooses per area whether they or a designated employee make decisions. See [ADR-0002](adr/0002-configurable-delegation.md) and [implementation issue #58](https://github.com/StanleyLl0yd/FootClubSim/issues/58). D03-D12 and detailed UX options remain proposals unless otherwise accepted.
 
 ## What is already established by project scope
 
@@ -12,8 +12,8 @@ These constraints should be preserved while making the decisions below.
 
 | ID | Topic | Proposed M0 decision | Planned implementation | Status |
 | --- | --- | --- | --- | --- |
-| D01 | Player role | One human acts as club manager, combining head-coach decisions (lineups, roles, match tactics) and sporting-director decisions (transfers, contract priorities, scouting). The board sets high-level goals and constraints. | M2 tactical/season loop; M3 club operations | **Needs owner approval** |
-| D02 | Delegation | Allow the user to delegate optional tasks to AI staff eventually, but keep direct control always possible. Do not require staff hiring UI for first playable season. | M3+, not M0/M1 | **Needs owner approval** |
+| D01 | Default player role | At career start the player decides all implemented head-coach and sporting-director matters personally, including training, lineup, tactical choices, recruitment, player and staff contracts when those systems exist. This is only the **default**; the player's role is not permanently fixed. | M2 core lineup/tactics; M3 training/club operations | **Accepted in principle 2026-10-14** |
+| D02 | Delegation and decision-maker | The player chooses **separately for each responsibility** whether to decide personally or to assign it to a named staff member; settings can be changed later without restarting. Different areas may have different decision-makers. Employee proposals with player approval are a recommended **additional mode**, not yet confirmed. See [ADR-0002](adr/0002-configurable-delegation.md). | M2 minimum for lineup/tactics, M3 training/contracts/recruitment/staff, M4+ youth | **Accepted core requirement 2026-10-14; UI granularity/modes proposed** |
 | D03 | Match | Both user and AI fixtures run through exactly the same deterministic seeded event-driven engine, with report and stats derived solely from one event ledger. No manual in-match real-time button prompts are needed in the first playable version. | M1 engine, M2 season | **Needs owner approval of interaction details** |
 | D04 | Player attributes | Keep 33 currently modeled football attributes on the integer 1..100 scale and explicit position/goalkeeper skills. Values and weights are **original game ratings**, not copied from a commercial football manager or third-party valuation data. Player potential, condition and form are separate mutable state. | M1 probability tuning, M3 growth | **Needs owner approval of attribute set and granularity** |
 | D05 | Tactics | Start with formation, eligible starting XI/bench and bounded controls for mentality, pressing, compactness, defensive line, passing risk and tempo. All changes affect event probabilities, never guarantee outcomes. | M1 inputs/effects; M2 UX | **Needs owner approval of tactical depth** |
@@ -27,19 +27,19 @@ These constraints should be preserved while making the decisions below.
 
 ## Proposed responsibility boundary
 
-The simulation should not imply the human controls all club staff or owns the club. Proposed responsibility split:
+The simulation should not imply the human controls all club staff or owns the club. **Owner-approved responsibility model:** the player manages everything by default, while authority can be assigned independently per implemented area (see [ADR-0002](adr/0002-configurable-delegation.md)).
 
-- **Human manager:** decide selection, formation, tactical strategy, transfer priorities and contract decisions within the board's budget and competition constraints.
+- **Human manager:** controls selection, formation, tactics, training, recruitment and player/staff contracts by default. May delegate each responsibility separately; any area left manual stays manual. The board's budget and competition constraints always apply.
 - **Club board/owner AI:** set season objectives, high-level financial limits and manager evaluation; implementation after the core season is coherent.
-- **AI assistant/staff:** can suggest lineup, training and scouting choices, without overriding an explicit user command; delegation is optional and introduced only where it reduces UX workload.
+- **AI assistant/staff:** may **make** decisions in explicitly delegated areas and may advise on manually controlled decisions. Must not override player-controlled responsibilities. A named eligible employee makes the decision; the player can reclaim the area at any time. Proposed review/approval mode is separate from full staff autonomy.
 - **Rival clubs:** use the same legal squad, fixture and match interfaces, with deterministic AI planning rather than privileged score shortcuts.
 
-No M1 production code should hard-code this proposed split before approval.
+The **principle of independent responsibility delegation is approved**, but technical contracts for employee authorization, pending approvals, logs, AI behavior and UX must be separately designed/tested before their M2/M3 implementation. The principle alone does not approve the remaining D03-D12 decisions. M1 may not start until M0 closes and the owner explicitly authorizes it.
 
 ## First-playable-season acceptance proposal (M2)
 
 1. Select one club from a legally usable versioned league dataset and inspect a valid 23+ player squad/registration list where permitted by rules.
-2. Choose a legal starting XI, bench and basic tactics; inaccessible players and foreigner limits are handled explicitly.
+2. Choose a legal starting XI, bench and basic tactics; inaccessible players and foreigner limits are handled explicitly. The user can **independently** assign XI/bench preparation and pre-match tactical choices to an eligible employee via a working responsibility setting; manual remains the default.
 3. Process all fixtures of an initial 16-team home/away schedule through the common match engine, including the AI fixtures, without rendering the pitch.
 4. Display consistent results, reports, table, tie-breakers, fatigue/discipline and next match information.
 5. Store each committed transition once and restore a career after browser reload; export and import an external backup without overwriting a healthy save on bad input.
@@ -50,7 +50,7 @@ This is an **acceptance proposal**, not a claim any listed feature already works
 
 ## Owner sign-off protocol
 
-For each D01-D12, record a date and one of **Accepted / Revised / Rejected**, plus any replacement rule. Link resulting architectural/rules decisions from `ARCHITECTURE.md`, `docs/USER_EXPERIENCE.md` and the [M0 checklist](M0_ACCEPTANCE.md). Avoid automatic sign-off or changing an existing design without an explicit decision. Until that happens, M0 acceptance and [exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) remain open.
+For each D01-D12, record a date and one of **Accepted / Revised / Rejected** (or **Partially accepted** where only the principle is agreed), plus any replacement rule. D01 and the core of D02 were accepted by the owner on 2026-10-14; do not treat remaining details or other entries as approved. Link resulting architectural/rules decisions from `ARCHITECTURE.md`, `docs/USER_EXPERIENCE.md` and the [M0 checklist](M0_ACCEPTANCE.md). Avoid automatic sign-off or changing an existing design without an explicit decision. Until that happens, M0 acceptance and [exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) remain open.
 
 ### Outstanding legal and engineering dependencies
 

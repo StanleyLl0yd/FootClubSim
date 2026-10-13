@@ -10,6 +10,7 @@ This is a **headless prototype**, not a playable career and not a browser storag
 - Envelope payload is limited to 4,500,000 JavaScript string units, and complete encoded envelope to 5,000,000. These are conservative M0 prototype limits, not a promised final game-save limit.
 - SHA-256 via Web Crypto detects accidental corruption. It **does not establish authenticity**, prevent intentional changes by a person who can recompute the checksum, encrypt saves or confer copyright permissions.
 - Export requires secure-context Web Crypto. Import returns `CRYPTO_UNAVAILABLE` when the runtime lacks it.
+- The generated 16-club synthetic pack uses `packVersion=1-seed-N`, where N is the deterministic generator seed. An M0 browser shell tied to one seed rejects importing/restoring careers from a different seed or older unversioned synthetic pack. It does not delete or silently overwrite those saved records. The core importer itself can still inspect any independently valid M0 synthetic save.
 - Unknown `saveSchemaVersion` is rejected rather than silently migrated. `saveSchemaVersion=1` only represents a newly created **initial** career, with `revision=0`. Versioned migrations and complete evolving career state belong to subsequent milestones.
 
 ## Required next steps

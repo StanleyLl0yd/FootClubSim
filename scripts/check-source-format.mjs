@@ -5,7 +5,7 @@ const extensions = new Set(['.ts', '.tsx', '.mjs', '.css', '.yml', '.json', '.ht
 const roots = ['src', 'tests', 'scripts', 'data', '.github/workflows'];
 const rootFiles = [
   'index.html', 'package.json', 'package-lock.json',
-  'tsconfig.json', 'tsconfig.app.json', 'eslint.config.mjs',
+  'tsconfig.json', 'tsconfig.app.json', 'eslint.config.mjs', 'vite.config.ts',
 ];
 const errors = [];
 

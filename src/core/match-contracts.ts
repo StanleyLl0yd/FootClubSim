@@ -142,7 +142,7 @@ export function deriveMatchLedger(input: MatchLedgerInput): MatchLedgerResult {
   let hasFullTime = false;
   for (const [index, event] of events.entries()) {
     const at = 'events[' + index + ']';
-    if (!isRecord(event)) {
+    if (event === null || typeof event !== 'object' || Array.isArray(event)) {
       errors.push(fail('INVALID_EVENT_SHAPE', at));
       continue;
     }

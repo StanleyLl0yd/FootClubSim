@@ -47,6 +47,8 @@ See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 
 M0 documentation may be merged incrementally without claiming M0 completion. Do not mark unverified tasks complete.
 
+**Mandatory handoff pause:** when every M0 acceptance criterion and both complete audit passes really pass, publish a final M0 completion report, close the M0 exit issue #2, **STOP all implementation work, and notify the project owner**. Start no M1 feature, prototype or PR without the owner's explicit subsequent authorization.
+
 ## M1: simulation engine
 
 - Player match attributes and tactical roles with typed contracts.

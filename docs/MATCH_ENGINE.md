@@ -2,6 +2,8 @@
 
 This document specifies a future headless football match simulation. No graphical match rendering is planned in early versions.
 
+**Implemented M0 subset:** `src/core/match-contracts.ts` validates a versioned, seeded pre-match snapshot and a bounded, ordered event ledger. It derives score, shots, on-target shots and fixed-point xG from `shot` events. The only terminal event is `full-time`. This is a contract/validator, **not a match generator**: own goals, penalties, substitutions, cards, injuries, abandoned matches and match-engine balancing remain deliberately unsupported until M1. Do not present these prototype records as complete RPL match rules.
+
 ## Contract
 
 Input: frozen pre-match player/team snapshots, validated lineups and tactics, versioned competition rules, engine version, explicit PRNG algorithm/version and seed.

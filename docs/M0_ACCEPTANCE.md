@@ -28,13 +28,13 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 - [x] Commit dependency lockfile, define numeric-only versioning and safe production build (CI verified).
 - [x] Set source-format hygiene, ESLint (TypeScript/React Hooks), types, unit tests and CI, with least privilege and pinned external actions.
 - [ ] Implement/document worker orchestration contract and command/state validation in focused tests.
-- [ ] Test export/import prototype or document a reproducible proof-of-concept with bounded error handling.
-- [ ] Verify on macOS Safari and Windows Chromium or explicitly record untested configurations.
+- [x] Test bounded JSON export/import and integrity rejection in [PR #22](https://github.com/StanleyLl0yd/FootClubSim/pull/22); a repeatable manual browser [smoke plan](M0_BROWSER_SMOKE.md) is available. This is the M0 initial-career prototype only.
+- [x] Verify actual macOS Safari initial-career save/reload/restore in [PR #38](https://github.com/StanleyLl0yd/FootClubSim/pull/38) and Windows Edge in [PR #39](https://github.com/StanleyLl0yd/FootClubSim/pull/39); [PR #40](https://github.com/StanleyLl0yd/FootClubSim/pull/40) covers unavailable IndexedDB API. Windows Chrome, quota, eviction and private storage are **not** covered by these checks.
 
 ## Match engine preparation
 
 - [ ] Agree deterministic PRNG contract and exact input/event/output schema.
-- [ ] Establish a synthetic fixture matrix and tests for invariants before balancing.
+- [x] Establish seeded synthetic double-round-robin fixture generation and invariant/negative tests in [PR #20](https://github.com/StanleyLl0yd/FootClubSim/pull/20), [PR #24](https://github.com/StanleyLl0yd/FootClubSim/pull/24) and [PR #51](https://github.com/StanleyLl0yd/FootClubSim/pull/51).
 - [ ] Approve the [M1 calibration protocol](M1_CALIBRATION_PROTOCOL.md) (metrics, 10,000-seed sampling, uncertainty and reference-rights gate drafted); select legally permitted external baselines and freeze tolerances before tuning.
 - [ ] Specify rule-pack handling of registration, standings and disciplinary differences.
 - [x] Open the [prioritized M1 implementation backlog](M1_BACKLOG.md); remaining effort estimates and technical risks still require approval.

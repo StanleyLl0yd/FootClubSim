@@ -60,6 +60,7 @@ npm run check       # типы, headless-тесты, production-сборка о�
 - [docs/RPL_2026_27_RULES.md](docs/RPL_2026_27_RULES.md): проверенные правила сезона 2026/27.
 - [docs/USER_EXPERIENCE.md](docs/USER_EXPERIENCE.md): пользовательские сценарии.
 - [docs/M0_ACCEPTANCE.md](docs/M0_ACCEPTANCE.md): проверяемые критерии M0.
+- [docs/M0_PRODUCT_DECISIONS.md](docs/M0_PRODUCT_DECISIONS.md): варианты ответственности менеджера, тактики и экономики на согласование.
 - [docs/adr/0001-web-offline-first.md](docs/adr/0001-web-offline-first.md): предлагаемое архитектурное решение.
 
 ## Участие и права

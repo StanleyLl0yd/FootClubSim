@@ -1,6 +1,7 @@
 import {
   exportInitialCareer, importInitialCareer, type InitialCareerSave,
 } from '../core/save.js';
+import { isStableId } from '../core/identifiers.js';
 
 export type CareerStorageErrorCode =
   'UNAVAILABLE' | 'OPEN_FAILED' | 'BLOCKED' | 'DUPLICATE' |
@@ -15,8 +16,6 @@ export class CareerStorageError extends Error {
 
 const DATABASE = 'footclubsim-m0';
 const STORE = 'initial-careers';
-const validId = (id: unknown): id is string =>
-  typeof id === 'string' && id.trim().length > 0 && id.length <= 128;
 
 /** Opens only an M0 prototype store; never upgrades or modifies future career formats. */
 function openDatabase(): Promise<IDBDatabase> {
@@ -54,7 +53,7 @@ function openDatabase(): Promise<IDBDatabase> {
  * Resolve only on transaction completion, not on the request's success event.
  */
 export async function saveNewInitialCareer(snapshot: InitialCareerSave): Promise<void> {
-  if (!validId(snapshot.careerId)) throw new CareerStorageError('INVALID_ID');
+  if (!isStableId(snapshot.careerId)) throw new CareerStorageError('INVALID_ID');
   const encoded = await exportInitialCareer(snapshot);
   const db = await openDatabase();
   try {
@@ -76,7 +75,7 @@ export async function saveNewInitialCareer(snapshot: InitialCareerSave): Promise
 
 /** Read and validate a copy. No missing/corrupt entry is silently initialized or replaced. */
 export async function loadInitialCareer(careerId: string): Promise<InitialCareerSave> {
-  if (!validId(careerId)) throw new CareerStorageError('INVALID_ID');
+  if (!isStableId(careerId)) throw new CareerStorageError('INVALID_ID');
   const db = await openDatabase();
   let encoded: unknown;
   try {

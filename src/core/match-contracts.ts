@@ -120,7 +120,7 @@ export function deriveMatchLedger(input: MatchLedgerInput): MatchLedgerResult {
     errors.push(fail('INVALID_MATCH_VERSION_OR_SEED', 'input'));
   }
   if (!Array.isArray(events) || events.length < 1 || events.length > MAX_EVENTS) {
-    errors.push(fail('INVALID_EVENT_COUNT', 'events'));
+    return { ok: false, errors: [...errors, fail('INVALID_EVENT_COUNT', 'events')] };
   }
 
   errors.push(...validateTacticalPlan(input.homeTactics, fixture.homeClubId));

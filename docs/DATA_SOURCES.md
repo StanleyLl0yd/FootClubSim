@@ -19,6 +19,8 @@ Official regulations for season 2026/27 can be located through [RFU official doc
 
 Relevant Transfermarkt terms: [Terms of Use](https://www.transfermarkt.us/intern/anb), including § 11.1 restricting bots, spiders and automated copying.
 
+Cross-document rule source editions and pending lawful-use decisions are tracked in [M0_RPL_RULES_MATRIX.md](M0_RPL_RULES_MATRIX.md). These citations do **not** license protected player/club data.
+
 ## Import process
 
 1. Register potential source, URL, terms/version and rights holder.

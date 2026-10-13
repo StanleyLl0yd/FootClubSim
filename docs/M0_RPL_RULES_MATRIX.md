@@ -1,0 +1,51 @@
+# RPL 2026/27 rule-pack source dependency matrix (M0)
+
+**Status: source inventory and implementation requirements, NOT an executable or fully verified rules pack.** Verified official document indexes and linked primary PDFs on 2026-10-14. The football rules, status/transfer law, sanctions and club licensing must be evaluated **together** and later checked for amendments. Access to a PDF does not authorize bundling the PDF, copyrighted match records or player databases.
+
+## Official source register
+
+| Proposed source key | Primary link | Verified published/effective edition | Purpose | M0 review status |
+| --- | --- | --- | --- | --- |
+| `rpl-2026-27` | [RFU RPL championship regulations, 56-page PDF](https://www.rfs.ru/subject/1/documents/preview?documentId=2164) | Approved RFU Executive Committee resolution 223.5, **25 June 2026**; agreed RPL resolution 238/3, **24 June 2026** | Team eligibility, squad lists, match protocols, dates, standings, standings sanctions | **Partial article-by-article review**, see [verified excerpts](RPL_2026_27_RULES.md) |
+| `rfs-disciplinary-2026-07` | [RFU disciplinary code, 69-page PDF](https://www.rfs.ru/subject/1/documents/preview?documentId=2096) | Amendments RFU Executive Committee resolution 342.5, **10 July 2026**, effective **18 July 2026** according to RFU index | Cards, automatic and tribunal sanctions, points deductions, forfeits, match annulment, appeals and carryover | **Source and edition verified; individual sanction algorithms NOT yet signed off** |
+| `rfs-player-status-2026-07` | [RFU status and player transfers code, 58-page PDF](https://www.rfs.ru/subject/1/documents/preview?documentId=2092) | Amendments RFU Executive Committee bureau resolution 342.5, **10 July 2026**, effective **18 July 2026** according to RFU index | Valid player employment, transfers and registration, eligibility and rights | **Source and edition verified; contractual/transfers algorithms NOT yet signed off** |
+| `rfs-disciplinary-annex1-2026-07` | [RFU disciplinary fine schedule, 23-page PDF](https://www.rfs.ru/subject/1/documents/preview?documentId=1986) | Listed by RFU index **10 July 2026**, effective **18 July 2026** | Financial sanctions and competition-specific fine scales | **Source identified, no figures transferred into game** |
+| `ifab-2026-27` | [RFU official 2026/27 Laws of the Game translation announcement](https://www.rfs.ru/news/224570) | RFU announcement **24 June 2026**; Laws effective **1 July 2026** | In-match physical/gameplay laws and substitution mechanics, separate from league roster limits | **Edition verified; individual laws and gameplay approximations need review** |
+| `rfs-first-league-2026-27` | [RFU men's competition documents index](https://www.rfs.ru/subject/1/documents/index?cat_id=17&id=1) | First League regulations listed **10 July 2026** | Promotion/relegation and participation eligibility | **Requires separate review before M4 promotion/relegation** |
+
+RFU official index used for cross-checking linked disciplinary/transfer editions: [RFU normative documents](https://www.rfs.ru/subject/1/documents/index?categoryId=14). The season-specific men's competitions index still lists the principal RPL document under 25 June 2026 as of this review. **An index listing does not prove that no later amendments, circulars or decisions exist.**
+
+## Functional contract and precedence (proposed, not implemented)
+
+| Rule-group ID | Needed state and validation | Source priority/dependency | Edge cases and tests before implementation | Implementation stage |
+| --- | --- | --- | --- | --- |
+| `competitionCalendar` | Immutable competition ID, season, legal participants, match IDs, home-away and scheduling status | RPL articles 4, 6 and 8. Independent of copied real match calendar | No repeated fixtures, byes, replay/reschedule vs resumed match, self-play | M2 |
+| `registration` | Separate player contract/status, eligible-registration document, specific list `3A/3B/3C`, age, homegrown category, citizenship/foreign eligibility status, active validity dates | RPL articles 1 and 5 **plus** RFU player-status code | Signed ≠ registered; registered ≠ medically eligible; 25/30/50 list bounds, 12-legionnaire and 7-on-pitch checks, goalkeeper minima, missing documents | M2/M3 |
+| `matchProtocol` | Lineup/bench version, pre-kickoff protocol, actual on-field participants, medical clearance, substitutions and substitutions-window history | RPL articles 8 and 10 **plus** effective IFAB Laws | Different validation for normal 11 vs permitted 7..11; 12 bench maximum; 5 match substitutions and 3 windows where applicable; pre-kickoff replacement does not consume ordinary match substitution | M1 for primitive events; M2 rules |
+| `standings` | Completed/awarded fixture ledger, table summary derived only from authoritative finalized outcomes | RPL article 18 and any RFU disciplinary/appeal decision affecting results | Head-to-head comparisons for tied groups; incomplete H2H schedule in a provisional table; away wins/goals; discipline points; tie playoff vs deterministic arbitrary alphabetical placement | M2 |
+| `discipline` | Match card events, person/club sanctions, served/carryover count, KDK decisions, court/appeal review status and effective date | RPL article 20 **plus** amended RFU disciplinary code and annex | Yellow accumulation, straight/double yellow, rescinded warnings, suspension carryover exceptions and non-match sanctions | M1 card ledger, M2 sanctions |
+| `administrativeResults` | Distinguish played fixture ledger from separately authorized forfait, replay, result annulment, points deduction or arbitration order | RFU disciplinary code arts. 21–24, 30 and relevant RPL rules | No invented shots/goals for administrative awarded result; points adjustment traceable and applied once; revision/recompute of standings | M2/M3 |
+| `playerTransfer` | Separate agreement, valid employment, window-dependent registration, medical/eligibility and roster slot availability | RPL article 5 plus RFU player-status code and contracts | Offer accepted outside window vs eligibility later; staff contract/role permissions; player loan RPL restrictions | M3 |
+| `promotionRelegation` | Season license, First League eligibility, pairings, playoff outcome and exceptional replacement | RPL article 4 plus First League and playoff regulations | Failure to obtain license, unqualified clubs, special competition decisions | M4 |
+
+### Rule precedence and release gates
+
+1. The **source register** is authoritative for the particular released game rules pack. Each encoded rule must cite exact article, revision, date range, and synthetic negative test cases. An excerpt in this document is not executable authority.
+2. The generic match engine handles physics/statistical events; competition-specific limits are applied by the rules layer. Club/manager delegation can assign a decision-maker, but cannot bypass these rules.
+3. Administrative sanctions (forfeit, deduction, annulment) are **not** ordinary scored shots and must not be written into a match's physical shot ledger. Save an explicit ruling/history event and derived table revision.
+4. Each career freezes the source/rules-pack version. A regulation amendment must create a **new** reviewed version. An existing career is not silently rewritten.
+5. If sources conflict or an authority-dependent exception is undefined, reject the action with a surfaced typed error rather than guessing a legal result. Identify whether the problem is incomplete evidence, mismatched effective dates, or genuinely disputed interpretation.
+6. A fictional synthetic league can support tests while legal permission for real 2026/27 clubs/player packs remains unconfirmed. Label any league simplifications and leave exact-realism acceptance **blocked**.
+
+## Cross-source review to finish before runnable RPL rules
+
+- [ ] Verify the **full** June 25 RPL document plus publication amendments/circulars after that date (not only already cited clauses).
+- [ ] Verify the relevant clauses of the July 18-effective disciplinary code and sanction annex, including changes to yellow/red accumulation, automatic sanctions, appeals and forfeits.
+- [ ] Verify employment, international transfer documents, registration timing and staff license status against the July 18-effective RFU player-status code.
+- [ ] Read the 2026/27 IFAB substitution/game laws and their interaction with RPL match procedure; the June 24 RFU announcement describes a new time limit for a substituted player leaving the pitch, but is not itself a complete rule implementation.
+- [ ] Review independent First League/transition regulations before promotion/relegation simulation.
+- [ ] Decide deliberately whether exceptional real-world rulings will be modeled exactly or represented by labeled synthetic simplifications. Record user approval.
+- [ ] Obtain redistributable license/permission for real player/club databases, emblems and images **separately**; none is supplied by these source links.
+- [ ] Create versioned executable rule data, referenced verification evidence and tests once source rights and implementation design are settled.
+
+**No official PDFs, copies of the RFU database or external branding are committed here.** This matrix is documentation, not permission to scrape, bulk-copy or redistribute.

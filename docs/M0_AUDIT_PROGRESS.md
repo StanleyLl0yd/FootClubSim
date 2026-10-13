@@ -29,6 +29,11 @@ A full frozen file inventory, final-source scanning evidence, full second review
 
 Earlier reliability/privacy-relevant changes also include [#33](https://github.com/StanleyLl0yd/FootClubSim/pull/33) add-only IndexedDB persistence, [#38](https://github.com/StanleyLl0yd/FootClubSim/pull/38) Safari reload/recovery, [#39](https://github.com/StanleyLl0yd/FootClubSim/pull/39) Windows Edge save/restore, [#40](https://github.com/StanleyLl0yd/FootClubSim/pull/40) unavailable storage paths, [#41](https://github.com/StanleyLl0yd/FootClubSim/pull/41) seed-specific pack identity, [#42](https://github.com/StanleyLl0yd/FootClubSim/pull/42) lint/format checks and [#43](https://github.com/StanleyLl0yd/FootClubSim/pull/43) source declaration.
 
+Additional follow-up findings:
+- [#53](https://github.com/StanleyLl0yd/FootClubSim/pull/53): formatting CI previously omitted root build/config files and the synthetic provenance manifest. Its unified checker now covers both, without duplicating validation code.
+- [#55](https://github.com/StanleyLl0yd/FootClubSim/pull/55): `tsc` emitted `dist/core` but Vite's default build cleaned `dist`, deleting headless modules. Browser assets now go to `web-dist` and Core CI checks that both output paths survive one complete build. Safari/Edge/Chromium smoke jobs passed against the new Vite output.
+- [#56](https://github.com/StanleyLl0yd/FootClubSim/pull/56): M0 checklist and browser-smoke documentation now cite only verified initial-career/import/fixture browser evidence, and distinguish automated tests from still-untested private/quota/Chrome cases.
+
 ### Removal, consolidation, simplification and dependencies
 
 - **Consolidated:** scattered ID checks into the canonical validator (#46); repeated shape validation now uses explicit bounds and safe iteration (#49-#51).
@@ -55,11 +60,11 @@ Measured using the **same** `npm run check` GitHub Actions Core contracts log ou
 
 Evidence: [Core CI for #49](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38462033108) and [Core CI for #51](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38463873462). The values are from the runs' recorded console output, **not** estimated from source. No reliable before/after entire-source-line totals or complete file counts have yet been measured, so none are claimed. Runtime benchmarking would need a separate controlled method.
 
-Production builds, typechecks, lint, source-format hygiene and Node tests are all included in Core CI. Browser smoke is independent and uses actual Safari/macOS and Edge/Windows, plus Chromium/Linux. The dependency-vulnerability workflow has passed on previously reviewed dependency changes, but a final-main full security and rights verification remains necessary.
+Production builds, typechecks, lint, source-format hygiene and Node tests are all included in Core CI. After [#55](https://github.com/StanleyLl0yd/FootClubSim/pull/55), [Core CI 38465738893](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38465738893) passed 50/50 Node tests and verified that `dist/core/save.js` and `web-dist/index.html` coexist. Vite reported web JS 237.47 kB (gzip 74.74 kB) and CSS 2.89 kB. [Browser smoke 38465738918](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38465738918) passed native Safari, Windows Edge and Linux Chromium against that build. Browser smoke is independent and uses actual Safari/macOS and Edge/Windows, plus Chromium/Linux. The dependency-vulnerability workflow has passed on previously reviewed dependency changes, but a final-main full security and rights verification remains necessary.
 
 ## Gaps and blockers
 
-1. **Owner decisions:** roadmap/ADR acceptance, manager vs coach vs sporting-director responsibilities, player attributes, tactics, season features and representation of the economy have not been formally approved.
+1. **Owner decisions:** the concrete [M0 product proposal](M0_PRODUCT_DECISIONS.md) from [#54](https://github.com/StanleyLl0yd/FootClubSim/pull/54) documents manager/coach/director responsibilities, tactics, economy and season scope, but each decision remains **unapproved** until the owner explicitly accepts/revises it.
 2. **Rights:** no documented license/permission for redistributing actual RPL rosters, player images or club marks. The synthetic authored pack only supports M0 tests.
 3. **Regulations:** primary-source clauses have been documented incrementally, but amendments, related disciplinary requirements, rule-pack behavior and full validation remain open.
 4. **Worker and game command orchestration:** no reviewed game-command transaction, queued simulation worker or multi-revision state machine exists. Existing initial-career snapshots remain revision 0.

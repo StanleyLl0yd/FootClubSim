@@ -57,15 +57,15 @@ def wait_for_text(session: str, fragment: str, timeout: int = 20):
 
 
 def click(session: str, name: str):
-    found = run_script(session, """var label = arguments[0];
-return false;""".replace("var label = arguments[0];\nreturn false;", f"""var label = {json.dumps(name, ensure_ascii=False)};
-var target = Array.from(document.querySelectorAll('button')).find(
-  button => button.textContent.trim() === label
-);
-if (!target || target.disabled) return false;
-target.click();
-return true;"""))
-    if found is not True:
+    script = (
+        "var label = " + json.dumps(name, ensure_ascii=False) + ";"
+        "var button = Array.from(document.querySelectorAll('button')).find("
+        "element => element.textContent.trim() === label);"
+        "if (!button || button.disabled) return false;"
+        "button.click();"
+        "return true;"
+    )
+    if run_script(session, script) is not True:
         raise AssertionError(f"Safari button missing or disabled: {name}")
 
 
@@ -106,6 +106,11 @@ def main():
                     if session:
                         break
                     raise RuntimeError(f"Safari session refused: {value!r}")
+                except urllib.error.HTTPError as error:
+                    raise RuntimeError(
+                        "SafariDriver refused session: " +
+                        error.read().decode("utf-8", errors="replace")[:3000]
+                    ) from error
                 except urllib.error.URLError:
                     if driver.poll() is not None:
                         raise RuntimeError(f"SafariDriver exited: {driver.returncode}")

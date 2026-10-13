@@ -121,14 +121,9 @@ jobs:
             )
             $edge = $edgeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
             if (-not $edge) { throw 'Microsoft Edge executable unavailable on Windows runner' }
-            $profile = Join-Path $env:RUNNER_TEMP 'footclubsim-edge'
-            $arguments = @('--headless=new','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-extensions',"--user-data-dir=$profile",'--virtual-time-budget=10000','--dump-dom','http://127.0.0.1:4173/')
-            $dom = (& $edge @arguments 2>$null | Out-String)
-            if ($LASTEXITCODE -ne 0) { throw "Edge exited with code $LASTEXITCODE" }
-            foreach ($expected in @('Начало карьеры','Календарь','Сохранения')) {
-              if (-not $dom.Contains($expected)) { throw "Missing rendered text: $expected" }
-            }
-            Write-Host 'React M0 shell rendered in Windows Edge'
+            node scripts/chromium-e2e.mjs "$edge"
+            if ($LASTEXITCODE -ne 0) { throw "Edge interactive smoke failed with code $LASTEXITCODE" }
+            Write-Host 'React M0 shell rendered, saved and restored in Windows Edge'
           } finally {
             Stop-Process -Id $preview.Id -Force -ErrorAction SilentlyContinue
           }

@@ -42,6 +42,25 @@ class CheckDocsTests(unittest.TestCase):
         (self.root / "AGENTS.md").unlink()
         self.assertTrue(any("missing required file" in e for e in check_repository(self.root)))
 
+    def test_ignored_dependency_tree_is_pruned(self):
+        nested = self.root / "node_modules" / "demo"
+        nested.mkdir(parents=True)
+        (nested / "README.md").write_text("[Broken](nothing.md)", encoding="utf-8")
+        self.assertEqual(check_repository(self.root), [])
+
+    def test_symlinked_markdown_cannot_read_outside_repository(self):
+        with tempfile.TemporaryDirectory() as external:
+            outside = Path(external) / "private.md"
+            outside.write_text("[External](missing.md)", encoding="utf-8")
+            link = self.root / "external.md"
+            try:
+                link.symlink_to(outside)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlink creation unavailable")
+            self.assertTrue(
+                any("symlinked Markdown file" in error for error in check_repository(self.root))
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 import sys
+from os import walk
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -18,16 +19,29 @@ REQUIRED = {
 }
 
 
+def iter_markdown_files(root: Path):
+    """Prune ignored dependency/build trees before visiting their contents."""
+    for directory, subdirs, files in walk(root, followlinks=False):
+        subdirs[:] = sorted(
+            name for name in subdirs
+            if name not in SKIP_DIRS and not (Path(directory) / name).is_symlink()
+        )
+        for name in sorted(files):
+            if name.endswith(".md"):
+                yield Path(directory) / name
+
+
 def check_repository(root: Path) -> list[str]:
     root = root.resolve()
     errors: list[str] = []
     for required in sorted(REQUIRED):
         if not (root / required).is_file():
             errors.append(f"missing required file: {required}")
-    for file in sorted(root.rglob("*.md")):
-        if any(part in SKIP_DIRS for part in file.relative_to(root).parts):
-            continue
+    for file in iter_markdown_files(root):
         relative = file.relative_to(root)
+        if file.is_symlink():
+            errors.append(f"{relative}: symlinked Markdown file is not allowed")
+            continue
         try:
             content = file.read_text(encoding="utf-8")
         except UnicodeError:

@@ -36,7 +36,7 @@ See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 - [x] Create non-optional audit issues for M0–M6.
 - [ ] Approve product scope and [architecture](ARCHITECTURE.md).
 - [ ] Finalize minimum player/club data contract and a legally usable initial **synthetic** dataset.
-- [ ] Specify deterministic match simulation, game-calendar state transitions and calibration baselines.
+- [ ] Specify deterministic match simulation and game-calendar transitions; [M1 calibration protocol](docs/M1_CALIBRATION_PROTOCOL.md) is drafted, but approved statistical reference baselines remain unavailable.
 - [ ] Establish provenance/rights gates for real RPL data and assets.
 - [x] Bootstrap TypeScript/Vite/React shell, locked dependencies and CI for types, ESLint, source formatting, tests and production build. Native Safari and Windows Edge smoke verification is also automated; exceptional storage cases remain tracked.
 - [ ] Verify browser storage capability and fallback/export strategy on representative Safari and Chromium versions.
@@ -86,3 +86,4 @@ M3 introduces economy/transfer systems, not multiplayer. M4 introduces additiona
 - [Data provenance and rights](docs/DATA_SOURCES.md)
 - [M0 exit criteria](docs/M0_ACCEPTANCE.md)
 - [Prioritized M1 tasks](docs/M1_BACKLOG.md)
+- [M1 calibration and evidence protocol](docs/M1_CALIBRATION_PROTOCOL.md)

@@ -15,8 +15,8 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 ## Data readiness
 
 - [ ] Define and implement versioned catalog, career-save and source-provenance schemas.
-- [ ] Add a **synthetic** fully rights-safe test league/player dataset and validation.
-- [ ] Demonstrate duplicate identity detection, malformed data rejection and cross-reference checks.
+- [x] Add a **synthetic** fictional 16-club/368-player test dataset, seed-specific pack identity, author-origin manifest and runtime validation.
+- [x] Demonstrate duplicate identity detection, malformed/oversized data rejection and cross-reference checks in headless tests.
 - [ ] Decide what real RPL data/club imagery can legally be distributed, with recorded permission.
 - [ ] Ensure no prohibited scraping, copyrighted assets, production/private credentials or secret values are committed.
 

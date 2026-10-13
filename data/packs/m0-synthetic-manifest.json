@@ -1,0 +1,14 @@
+{
+  "manifestSchemaVersion": 1,
+  "catalogSchemaVersion": 1,
+  "packId": "fictional-rpl-scale",
+  "packVersion": "1-seed-2026",
+  "generator": "src/core/synthetic.ts",
+  "generatorSeed": 2026,
+  "declaredAt": "2026-10-13",
+  "rightsBasis": "project-authored-synthetic",
+  "containsThirdPartyFootballData": false,
+  "containsThirdPartyArtwork": false,
+  "assetPaths": [],
+  "reviewStatus": "synthetic-only"
+}

@@ -1,6 +1,6 @@
 # FootClubSim architecture (M0 design)
 
-Status: **partly implemented M0 architecture**. Pure TypeScript domain, a minimal React/Vite shell, and a preliminary IndexedDB adapter exist. Match generation, game orchestration, workers, PWA and long-term career storage remain proposed. Architectural changes require review and the relevant ADR.
+Status: **partly implemented M0 architecture**. Pure TypeScript domain, a minimal React/Vite shell, and a preliminary IndexedDB adapter exist. Match generation, actual game orchestration/worker execution, PWA and long-term career storage remain proposed. Versioned **command and worker-message validators** exist, but they do not run a worker or apply career changes. Architectural changes require review and the relevant ADR.
 
 ## Product and platforms
 
@@ -71,7 +71,7 @@ Starting dataset packs have immutable pack ID, schema version, release date and 
 
 A reproducible match result is a pure calculation from immutable pre-match snapshot + rules version + engine version + explicit PRNG/seed. Emit a canonical event ledger and report. Do not reconstruct match statistics from score, or score from independently randomized aggregate statistics. A single schedule orchestration step processes fixtures once, applies home/away effects, then commits standings, disciplinary and fatigue changes atomically.
 
-Worker boundary should support cancellation before commit, progress signals for lengthy batches, error surfaces and abort/retry. For high-cost season simulation, perform batches and periodically yield; no arbitrary wall-time correctness conditions.
+Worker boundary should support cancellation before commit, progress signals for lengthy batches, error surfaces and abort/retry. M0 has versioned request/reply **wire validators and a stale-reply gate**, documented in [M0 worker protocol](docs/M0_WORKER_PROTOCOL.md); no actual worker is spawned. For high-cost season simulation, perform batches and periodically yield; no arbitrary wall-time correctness conditions.
 
 ## Local persistence and offline availability
 

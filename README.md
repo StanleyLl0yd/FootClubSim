@@ -58,6 +58,7 @@ npm run check       # типы, headless-тесты, production-сборка о�
 - [ARCHITECTURE.md](ARCHITECTURE.md): границы модулей и архитектурные решения.
 - [docs/DATA_MODEL.md](docs/DATA_MODEL.md): клубы, футболисты, карьеры, правила и сохранения.
 - [docs/MATCH_ENGINE.md](docs/MATCH_ENGINE.md): модель расчёта матчей, события, воспроизводимость.
+- [docs/M0_WORKER_PROTOCOL.md](docs/M0_WORKER_PROTOCOL.md): проверяемые контракты команд, связи с Web Worker, отмены и защиты от устаревших результатов.
 - [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md): происхождение футбольных данных и разрешения.
 - [docs/RPL_2026_27_RULES.md](docs/RPL_2026_27_RULES.md): проверенные правила сезона 2026/27.
 - [docs/USER_EXPERIENCE.md](docs/USER_EXPERIENCE.md): пользовательские сценарии.

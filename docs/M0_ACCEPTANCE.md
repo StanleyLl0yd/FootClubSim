@@ -27,7 +27,7 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 - [x] Create the minimal TypeScript strict workspace with Vite/React browser shell and isolated headless domain modules.
 - [x] Commit dependency lockfile, define numeric-only versioning and safe production build (CI verified).
 - [x] Set source-format hygiene, ESLint (TypeScript/React Hooks), types, unit tests and CI, with least privilege and pinned external actions.
-- [ ] Implement/document worker orchestration contract and command/state validation in focused tests.
+- [x] Implement/document the **M0-only worker-message/orchestration contract and pure command/state admission validation**, with negative tests, in [M0_WORKER_PROTOCOL.md](M0_WORKER_PROTOCOL.md), `src/core/command-contracts.ts` and `src/core/worker-protocol.ts`. No real Worker scheduling, simulation or multi-revision commit is implemented yet; that belongs to later milestones.
 - [x] Test bounded JSON export/import and integrity rejection in [PR #22](https://github.com/StanleyLl0yd/FootClubSim/pull/22); a repeatable manual browser [smoke plan](M0_BROWSER_SMOKE.md) is available. This is the M0 initial-career prototype only.
 - [x] Verify actual macOS Safari initial-career save/reload/restore in [PR #38](https://github.com/StanleyLl0yd/FootClubSim/pull/38) and Windows Edge in [PR #39](https://github.com/StanleyLl0yd/FootClubSim/pull/39); [PR #40](https://github.com/StanleyLl0yd/FootClubSim/pull/40) covers unavailable IndexedDB API. Windows Chrome, quota, eviction and private storage are **not** covered by these checks.
 

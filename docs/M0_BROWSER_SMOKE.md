@@ -33,6 +33,7 @@ Record browser brand, exact version, operating system, each observed result and 
 
 - [PR #38](https://github.com/StanleyLl0yd/FootClubSim/pull/38): actual Safari on GitHub macOS 15 verified UI rendering, creating an initial career, IndexedDB save, reload and recovery.
 - [PR #39](https://github.com/StanleyLl0yd/FootClubSim/pull/39): actual Windows Microsoft Edge verified the same initial-career flow and duplicate-save rejection.
+- [PR #67](https://github.com/StanleyLl0yd/FootClubSim/pull/67): Windows 2025 CI separately launches **Google Chrome** and Microsoft Edge (same CDP smoke) and verifies initial-career save, duplicate rejection, reload, restore and unavailable IndexedDB, alongside actual macOS Safari and Linux Chromium ([four-browser CI run](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38473107523)).
 - [PR #40](https://github.com/StanleyLl0yd/FootClubSim/pull/40): Safari and Edge verified a simulated unavailable IndexedDB API does not erase the active in-memory career.
 - [PR #35](https://github.com/StanleyLl0yd/FootClubSim/pull/35): Linux Chromium renders the production-built React shell. This check alone does not exercise persistence.
 

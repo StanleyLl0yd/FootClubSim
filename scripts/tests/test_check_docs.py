@@ -48,6 +48,16 @@ class CheckDocsTests(unittest.TestCase):
         (nested / "README.md").write_text("[Broken](nothing.md)", encoding="utf-8")
         self.assertEqual(check_repository(self.root), [])
 
+
+    def test_generated_web_bundle_docs_are_not_checked(self):
+        for directory in ("dist", "web-dist", "build"):
+            nested = self.root / directory / "artifacts"
+            nested.mkdir(parents=True)
+            (nested / "README.md").write_text(
+                "[Broken](/absolute/irrelevant.md)\n", encoding="utf-8"
+            )
+        self.assertEqual(check_repository(self.root), [])
+
     def test_symlinked_markdown_cannot_read_outside_repository(self):
         with tempfile.TemporaryDirectory() as external:
             outside = Path(external) / "private.md"

@@ -1,6 +1,6 @@
 # M0 initial-career save prototype
 
-This is a **headless prototype**, not a playable career and not a browser storage implementation. It lives in `src/core/save.ts` and has no React, filesystem, IndexedDB or server dependency.
+This is a **headless initial-career format**, not a playable career. The format and validation live in `src/core/save.ts`, without React, filesystem, IndexedDB or server dependencies. A **separate preliminary browser IndexedDB adapter** already exists in `src/browser/initial-career-store.ts`; it stores only add-once initial snapshots.
 
 ## Boundary and semantics
 
@@ -16,8 +16,8 @@ This is a **headless prototype**, not a playable career and not a browser storag
 ## Required next steps
 
 1. A preliminary add-only IndexedDB adapter is implemented in `src/browser/initial-career-store.ts`. It stores verified initial JSON and rejects duplicate career IDs, waits for transaction commit, and validates on restore. Add revision compare-and-swap for actual evolving careers, migrations, storage quota/eviction recovery and meaningful backup/export UX before shipping.
-2. Integrate an explicit game-command and event-ledger contract, including idempotency and fixture transitions.
-3. Test export/import and browser storage in actual macOS Safari and Windows Chrome/Edge, including private/blocked storage.
+2. Connect the existing M0 versioned command, event-ledger and [worker-message contracts](M0_WORKER_PROTOCOL.md) to an actual game-state transaction executor in a later milestone; idempotent commit, fixture transitions and worker execution are **not yet implemented**.
+3. Real Safari/macOS and Edge/Windows save/reload/restore smoke checks already pass; unavailable IndexedDB API is also exercised. Add missing Windows **Chrome-specific**, private-mode, storage-quota/eviction and recovery scenarios before declaring persistence release-ready.
 4. Add full career version migrations only when a genuine M1/M2 career state exists.
 
 Run `npm run check` for the current headless tests. Green Node tests are not evidence of real-browser storage reliability.

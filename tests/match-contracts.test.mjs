@@ -160,3 +160,24 @@ test('malformed runtime input reports typed errors instead of crashing', () => {
     }
   }
 });
+
+test('sparse catalog arrays and oversized roster references never crash match derivation', () => {
+  const cases = [
+    { ...base, catalog: { ...catalog, players: Array(1) } },
+    { ...base, catalog: { ...catalog, clubs: Array(1) } },
+    { ...base, catalog: { ...catalog, clubs: [
+      { ...catalog.clubs[0], registeredPlayerIds: Array(1) },
+      ...catalog.clubs.slice(1),
+    ] } },
+    { ...base, catalog: { ...catalog, clubs: [
+      { ...catalog.clubs[0], registeredPlayerIds: Array(129).fill(catalog.players[0].id) },
+      ...catalog.clubs.slice(1),
+    ] } },
+  ];
+  for (const input of cases) {
+    assert.doesNotThrow(() => deriveMatchLedger(input));
+    const result = deriveMatchLedger(input);
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.ok(result.errors.some(e => e.code === 'INVALID_MATCH_SHAPE'));
+  }
+});

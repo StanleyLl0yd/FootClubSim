@@ -1,6 +1,7 @@
 import type { Fixture } from './fixtures.js';
 import type { Catalog, MatchLineup, MatchRosterRules } from './model.js';
 import { RNG_VERSION } from './rng.js';
+import { validateTacticalPlan, type TacticalPlan } from './tactics.js';
 import { validateCatalog, validateLineup, type ValidationError } from './validation.js';
 
 /**
@@ -36,6 +37,8 @@ export interface MatchLedgerInput {
   readonly catalog: Catalog;
   readonly homeLineup: MatchLineup;
   readonly awayLineup: MatchLineup;
+  readonly homeTactics: TacticalPlan;
+  readonly awayTactics: TacticalPlan;
   readonly rosterRules: MatchRosterRules;
   readonly rngAlgorithmVersion: typeof RNG_VERSION;
   readonly rngSeed: number;
@@ -88,6 +91,8 @@ export function deriveMatchLedger(input: MatchLedgerInput): MatchLedgerResult {
     errors.push(fail('INVALID_EVENT_COUNT', 'events'));
   }
 
+  errors.push(...validateTacticalPlan(input.homeTactics, fixture.homeClubId));
+  errors.push(...validateTacticalPlan(input.awayTactics, fixture.awayClubId));
   const catalogErrors = validateCatalog(catalog);
   errors.push(...catalogErrors);
   const homeClub = catalog.clubs.find(club => club.id === fixture.homeClubId);

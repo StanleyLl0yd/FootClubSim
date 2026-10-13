@@ -1,0 +1,16 @@
+{
+  "name": "footclubsim",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "FootClubSim core contracts - not yet a playable game",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build:core": "tsc",
+    "test": "npm run build:core && node --test tests/*.test.mjs",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3"
+  }
+}

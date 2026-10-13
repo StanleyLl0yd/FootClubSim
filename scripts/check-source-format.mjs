@@ -2,7 +2,11 @@ import { readdir, readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
 const extensions = new Set(['.ts', '.tsx', '.mjs', '.css', '.yml', '.json', '.html']);
-const roots = ['src', 'tests', 'scripts', '.github/workflows'];
+const roots = ['src', 'tests', 'scripts', 'data', '.github/workflows'];
+const rootFiles = [
+  'index.html', 'package.json', 'package-lock.json',
+  'tsconfig.json', 'tsconfig.app.json', 'eslint.config.mjs',
+];
 const errors = [];
 
 async function visit(path) {
@@ -24,6 +28,13 @@ async function visit(path) {
 }
 
 for (const root of roots) await visit(root);
+for (const file of rootFiles) {
+  const value = await readFile(file, 'utf8');
+  if (!value.endsWith('\n')) errors.push(file + ': missing terminal newline');
+  if (value.includes('\r')) errors.push(file + ': CR/CRLF line endings');
+  if (value.includes('\t')) errors.push(file + ': tab indentation');
+  if (/[^\S\n]+$/m.test(value)) errors.push(file + ': trailing whitespace');
+}
 if (errors.length) {
   for (const error of errors) console.error(error);
   process.exitCode = 1;

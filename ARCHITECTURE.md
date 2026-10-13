@@ -1,6 +1,6 @@
 # FootClubSim architecture (M0 design)
 
-Status: **proposed architecture**, not an implemented system. Architectural changes require review and the relevant ADR.
+Status: **partly implemented M0 architecture**. Pure TypeScript domain, a minimal React/Vite shell, and a preliminary IndexedDB adapter exist. Match generation, game orchestration, workers, PWA and long-term career storage remain proposed. Architectural changes require review and the relevant ADR.
 
 ## Product and platforms
 

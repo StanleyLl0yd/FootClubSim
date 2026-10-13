@@ -4,6 +4,8 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 
 ## Scope and documentation
 
+Предлагаемые, но **ещё не утверждённые** продуктовые решения перечислены в [M0_PRODUCT_DECISIONS.md](M0_PRODUCT_DECISIONS.md). Их наличие не закрывает ни один пункт согласования ниже.
+
 - [x] Create public FootClubSim repository and adapt `AGENTS.md` from WindowTidy.
 - [x] Create dedicated whole-repo exit issues for M0–M6.
 - [ ] Review and approve roadmap, boundaries and platform plan.

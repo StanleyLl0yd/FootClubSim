@@ -10,6 +10,10 @@ import { validateCatalog, validateLineup, type ValidationError } from './validat
  * future explicitly versioned event contract, not guessed behavior.
  */
 export const MATCH_LEDGER_VERSION = 1 as const;
+/** M0 derives reports only; engine version 0 explicitly means no match generator. */
+export const M0_ENGINE_VERSION = '0' as const;
+export const M0_RULES_PACK_ID = 'synthetic-rpl-scale' as const;
+export const M0_RULES_PACK_VERSION = '1' as const;
 export type ShotOutcome = 'goal' | 'saved' | 'off-target' | 'blocked';
 
 interface EventBase {
@@ -33,6 +37,9 @@ export type MatchLedgerEvent = ShotEvent | FullTimeEvent;
 
 export interface MatchLedgerInput {
   readonly schemaVersion: typeof MATCH_LEDGER_VERSION;
+  readonly engineVersion: typeof M0_ENGINE_VERSION;
+  readonly rulesPackId: typeof M0_RULES_PACK_ID;
+  readonly rulesPackVersion: typeof M0_RULES_PACK_VERSION;
   readonly fixture: Fixture;
   readonly catalog: Catalog;
   readonly homeLineup: MatchLineup;
@@ -83,6 +90,9 @@ export function deriveMatchLedger(input: MatchLedgerInput): MatchLedgerResult {
     errors.push(fail('INVALID_FIXTURE', 'fixture'));
   }
   if (input.schemaVersion !== MATCH_LEDGER_VERSION ||
+      input.engineVersion !== M0_ENGINE_VERSION ||
+      input.rulesPackId !== M0_RULES_PACK_ID ||
+      input.rulesPackVersion !== M0_RULES_PACK_VERSION ||
       input.rngAlgorithmVersion !== RNG_VERSION ||
       !Number.isInteger(input.rngSeed) || input.rngSeed < 1 || input.rngSeed > 0xffffffff) {
     errors.push(fail('INVALID_MATCH_VERSION_OR_SEED', 'input'));

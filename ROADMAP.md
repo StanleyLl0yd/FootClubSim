@@ -13,6 +13,7 @@
 - Maintain an independent and reproducible match engine, a versioned starting dataset, and versioned persistent career saves.
 - Version numbers, when introduced, are numeric-only (no alpha/beta/rc suffixes).
 - Match reality is judged against recorded simulation events and reproducible aggregate measurements, not hand-tuned preferred scores.
+- **Configurable responsibility delegation:** the player initially controls all implemented coaching/director duties, but independently chooses who decides each area. Club staff cannot silently take over manual areas. Owner-approved principle: [ADR-0002](docs/adr/0002-configurable-delegation.md); implementation [#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58).
 
 ## Milestone gates
 
@@ -34,7 +35,7 @@ See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 
 - [x] Public repository, README and original-derived `AGENTS.md`.
 - [x] Create non-optional audit issues for M0–M6.
-- [ ] Approve product scope and [architecture](ARCHITECTURE.md).
+- [ ] Approve product scope and [architecture](ARCHITECTURE.md); independent staff delegation has been approved in principle under [ADR-0002](docs/adr/0002-configurable-delegation.md), while other product decisions remain open.
 - [ ] Finalize minimum player/club data contract and a legally usable initial **synthetic** dataset.
 - [ ] Specify deterministic match simulation and game-calendar transitions; [M1 calibration protocol](docs/M1_CALIBRATION_PROTOCOL.md) is drafted, but approved statistical reference baselines remain unavailable.
 - [ ] Establish provenance/rights gates for real RPL data and assets.
@@ -61,13 +62,14 @@ M0 documentation may be merged incrementally without claiming M0 completion. Do 
 - Russian-language desktop-oriented browser interface; pick one RPL club.
 - Season fixtures, fixtures chronology, results, standings and tiebreaker rule data.
 - Computer clubs select legal lineups and adapt tactics; absences and suspensions respected.
+- Player's lineup/bench and tactics responsibilities are separately configurable: decide manually by default, or delegate to an eligible named club employee. Show decision authority and support manual takeover ([#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58)).
 - Simulate next event/tour rapidly, persist and restore game state, export/import career save.
 - Fully offline core behavior; tested Safari/Chromium compatibility.
 - Whole-repository exit gate [#4](https://github.com/StanleyLl0yd/FootClubSim/issues/4).
 
 ## M3–M6 scope controls
 
-M3 introduces economy/transfer systems, not multiplayer. M4 introduces additional modeled divisions/world clubs without promising fully playable foreign leagues. M5 introduces PWA polish, not a required backend. M6 desktop packaging is conditional on real benefit and platform acceptance; no dedicated Linux app is promised.
+M3 introduces economy/transfer systems, training, staff and full per-area responsibility delegation (player/staff contracts, recruitment, training), not multiplayer. M4 introduces additional modeled divisions/world clubs without promising fully playable foreign leagues. M5 introduces PWA polish, not a required backend. M6 desktop packaging is conditional on real benefit and platform acceptance; no dedicated Linux app is promised.
 
 ## Explicit exclusions until a future decision
 

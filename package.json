@@ -3,14 +3,23 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "FootClubSim core contracts - not yet a playable game",
+  "description": "FootClubSim M0 browser shell and isolated headless football domain",
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "dev": "vite --host 127.0.0.1",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.app.json",
     "build:core": "tsc",
+    "build:web": "vite build",
     "test": "npm run build:core && node --test tests/*.test.mjs",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm test && npm run build:web"
   },
   "devDependencies": {
-    "typescript": "5.8.3"
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "5.8.3",
+    "vite": "8.3.4"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }

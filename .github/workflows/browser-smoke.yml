@@ -87,9 +87,13 @@ jobs:
           grep -Fq 'Сохранения' /tmp/footclubsim-dom.html
           echo 'React M0 shell rendered in Chromium'
 
-  edge-windows:
-    name: Built app renders in Windows Edge
+  chromium-windows:
+    name: Built app renders in Windows ${{ matrix.browser }}
     runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [Edge, Chrome]
     permissions:
       contents: read
     steps:
@@ -106,7 +110,7 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build static app
         run: npm run build:web
-      - name: Verify real Windows Edge renders the React app
+      - name: Verify real Windows browser save/reload and restore
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -121,15 +125,23 @@ jobs:
               Start-Sleep -Seconds 1
             }
             if (-not $ready) { throw 'Vite preview did not start' }
-            $edgeCandidates = @(
-              "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
-              "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
-            )
-            $edge = $edgeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-            if (-not $edge) { throw 'Microsoft Edge executable unavailable on Windows runner' }
-            node scripts/chromium-e2e.mjs "$edge"
-            if ($LASTEXITCODE -ne 0) { throw "Edge interactive smoke failed with code $LASTEXITCODE" }
-            Write-Host 'React M0 shell rendered, saved and restored in Windows Edge'
+            $browserName = '${{ matrix.browser }}'
+            if ($browserName -eq 'Chrome') {
+              $candidates = @(
+                "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+                "$env:ProgramFiles\Google\Chrome\Application\chrome.exe"
+              )
+            } else {
+              $candidates = @(
+                "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+                "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
+              )
+            }
+            $executable = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if (-not $executable) { throw "$browserName executable unavailable on Windows runner" }
+            node scripts/chromium-e2e.mjs "$executable"
+            if ($LASTEXITCODE -ne 0) { throw "$browserName interactive smoke failed with code $LASTEXITCODE" }
+            Write-Host "React M0 shell rendered, saved and restored in Windows $browserName"
           } finally {
             Stop-Process -Id $preview.Id -Force -ErrorAction SilentlyContinue
           }

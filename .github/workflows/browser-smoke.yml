@@ -1,0 +1,82 @@
+name: Browser smoke
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - '.github/workflows/browser-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - '.github/workflows/browser-smoke.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  browser:
+    name: Built app renders in Chromium
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build static app
+        run: npm run build:web
+      - name: Verify real Chromium renders the React app
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vite preview --host 127.0.0.1 --port 4173 --strictPort >/tmp/footclubsim-preview.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:4173/ >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/footclubsim-preview.log
+            exit 1
+          fi
+          browser=""
+          for executable in google-chrome google-chrome-stable chromium chromium-browser; do
+            if command -v "$executable" >/dev/null 2>&1; then
+              browser="$executable"
+              break
+            fi
+          done
+          if [ -z "$browser" ]; then
+            echo 'No Chromium executable on runner'
+            exit 1
+          fi
+          timeout 60 "$browser" --headless --no-sandbox --disable-gpu \
+            --disable-dev-shm-usage --virtual-time-budget=10000 \
+            --dump-dom http://127.0.0.1:4173/ \
+            >/tmp/footclubsim-dom.html 2>/tmp/footclubsim-browser.log
+          grep -Fq 'Начало карьеры' /tmp/footclubsim-dom.html
+          grep -Fq 'Календарь' /tmp/footclubsim-dom.html
+          grep -Fq 'Сохранения' /tmp/footclubsim-dom.html
+          echo 'React M0 shell rendered in Chromium'

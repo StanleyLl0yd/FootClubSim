@@ -52,3 +52,11 @@ test('round and fixture numbering must be consistent', () => {
   wrongFixture[0].fixtures[0].round = 3;
   assert.ok(validateDoubleRoundRobin(wrongFixture, ids).some(e => e.code === 'INVALID_FIXTURE_ID'));
 });
+
+test('sparse club arrays are invalid even when Set reports a distinct undefined entry', () => {
+  const validIds = ['a', 'b', 'c', 'd'];
+  const rounds = generateDoubleRoundRobin(validIds);
+  const withHole = [, 'b', 'c', 'd'];
+  assert.equal(new Set(withHole).size, withHole.length);
+  assert.ok(validateDoubleRoundRobin(rounds, withHole).some(error => error.code === 'INVALID_CLUBS'));
+});

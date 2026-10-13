@@ -101,3 +101,45 @@ test('missing and tampered records are not returned as valid saves', async () =>
     else globalThis.indexedDB = original;
   }
 });
+
+test('synchronous transaction, object-store and request failures are typed and close the database', async () => {
+  const original = globalThis.indexedDB;
+  const unchanged = JSON.stringify(career);
+  try {
+    for (const fault of ['transaction', 'store', 'request']) {
+      let closed = 0;
+      const db = {
+        objectStoreNames: { contains: () => true },
+        close() { closed++; },
+        transaction() {
+          if (fault === 'transaction') throw new Error('transaction rejected');
+          return {
+            objectStore() {
+              if (fault === 'store') throw new Error('object store unavailable');
+              return {
+                add() { throw new Error('add rejected'); },
+                get() { throw new Error('get rejected'); },
+              };
+            },
+          };
+        },
+      };
+      globalThis.indexedDB = {
+        open() {
+          const request = {
+            result: db, onupgradeneeded: null, onerror: null, onblocked: null, onsuccess: null,
+          };
+          queueMicrotask(() => request.onsuccess?.());
+          return request;
+        },
+      };
+      await assert.rejects(saveNewInitialCareer(career), { code: 'STORAGE_FAILED' });
+      await assert.rejects(loadInitialCareer(career.careerId), { code: 'STORAGE_FAILED' });
+      assert.equal(closed, 2);
+      assert.equal(JSON.stringify(career), unchanged);
+    }
+  } finally {
+    if (original === undefined) delete globalThis.indexedDB;
+    else globalThis.indexedDB = original;
+  }
+});

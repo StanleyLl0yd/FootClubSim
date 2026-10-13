@@ -62,7 +62,9 @@ export async function saveNewInitialCareer(snapshot: InitialCareerSave): Promise
       try { transaction = db.transaction(STORE, 'readwrite'); }
       catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
       let duplicate = false;
-      const request = transaction.objectStore(STORE).add(encoded, snapshot.careerId);
+      let request: IDBRequest<IDBValidKey>;
+      try { request = transaction.objectStore(STORE).add(encoded, snapshot.careerId); }
+      catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
       request.onerror = () => { duplicate = request.error?.name === 'ConstraintError'; };
       transaction.oncomplete = () => resolve();
       transaction.onabort = () => reject(new CareerStorageError(duplicate ? 'DUPLICATE' : 'STORAGE_FAILED'));
@@ -83,7 +85,9 @@ export async function loadInitialCareer(careerId: string): Promise<InitialCareer
       let transaction: IDBTransaction;
       try { transaction = db.transaction(STORE, 'readonly'); }
       catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
-      const request = transaction.objectStore(STORE).get(careerId);
+      let request: IDBRequest<unknown>;
+      try { request = transaction.objectStore(STORE).get(careerId); }
+      catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
       let value: unknown;
       request.onsuccess = () => { value = request.result as unknown; };
       transaction.oncomplete = () => resolve(value);

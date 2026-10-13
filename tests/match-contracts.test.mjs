@@ -110,3 +110,19 @@ test('both club tactical plans must match the fixture and pass validated ranges'
     assert.equal(deriveMatchLedger({ ...base, homeTactics: change }).ok, false);
   }
 });
+
+test('match input binds the event ledger to a specific engine and rules version', () => {
+  assert.equal(deriveMatchLedger(base).ok, true);
+  for (const patch of [
+    { schemaVersion: 2 },
+    { engineVersion: '1' },
+    { rulesPackId: 'rpl-2026-27' },
+    { rulesPackVersion: '2' },
+  ]) {
+    const result = deriveMatchLedger({ ...base, ...patch });
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.ok(result.errors.some(error => error.code === 'INVALID_MATCH_VERSION_OR_SEED'));
+    }
+  }
+});

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSyntheticRplScaleCatalog, defaultSyntheticLineup } from '../dist/core/synthetic.js';
 import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
-import { MATCH_LEDGER_VERSION, deriveMatchLedger } from '../dist/core/match-contracts.js';
+import { MATCH_LEDGER_VERSION, M0_ENGINE_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION, deriveMatchLedger } from '../dist/core/match-contracts.js';
 import { RNG_VERSION } from '../dist/core/rng.js';
 import { defaultTacticalPlan } from '../dist/core/tactics.js';
 
@@ -13,7 +13,11 @@ const homeLineup = defaultSyntheticLineup(clubs.get(fixture.homeClubId));
 const awayLineup = defaultSyntheticLineup(clubs.get(fixture.awayClubId));
 const end = { id: 'end', sequence: 1, elapsedSeconds: 5400, type: 'full-time' };
 const base = {
-  schemaVersion: MATCH_LEDGER_VERSION, fixture, catalog,
+  schemaVersion: MATCH_LEDGER_VERSION,
+  engineVersion: M0_ENGINE_VERSION,
+  rulesPackId: M0_RULES_PACK_ID,
+  rulesPackVersion: M0_RULES_PACK_VERSION,
+  fixture, catalog,
   homeLineup, awayLineup,
   homeTactics: defaultTacticalPlan(fixture.homeClubId),
   awayTactics: defaultTacticalPlan(fixture.awayClubId),
@@ -104,5 +108,21 @@ test('both club tactical plans must match the fixture and pass validated ranges'
     { ...base.homeTactics, tempo: NaN },
   ]) {
     assert.equal(deriveMatchLedger({ ...base, homeTactics: change }).ok, false);
+  }
+});
+
+test('match input binds the event ledger to a specific engine and rules version', () => {
+  assert.equal(deriveMatchLedger(base).ok, true);
+  for (const patch of [
+    { schemaVersion: 2 },
+    { engineVersion: '1' },
+    { rulesPackId: 'rpl-2026-27' },
+    { rulesPackVersion: '2' },
+  ]) {
+    const result = deriveMatchLedger({ ...base, ...patch });
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.ok(result.errors.some(error => error.code === 'INVALID_MATCH_VERSION_OR_SEED'));
+    }
   }
 });

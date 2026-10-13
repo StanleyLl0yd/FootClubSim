@@ -12,6 +12,7 @@ The interface should feel like a detailed manager, not a console or match-viewin
 - **Матчи:** completed-match report from canonical event ledger, including score, scorers, disciplinary events, shots, xG.
 - **Клуб:** finances, staff, facilities and club board expectations as they become available by milestone.
 - **Трансферы:** offers, contracts, scouting (M3 onward).
+- **Обязанности и персонал:** отдельная настройка, кто принимает решение по каждой области: игрок (по умолчанию) или назначенный доступный сотрудник. Состав и тактика делегируются независимо друг от друга; тренировки, трансферы и контракты добавляются позже. Принцип утверждён в [ADR-0002](adr/0002-configurable-delegation.md), реализация отслеживается в [#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58).
 - **Сохранения и настройки:** explicit backups, import/export, game/pack versions and Russian help.
 
 ## Play loop
@@ -26,5 +27,7 @@ The interface should feel like a detailed manager, not a console or match-viewin
 ## UX principles
 
 Russian strings visible to players; semantic IDs and source code names remain locale-independent. Keyboard navigation, visible focus, tabular alignment, filtering of large rosters and readable data density are first-class. Do not require drag-and-drop alone to configure a lineup.
+
+Делегирование не должно быть настройкой «всё отдать ассистенту»: пользователь выбирает ответственного отдельно по каждой доступной обязанности и может вернуть управление без перезапуска карьеры. Автоматические решения сотрудников должны сопровождаться пояснениями и журналом действий. Нереализованные области не должны выдавать себя за рабочие.
 
 Storage failures, invalid data, incompatible saves and worker interruptions must show actionable errors without wiping existing careers. Warn players that browser storage can be cleared and provide a versioned exported backup path. PWA should behave consistently after offline/online switches and app updates.

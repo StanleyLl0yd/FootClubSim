@@ -80,6 +80,38 @@ rights. These still require manual review. Measured counts must be recorded
 only after the successful CI job prints `TRACKED_REPO_METRICS`. The first
 and second required *whole-repo human/code* reviews remain OPEN.
 
+## Further M0 work verified on 2026-10-14
+
+- [#60](https://github.com/StanleyLl0yd/FootClubSim/pull/60) implemented pure command-envelope, current-revision and per-responsibility staff-authorization validation without any game-state mutation.
+- [#61](https://github.com/StanleyLl0yd/FootClubSim/pull/61) defined bounded worker wire envelopes, cancellation acknowledgement and stale/foreign/invalid report guards. These are **not** an active Web Worker or M1 match generator.
+- [#62](https://github.com/StanleyLl0yd/FootClubSim/pull/62) introduced independent Git-tracked inventory metrics, known-secret/asset/action-pin heuristics with negative Python tests. One failing YAML-list recognition regression was caught by CI and corrected **before merging**.
+- [#63](https://github.com/StanleyLl0yd/FootClubSim/pull/63) registered the relevant primary 2026/27 RPL, July 2026 disciplinary/status/transfer and IFAB source editions and documented rule-group precedence, tests, rights and open verification in [M0_RPL_RULES_MATRIX.md](M0_RPL_RULES_MATRIX.md). No executable RPL rules or license permission were inferred.
+
+### Reproducible inventory measurements
+
+The **same** `python3 scripts/repo_audit.py` script ran in Documentation verification CI
+after checking out the complete PR merge ref on an Ubuntu Linux runner. Both runs
+reported `PASS`, no Git-tracked binary/artwork assets and no findings from the
+defined known-signature secret or GitHub Actions SHA-pin heuristics:
+
+| Measurement | [PR #62 docs CI](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38471362509) | [PR #63 docs CI](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38471857385) |
+| --- | ---: | ---: |
+| Tracked files | 73 | 74 |
+| Tracked bytes | 420859 | 431891 |
+| Source files (`.ts/.tsx/.mjs/.py/.css`) | 39 | 39 |
+| Source lines (Python `bytes.splitlines()`) | 3242 | 3242 |
+| Test files (`tests/` and `scripts/tests/`) | 15 | 15 |
+| Markdown files | 22 | 23 |
+| Asset/data files by flagged extension | 0 | 0 |
+
+The difference is a single documentation addition and edits. These measurements
+are *not* a claimed entire-project shrinking/refactoring result, and the totals
+will change with further M0 edits. The metrics are reproducible only for the
+cited commits/PR checkout contexts. Core CI after #62 recorded **63/63 passing
+Node tests**; actual browser smoke was previously green on worker-command PR
+heads #60 and #61. Final-main full security/rights scanning and both complete
+whole-repository review passes are still REQUIRED.
+
 ## Gaps and blockers
 
 1. **Owner decisions:** the concrete [M0 product proposal](M0_PRODUCT_DECISIONS.md) from [#54](https://github.com/StanleyLl0yd/FootClubSim/pull/54) documents manager/coach/director responsibilities, tactics, economy and season scope, but each decision remains **unapproved** until the owner explicitly accepts/revises it.

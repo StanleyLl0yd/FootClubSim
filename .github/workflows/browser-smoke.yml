@@ -12,6 +12,9 @@ on:
       - 'package-lock.json'
       - 'tsconfig*.json'
       - '.github/workflows/browser-smoke.yml'
+      # Exit-acceptance edits must be verified against all supported browsers.
+      - 'docs/M0_ACCEPTANCE.md'
+      - 'docs/M0_EXIT_AUDIT_REPORT.md'
   push:
     branches: [main]
     paths:
@@ -24,6 +27,9 @@ on:
       - 'package-lock.json'
       - 'tsconfig*.json'
       - '.github/workflows/browser-smoke.yml'
+      # Exit-acceptance edits must be verified against all supported browsers.
+      - 'docs/M0_ACCEPTANCE.md'
+      - 'docs/M0_EXIT_AUDIT_REPORT.md'
   workflow_dispatch:
 
 permissions: {}

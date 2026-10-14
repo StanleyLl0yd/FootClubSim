@@ -4,7 +4,7 @@ Status: **partly implemented M0 architecture**. Pure TypeScript domain, a minima
 
 ## Product and platforms
 
-FootClubSim is a Russian-first, browser-based, single-player club management simulation. Initial playable competition: RPL. All match outcomes are calculated headlessly. A dedicated Linux desktop release is not a goal. macOS Safari and Windows Chrome/Edge are priority browser acceptance targets.
+FootClubSim is a Russian-first, browser-based, single-player club management simulation. Initial playable competition: the fictional **«Лига приколов»**, with source-verified actual RPL/RFU/IFAB sporting rules and original inverse/antonym-inspired names for the 16 2026/27 RPL-inspired clubs ([ADR-0004](docs/adr/0004-liga-prikolov-rpl-rules.md)). All match outcomes are calculated headlessly. A dedicated Linux desktop release is not a goal. macOS Safari and Windows Chrome/Edge are priority browser acceptance targets.
 
 The application must remain playable without a central server after its assets and a starting dataset are installed. OCI is an optional future host for distributing static data and optional sync, not the authoritative source of match results.
 
@@ -103,7 +103,7 @@ Worker boundary should support cancellation before commit, progress signals for 
 
 ## Game-data source policy
 
-Read [data source policy](docs/DATA_SOURCES.md). The repository must not contain unauthorized Transfermarkt exports, scraper output, player photos, team crests or copyrighted third-party databases. Start with synthetic clubs and fictional footballers, then enable a rights-cleared RPL data pack. Rules are data-driven with explicit verification against official regulations before claiming an authentic 2026/27 season.
+Read [data source policy](docs/DATA_SOURCES.md). The repository must not contain unauthorized Transfermarkt exports, scraper output, player photos, team crests or copyrighted third-party databases. Use original fictional clubs and footballers for «Лига приколов»; do not silently switch to real RPL squads or copied club branding. Rules are independently versioned, data-driven and derived from actual effective RPL/RFU/IFAB regulations, with explicit article-by-article verification before claiming compliance. Club catalog version and sports rules version must be independently pinned to each career.
 
 ## Security and correctness boundaries
 

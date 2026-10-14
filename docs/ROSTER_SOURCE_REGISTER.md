@@ -45,3 +45,7 @@ Finding a club's current team page is **not the same as proving a historical ros
 ## Second official federation-source discovery (2026-10-14)
 
 All 16 2026/27 RPL participants also have individually matched [RFU Cup team index URLs](RFS_CUP_TEAM_INDEX_FEASIBILITY.md), recorded as link-only pointers in [`data/drafts/liga-rfs-cup-team-index-links-2026-10-14.json`](../data/drafts/liga-rfs-cup-team-index-links-2026-10-14.json). These Cup pages are mutable and **not** dated RPL registrations or a data-use grant. Do not revise the 0/16 verified-roster or zero imported-facts statuses; the specific stale Zenit entries are demonstrated [here](NADIR_RFS_CUP_CROSSCHECK.md).
+
+## First dated match-participation evidence (2026-10-14)
+
+[Two played 2026/27 match records](DATED_MATCH_APPEARANCE_CROSSCHECK.md) independently confirm narrow appearance observations on 2 September (RFU Cup Zenit - Dinamo Makhachkala) and 10 October (RPL Krasnodar - Zenit). Structured aggregates and two targeted draft-ID spot checks are in [`data/drafts/liga-dated-match-observations-2026-10-14.json`](../data/drafts/liga-dated-match-observations-2026-10-14.json). This **does not** establish three verified RPL registration denominators: match appearances, unused bench places and current-squad registration are different states. Rights review and all 16 as-of roster gates remain blocked.

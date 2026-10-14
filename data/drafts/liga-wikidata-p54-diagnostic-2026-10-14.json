@@ -1,0 +1,314 @@
+{
+  "schemaVersion": 1,
+  "status": "diagnostic-only-not-roster-snapshot",
+  "targetAsOf": "2026-10-14",
+  "measuredAt": "2026-10-14T08:46:41.134Z",
+  "retrievedFrom": "Wikidata Query Service",
+  "licenseForStructuredStatements": "CC0-1.0",
+  "method": "Current WDQS P54 statements with optional P580/P582; all historical memberships and all ranks. No Wikidata historical revision freeze or RFU registration check.",
+  "sourceRun": "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38537433952",
+  "sourceCommit": "0cb125d081a612bbb202cde50b11f432e0f111c5",
+  "measurementCompletedForAll16": true,
+  "countsAreClubPersonPairsNotUniqueAcrossClubs": true,
+  "independentlyVerifiedAsOfRosterCoverage": false,
+  "independentlyVerifiedRosterRows": 0,
+  "realPersonIdentityRowsPersisted": 0,
+  "aggregates": {
+    "historicalClubPersonPairs": 7518,
+    "historicalMembershipStatements": 8297,
+    "boundedCandidate": 0,
+    "openEndedCandidate": 504,
+    "unknown": 1761,
+    "outside": 5253
+  },
+  "clubs": [
+    {
+      "clubId": "lp-nadir",
+      "wikidataQid": "Q29108",
+      "candidatePersonsAllSeasons": 733,
+      "statementCount": 792,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 43,
+        "unknown": 295,
+        "outside": 454
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 43,
+        "unknown": 295,
+        "outside": 395
+      }
+    },
+    {
+      "clubId": "lp-zelenober",
+      "wikidataQid": "Q220854",
+      "candidatePersonsAllSeasons": 321,
+      "statementCount": 331,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 46,
+        "unknown": 94,
+        "outside": 191
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 45,
+        "unknown": 94,
+        "outside": 182
+      }
+    },
+    {
+      "clubId": "lp-vagon",
+      "wikidataQid": "Q29115",
+      "candidatePersonsAllSeasons": 705,
+      "statementCount": 752,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 31,
+        "unknown": 175,
+        "outside": 546
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 31,
+        "unknown": 175,
+        "outside": 499
+      }
+    },
+    {
+      "clubId": "lp-patriciy",
+      "wikidataQid": "Q29112",
+      "candidatePersonsAllSeasons": 857,
+      "statementCount": 951,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 73,
+        "unknown": 234,
+        "outside": 644
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 73,
+        "unknown": 234,
+        "outside": 550
+      }
+    },
+    {
+      "clubId": "lp-ogkm",
+      "wikidataQid": "Q176371",
+      "candidatePersonsAllSeasons": 805,
+      "statementCount": 914,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 20,
+        "unknown": 231,
+        "outside": 663
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 19,
+        "unknown": 231,
+        "outside": 555
+      }
+    },
+    {
+      "clubId": "lp-pacifica",
+      "wikidataQid": "Q795978",
+      "candidatePersonsAllSeasons": 377,
+      "statementCount": 429,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 30,
+        "unknown": 41,
+        "outside": 358
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 30,
+        "unknown": 39,
+        "outside": 308
+      }
+    },
+    {
+      "clubId": "lp-statika-m1",
+      "wikidataQid": "Q17497",
+      "candidatePersonsAllSeasons": 763,
+      "statementCount": 868,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 22,
+        "unknown": 135,
+        "outside": 711
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 22,
+        "unknown": 135,
+        "outside": 606
+      }
+    },
+    {
+      "clubId": "lp-izumrud",
+      "wikidataQid": "Q170040",
+      "candidatePersonsAllSeasons": 481,
+      "statementCount": 518,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 53,
+        "unknown": 85,
+        "outside": 380
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 53,
+        "unknown": 83,
+        "outside": 345
+      }
+    },
+    {
+      "clubId": "lp-uprek",
+      "wikidataQid": "Q240444",
+      "candidatePersonsAllSeasons": 364,
+      "statementCount": 391,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 41,
+        "unknown": 67,
+        "outside": 283
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 40,
+        "unknown": 67,
+        "outside": 257
+      }
+    },
+    {
+      "clubId": "lp-spadov",
+      "wikidataQid": "Q182930",
+      "candidatePersonsAllSeasons": 609,
+      "statementCount": 684,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 47,
+        "unknown": 101,
+        "outside": 536
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 47,
+        "unknown": 101,
+        "outside": 461
+      }
+    },
+    {
+      "clubId": "lp-korni-zapretov",
+      "wikidataQid": "Q274778",
+      "candidatePersonsAllSeasons": 582,
+      "statementCount": 637,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 31,
+        "unknown": 139,
+        "outside": 467
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 31,
+        "unknown": 138,
+        "outside": 413
+      }
+    },
+    {
+      "clubId": "lp-orendorf",
+      "wikidataQid": "Q2095484",
+      "candidatePersonsAllSeasons": 259,
+      "statementCount": 273,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 30,
+        "unknown": 46,
+        "outside": 197
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 30,
+        "unknown": 46,
+        "outside": 183
+      }
+    },
+    {
+      "clubId": "lp-nizon",
+      "wikidataQid": "Q65124755",
+      "candidatePersonsAllSeasons": 29,
+      "statementCount": 30,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 5,
+        "unknown": 9,
+        "outside": 16
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 5,
+        "unknown": 9,
+        "outside": 15
+      }
+    },
+    {
+      "clubId": "lp-statika-m2",
+      "wikidataQid": "Q2494171",
+      "candidatePersonsAllSeasons": 192,
+      "statementCount": 204,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 5,
+        "unknown": 88,
+        "outside": 111
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 5,
+        "unknown": 88,
+        "outside": 99
+      }
+    },
+    {
+      "clubId": "lp-chuzhbina",
+      "wikidataQid": "Q66210522",
+      "candidatePersonsAllSeasons": 18,
+      "statementCount": 18,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 0,
+        "unknown": 8,
+        "outside": 10
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 0,
+        "unknown": 8,
+        "outside": 10
+      }
+    },
+    {
+      "clubId": "lp-ognetushitel",
+      "wikidataQid": "Q1388889",
+      "candidatePersonsAllSeasons": 423,
+      "statementCount": 505,
+      "statementClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 30,
+        "unknown": 18,
+        "outside": 457
+      },
+      "distinctPersonClasses": {
+        "boundedCandidate": 0,
+        "openEndedCandidate": 30,
+        "unknown": 18,
+        "outside": 375
+      }
+    }
+  ]
+}

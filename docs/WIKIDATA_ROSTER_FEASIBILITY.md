@@ -1,6 +1,6 @@
 # Wikidata 2026/27 roster feasibility and provenance gate
 
-**Date assessed:** 2026-10-14. **Result:** CC0 source eligible for consideration; actual 16-club as-of roster coverage **not yet measured or verified**. Do not infer zero coverage or full coverage from this statement. No Wikidata player facts were imported.
+**Date assessed:** 2026-10-14. **Result:** CC0 source eligible for consideration. Historical P54 discovery counts for all 16 clubs **have been measured**; actual first-team as-of roster completeness remains **unmeasured and unverified**. No Wikidata player facts were imported.
 
 ## Permission and technical baseline
 
@@ -47,16 +47,17 @@ All **16 club-level Wikidata entity IDs** have been identified and frozen in [th
 
 **Coverage remains unmeasured:** no successful dated `P54` extraction/denominator reconciliation is recorded. Do not translate 16/16 matched clubs into 16/16 verified rosters. The automated WDQS query was not run as part of this check; do not invent candidate counts.
 
-## Bounded, reproducible P54 diagnostic
+## Live WDQS results, 2026-10-14
 
-Run `node scripts/wikidata-p54-coverage.mjs --club=lp-nadir` for Zenit alone, or `node scripts/wikidata-p54-coverage.mjs` for all 16 club QIDs. The dedicated [GitHub Actions diagnostic](../.github/workflows/wikidata-coverage.yml) executes the all-club query when relevant code changes. It does **not** control production app builds or copy player statements into Git.
+[GitHub Actions run 38537433952](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38537433952) successfully queried all 16 mapped club QIDs. The counts are recorded **only as aggregates** in [the dated diagnostic JSON](../data/drafts/liga-wikidata-p54-diagnostic-2026-10-14.json). Query script commit: `0cb125d081a612bbb202cde50b11f432e0f111c5`, extracted at `2026-10-14T08:46:41.134Z` UTC.
 
-The script reads the checked [QID mapping](../data/drafts/liga-wikidata-club-map-v1.json), performs at most one limited `P54` query per club (1,501-row ceiling, 30-second client timeout, 1.5-second delay between queries), honors HTTP 429 by halting, and prints only aggregate statistics. Individual person QIDs, names, statement references and dates **remain in process memory only** and are never logged or included in committed artifacts.
+- **7518** cumulative club-person pairs, including past club membership; the same human can appear for several clubs. **Not** unique persons across the entire league.
+- **8297** historical P54 statement records.
+- **0** person-club pairs have both finite qualifiers spanning the requested date.
+- **504** have a start date no later than 2026-10-14 and no end date. This is a lead for review, *not active registration*.
+- **1761** lack enough temporal qualifier precision or known dates.
+- **5253** have only statements clearly outside the target date.
 
-This diagnostic deliberately includes all historical membership statements, even deprecated ranks, because it measures discovery coverage rather than providing a verified roster. Its categories are:
-- `boundedCandidate`: both dates provided and the serialized date interval covers 2026-10-14, pending precision/rank/source and roster verification.
-- `openEndedCandidate`: the start date is at or before 2026-10-14 but no end qualifier is present, **not** proof of current membership.
-- `unknown`: missing start, uncertain date precision or insufficient temporal details.
-- `outside`: clearly before or after 2026-10-14.
+«Надир»/FC Zenit: **733** all-time people, **792** statements, **43** open-ended date candidates, **295** temporally unknown and **395** outside-date. These are discoverability metrics, **not** evidence that 43 players are in the current squad.
 
-The report keeps distinct person and statement counts separate, deduplicates repeated statement bindings, treats network failures as `query-failed` **not zero candidates**, and rejects truncated results instead of asserting full coverage. No tested category represents RFU registration. A client-side query of today's Wikidata graph is **not** a frozen historical snapshot; true historical verification will need entity revisions/effective-source evidence. Never translate `P54` counts into 2026/27 roster completeness without a licensed first-team denominator and manual reconciliation.
+The result shows why CC0 availability is not sufficient for a playable league database: Wikidata lacks conclusive dated registration assertions for many historical links, and every 2026/27 squad still lacks an independently established roster denominator. Some P54 entries may be non-current, historical, or wrong; the current graph does not freeze Wikidata state as it existed on 2026-10-14. All 16 first-team rosters remain **not verified**, and M0/M2 publishing remains blocked.

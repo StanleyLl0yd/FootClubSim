@@ -30,3 +30,7 @@ Relative effort here is qualitative (L > M), not a duration guarantee. Dependenc
 5. No browser or remote service can be an authority for match probabilities. Browser worker integration and the user-facing league season belong primarily to M2.
 
 The first M1 implementation should introduce only the minimal tested state transitions needed to make a zero-event or 0-0 fixture deterministic; avoid a broad engine rewrite without incremental invariants.
+
+## Owner-approved in-match interaction contract (2026-10-14)
+
+[ADR-0007](adr/0007-match-tactics-multicurrency.md) requires a single deterministic seeded engine for fully automatic and interactive fixtures, with versioned pause/checkpoint and legally validated mid-match substitutions, formation/tactical and individual-player instructions. Scope this as future M1 **engine interfaces and deterministic negative tests**; the actual M2 UI and 2026/27 RPL executable rules remain later-stage gates. Owner approval of architecture does **not** authorize coding M1 before M0 is fully closed and explicit approval to start M1 is received.

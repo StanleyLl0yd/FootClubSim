@@ -61,3 +61,9 @@ Russian strings visible to players; semantic IDs and source code names remain lo
 Делегирование не должно быть настройкой «всё отдать ассистенту»: пользователь выбирает ответственного отдельно по каждой доступной обязанности и может вернуть управление без перезапуска карьеры. Автоматические решения сотрудников должны сопровождаться пояснениями и журналом действий. Нереализованные области не должны выдавать себя за рабочие.
 
 Storage failures, invalid data, incompatible saves and worker interruptions must show actionable errors without wiping existing careers. Warn players that browser storage can be cleared and provide a versioned exported backup path. PWA should behave consistently after offline/online switches and app updates.
+
+## Approved live-match interaction and currency UX (2026-10-14)
+
+[ADR-0007](adr/0007-match-tactics-multicurrency.md) adds **interactive in-match tactics and substitutions** to the existing common deterministic match engine: pause/continue/fast-forward; legal substitutions; formation, team instructions and player-specific adjustments, all effective only at a validated virtual-time checkpoint. Full automatic calculation remains available without 2D/3D visualization. The available action set must clearly indicate who currently controls each responsibility (player or delegated staff).
+
+Finance screens in M3 allow displaying **RUB, USD or EUR**; default reporting currency is RUB. A user selecting another display currency sees automatically converted amounts and an explicit **Google Finance rate source/date/time**, with stale/offline flags. Contract money retains the original currency; historical transfers do not change when the current displayed rate updates. If rates cannot lawfully be obtained or are unavailable, keep the original sums visible and do not invent current-day rates. Actual implementation awaits later-stage authorization and a lawful exchange-rate feed.

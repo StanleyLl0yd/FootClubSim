@@ -8,6 +8,11 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const executable = process.argv[2];
 const targetUrl = process.argv[3] ?? 'http://127.0.0.1:4173/';
+const privateFlag = process.argv[4] ?? null;
+if (privateFlag !== null && privateFlag !== '--incognito' && privateFlag !== '--inprivate') {
+  console.error('Unknown browser mode, expected --incognito or --inprivate');
+  process.exit(2);
+}
 if (!executable) {
   console.error('Usage: node scripts/chromium-e2e.mjs /path/to/chrome-or-edge [url]');
   process.exit(2);
@@ -85,6 +90,7 @@ async function startBrowser() {
     const profile = await mkdtemp(join(tmpdir(), 'footclubsim-cdp-'));
     const browser = spawn(executable, [
       '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+      ...(privateFlag ? [privateFlag] : []),
       '--disable-extensions', '--remote-debugging-port=0',
       '--remote-allow-origins=*', '--user-data-dir=' + profile,
       'about:blank',
@@ -169,6 +175,34 @@ async function run() {
     await click('Создать стартовую карьеру');
     await waitText('Стартовая карьера создана в памяти браузера');
     await click('Сохранить в браузере');
+
+    if (privateFlag) {
+      const outcome = await until(async () => {
+        const status = await evaluate("document.querySelector('.status')?.textContent ?? ''");
+        if (status.includes('Начальная карьера записана в IndexedDB')) return 'saved';
+        if (status.startsWith('Сохранение отклонено:')) return 'rejected';
+        return null;
+      }, 'explicit private-session storage success or rejection');
+
+      if (outcome === 'saved') {
+        // Private browsers may permit temporary same-session IndexedDB.
+        await click('Сохранить в браузере');
+        await waitText('Сохранение отклонено: DUPLICATE');
+        await send('Page.reload', { ignoreCache: true });
+        await waitText('Выберите вымышленный клуб');
+        await click('Восстановить из браузера');
+        await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+      } else {
+        // A browser blocking private storage must not silently drop the career.
+        if (!await evaluate("Boolean(document.querySelector('.career-info'))")) {
+          throw new Error('Private-mode storage rejection erased the active career');
+        }
+        await click('Экспортировать JSON');
+        await waitText('Файл JSON экспортирован');
+      }
+      console.log('PASS: private browser ' + privateFlag + ' responded explicitly (' + outcome + ')');
+      return;
+    }
     await waitText('Начальная карьера записана в IndexedDB');
 
     await click('Сохранить в браузере');

@@ -15,6 +15,8 @@
 
 RFU official index used for cross-checking linked disciplinary/transfer editions: [RFU normative documents](https://www.rfs.ru/subject/1/documents/index?categoryId=14). The season-specific men's competitions index still lists the principal RPL document under 25 June 2026 as of this review. **An index listing does not prove that no later amendments, circulars or decisions exist.**
 
+The [M0 encoded-assumptions inventory](M0_ENCODED_RULES_PROVENANCE.md) maps each current executable synthetic validation, engine version and save/worker contract to its actual **project-authored** or **external normative** provenance. The matrix below governs future league compliance; it must never be inferred to be implemented by the M0 code.
+
 ## Functional contract and precedence (proposed, not implemented)
 
 | Rule-group ID | Needed state and validation | Source priority/dependency | Edge cases and tests before implementation | Implementation stage |

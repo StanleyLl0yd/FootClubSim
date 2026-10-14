@@ -73,7 +73,7 @@ M0 documentation may be merged incrementally without claiming M0 completion. Do 
 
 ## M3–M6 scope controls
 
-M3 introduces economy/transfer systems, training, staff and full per-area responsibility delegation (player/staff contracts, recruitment, training), plus practical effects of manager competencies on these real systems. The approved manager-profile wizard is planned for M2, not M1. Neither stage introduces multiplayer. M4 introduces additional modeled divisions/world clubs without promising fully playable foreign leagues. M5 introduces PWA polish, not a required backend. M6 desktop packaging is conditional on real benefit and platform acceptance; no dedicated Linux app is promised.
+M3 introduces economy/transfer systems, training, staff and full per-area responsibility delegation (player/staff contracts, recruitment, training), plus practical effects of manager competencies on these real systems. **Owner-approved D07** requires an auditable **RUB/USD/EUR** finance ledger and **automatic Google Finance-referenced currency conversion by current real-world day**, with date-pinned rates, no retroactive career changes and prior verification of Google's data-access/retention rights ([ADR-0007](docs/adr/0007-match-tactics-multicurrency.md)). The approved manager-profile wizard is planned for M2, not M1. Neither stage introduces multiplayer. M4 introduces additional modeled divisions/world clubs without promising fully playable foreign leagues. M5 introduces PWA polish, not a required backend. M6 desktop packaging is conditional on real benefit and platform acceptance; no dedicated Linux app is promised.
 
 ## Explicit exclusions until a future decision
 

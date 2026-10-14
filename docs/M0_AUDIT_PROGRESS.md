@@ -150,6 +150,30 @@ The reviewed inventory encompasses domain logic (`src/core/**`), React shell and
 
 **Limitations that still block final exit:** architecture/owner acceptance beyond D01-D02 and the core D13 origin/biography principle; full official regulation and amendment review; explicit rights on real club/player data and imagery; private-mode/quota/eviction browser checks; definitive remaining source-by-source simplification and mandatory full second pass **after** all M0 functional/decision changes; final-main complete security/CI pass. This work is an evidence-backed **interim review**, not a completed first or second mandatory exit pass.
 
+## Continued M0 validation and audit fixes (14 October, PR #78-#84)
+
+This section is **incremental review evidence, not a completed two-pass exit
+audit**. Measurements below are tied to an actual PR head, not extrapolated
+from an earlier revision or represented as the final reviewed `main`.
+
+| PR | Verified change | Remaining qualification |
+| --- | --- | --- |
+| [#78](https://github.com/StanleyLl0yd/FootClubSim/pull/78) | CDP launch retries only failed Chrome/Edge startup once in a fresh isolated profile, without retrying app assertions | Real runner flakiness can still recur; attempts remain bounded |
+| [#79](https://github.com/StanleyLl0yd/FootClubSim/pull/79) | QuotaExceededError is distinct from duplicate/generic IndexedDB errors; mocked transaction abort/rollback and native-browser **injected** quota UI path preserve active career | Does **not** exercise real disk quota or browser eviction |
+| [#80](https://github.com/StanleyLl0yd/FootClubSim/pull/80) | Four golden xorshift32-v1 integer sequences, snapshot continuation and float consumption/range tests | No owner sign-off on adopting M0 RNG for M1 probabilistic model |
+| [#81](https://github.com/StanleyLl0yd/FootClubSim/pull/81) | Native Windows Chrome Incognito and Edge InPrivate browser sessions store/restore the initial career during the same session | No evidence private data survives window closure; Safari Private Browsing unverified |
+| [#82](https://github.com/StanleyLl0yd/FootClubSim/pull/82) | CDP `Target.getTargetInfo` confirms separate browserContextId in **both** native Windows private sessions, excluding a false pass caused by silently ignored launch flags | First SafariRunner new-session handshake timed out; rerun succeeded without source change |
+| [#83](https://github.com/StanleyLl0yd/FootClubSim/pull/83) | SafariDriver new-session HTTP timeout raised to 45 s, while normal WebDriver commands remain at 15 s | Not a guarantee of SafariDriver session startup under all runner conditions |
+| [#84](https://github.com/StanleyLl0yd/FootClubSim/pull/84) | M0 worker report cannot claim more than 4095 shots combined when the event ledger allows 4096 events including terminal full-time; negative and boundary tests added | Wire validation is not an authoritative atomic career-state commit |
+
+**Exact CI evidence for [#84 core](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38517256708):** 76 Node tests passed, 0 failed, with compiled TypeScript core, source-format checks, ESLint and production Vite build. Built browser JavaScript: **238.13 kB**, gzip **74.92 kB**; CSS **2.89 kB**.
+
+**Exact inventory from [#84 documentation CI](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38517256722):** 78 tracked files, 500,713 tracked bytes, 42 source files and 3,771 source lines under the automated counting method; 17 test files, 24 Markdown files, 0 declared/bundled binary/artwork assets. This is the PR head and may differ from `main` after subsequent merges. The tracked-file heuristic did not identify known token patterns, unpinned external GitHub Actions or undeclared binary assets; it does **not** constitute an independent intellectual-property clearance or exhaustive vulnerability scan.
+
+**Actual browser evidence:** [#84 browser workflow](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38517256629) passed the current normal React prototype browser checks on macOS Safari, Windows Chrome, Windows Edge and Linux Chromium, as well as the Windows private-session paths. Under [#82 browser workflow](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38516820503), the first native Safari job timed out creating the SafariDriver session, but the retry was successful. Both Chrome and Edge independently logged confirmation of isolated CDP contexts.
+
+**Still NOT M0 exit:** D03-D12 and D13 balance details lack approval, legal use of real RPL rosters/club marks is unverified, RPL disciplinary and transfer source cross-review is incomplete, actual Safari private/quota/eviction tests remain, and the required **first and second COMPLETE whole-repository audit passes after final M0 acceptance** are not signed off. M1 must not start without explicit owner permission, even after M0 eventually closes.
+
 ## Gaps and blockers
 
 1. **Owner decisions:** the [M0 product decision register](M0_PRODUCT_DECISIONS.md) records accepted D01/D02 (default human control with per-area delegation) and D13 (three origin profiles with a skill-aware biography, [ADR-0003](adr/0003-manager-origins-biographies.md), [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76)). Other D03-D12 decisions and the exact skill budget, numeric attributes, and biography generation UX remain **unapproved** until the owner explicitly accepts/revises them. No playable wizard exists in M0.

@@ -61,3 +61,18 @@ All **16 club-level Wikidata entity IDs** have been identified and frozen in [th
 «Надир»/FC Zenit: **733** all-time people, **792** statements, **43** open-ended date candidates, **295** temporally unknown and **395** outside-date. These are discoverability metrics, **not** evidence that 43 players are in the current squad.
 
 The result shows why CC0 availability is not sufficient for a playable league database: Wikidata lacks conclusive dated registration assertions for many historical links, and every 2026/27 squad still lacks an independently established roster denominator. Some P54 entries may be non-current, historical, or wrong; the current graph does not freeze Wikidata state as it existed on 2026-10-14. All 16 first-team rosters remain **not verified**, and M0/M2 publishing remains blocked.
+
+### Candidate field measurement, 2026-10-14
+
+[Successful GitHub Actions run 38538448265](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38538448265) measured P569/P27/P413 field presence for **all 16 club QIDs** in the present Wikidata graph. [Dated aggregate-only snapshot](../data/drafts/liga-wikidata-candidate-field-diagnostic-2026-10-14.json):
+
+| Historical open-ended P54 club-person pair measurement | Count |
+| --- | ---: |
+| Candidate person/club links | 504 |
+| P569 date-of-birth field present | 504 |
+| P27 citizenship field present | 504 |
+| P413 general playing position field present | 498 |
+| All three fields present | 498 |
+| Verified first-team registrations / effective roster facts | **0** |
+
+«Надир» alone has 43 open-ended candidates with all three fields present. **This is not a 43-player current squad.** The source is a live, mutable Wikidata graph (observed 2026-10-14T08:55:12.741Z UTC), not an official 2026/27 registration freeze. Some P413 positions are too general, field values can be outdated, and P27 is not Russian player-limit eligibility. Other candidate groups with undated P54 membership (1761 historical club-person pairs in the first diagnostic) were **not included** in this narrower field-presence measurement. Absence of a candidate or an attribute is not evidence that a player is absent from the real club.

@@ -14,11 +14,11 @@
 | **Safari normal mode, explicit IndexedDB deletion and JSON re-import** | New Safari WebDriver fixture under review: deletion, missing-save rejection, valid and tampered JSON file-input simulation | **Must be verified by actual macOS CI; not Private mode or organic eviction** |
 | **Real browser-enforced storage quota pressure** | No genuine per-origin eviction/quota outcome | **OPEN** |
 | **Actual storage eviction** | No observation of automatic browser eviction | **OPEN** |
-| **Backup/recovery across complete browser shutdown** | Native Windows Chrome/Edge same disposable profile closed with `Browser.close`, full process exit, fresh process and IndexedDB Restore check added; **CI pending**. Actual JSON download, Safari shutdown and general eviction still outstanding | **PARTIAL only if CI passes** |
-| **Windows Chrome/Edge site-data clearing and same-process JSON import** | New CDP fixture under review in browser CI; restores a byte-for-byte stored M0 snapshot and rejects a corrupted backup | **Not equivalent to full shutdown or organic eviction** |
+| **Backup/recovery across complete browser shutdown** | [PR #127](https://github.com/StanleyLl0yd/FootClubSim/pull/127) / [native browser CI 38566035144](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38566035144): actual Windows Chrome and Edge process exit plus fresh process using the SAME disposable profile, then successful IndexedDB Restore | **PASS on Windows Chrome/Edge only; Safari and actual JSON download OPEN** |
+| **Windows Chrome/Edge site-data clearing and same-process JSON import** | [PR #119](https://github.com/StanleyLl0yd/FootClubSim/pull/119) verified explicit real IndexedDB clear, valid file import and corrupted/mismatched-ID rejection on Chrome and Edge | **PASS for explicit clearing; not automatic eviction** |
 | **Evolving career data and save migrations** | No implemented evolving career schema | M2, not a meaningful M0 functional test |
 
-The CDP harness now contains an additional **isolated disposable Windows browser-profile** recovery scenario that clears real IndexedDB using a browser protocol command and exercises the app's file import with a valid and a tampered snapshot. Its result must be confirmed from the corresponding actual browser CI run before claiming PASS. It does **not** demonstrate that the user clicked Export and downloaded a file, or that browser data is naturally evicted after background storage pressure.
+The CDP harness now contains an additional **isolated disposable Windows browser-profile** recovery scenario that clears real IndexedDB using a browser protocol command and exercises the app's file import with a valid and a tampered snapshot. Its positive file-import/explicit-clear outcome was confirmed by real Chrome and Edge CI in [PR #119](https://github.com/StanleyLl0yd/FootClubSim/pull/119). It does **not** demonstrate that the user clicked Export and downloaded a file, or that browser data is naturally evicted after background storage pressure.
 
 The Safari WebDriver harness also now includes a real IndexedDB deletion and **programmatic `File` / `DataTransfer` assignment** into the app's input (not an OS file picker). Its assertions test integrity rejection and in-memory career preservation; no PASS is claimed without the actual macOS CI run. The Chrome/Edge Windows suite uses DevTools to set a file path instead. Both are narrower than the outstanding native manual backup/download and full-restart acceptance.
 
@@ -34,7 +34,7 @@ Requires **actual Safari on macOS** with a separate disposable testing profile/s
 
 **Pass** requires explicit observed outcome for each applicable assertion; if the platform denies/blocks private automation, mark **BLOCKED**, give browser version and manual procedure, do not mark PASS.
 
-The native Windows test now also requests a genuine browser-process close, confirms the process exited, restarts with the **same isolated user-data directory** and checks the application Restore path. The test must pass in Windows Chrome and Edge CI before claiming that limited process-restart property. It does not replace the real OS file-download UX, Safari full-shutdown test, organic eviction or a manual recovery exercise.
+The native Windows test now also requests a genuine browser-process close, confirms the process exited, restarts with the **same isolated user-data directory** and checks the application Restore path. This limited process-restart property passed in both Windows Chrome and Edge on [browser run 38566035144](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38566035144). It does not replace the real OS file-download UX, Safari full-shutdown test, organic eviction or a manual recovery exercise.
 
 ## Persistent-profile full shutdown/restart and backup recovery
 
@@ -48,6 +48,10 @@ If genuine browser eviction happens during a controlled disposable-profile sessi
 - Do not deliberately fill the host's real disk or normal browser profile. Use a disposable VM/browser profile and an explicitly bounded browser quota when supported. Record the exact browser/tool control, applied quota, written data size and actual observed transaction error. An artificial DevTools quota override should be reported as a **browser-enforced test limit**, not as ambient host-disk exhaustion.
 - If no real quota is reached, outcome is **NOT TESTED**, not PASS. Do not extrapolate from unit tests, browser simulations or the availability of a configuration setting.
 - Active career and existing saved entries must not be silently overwritten or destroyed after failures. Report quota/eviction effects and any inability to recover; never assume IndexedDB persistence is durable enough without a user-controlled JSON backup.
+
+### Quota override: negative native-browser evidence
+
+Do not use the closed, **unmerged** [PR #125](https://github.com/StanleyLl0yd/FootClubSim/pull/125) as passing evidence. Chrome and Edge both reported DevTools `overrideActive=true`, `quota=524288` bytes and `usage=70203` bytes, **yet completed** a deliberately oversized **24 MiB** IndexedDB write, instead of returning `QuotaExceededError`. Earlier 2 MiB attempts also succeeded. [First run](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38564696267) and [confirmed retest](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38565076622) FAILED exactly on that assertion. Therefore DevTools quota override is **not an observed IndexedDB rejection** on these CI environments. Actual quota and eviction acceptance remain OPEN; no test was weakened and none of that PR's code entered main.
 
 ## Evidence form for the eventual acceptance report
 

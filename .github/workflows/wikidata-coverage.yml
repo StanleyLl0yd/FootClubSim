@@ -1,0 +1,32 @@
+name: Wikidata roster coverage diagnostic
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/wikidata-p54-coverage.mjs'
+      - 'tests/wikidata-p54-coverage.test.mjs'
+      - 'data/drafts/liga-wikidata-club-map-v1.json'
+      - '.github/workflows/wikidata-coverage.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  diagnostic:
+    name: CC0 historical P54 coverage (not roster verification)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Bounded Wikimedia SPARQL diagnostic
+        run: node scripts/wikidata-p54-coverage.mjs

@@ -46,3 +46,17 @@ All **16 club-level Wikidata entity IDs** have been identified and frozen in [th
 **Important disambiguations:** Moscow Dinamo football club is `Q17497`, not the broader `Q1269117` multisport society; Samara Krylia is `Q274778`, not its Moscow namesake. Makhachkala Dinamo `Q2494171` carries two historical inception dates (1927/2021) and requires an additional identity-continuity review. These mappings establish **club entities only**, not legal entities, squad membership, coaches or registered players.
 
 **Coverage remains unmeasured:** no successful dated `P54` extraction/denominator reconciliation is recorded. Do not translate 16/16 matched clubs into 16/16 verified rosters. The automated WDQS query was not run as part of this check; do not invent candidate counts.
+
+## Bounded, reproducible P54 diagnostic
+
+Run `node scripts/wikidata-p54-coverage.mjs --club=lp-nadir` for Zenit alone, or `node scripts/wikidata-p54-coverage.mjs` for all 16 club QIDs. The dedicated [GitHub Actions diagnostic](../.github/workflows/wikidata-coverage.yml) executes the all-club query when relevant code changes. It does **not** control production app builds or copy player statements into Git.
+
+The script reads the checked [QID mapping](../data/drafts/liga-wikidata-club-map-v1.json), performs at most one limited `P54` query per club (1,501-row ceiling, 30-second client timeout, 1.5-second delay between queries), honors HTTP 429 by halting, and prints only aggregate statistics. Individual person QIDs, names, statement references and dates **remain in process memory only** and are never logged or included in committed artifacts.
+
+This diagnostic deliberately includes all historical membership statements, even deprecated ranks, because it measures discovery coverage rather than providing a verified roster. Its categories are:
+- `boundedCandidate`: both dates provided and the serialized date interval covers 2026-10-14, pending precision/rank/source and roster verification.
+- `openEndedCandidate`: the start date is at or before 2026-10-14 but no end qualifier is present, **not** proof of current membership.
+- `unknown`: missing start, uncertain date precision or insufficient temporal details.
+- `outside`: clearly before or after 2026-10-14.
+
+The report keeps distinct person and statement counts separate, deduplicates repeated statement bindings, treats network failures as `query-failed` **not zero candidates**, and rejects truncated results instead of asserting full coverage. No tested category represents RFU registration. A client-side query of today's Wikidata graph is **not** a frozen historical snapshot; true historical verification will need entity revisions/effective-source evidence. Never translate `P54` counts into 2026/27 roster completeness without a licensed first-team denominator and manual reconciliation.

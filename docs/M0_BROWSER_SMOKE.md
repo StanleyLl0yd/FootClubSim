@@ -39,6 +39,17 @@ Record browser brand, exact version, operating system, each observed result and 
 
 These automated cases are for the production React shell, not a claim that each manual exercise on this standalone diagnostics page has been performed. Browser versions and any remaining untested scenarios must be recorded explicitly before release.
 
+## Headless Chrome startup reliability
+
+An intermittent Windows Chrome smoke failure was observed on the M0 main branch
+([attempt 1 of run 38513013078](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38513013078)):
+the browser did not create `DevToolsActivePort` in its temporary profile.
+The failed job passed when rerun without source changes. The CDP harness now
+allows **one additional startup attempt with a new isolated profile**, reports
+why each startup failed and keeps **all application assertions single-attempt**
+once CDP is ready. A second startup failure remains a hard failure; this
+does not declare the underlying platform flakiness resolved.
+
 ## Remaining work
 
 The React/Vite technical shell and preliminary IndexedDB adapter already exist; however full career revisions/migrations, quota/eviction recovery, private-storage handling, Windows Chrome-specific initial-career compatibility is now automated; **actual private browsing, quota pressure, eviction and complete milestone exit audit** remain open. The adapter currently writes only new initial careers, with no overwrite or in-place revision update. This page is a non-shipping diagnostics artifact and is **not** a playable game.

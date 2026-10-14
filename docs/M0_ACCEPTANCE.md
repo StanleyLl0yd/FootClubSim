@@ -1,6 +1,6 @@
 # M0 acceptance checklist
 
-Status: **OPEN**. Evidence must come from actual implementation, source review or observed tests, not from the existence of this checklist. Complete and cross-reference [M0 exit issue #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) before declaring M0 closed.
+Status: **OPEN**. Evidence must come from actual implementation, source review or observed tests, not from the existence of this checklist. The [M0 blocker decision package](M0_BLOCKER_DECISIONS.md) lists concrete **pending** owner choices and proposed M0 vs M2 acceptance boundaries; it grants no automatic approval. Complete and cross-reference [M0 exit issue #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) before declaring M0 closed.
 
 ## Scope and documentation
 

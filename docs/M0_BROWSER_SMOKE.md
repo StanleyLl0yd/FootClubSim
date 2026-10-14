@@ -40,9 +40,9 @@ Record browser brand, exact version, operating system, each observed result and 
 
 These automated cases are for the production React shell, not a claim that each manual exercise on this standalone diagnostics page has been performed. Browser versions and any remaining untested scenarios must be recorded explicitly before release.
 
-The native Windows Chrome/Edge CDP harness additionally contains a disposable-profile **explicit IndexedDB-clear and JSON-import recovery check**: after the ordinary save/restore flow it reads the known M0 snapshot as a test fixture, clears the origin's IndexedDB via the browser protocol, verifies `NOT_FOUND`, imports the saved file, rejects its intentionally corrupted variant and saves the recovered career. This is **not** confirmation of automatic eviction, downloaded-file UX, real quota exhaustion or full browser-process restart; those require separate evidence in [the edge-case matrix](M0_STORAGE_EDGE_ACCEPTANCE.md).
+The native Windows Chrome/Edge CDP harness additionally contains a disposable-profile **explicit IndexedDB-clear and JSON-import recovery check**: after the ordinary save/restore flow it reads the known M0 snapshot as a test fixture, clears the origin's IndexedDB via the browser protocol, verifies `NOT_FOUND`, imports the saved file, rejects its intentionally corrupted variant and saves the recovered career. That clearing exercise alone is **not** confirmation of automatic eviction, downloaded-file UX, real quota exhaustion or full browser-process restart; a separate Windows process-restart check is now recorded below.
 
-The native Windows Chrome/Edge smoke now additionally **exits and restarts the complete browser process** using the same isolated test profile, then asserts that the recorded M0 career restores from IndexedDB. CI must confirm this new case. This covers more than same-tab reload but does **not** cover Safari restart, real file download, automatic eviction, host disk quota or private-window survival.
+The native Windows Chrome/Edge smoke now additionally **exits and restarts the complete browser process** using the same isolated test profile, then asserts that the recorded M0 career restores from IndexedDB. [PR #127](https://github.com/StanleyLl0yd/FootClubSim/pull/127) confirmed this case on native Windows Chrome and Edge in [browser run 38566035144](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38566035144). This covers more than same-tab reload but does **not** cover Safari restart, real file download, automatic eviction, host disk quota or private-window survival.
 
 ## Headless Chrome startup reliability
 
@@ -55,7 +55,7 @@ why each startup failed and keeps **all application assertions single-attempt**
 once CDP is ready. A second startup failure remains a hard failure; this
 does not declare the underlying platform flakiness resolved.
 
-The macOS SafariDriver smoke additionally has an explicit isolated-origin IndexedDB deletion and **programmatic app JSON-import** recovery check, including rejection of a corrupted backup while preserving the active career. It is **not** a test of Safari Private Browsing, natural eviction, downloaded-file UX or full browser restart. A corresponding successful native Safari CI run is required before treating this added case as verified.
+The macOS SafariDriver smoke additionally has an explicit isolated-origin IndexedDB deletion and **programmatic app JSON-import** recovery check, including rejection of a corrupted backup while preserving the active career. It is **not** a test of Safari Private Browsing, natural eviction, downloaded-file UX or full browser restart. This explicit deletion + file-input exercise succeeded in native Safari in [PR #120](https://github.com/StanleyLl0yd/FootClubSim/pull/120); Safari Private Browsing and full process restart remain unverified.
 
 ## Safari WebDriver startup variability
 
@@ -72,4 +72,4 @@ The [exceptional storage acceptance matrix](M0_STORAGE_EDGE_ACCEPTANCE.md) suppl
 
 ## Remaining work
 
-The React/Vite technical shell and preliminary IndexedDB adapter already exist. Normal and flagged private Windows Chrome/Edge sessions are now in automated native-browser CI, but **macOS Safari Private Browsing, genuine disk-quota pressure, storage eviction and recovery after browser shutdown remain unverified**. Full career revisions and migrations, plus complete milestone exit audit, are also open. The adapter currently writes only new initial careers, with no overwrite or in-place revision update. This page is a non-shipping diagnostics artifact and is **not** a playable game.
+The React/Vite technical shell and preliminary IndexedDB adapter already exist. Normal and flagged private Windows Chrome/Edge sessions are now in automated native-browser CI, but **macOS Safari Private Browsing and full Safari process-restart recovery, genuine disk-quota pressure, automatic storage eviction and real OS-file download/recovery remain unverified**. Full career revisions and migrations, plus complete milestone exit audit, are also open. The adapter currently writes only new initial careers, with no overwrite or in-place revision update. This page is a non-shipping diagnostics artifact and is **not** a playable game.

@@ -14,7 +14,10 @@
 | **Real browser-enforced storage quota pressure** | No genuine per-origin eviction/quota outcome | **OPEN** |
 | **Actual storage eviction** | No observation of automatic browser eviction | **OPEN** |
 | **Backup/recovery across complete browser shutdown** | Same-tab reload smoke only | **OPEN** |
+| **Windows Chrome/Edge site-data clearing and same-process JSON import** | New CDP fixture under review in browser CI; restores a byte-for-byte stored M0 snapshot and rejects a corrupted backup | **Not equivalent to full shutdown or organic eviction** |
 | **Evolving career data and save migrations** | No implemented evolving career schema | M2, not a meaningful M0 functional test |
+
+The CDP harness now contains an additional **isolated disposable Windows browser-profile** recovery scenario that clears real IndexedDB using a browser protocol command and exercises the app's file import with a valid and a tampered snapshot. Its result must be confirmed from the corresponding actual browser CI run before claiming PASS. It does **not** demonstrate that the user clicked Export and downloaded a file, or that browser data is naturally evicted after background storage pressure.
 
 ## Native Safari Private Browsing manual protocol
 

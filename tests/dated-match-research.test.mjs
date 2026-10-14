@@ -29,6 +29,7 @@ test('historical fixture evidence rejects invented roster clearance, source copy
     d => {d.sourcePlayerImagesCopied=true;},
     d => {d.sourceRightsForBulkRedistribution='permitted';},
     d => {d.fixtures[0].playedOn='2026-10-15';},
+    d => {d.fixtures[0].playedOn='2026-10-14';},
     d => {d.fixtures[0].playedOn='2026-02-30';},
     d => {d.fixtures[0].isRegistrationList=true;},
     d => {d.fixtures[0].asOfRosterVerified=true;},

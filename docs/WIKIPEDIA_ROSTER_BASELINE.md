@@ -38,3 +38,17 @@ Wikipedia article **text** is generally [CC BY-SA 4.0](https://creativecommons.o
 Practical future provenance record per *candidate* person: `wikipediaRevisionId`, `sourceUrl`, `observedOn`, `factType`, `effectiveFrom/effectiveTo` (or unknown), `sourceSection`, `separateOfficialCrosscheckUrl` (when needed), `rightsReview`, and independent `fictionalPersonId`. No bulk scraping or automatic Wikipedia-to-playable-roster conversion is authorized.
 
 **Outcome:** 16/16 club-section **Wikipedia research pointers**, **0/16 complete 2026-10-14 RPL registration datasets**, **0 independently cleared source-derived playable fact records**, **0 changes to the initial synthetic pack or current career saves**. Remain in M0 until [rights/rules #15](https://github.com/StanleyLl0yd/FootClubSim/issues/15), [roster work #91](https://github.com/StanleyLl0yd/FootClubSim/issues/91) and [two-pass M0 exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) gates are satisfied.
+
+## 16 club head-coach leads and four recent transition leads
+
+A second [non-playable Wikipedia coach-lead research file](../data/drafts/liga-wikipedia-coach-leads-2026-10-14.json), sourced from the **same frozen `155571074` RPL season revision**, records **one named head-coach lead per each of the 16** approved fictional club IDs. It records **no new fictional coach names** for the 15 non-Nadir clubs, no registration/employment certification and no released staff facts. Only the owner-approved «Надир» coach `lp-person-0027` is linked to a pre-existing fictional person ID; other links require independently designed names and verification.
+
+Four dated Wikipedia-reported changes require chronological reconciliation:
+
+- **21 September:** «Родина» prototype, from Хуан Диас to temporary Барсег Киракосян.
+- **26 September:** «Ростов» prototype, from Джонатан Альба to Дмитрий Кириченко.
+- **8 October:** «Родина» prototype, from temporary Барсег Киракосян to Джонатан Альба. Treat the earlier Rostov-to-Rodina coaching movement as **one prototype person**, not two simultaneous permanent appointments.
+- **11 October:** «Факел» prototype, from Олег Василенко to acting Алексей Ребко. **Acting coach** is not interchangeable with an indefinitely appointed permanent coach.
+
+These are manually recorded **Wikipedia-reported** dates and roles, not independently verified original club appointment documents. [Contract tests](../tests/wikipedia-coach-leads.test.mjs) protect 16-club coverage, date ordering, acting flags, the one existing approved Nadir ID and all zero-import/rights states. The separate [staff and regulations review #15](https://github.com/StanleyLl0yd/FootClubSim/issues/15) remains required before any game-facing staff role is considered fully verified.
+

@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "reviewedOn": "2026-10-14",
+  "targetAsOf": "2026-10-14",
+  "wikipediaSourceId": "rpl-season-2026-27",
+  "wikipediaRevisionId": 155571074,
+  "sourceArticleUrl": "https://ru.wikipedia.org/wiki/Чемпионат_России_по_футболу_2026/2027",
+  "sourceSection": "Официальные представители / Тренерские изменения",
+  "scope": "observed-wikipedia-head-coach-candidates-not-verified-as-of-staff-appointments",
+  "reportedCoachLeads": [
+    {
+      "fictionalClubId": "lp-nizon",
+      "prototypeName": "Срджан Благоевич",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-uprek",
+      "prototypeName": "Станислав Черчесов",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-pacifica",
+      "prototypeName": "Андрей Талалаев",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-statika-m2",
+      "prototypeName": "Вадим Евсеев",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-statika-m1",
+      "prototypeName": "Сандро Шварц",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-nadir",
+      "prototypeName": "Сергей Семак",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": "lp-person-0027",
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-zelenober",
+      "prototypeName": "Мурад Мусаев",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-korni-zapretov",
+      "prototypeName": "Сергей Булатов",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-vagon",
+      "prototypeName": "Михаил Галактионов",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-orendorf",
+      "prototypeName": "Ильдар Ахметзянов",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-chuzhbina",
+      "prototypeName": "Джонатан Альба",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-spadov",
+      "prototypeName": "Дмитрий Кириченко",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-izumrud",
+      "prototypeName": "Франк Артига",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-patriciy",
+      "prototypeName": "Хуан Карседо",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-ognetushitel",
+      "prototypeName": "Алексей Ребко",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": true,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    },
+    {
+      "fictionalClubId": "lp-ogkm",
+      "prototypeName": "Дмитрий Игдисамов",
+      "role": "head-coach-source-lead",
+      "sourceMarksActing": false,
+      "approvedFictionalPersonId": null,
+      "appointmentAsOfVerified": false
+    }
+  ],
+  "reportedCoachTransitions": [
+    {
+      "fictionalClubId": "lp-chuzhbina",
+      "reportedEffectiveDate": "2026-09-21",
+      "previousPrototypeName": "Хуан Диас",
+      "nextPrototypeName": "Барсег Киракосян",
+      "sourceMarksNextActing": true,
+      "effectiveDateIndependentlyVerified": false
+    },
+    {
+      "fictionalClubId": "lp-spadov",
+      "reportedEffectiveDate": "2026-09-26",
+      "previousPrototypeName": "Джонатан Альба",
+      "nextPrototypeName": "Дмитрий Кириченко",
+      "sourceMarksNextActing": false,
+      "effectiveDateIndependentlyVerified": false
+    },
+    {
+      "fictionalClubId": "lp-chuzhbina",
+      "reportedEffectiveDate": "2026-10-08",
+      "previousPrototypeName": "Барсег Киракосян",
+      "nextPrototypeName": "Джонатан Альба",
+      "sourceMarksNextActing": false,
+      "effectiveDateIndependentlyVerified": false
+    },
+    {
+      "fictionalClubId": "lp-ognetushitel",
+      "reportedEffectiveDate": "2026-10-11",
+      "previousPrototypeName": "Олег Василенко",
+      "nextPrototypeName": "Алексей Ребко",
+      "sourceMarksNextActing": true,
+      "effectiveDateIndependentlyVerified": false
+    }
+  ],
+  "licensedPlayableStaffFactsImported": 0,
+  "completeVerifiedStaffLists": 0,
+  "sourceTableCopied": false,
+  "sourceTextOrImagesCopied": false,
+  "sourceRightsReview": "pending",
+  "modifiesOwnerApprovedNames": false,
+  "modifiesCurrentSaves": false
+}

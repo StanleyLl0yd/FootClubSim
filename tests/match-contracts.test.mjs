@@ -197,3 +197,22 @@ test('malformed competition foreigner flags cannot bypass match eligibility vali
     if (!result.ok) assert.ok(result.errors.some(error => error.code === 'INVALID_PLAYER'));
   }
 });
+
+test('versioned match events reject undeclared fields and missing required fields', () => {
+  const shot = {
+    id: 's1', sequence: 1, elapsedSeconds: 200,
+    type: 'shot', teamId: fixture.homeClubId,
+    playerId: homeLineup.starters[10], xgMilli: 100, outcome: 'saved',
+  };
+  const malformed = [
+    [{ ...end, debug: 'unexpected' }],
+    [{ ...shot, debug: 'unexpected' }, { ...end, sequence: 2 }],
+    [{ ...shot, playerId: undefined }, { ...end, sequence: 2 }],
+    [{ ...shot, outcome: undefined }, { ...end, sequence: 2 }],
+  ];
+  for (const events of malformed) {
+    const result = deriveMatchLedger({ ...base, events });
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.ok(result.errors.some(e => e.code === 'INVALID_EVENT_SHAPE'));
+  }
+});

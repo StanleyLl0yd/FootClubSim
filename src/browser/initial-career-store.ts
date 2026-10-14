@@ -5,7 +5,7 @@ import { isStableId } from '../core/identifiers.js';
 
 export type CareerStorageErrorCode =
   'UNAVAILABLE' | 'OPEN_FAILED' | 'BLOCKED' | 'DUPLICATE' |
-  'NOT_FOUND' | 'CORRUPTED' | 'STORAGE_FAILED' | 'INVALID_ID';
+  'NOT_FOUND' | 'CORRUPTED' | 'STORAGE_FAILED' | 'QUOTA_EXCEEDED' | 'INVALID_ID';
 
 export class CareerStorageError extends Error {
   constructor(public readonly code: CareerStorageErrorCode) {
@@ -35,7 +35,8 @@ function openDatabase(): Promise<IDBDatabase> {
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains(STORE)) request.result.createObjectStore(STORE);
     };
-    request.onerror = () => failure('OPEN_FAILED');
+    request.onerror = () => failure(request.error?.name === 'QuotaExceededError' ?
+      'QUOTA_EXCEEDED' : 'OPEN_FAILED');
     request.onblocked = () => failure('BLOCKED');
     request.onsuccess = () => {
       if (settled) {
@@ -61,13 +62,19 @@ export async function saveNewInitialCareer(snapshot: InitialCareerSave): Promise
       let transaction: IDBTransaction;
       try { transaction = db.transaction(STORE, 'readwrite'); }
       catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
-      let duplicate = false;
+      let requestError: CareerStorageErrorCode = 'STORAGE_FAILED';
       let request: IDBRequest<IDBValidKey>;
       try { request = transaction.objectStore(STORE).add(encoded, snapshot.careerId); }
       catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
-      request.onerror = () => { duplicate = request.error?.name === 'ConstraintError'; };
+      request.onerror = () => {
+        if (request.error?.name === 'ConstraintError') requestError = 'DUPLICATE';
+        else if (request.error?.name === 'QuotaExceededError') requestError = 'QUOTA_EXCEEDED';
+      };
       transaction.oncomplete = () => resolve();
-      transaction.onabort = () => reject(new CareerStorageError(duplicate ? 'DUPLICATE' : 'STORAGE_FAILED'));
+      transaction.onabort = () => reject(new CareerStorageError(
+        requestError === 'STORAGE_FAILED' && transaction.error?.name === 'QuotaExceededError' ?
+          'QUOTA_EXCEEDED' : requestError,
+      ));
       transaction.onerror = () => { /* Wait for abort so that no partial write is reported. */ };
     });
   } finally {

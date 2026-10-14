@@ -3,11 +3,14 @@ import { createSyntheticRplScaleCatalog } from '../core/synthetic.js';
 import { generateDoubleRoundRobin } from '../core/fixtures.js';
 import { validateDoubleRoundRobin } from '../core/fixture-validation.js';
 import { createInitialCareer, exportInitialCareer, importInitialCareer, type InitialCareerSave } from '../core/save.js';
-import { loadInitialCareer, saveNewInitialCareer } from '../browser/initial-career-store.js';
+import { CareerStorageError, loadInitialCareer, saveNewInitialCareer } from '../browser/initial-career-store.js';
 
 const CAREER_ID = 'm0-ui-initial-career';
 
 function errorMessage(error: unknown): string {
+  if (error instanceof CareerStorageError && error.code === 'QUOTA_EXCEEDED') {
+    return 'Недостаточно места в хранилище браузера. Экспортируйте карьеру в JSON и освободите место.';
+  }
   return error instanceof Error ? error.message : String(error);
 }
 

@@ -90,8 +90,8 @@ class RepositoryAuditTests(unittest.TestCase):
         self.assertEqual(audit_files(self.root, paths, set(paths))[1], [])
 
     def test_disguised_binary_payload_requires_review(self):
-        self.put("bin/blob.unknown", b"prefix\\x00payload")
-        self.put("data/custom.txt", b"prefix\\x00payload")
+        self.put("bin/blob.unknown", b"prefix\x00payload")
+        self.put("data/custom.txt", b"prefix\x00payload")
         paths = ["bin/blob.unknown", "data/custom.txt"]
         _, concerns = audit_files(self.root, paths, set())
         self.assertEqual(len([c for c in concerns if "binary content" in c]), 2)

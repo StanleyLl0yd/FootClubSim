@@ -47,6 +47,24 @@ Formation, role fit, pressing, compactness, defensive line, passing risk, posses
 
 ## Reproducibility
 
+**Implemented M0 RNG compatibility contract (proposed for M1):**
+`src/core/rng.ts` uses `xorshift32-v1` with a nonzero unsigned 32-bit
+integer seed from `1..4294967295`. Each draw applies XOR/shift by
+`(13 left, 17 unsigned-right, 5 left)` in that exact order and stores
+the unsigned 32-bit result. `nextFloat()` returns `nextUint32() /
+4294967296`, consuming exactly **one** generator step, with an
+inclusive lower bound and exclusive upper bound `[0,1)`. Snapshot/
+restore transfers the exact integer continuation state. The algorithm
+is **not cryptographically secure** and must not be used for secrets.
+
+`tests/rng-vectors.test.mjs` pins exact multi-seed integer outputs,
+resume boundaries and float normalization. The saved `RNG_VERSION`
+protects compatibility for revision-0 career snapshots and early
+contracts. A future change of algorithm or draw consumption order
+requires a new version and reviewed replay/migration tests.
+**This does not by itself approve the M1 random-number architecture
+or prove a statistically realistic football model.**
+
 Version and store the PRNG algorithm, seed and continuation state. Same frozen inputs and same engine/rules versions must give identical event order and results. Randomness must be consumed in a stable explicit sequence. Never claim reproducibility across changed engine versions unless a compatibility/replay layer verifies it.
 
 ## M1 testing and calibration
@@ -55,4 +73,4 @@ Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuri
 
 Calibrate using the [M1 calibration protocol](M1_CALIBRATION_PROTOCOL.md), with 10,000 seeded matches per scenario and documented source-permitted reference distributions: goals, draws, home/away results, shots, xG, cards, injuries and player attribute/tactics sensitivity. Preserve baselines and confidence intervals. Do not invent target realism metrics or claim successful calibration before running actual tests.
 
-Open design choices: exact PRNG, probability curves, spatial zones, saved event detail, competition-specific disciplinary and abandonment policies.
+Open design choices: whether to adopt the existing, vector-tested M0 PRNG unchanged for M1; probability curves, spatial zones, saved event detail, competition-specific disciplinary and abandonment policies. The current algorithm and replay semantics are specified and tested, but owner approval for M1 usage is pending.

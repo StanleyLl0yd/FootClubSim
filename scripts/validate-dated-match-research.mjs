@@ -54,12 +54,12 @@ function sourceMatchesDeclaration(fixture) {
     assert.ok(parameters.length <= 1, 'unexpected federation query parameters');
     if (parameters.length === 1) {
       assert.equal(parameters[0][0], 'TournamentMatchesFilter[tournamentId]', 'unreviewed federation query');
-      assert.match(parameters[0][1], /^[1-9]\\d*$/, 'invalid federation tournament ID');
+      assert.match(parameters[0][1], /^[1-9][0-9]*$/, 'invalid federation tournament ID');
     }
   } else if (fixture.provider === 'FC Krasnodar') {
     assert.equal(parameters.length, 1, 'expected source article ID');
     assert.equal(parameters[0][0], 'object_id', 'unreviewed article query');
-    assert.match(parameters[0][1], /^[1-9]\\d*$/, 'invalid article ID');
+    assert.match(parameters[0][1], /^[1-9][0-9]*$/, 'invalid article ID');
   } else {
     assert.equal(parameters.length, 0, 'unexpected provider query parameters');
   }

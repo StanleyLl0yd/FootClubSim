@@ -6,6 +6,8 @@ import {
 
 export type ValidationError = Readonly<{ code: string; at: string }>;
 
+const ATTRIBUTE_KEYS = [...FIELD_ATTRIBUTE_KEYS, ...GOALKEEPER_ATTRIBUTE_KEYS];
+
 /** Validates a typed model. JSON parsing needs a separate untrusted-data adapter. */
 export function validateCatalog(catalog: Catalog): readonly ValidationError[] {
   const errors: ValidationError[] = [];
@@ -26,7 +28,7 @@ export function validateCatalog(catalog: Catalog): readonly ValidationError[] {
         typeof player.foreignerForCompetition !== 'boolean') {
       errors.push({ code: 'INVALID_PLAYER', at: 'player:' + player.id });
     }
-    for (const key of [...FIELD_ATTRIBUTE_KEYS, ...GOALKEEPER_ATTRIBUTE_KEYS]) {
+    for (const key of ATTRIBUTE_KEYS) {
       const value = player.attributes[key];
       if (!Number.isInteger(value) || value < 1 || value > 100) {
         errors.push({ code: 'INVALID_ATTRIBUTE', at: 'player:' + player.id + '.' + key });

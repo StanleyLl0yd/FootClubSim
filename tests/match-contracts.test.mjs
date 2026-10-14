@@ -181,3 +181,19 @@ test('sparse catalog arrays and oversized roster references never crash match de
     if (!result.ok) assert.ok(result.errors.some(e => e.code === 'INVALID_MATCH_SHAPE'));
   }
 });
+
+test('malformed competition foreigner flags cannot bypass match eligibility validation', () => {
+  const first = catalog.players[0];
+  for (const invalid of ['false', null, 1]) {
+    const altered = {
+      ...base,
+      catalog: {
+        ...catalog,
+        players: [{ ...first, foreignerForCompetition: invalid }, ...catalog.players.slice(1)],
+      },
+    };
+    const result = deriveMatchLedger(altered);
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.ok(result.errors.some(error => error.code === 'INVALID_PLAYER'));
+  }
+});

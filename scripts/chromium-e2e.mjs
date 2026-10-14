@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Chromium DevTools Protocol smoke: native browser, no DOM emulator or extra packages.
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -221,6 +221,44 @@ async function run() {
     await waitText('Выберите вымышленный клуб');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+
+    // Recover a valid initial career after clearing IndexedDB in a disposable
+    // browser profile. Clearing site data is NOT organic eviction or real quota.
+    const savedJson = await evaluate(`new Promise((resolve, reject) => {
+      const open = indexedDB.open('footclubsim-m0', 1);
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result;
+        let value;
+        const tx = db.transaction('initial-careers', 'readonly');
+        const get = tx.objectStore('initial-careers').get('m0-ui-initial-career');
+        get.onsuccess = () => { value = get.result; };
+        tx.oncomplete = () => { db.close(); resolve(value); };
+        tx.onabort = () => { db.close(); reject(tx.error); };
+      };
+    })`);
+    if (typeof savedJson !== 'string' || !savedJson.includes('footclubsim-initial-career')) {
+      throw new Error('Could not read valid initial-career backup from isolated browser');
+    }
+    const backupPath = join(profile, 'm0-recovery.json');
+    await writeFile(backupPath, savedJson, 'utf8');
+    await send('Storage.clearDataForOrigin', {
+      origin: new URL(targetUrl).origin, storageTypes: 'indexeddb',
+    });
+    await send('Page.reload', { ignoreCache: true });
+    await waitText('Выберите вымышленный клуб');
+    await click('Восстановить из браузера');
+    await waitText('Восстановление отклонено: NOT_FOUND');
+    const documentTree = await send('DOM.getDocument');
+    const fileInput = await send('DOM.querySelector', {
+      nodeId: documentTree.root.nodeId, selector: '#import-file',
+    });
+    if (!fileInput.nodeId) throw new Error('Import file input missing');
+    await send('DOM.setFileInputFiles', { nodeId: fileInput.nodeId, files: [backupPath] });
+    await waitText('Стартовая карьера проверена и загружена в память');
+    await click('Сохранить в браузере');
+    await waitText('Начальная карьера записана в IndexedDB');
+    console.log('PASS: isolated browser recovers from cleared IndexedDB through file import');
 
     // Simulate an IndexedDB open quota rejection in a real browser process.
     // This validates UI/error recovery, not real disk-quota or eviction behavior.

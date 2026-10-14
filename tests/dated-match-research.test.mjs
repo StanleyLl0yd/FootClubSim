@@ -10,9 +10,9 @@ const nadir = read('data/drafts/nadir-personnel-v1.json');
 const pack = read('data/drafts/liga-personnel-pack-v1.json');
 const input = {clubIds:clubs, nadir};
 
-test('both fixture sources record bounded played appearances, not dated league registrations', () => {
+test('four fixture sources record bounded played appearances, not dated league registrations', () => {
   assert.deepEqual(validateDatedMatchResearch(observations, input), {
-    fixtures: 2, teamsObserved: 3, datedTeamAppearanceSlots: 62,
+    fixtures: 4, teamsObserved: 6, datedTeamAppearanceSlots: 125,
     distinctRegisteredPlayersEstablished: 0, legallyClearedPlayableFacts: 0,
   });
   assert.equal(pack.availableForCareerStart, false);
@@ -57,4 +57,22 @@ test('case IDs and referenced real match participation are unique and club-scope
   const outside = structuredClone(observations);
   outside.targetedCaseChecks[0].fictionalClubId = 'lp-zelenober';
   assert.throws(() => validateDatedMatchResearch(outside, input), /unapproved individual case club/);
+});
+
+
+test('October federation protocol resolves source-shortened Akron substitution counting', () => {
+  const rows = observations.fixtures;
+  assert.equal(rows.length, 4);
+  assert.deepEqual(new Set(rows.map(x => x.fixtureId)).size, 4);
+  const cup = rows.find(x => x.fixtureId === 'rfs-cup-2026-10-13-lokomotiv-akron');
+  assert.ok(cup);
+  assert.equal(cup.provider, 'Russian Football Union');
+  const akron = cup.participants.find(x => x.fictionalClubId === 'lp-nizon');
+  assert.deepEqual(akron, {
+    fictionalClubId: 'lp-nizon', startingPlayers: 11,
+    benchListed: 12, substitutesEntered: 5, uniquePlayersAppeared: 16,
+  });
+  const fakel = rows.find(x => x.fixtureId === 'rpl-2026-10-10-fakel-lokomotiv');
+  assert.equal(fakel.participants.find(x => x.fictionalClubId === 'lp-ognetushitel').uniquePlayersAppeared, 15);
+  assert.equal(fakel.participants.find(x => x.fictionalClubId === 'lp-vagon').uniquePlayersAppeared, 16);
 });

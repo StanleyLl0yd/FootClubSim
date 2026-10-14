@@ -1,5 +1,7 @@
 # M0 blockers: decision package and milestone scope boundaries
 
+**Current owner decisions (2026-10-14):** the 16 club aliases, `Статика М1`/`Статика М2`, abstract three-ring badges and parody real-roster-prototype direction are now approved in [ADR-0005](adr/0005-liga-prikolov-brand-and-personnel.md). Any earlier unresolved choices for these exact names or city suffixes below are historical and superseded. Data licensing, actual player/coach status and M0 exit gates are still open.
+
 **Status: PARTIALLY RESOLVED on 2026-10-14.** The owner now approved the fictional **«Лига приколов»**, reverse/antonym club-name policy and **genuine effective RPL/RFU/IFAB rules**. Five aliases are now accepted (two separate «Статика» clubs, Зеленобер, Изумруд, Низон); the eleven remaining aliases and all city names are still drafts in [ADR-0004](adr/0004-liga-prikolov-rpl-rules.md). All other D03-D05 and D07-D11 proposals, detailed manager values, remaining regulation and rights checks, and M0-to-M2 gate changes still require approval. This record neither closes #15 nor authorizes M1.
 
 ## Principle: separate M0 architecture exit from gameplay release

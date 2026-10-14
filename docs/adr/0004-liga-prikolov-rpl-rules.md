@@ -1,11 +1,6 @@
 # ADR-0004: Liga Prikolov with genuine RPL sporting regulations and fictional reverse-name clubs
 
-**Status: Core product direction ACCEPTED by owner on 2026-10-14.**
-**Five exact club names were selected by the owner on 2026-10-14**:
-«Зеленобер», «Статика» (for both Dynamo teams), «Изумруд» and «Низон».
-The other eleven source-team aliases are **candidates**, not an approved
-ready-to-ship catalog. Neither official RPL regulatory completeness nor
-external branding/source rights are declared satisfied.
+**Status: All 16 exact fictional names APPROVED 2026-10-14.** The two Dynamo-inspired clubs are officially **Статика М1** and **Статика М2**. Original three-ring badge designs and roster-prototype direction are approved in [ADR-0005](0005-liga-prikolov-brand-and-personnel.md). Rights, actual season-roster verification, and sporting-rule completeness remain OPEN. No playable real-prototype pack is released.
 
 ## Owner-approved direction
 
@@ -25,10 +20,7 @@ external branding/source rights are declared satisfied.
    name by antonym, semantic reversal or deliberate wordplay** on the
    real name. If a source name is a proper noun, city or acronym with no
    true antonym, do not falsely label the reversal a dictionary antonym.
-4. Use **original fictional footballers, staff, biographies, badges and
-   visual identities** rather than silently copying real rosters, real
-   club insignia or player images. Exact future squad generation and
-   original artwork need their own reviewed designs and rights gates.
+4. Use **real 2026/27 season personnel as verified factual prototypes** for the future fictional starting squads, while displaying independently authored parodic names, generated gameplay ratings and original geometric badges. Do not copy protected crest assets, photos or proprietary datasets. A season-specific, rights-reviewed source and release gate is required before bundling factual rosters.
 5. Keep **regulations and the roster/branding pack independently
    versioned**: real sports rules may govern a fictional league without
    distributing original real-world player databases. Ensure the game
@@ -44,62 +36,30 @@ external branding/source rights are declared satisfied.
    bypass actual RPL coaching accreditation or registration requirements
    where a specific playable rules-pack model requires them.
 
-## 2026/27 source-team mapping: owner-approved and candidate aliases
+## 2026/27 source-team mapping: 16 approved fictional aliases
 
-The current participant list comes from the club-published [2026/27 RPL
-participant list](https://www.fc-akhmat.ru/news/press/vse-uchastniki-rpl-v-sezone-202627/),
-cross-checked against the RFU [2026/27 RPL Cup fixture announcement](https://www.rfs.ru/news/224573) and competition's official regulation
-[PDF documentId 2164](https://www.rfs.ru/subject/1/documents/preview?documentId=2164).
-The real names below are **source references for the parody**, not
-licensed game data, and are not actual in-game club records today.
-**Approval refers to exact names, not approval of new data packs or game behavior.**
+All entries were approved by the owner on 2026-10-14. The real club names below are documentary design references, **not** a licensed football database or game affiliation. The stable fictional IDs, colors and badges are in `src/branding/identities.ts` and [ADR-0005](0005-liga-prikolov-brand-and-personnel.md). The existing revision-0 M0 test catalog is unchanged.
 
-| Real participating club | Fictional club name | Status | Transformation rationale |
-| --- | --- | --- | --- |
-| Зенит | Надир | Candidate | Direct antonym: upper celestial point vs lower |
-| Краснодар | **Зеленобер** | **Approved 2026-10-14** | Красный -> зелёный; дарить -> брать, «бер» (игровое усечение от «берёт») |
-| Локомотив | Вагон | Candidate | Pulling engine vs hauled carriage |
-| Спартак (Москва) | Патриций | Candidate | Historical contrast: gladiator/slave leader vs Roman aristocrat |
-| ЦСКА | ОГКМ | Candidate | Окраинный гражданский клуб мира vs Центральный спортивный клуб армии; playful acronym |
-| Балтика | Пацифика | Candidate | Baltic sea vs vast distant Pacific; geographic rather than dictionary antonym |
-| Динамо (Москва) | **Статика** | **Approved 2026-10-14** | Динамо -> Статика; **Москва is not part of the club's approved display name** |
-| Рубин | **Изумруд** | **Approved 2026-10-14** | Red gemstone -> green gemstone; color opposition without losing precious-stone theme |
-| Ахмат | Упрёк | Candidate | Praise-worthy name vs reproach; not a dictionary antonym of a name |
-| Ростов | Спадов | Candidate | Рост vs спад, retaining place-name-like form |
-| Крылья Советов | Корни Запретов | Candidate | Wings vs roots; advice vs prohibitions |
-| Оренбург | **Орендорф** / **Оренвайлер** | **Pending owner choice** | German Burg (fortified castle/stronghold) vs Dorf (village) or Weiler (hamlet). Not strict dictionary antonyms; preserve recognizable toponym |
-| Акрон | **Низон** | **Approved 2026-10-14** | A crafted name suggesting низ / нижняя точка in contrast with the upper/акро association; this is wordplay, not proven source etymology |
-| Динамо (Махачкала) | **Статика** | **Approved 2026-10-14** | Динамо -> Статика; **Махачкала is not part of the club's approved display name** |
-| Родина | Чужбина | Candidate | Homeland vs foreign land |
-| Факел | Огнетушитель | Candidate | Fire-bearing torch vs fire-extinguishing device |
+| Real prototype (design reference) | Approved fictional name |
+| --- | --- |
+| Зенит | **Надир** |
+| Краснодар | **Зеленобер** |
+| Локомотив | **Вагон** |
+| Спартак (Москва) | **Патриций** |
+| ЦСКА | **ОГКМ** |
+| Балтика | **Пацифика** |
+| Динамо (Москва) | **Статика М1** |
+| Рубин | **Изумруд** |
+| Ахмат | **Упрёк** |
+| Ростов | **Спадов** |
+| Крылья Советов | **Корни Запретов** |
+| Оренбург | **Орендорф** |
+| Акрон | **Низон** |
+| Динамо (Махачкала) | **Статика М2** |
+| Родина | **Чужбина** |
+| Факел | **Огнетушитель** |
 
-**Other alternative proposals:** «Тихоокеаника», «Гражданские» and
-«Орендеревня»; for Orenburg specifically, propose «Орендорф» (Dorf),
-«Оренвайлер» (Weiler) or «Оренфельд» (Feld; looser contrast).
-**No Orenburg option has yet been selected.** The five confirmed aliases
-above must not be replaced with prior options in subsequent revisions.
-
-**Two different clubs intentionally share the exact public-facing
-`displayName = «Статика»`.** They must carry **different permanent
-internal `clubId` values** and a separately modeled home-city/
-locality/region qualifier in tables, search, fixtures, match reports,
-notifications and save roundtrips. Never add «-Москва» or
-«-Махачкала» to either approved **club** name merely to satisfy a
-unique-display-name assumption. The actual locality names may also be
-parodied in a separate explicitly reviewed mapping; none has yet been
-approved. One conceptual suggestion is to invert the *proposed* moist/
-marshy meaning of Москва into a dry/waterless place name, but the
-etymology of Москва is disputed and should not be treated as a fact.
-For Махачкала, `кала/qala` is conventionally interpreted as a
-fortress/town component; a speculative locality name «Махачаул» could
-contrast that with a rural settlement. Neither geographical suggestion
-is an approved name.
-
-Do not implement a real-name-to-game-ID relationship in the initial
-save schema without explicit versioning, a reviewed rights policy and
-separate catalog validation. Avoid source name or external team ID in
-the public-facing UI unless there is a clear design reason and a rights
-review. The game must not use `displayName` as an identity key.
+**Статика М1** (Москва prototype) and **Статика М2** (Махачкала prototype) each have a unique club ID, distinct public name and own abstract badge; the second line inside each badge is exactly «М1» or «М2». No fictional city renaming is approved or required to distinguish them. The earlier same-name/no-suffix proposal is superseded by the owner's explicit decision.
 
 ## Rules architecture and no invented shortcuts
 
@@ -129,32 +89,10 @@ review. The game must not use `displayName` as an identity key.
 
 ## Acceptance and remaining constraints
 
-**Accepted now:** the league name «Лига приколов», the
-real-regulations-only rule-source policy, semantic-reversal approach
-to fictional club names, 2026/27 participants as source inspiration,
-and five exact club aliases: «Зеленобер», «Статика» for each of the two
-separate Dynamo-inspired clubs, «Изумруд» and «Низон».
+**Approved:** all 16 exact names, two independently named «Статика» teams, original concentric circular badges with «М1»/«М2», recognizable but original parody person names, real roster prototypes as a future product direction, and authentic source-verified sporting rules.
 
-**NOT accepted/verified:** the remaining eleven fictional source-team
-aliases, all fictional city names (including any separate locality names
-for the two «Статика» clubs), their club designs, rights/trademark
-clearance, full
-article-by-article review of all effective RPL/RFU/IFAB source editions,
-modelling and tests of all relevant legal sporting edge cases, staff
-qualifications, true-official branding claims, M1 implementation
-or finished M0 exit audits.
+**Still OPEN:** factual roster/source verification, permissions for distributing substantial third-party records in this public proprietary repository, rights/publicity and original-name/trademark review, official effective rule edition completeness, frozen versioned playable data pack, migrations and both required whole-repository M0 exit audit passes.
 
-Legal review matters: inventing a satirical name or using geographic
-references does **not** automatically establish freedom to use an
-existing logo, distinctive trade dress, another company's database or
-registered mark. A public product should have original names,
-crests and branding and should not suggest official endorsement.
+The 46 «Надир» parody names are approved but are not certification that all referenced real people were registered with «Зенит» on 2026-10-14. Fifteen more squads remain to be researched; no generated placeholder can be reported as a verified real-world roster. Current M0 remains a synthetic test pack.
 
-Relevant design records: [M0 product decisions](../M0_PRODUCT_DECISIONS.md),
-[M0 blocker decisions](../M0_BLOCKER_DECISIONS.md),
-[RPL article/source register](../M0_RPL_RULES_MATRIX.md),
-[data provenance](../DATA_SOURCES.md), [M0 acceptance](../M0_ACCEPTANCE.md).
-
-**M0 exit #2 stays open until remaining source/rule/rights/design and
-mandatory two complete repository audits pass. STOP before M1 and
-notify the owner; require a separate explicit instruction to begin M1.**
+**Do not start M1 without explicit separate owner instruction after M0 gate.**

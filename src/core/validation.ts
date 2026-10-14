@@ -64,7 +64,7 @@ export function validateLineup(
   const errors: ValidationError[] = [];
   if (lineup.clubId !== club.id) errors.push({ code: 'WRONG_CLUB', at: 'clubId' });
   if (!Number.isInteger(rules.starterCount) || rules.starterCount < 1 || rules.starterCount > 11 ||
-      !Number.isInteger(rules.maxBench) || rules.maxBench < 0 ||
+      !Number.isSafeInteger(rules.maxBench) || rules.maxBench < 0 || rules.maxBench > 128 ||
       !Number.isInteger(rules.maxForeignersOnField) || rules.maxForeignersOnField < 0 ||
       rules.maxForeignersOnField > rules.starterCount) {
     return [{ code: 'INVALID_RULES', at: 'rules' }];

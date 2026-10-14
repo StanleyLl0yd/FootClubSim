@@ -107,6 +107,8 @@ def read_manifest(root: Path) -> tuple[set[str], list[str]]:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, ValueError):
         return set(), ["synthetic asset manifest unreadable"]
+    if not isinstance(data, dict):
+        return set(), ["synthetic asset manifest must be a JSON object"]
     values = data.get("assetPaths")
     if not isinstance(values, list) or any(not is_safe_asset_path(value) for value in values):
         return set(), ["synthetic asset manifest has invalid asset paths"]

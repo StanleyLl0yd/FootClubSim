@@ -19,7 +19,7 @@
 </head>
 <body>
   <h1>FootClubSim: проверка ядра M0</h1>
-  <p class="note">Это технический стенд, а не игра. Здесь нет симуляции матчей, сохранения в браузере или реальных футболистов.</p>
+  <p class="note">Это технический стенд, а не игра. Здесь нет симуляции матчей или реальных футболистов. Сохранения в IndexedDB используются только для проверки прототипа.</p>
   <label for="club">Вымышленный клуб</label>
   <select id="club"></select>
   <div>
@@ -103,6 +103,11 @@
     document.getElementById('restore-local').addEventListener('click', async () => {
       try {
         const restored = await loadInitialCareer('m0-manual-test');
+        if (restored.basePackId !== catalog.packId ||
+            restored.basePackVersion !== catalog.packVersion) {
+          result.textContent = 'Восстановление отклонено: другая версия тестовой базы. Сохранение не перезаписано.';
+          return;
+        }
         activeCareer = restored;
         clubSelect.value = restored.selectedClubId;
         exportButton.disabled = false;
@@ -124,6 +129,9 @@
         const parsed = await importInitialCareer(await file.text());
         if (!parsed.ok) {
           result.textContent = 'Импорт отклонён: ' + parsed.error;
+        } else if (parsed.value.basePackId !== catalog.packId ||
+                   parsed.value.basePackVersion !== catalog.packVersion) {
+          result.textContent = 'Импорт отклонён: другая версия тестовой базы. Текущая карьера сохранена.';
         } else {
           activeCareer = parsed.value;
           clubSelect.value = activeCareer.selectedClubId;

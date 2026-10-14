@@ -22,7 +22,7 @@ Running from `file://` can fail because of browser ES module origin restrictions
 2. Select another fictional club, create an initial career and verify the selected club, schema version and revision 0 are shown.
 3. Export the JSON file; import the same file. The career ID and selected club should survive unchanged.
 4. Modify the inner payload string of the downloaded JSON without recomputing the checksum, then import. It must be rejected with `INTEGRITY_ERROR` rather than replacing the current displayed career.
-5. Import malformed JSON and an unsupported schema; verify a readable rejection and no loss of the current displayed career.
+5. Import malformed JSON and an unsupported schema; verify a readable rejection and no loss of the current displayed career. Also import a valid export from a different synthetic seed: the standalone diagnostics page must reject the incompatible pack while keeping the active career.
 6. With an initial career created, click **Сохранить в IndexedDB** and confirm success. Repeating the action with the same career ID must return `DUPLICATE` and keep the existing stored value.
 7. Reload the page: in-memory state disappears. Click **Восстановить тестовую карьеру**, then verify the original club and ID are restored from IndexedDB.
 8. In private browsing or with storage blocked, confirm that storage errors are surfaced without replacing the active in-memory career. Do not interpret this as a successful persistence test without recording real-browser observations.

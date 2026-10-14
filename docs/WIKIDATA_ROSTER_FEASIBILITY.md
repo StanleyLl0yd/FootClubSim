@@ -77,6 +77,14 @@ The result shows why CC0 availability is not sufficient for a playable league da
 
 «Надир» alone has 43 open-ended candidates with all three fields present. **This is not a 43-player current squad.** The source is a live, mutable Wikidata graph (observed 2026-10-14T08:55:12.741Z UTC), not an official 2026/27 registration freeze. Some P413 positions are too general, field values can be outdated, and P27 is not Russian player-limit eligibility. Other candidate groups with undated P54 membership (1761 historical club-person pairs in the first diagnostic) were **not included** in this narrower field-presence measurement. Absence of a candidate or an attribute is not evidence that a player is absent from the real club.
 
-## Conflicting open-ended memberships
+### Measured open-ended cross-club collisions, 2026-10-14
 
-The [cross-club diagnostic](../scripts/wikidata-crossclub-conflicts.mjs) checks whether the **same person QID** has open-ended P54 candidate memberships for multiple of the 16 source clubs. It tracks identifiers only in process memory; published output contains counts of collisions per club and across the league. It runs under a [separate diagnostic workflow](../.github/workflows/wikidata-crossclub-conflicts.yml). Any conflicts are **data-quality review leads, not proven concurrent player contracts or improper RFU registration**. A failure or throttling in any club query prevents a misleading all-club summary.
+[GitHub Actions run 38539620742](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38539620742) obtained a complete 16-club result on its **second attempt**; the initial attempt encountered a transient WDQS timeout and produced no conclusion. [Aggregated research snapshot](../data/drafts/liga-wikidata-crossclub-collision-2026-10-14.json):
+
+- **504** open-ended candidate club-person pairs.
+- **486** unique Wikidata person entities among these candidate links (kept in memory only).
+- **16** people are open-ended candidates in two or more of these 16 clubs.
+- **18** excess club links, demonstrating why club totals are not league-wide unique persons.
+- **0 verified concurrent RFU registrations**. This scan does not prove any player actually belongs to multiple clubs.
+
+«Надир» has **4** candidates also marked open-ended for at least one other league club. All overlaps need dated source and effective registration review. No playable person data or M0 career files changed.

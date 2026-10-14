@@ -129,3 +129,21 @@ test('fake worker reports cannot claim impossible score/shots/xG', () => {
     { ...reply.report, away: { ...reply.report.away, shots: NaN } },
   ]) failure(readWorkerReply({ ...reply, report }, pending, 0), 'INVALID_REPORT');
 });
+
+test('completed worker report cannot exceed the combined match event budget', () => {
+  const manyHome = { goals: 0, shots: 3000, shotsOnTarget: 0, xgMilli: 0 };
+  const manyAway = { goals: 0, shots: 2000, shotsOnTarget: 0, xgMilli: 0 };
+  failure(readWorkerReply({
+    ...reply, report: { ...reply.report, home: manyHome, away: manyAway },
+  }, pending, 0), 'INVALID_REPORT');
+
+  const withinBudget = readWorkerReply({
+    ...reply,
+    report: {
+      ...reply.report,
+      home: { ...manyHome, shots: 2095 },
+      away: manyAway,
+    },
+  }, pending, 0);
+  assert.equal(withinBudget.ok, true);
+});

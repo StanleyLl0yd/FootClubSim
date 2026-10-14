@@ -138,17 +138,20 @@ test('network failure does not become a zero-player claim; no unverified rosters
   assert.ok(!('candidatePersonsAllSeasons' in response.results[0]));
 });
 
-test('429 halts subsequent club requests without crossing Wikimedia retry limits', async () => {
+test('429 rate limits and 503 overload both halt subsequent WDQS club requests', async () => {
   const clubs = [
     { clubId: 'lp-nadir', wikidataQid: 'Q29108' },
     { clubId: 'lp-vagon', wikidataQid: 'Q29115' },
   ];
-  let called = 0;
-  const response = await collectCoverage(clubs, async () => {
-    called++;
-    return { status: 429, ok: false, headers: { get: () => '20' } };
-  }, async () => {});
-  assert.equal(called, 1);
-  assert.equal(response.results.length, 1);
-  assert.equal(response.completeClubCoverage, false);
+  for (const status of [429, 503]) {
+    let called = 0;
+    const response = await collectCoverage(clubs, async () => {
+      called++;
+      return { status, ok: false, headers: { get: () => '20' } };
+    }, async () => {});
+    assert.equal(called, 1, 'status ' + status);
+    assert.equal(response.results.length, 1);
+    assert.equal(response.results[0].status, 'query-failed');
+    assert.equal(response.completeClubCoverage, false);
+  }
 });

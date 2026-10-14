@@ -85,10 +85,11 @@ function cdpClient(socket) {
  * DevToolsActivePort exists. Retry only startup, with a fresh isolated profile;
  * never retry application assertions or hide a failing browser test.
  */
-async function startBrowser() {
+async function startBrowser(reuseProfile = null) {
   const failures = [];
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    const profile = await mkdtemp(join(tmpdir(), 'footclubsim-cdp-'));
+  for (let attempt = 1; attempt <= (reuseProfile ? 1 : 2); attempt++) {
+    const profile = reuseProfile ?? await mkdtemp(join(tmpdir(), 'footclubsim-cdp-'));
+    if (reuseProfile) await rm(join(profile, 'DevToolsActivePort'), { force: true });
     const browser = spawn(executable, [
       '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
       ...(privateFlag ? [privateFlag] : []),
@@ -115,14 +116,14 @@ async function startBrowser() {
       failures.push('attempt ' + attempt + ': ' + status + '; ' + String(error));
       browser.kill();
       await delay(500);
-      await rm(profile, { recursive: true, force: true, maxRetries: 4, retryDelay: 500 });
+      if (!reuseProfile) await rm(profile, { recursive: true, force: true, maxRetries: 4, retryDelay: 500 });
     }
   }
-  throw new Error('Browser startup failed after two isolated attempts: ' + failures.join(' | '));
+  throw new Error('Browser startup failed: ' + failures.join(' | '));
 }
 
 async function run() {
-  const { profile, browser, port } = await startBrowser();
+  let { profile, browser, port } = await startBrowser();
   let socket;
   try {
 
@@ -134,7 +135,7 @@ async function run() {
     }, 'CDP page target');
 
     socket = await openSocket(target.webSocketDebuggerUrl);
-    const send = cdpClient(socket);
+    let send = cdpClient(socket);
     await send('Page.enable');
     await send('Runtime.enable');
 
@@ -287,6 +288,32 @@ async function run() {
     await click('Сохранить в браузере');
     await waitText('Начальная карьера записана в IndexedDB');
     console.log('PASS: isolated browser recovers from cleared IndexedDB through file import');
+
+    // A real application-process restart with the SAME isolated profile must
+    // preserve the committed revision-0 save. InPrivate mode is tested separately.
+    void send('Browser.close').catch(() => {});
+    await until(
+      () => browser.exitCode !== null || browser.signalCode !== null,
+      'graceful Chrome/Edge process exit', 15_000,
+    );
+    socket?.close();
+    ({ browser, port } = await startBrowser(profile));
+    const secondTarget = await until(async () => {
+      const response = await fetch('http://127.0.0.1:' + port + '/json/list');
+      if (!response.ok) return null;
+      const pages = await response.json();
+      return pages.find(page => page.type === 'page' && page.webSocketDebuggerUrl);
+    }, 'second Chrome/Edge page target');
+    socket = await openSocket(secondTarget.webSocketDebuggerUrl);
+    send = cdpClient(socket);
+    await send('Page.enable');
+    await send('Runtime.enable');
+    await send('Page.navigate', { url: targetUrl });
+    await waitText('Начало карьеры');
+    await click('Восстановить из браузера');
+    await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+    console.log('PASS: initial M0 career survives complete browser restart with same profile');
+
 
     // Simulate an IndexedDB open quota rejection in a real browser process.
     // This validates UI/error recovery, not real disk-quota or eviction behavior.

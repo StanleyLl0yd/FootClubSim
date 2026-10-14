@@ -58,7 +58,7 @@ export function summarizeP54Bindings(bindings, asOf = AS_OF) {
     throw new Error('WDQS query result truncated or malformed; do not report complete counts');
   }
   const byPerson = new Map();
-  const statementKeys = new Set();
+  const qualifierByStatement = new Map();
   const byType = { boundedCandidate: 0, openEndedCandidate: 0, unknown: 0, outside: 0 };
   for (const row of bindings) {
     const person = row?.person?.value;
@@ -67,8 +67,14 @@ export function summarizeP54Bindings(bindings, asOf = AS_OF) {
       throw new Error('Unexpected WDQS entity/statement URI');
     }
     const key = person + '/' + statement;
-    if (statementKeys.has(key)) continue;
-    statementKeys.add(key);
+    const qualifiers = JSON.stringify([row?.start?.value ?? null, row?.end?.value ?? null]);
+    if (qualifierByStatement.has(key)) {
+      if (qualifierByStatement.get(key) !== qualifiers) {
+        throw new Error('Conflicting P54 date qualifiers for a single statement');
+      }
+      continue;
+    }
+    qualifierByStatement.set(key, qualifiers);
     const type = classifyP54Statement(row, asOf);
     byType[type]++;
     if (!byPerson.has(person)) byPerson.set(person, new Set());
@@ -86,7 +92,7 @@ export function summarizeP54Bindings(bindings, asOf = AS_OF) {
   }
   return {
     candidatePersonsAllSeasons: byPerson.size,
-    statementCount: statementKeys.size,
+    statementCount: qualifierByStatement.size,
     statementClasses: byType,
     distinctPersonClasses: people,
     registrationVerified: false,

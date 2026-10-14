@@ -1,4 +1,4 @@
-# Date-bounded match appearances: first two-club cross-check (2026-10-14)
+# Date-bounded match appearances: multi-club cross-check (2026-10-14)
 
 **M0 research only.** Four distinct, dated, **completed** 2026/27 matches corroborate participation for «Надир» (FC Zenit), «Зеленобер» (FC Krasnodar), and «Статика М2» (Dinamo Makhachkala). **No** full RPL registration list has been verified for any of the 16 clubs. The record [`data/drafts/liga-dated-match-observations-2026-10-14.json`](../data/drafts/liga-dated-match-observations-2026-10-14.json) stores aggregate measurements and two narrowly chosen observations, **not** the official source tables.
 

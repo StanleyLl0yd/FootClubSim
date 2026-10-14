@@ -3,6 +3,7 @@
 - **Status:** ACCEPTED BY OWNER, 2026-10-14 (later refinement of D07 and browser availability policy).
 - **Supersedes:** the **mandatory offline-capable/offline-first gameplay** requirement in the earlier *proposed* [ADR-0001](0001-web-offline-first.md), and the automatic refresh/offline-stale/cent-rounded **currency conversion policy** of [ADR-0007](0007-match-tactics-multicurrency.md). It does not repeal the other approved match, staffing or career decisions.
 - **Scope:** requirements and future adapter interface, **not an M0 exchange-rate implementation**.
+- **Later owner refinement:** [ADR-0009](0009-rub-only-ledger-and-cbr-source-option.md) **overrides** the multi-currency ledger interpretation and completes EUR/USD target rounding: all financial postings are in RUB to 10,000 ₽, while all foreign target displays round to 1,000 $/€. It also researches a **CBR source option (not yet accepted instead of Google)**.
 
 ## Owner decision
 
@@ -21,7 +22,7 @@ The date is the **local calendar date of game entry**, with the chosen timezone 
 | USD -> RUB, EUR -> RUB | RUB | Nearest **10,000 ₽** |
 | RUB -> USD | USD | Nearest **1,000 $** |
 | RUB -> EUR | EUR | Nearest **1,000 €** |
-| EUR <-> USD | USD or EUR | **Not specified by this decision**; keep an exact internally derived cross-rate result or explicitly defer cross-currency business rounding until separately defined |
+| EUR <-> USD | USD or EUR | **Approved later by ADR-0009:** nearest **1,000 $ or €** in the target currency |
 
 Examples for illustration only, **not real quotes**: a calculated ₽1,234,567 conversion from dollars or euros is displayed/booked at the approved conversion resolution as ₽1,230,000; a calculated $12,600 conversion from rubles becomes $13,000. Use deterministic **nearest-unit rounding, exact half up / half away from zero**. Do **not** round the Google market quote itself to an invented rate; apply coarse rounding only **once to the final target-currency amount**, after exact decimal/rational rate multiplication.
 
@@ -29,9 +30,11 @@ Examples for illustration only, **not real quotes**: a calculated ₽1,234,567 c
 
 **Immutability:** Store original source quote/date/time, logical date, source attribution and rates in an append-only record (or cryptographically/integrity protected immutable career snapshot where applicable). Once a game transaction uses a snapshot, that transaction must permanently reference its exact quote; a subsequent day's quote changes only future conversions. Players cannot edit rates; import validation must reject attempts to rewrite a committed snapshot.
 
+**Ledger precedence:** The owner subsequently clarified that **all posted financial entries are RUB-only**, rounded to nearest **10,000 ₽**, irrespective of currency of a contract/deal. USD/EUR remain source transaction and display currency attributes, not cash/budget subledgers. See [ADR-0009](0009-rub-only-ledger-and-cbr-source-option.md). The EUR/USD display quantum is now **1,000** target units; neither EUR/USD conversion nor a display switch changes RUB postings or past transactions.
+
 ## Source/access limitation that remains OPEN
 
-Google Finance's [official disclaimer](https://www.google.com/intl/en/googlefinance/disclaimer/) says Google does not guarantee exchange rate accuracy and **restricts copying, downloading, storing, reproducing, transmitting or using quoted data commercially without prior written permission**. Simply using the site in an internet-connected browser does not automatically grant a suitable programmatic API, storage license or the right to scrape an HTML page. **No permissioned automated Google FX integration has been established.** The approved daily refresh remains a requirement for future M3, gated on identifying a lawful supported Google data interface or obtaining the necessary permission. Do not silently substitute ECB, CBR, another feed or invented rates without a new owner decision.
+Google Finance's [official disclaimer](https://www.google.com/intl/en/googlefinance/disclaimer/) says Google does not guarantee exchange rate accuracy and **restricts copying, downloading, storing, reproducing, transmitting or using quoted data commercially without prior written permission**. Simply using the site in an internet-connected browser does not automatically grant a suitable programmatic API, storage license or the right to scrape an HTML page. **No permissioned automated Google FX integration has been established.** The approved daily refresh remains a requirement for future M3, gated on identifying a lawful supported Google data interface or obtaining the necessary permission. The owner has now asked about CBR: [ADR-0009](0009-rub-only-ledger-and-cbr-source-option.md) documents official CBR terms and XML API as a **recommended but not yet authorized** replacement. Do not silently switch the previously approved Google source merely because the alternative has been researched.
 
 ## Tests and milestone gates
 

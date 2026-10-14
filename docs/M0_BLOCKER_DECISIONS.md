@@ -74,6 +74,15 @@ to a clearly labeled fictional scope with owner approval. Accurate live
 RPL eligibility/discipline and amendments additionally demand legal
 and sporting-rules review.
 
+**Possible structured-data source for B/C:** Wikidata declares its
+own structured database under [CC0](https://www.wikidata.org/wiki/Wikidata:Licensing).
+This can be investigated for independently reusable **facts** and stable
+club/person references, but its licenses do not automatically apply to
+external webpages, linked photographs or emblems. Check each material
+source, personal-data issue, trademark presentation and the accuracy of
+current-season registrations before inclusion. Wikidata is **not** a
+pre-verified complete 2026/27 player roster.
+
 **Decision required:** choose A (all fictional), B (real team names,
 synthetic rosters and separate identity/mark approval) or C (authentic
 rights-cleared league); record its explicit source, rights and milestone

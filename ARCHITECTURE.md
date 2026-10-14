@@ -124,3 +124,9 @@ Read [data source policy](docs/DATA_SOURCES.md). The repository must not contain
 - `docs/adr/`: explicit architecture decisions; unresolved tradeoffs stay labeled provisional.
 
 No major subsystem implementation starts without tests for critical data and match invariants. Avoid abstracting hypothetical features before they exist.
+
+## Approved M0 design: in-match commands and multi-currency accounting
+
+[ADR-0007](docs/adr/0007-match-tactics-multicurrency.md) explicitly approves D03-D05/D07-D11. The M1/M2 event-driven seeded engine must support **both automated and interactive in-match control** using a single legal command/event path for player and AI (substitutions, formations, tactical settings and individual instructions at deterministic virtual-time checkpoints, with authority/delegation checks). The current M0 shot/full-time event ledger is **not** that implementation; match schema changes must be versioned before M1 coding and require subsequent owner authorization.
+
+M3 monetary amounts must carry one of **RUB, USD, EUR** as a native currency and exact integer minor units; display currency can change independently without mutating historical booked amounts. The future FX adapter targets **current-real-day Google Finance rates**, with source, timestamp, calendar date, fixed-decimal quote, rounding and signed transaction snapshot. The gameplay must remain usable offline with clearly stale/missing FX state and without executing an unverified cross-currency payment. A lawful/authorized automated data-access and retention method is a **future M3 blocker**. No Google API, web scraper or FX rates are implemented in M0.

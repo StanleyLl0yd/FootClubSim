@@ -40,6 +40,8 @@ Record browser brand, exact version, operating system, each observed result and 
 
 These automated cases are for the production React shell, not a claim that each manual exercise on this standalone diagnostics page has been performed. Browser versions and any remaining untested scenarios must be recorded explicitly before release.
 
+The native Windows Chrome/Edge CDP harness additionally contains a disposable-profile **explicit IndexedDB-clear and JSON-import recovery check**: after the ordinary save/restore flow it reads the known M0 snapshot as a test fixture, clears the origin's IndexedDB via the browser protocol, verifies `NOT_FOUND`, imports the saved file, rejects its intentionally corrupted variant and saves the recovered career. This is **not** confirmation of automatic eviction, downloaded-file UX, real quota exhaustion or full browser-process restart; those require separate evidence in [the edge-case matrix](M0_STORAGE_EDGE_ACCEPTANCE.md).
+
 ## Headless Chrome startup reliability
 
 An intermittent Windows Chrome smoke failure was observed on the M0 main branch

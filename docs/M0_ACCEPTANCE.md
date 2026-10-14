@@ -4,7 +4,7 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 
 ## Scope and documentation
 
-Продуктовые решения и их статусы перечислены в [M0_PRODUCT_DECISIONS.md](M0_PRODUCT_DECISIONS.md). **2026-10-14 утверждены принципы распределения обязанностей по каждой задаче отдельно** ([ADR-0002](adr/0002-configurable-delegation.md)), **трёх путей создания менеджера с характеристиками и вымышленной биографией** ([ADR-0003](adr/0003-manager-origins-biographies.md)), а также **«Лиги приколов» с вымышленными клубами-антонимами и настоящими спортивными правилами РПЛ** ([ADR-0004](adr/0004-liga-prikolov-rpl-rules.md)). Остальные решения и конкретные численные параметры не считаются согласованными автоматически.
+Продуктовые решения и их статусы перечислены в [M0_PRODUCT_DECISIONS.md](M0_PRODUCT_DECISIONS.md). **2026-10-14 утверждены принципы распределения обязанностей по каждой задаче отдельно** ([ADR-0002](adr/0002-configurable-delegation.md)), **трёх путей создания менеджера с характеристиками и вымышленной биографией** ([ADR-0003](adr/0003-manager-origins-biographies.md)), а также **«Лиги приколов» с вымышленными клубами-антонимами и настоящими спортивными правилами РПЛ** ([ADR-0004](adr/0004-liga-prikolov-rpl-rules.md)), с уточнением утверждённых 16 названий, эмблем и прототипов в [ADR-0005](adr/0005-liga-prikolov-brand-and-personnel.md)). Остальные решения и конкретные численные параметры не считаются согласованными автоматически.
 
 - [x] Create public FootClubSim repository and adapt `AGENTS.md` from WindowTidy.
 - [x] Create dedicated whole-repo exit issues for M0–M6.
@@ -21,7 +21,7 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 - [x] Define and implement the **M0 synthetic-only** catalog, revision-0 initial-career JSON/save and provenance declaration schemas with bounded validation: `src/core/import.ts`, `src/core/save.ts`, `src/core/provenance.ts`, and corresponding tests. This does **not** imply a full evolving career schema or a licensed real RPL data-pack provenance contract; both require new versions, tests and independent permission review.
 - [x] Add a **synthetic** fictional 16-club/368-player test dataset, seed-specific pack identity, author-origin manifest and runtime validation.
 - [x] Demonstrate duplicate identity detection, malformed/oversized data rejection and cross-reference checks in headless tests.
-- [ ] Complete rights review for the fictional league's original **parody club names/visual identities** and any separately included real club/league references; no real roster, team crest or licensed image is authorized for bundling by this design decision. The owner has explicitly chosen fictional participant identities, not a real roster database.
+- [ ] Complete rights review for the fictional league's original **parody club names/visual identities** and any separately included real club/league references; the owner approved original parody club/person identities informed by verified real 2026/27 prototypes, **not** redistribution of a real roster database, actual club crests, player photos or league marks. Any proposed source-derived factual player/staff records still need an independently date-verified and rights-cleared future pack; M0 remains synthetic.
 - [ ] Ensure no prohibited scraping, copyrighted assets, production/private credentials or secret values are committed.
 
 ## Code and tooling foundation

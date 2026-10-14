@@ -42,6 +42,9 @@ export function validateDatedMatchResearch(doc, { clubIds, nadir }) {
     assert.match(fixture.fixtureId, /^[a-z0-9-]{12,100}$/);
     assert.ok(!fixtures.has(fixture.fixtureId), 'duplicate fixture');
     assert.ok(date(fixture.playedOn) && fixture.playedOn <= doc.targetAsOf, 'future or invalid fixture date');
+    // This research schema records only a calendar day, not a verified completion timestamp.
+    // Fail closed on same-day matches, which may still be scheduled when observed.
+    assert.ok(fixture.playedOn < doc.observedOn, 'same-day fixture requires timestamped completion evidence');
     assert.ok(typeof fixture.competition === 'string' && fixture.competition.length < 80);
     assert.ok(typeof fixture.provider === 'string' && fixture.provider.length < 80);
     assert.ok(typeof fixture.sourceKind === 'string' && fixture.sourceKind.length < 100);

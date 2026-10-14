@@ -76,3 +76,7 @@ The result shows why CC0 availability is not sufficient for a playable league da
 | Verified first-team registrations / effective roster facts | **0** |
 
 «Надир» alone has 43 open-ended candidates with all three fields present. **This is not a 43-player current squad.** The source is a live, mutable Wikidata graph (observed 2026-10-14T08:55:12.741Z UTC), not an official 2026/27 registration freeze. Some P413 positions are too general, field values can be outdated, and P27 is not Russian player-limit eligibility. Other candidate groups with undated P54 membership (1761 historical club-person pairs in the first diagnostic) were **not included** in this narrower field-presence measurement. Absence of a candidate or an attribute is not evidence that a player is absent from the real club.
+
+## Conflicting open-ended memberships
+
+The [cross-club diagnostic](../scripts/wikidata-crossclub-conflicts.mjs) checks whether the **same person QID** has open-ended P54 candidate memberships for multiple of the 16 source clubs. It tracks identifiers only in process memory; published output contains counts of collisions per club and across the league. It runs under a [separate diagnostic workflow](../.github/workflows/wikidata-crossclub-conflicts.yml). Any conflicts are **data-quality review leads, not proven concurrent player contracts or improper RFU registration**. A failure or throttling in any club query prevents a misleading all-club summary.

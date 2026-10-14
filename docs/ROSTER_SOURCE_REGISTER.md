@@ -41,3 +41,7 @@ Finding a club's current team page is **not the same as proving a historical ros
 4. Build the next **separately versioned M2 pack** only after documentation/rights approval. Test compatibility with existing M0 saves and perform the mandatory M0 exit audits before authorizing M1.
 
 **Status:** 16 club website/source candidates identified, 0 club rosters validated for the requested as-of date, 0 licensed player rows imported, 15 non-Nadir teams still need parody person drafts. No finished 2026/27 player database is claimed.
+
+## Second official federation-source discovery (2026-10-14)
+
+All 16 2026/27 RPL participants also have individually matched [RFU Cup team index URLs](RFS_CUP_TEAM_INDEX_FEASIBILITY.md), recorded as link-only pointers in [`data/drafts/liga-rfs-cup-team-index-links-2026-10-14.json`](../data/drafts/liga-rfs-cup-team-index-links-2026-10-14.json). These Cup pages are mutable and **not** dated RPL registrations or a data-use grant. Do not revise the 0/16 verified-roster or zero imported-facts statuses; the specific stale Zenit entries are demonstrated [here](NADIR_RFS_CUP_CROSSCHECK.md).

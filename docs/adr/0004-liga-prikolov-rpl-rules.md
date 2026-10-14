@@ -46,8 +46,7 @@ nor external branding/source rights are declared satisfied.
 
 The current participant list comes from the club-published [2026/27 RPL
 participant list](https://www.fc-akhmat.ru/news/press/vse-uchastniki-rpl-v-sezone-202627/),
-cross-checked against the RFU [2026/27 RPL Cup fixture announcement]
-(https://www.rfs.ru/news/224573) and competition's official regulation
+cross-checked against the RFU [2026/27 RPL Cup fixture announcement](https://www.rfs.ru/news/224573) and competition's official regulation
 [PDF documentId 2164](https://www.rfs.ru/subject/1/documents/preview?documentId=2164).
 The real names below are **source references for the parody**, not
 licensed game data, and are not actual in-game club records today.

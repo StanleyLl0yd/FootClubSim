@@ -77,7 +77,7 @@ npm run check       # типы, headless-тесты, production-сборка о�
 - [docs/M0_PRODUCT_DECISIONS.md](docs/M0_PRODUCT_DECISIONS.md): варианты ответственности менеджера, тактики и экономики на согласование.
 - [docs/M0_BLOCKER_DECISIONS.md](docs/M0_BLOCKER_DECISIONS.md): конкретные предложения по открытым решениям M0 и распределению тестов по этапам (часть про выбор источников заменена утверждённым [ADR-0004](docs/adr/0004-liga-prikolov-rpl-rules.md)).
 - [docs/adr/0004-liga-prikolov-rpl-rules.md](docs/adr/0004-liga-prikolov-rpl-rules.md): утверждённая идея «Лиги приколов», 16 предварительных клубных названий-антонимов и требование настоящих регламентов.
-- [docs/adr/0001-web-offline-first.md](docs/adr/0001-web-offline-first.md): предлагаемое архитектурное решение.
+- [docs/adr/0001-web-offline-first.md](docs/adr/0001-web-offline-first.md): историческая локальная архитектура; обязательный офлайн-режим заменён [ADR-0008](docs/adr/0008-online-daily-fx-rounding.md).
 - [docs/adr/0002-configurable-delegation.md](docs/adr/0002-configurable-delegation.md): утверждённый принцип самостоятельного управления и назначения обязанностей сотрудникам.
 - [docs/adr/0003-manager-origins-biographies.md](docs/adr/0003-manager-origins-biographies.md): три типа прошлого менеджера, очки характеристик и генерация биографии для M2.
 

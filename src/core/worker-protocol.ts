@@ -193,7 +193,9 @@ export function readWorkerReply(
   ])) return fail('INVALID_MESSAGE');
   if (value.report.fixtureId !== pending.fixtureId) return fail('WRONG_FIXTURE');
   const home = readStats(value.report.home), away = readStats(value.report.away);
-  if (!home || !away) return fail('INVALID_REPORT');
+  // Every completed M0 ledger includes at least one full-time event,
+  // so the total shot count must stay below the 4096-event budget.
+  if (!home || !away || home.shots + away.shots > 4095) return fail('INVALID_REPORT');
   return { ok: true, value: {
     ...base, kind: 'completed', report: { fixtureId: pending.fixtureId, home, away },
   } };

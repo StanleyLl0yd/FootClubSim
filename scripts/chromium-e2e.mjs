@@ -74,23 +74,50 @@ function cdpClient(socket) {
   });
 }
 
+/**
+ * Windows runners sometimes fail to launch a headless Chrome instance before
+ * DevToolsActivePort exists. Retry only startup, with a fresh isolated profile;
+ * never retry application assertions or hide a failing browser test.
+ */
+async function startBrowser() {
+  const failures = [];
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const profile = await mkdtemp(join(tmpdir(), 'footclubsim-cdp-'));
+    const browser = spawn(executable, [
+      '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+      '--disable-extensions', '--remote-debugging-port=0',
+      '--remote-allow-origins=*', '--user-data-dir=' + profile,
+      'about:blank',
+    ], { stdio: 'ignore', windowsHide: true });
+    let launchError = null;
+    browser.on('error', error => { launchError = error; });
+    try {
+      const portFile = join(profile, 'DevToolsActivePort');
+      const port = await until(async () => {
+        if (launchError) throw launchError;
+        if (browser.exitCode !== null) throw new Error('Browser exited with code ' + browser.exitCode);
+        const file = await readFile(portFile, 'utf8');
+        const parsed = Number(file.split(/\r?\n/)[0]);
+        return Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535 ? parsed : null;
+      }, 'Edge/Chrome DevTools port', 20_000);
+      if (attempt > 1) console.log('PASS: browser started on second attempt with a fresh profile');
+      return { profile, browser, port };
+    } catch (error) {
+      const status = launchError ? String(launchError) :
+        browser.exitCode !== null ? 'exit=' + browser.exitCode : 'no DevToolsActivePort';
+      failures.push('attempt ' + attempt + ': ' + status + '; ' + String(error));
+      browser.kill();
+      await delay(500);
+      await rm(profile, { recursive: true, force: true, maxRetries: 4, retryDelay: 500 });
+    }
+  }
+  throw new Error('Browser startup failed after two isolated attempts: ' + failures.join(' | '));
+}
+
 async function run() {
-  const profile = await mkdtemp(join(tmpdir(), 'footclubsim-cdp-'));
-  const browser = spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-    '--disable-extensions', '--remote-debugging-port=0',
-    '--remote-allow-origins=*', '--user-data-dir=' + profile,
-    'about:blank',
-  ], { stdio: 'ignore', windowsHide: true });
+  const { profile, browser, port } = await startBrowser();
   let socket;
   try {
-    const portFile = join(profile, 'DevToolsActivePort');
-    const port = await until(async () => {
-      const file = await readFile(portFile, 'utf8');
-      const parsed = Number(file.split(/\r?\n/)[0]);
-      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) return null;
-      return parsed;
-    }, 'Edge/Chrome DevTools port');
 
     const target = await until(async () => {
       const response = await fetch('http://127.0.0.1:' + port + '/json/list');

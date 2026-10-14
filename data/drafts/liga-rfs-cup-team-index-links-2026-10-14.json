@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "researchDate": "2026-10-14",
+  "asOfDateRequested": "2026-10-14",
+  "scope": "alternative-official-Cup-team-link-discovery-not-a-current-registration-list",
+  "provider": "Russian Football Union",
+  "competition": "Russian Cup 2026/27, Path of RPL",
+  "discoveryUrl": "https://www.rfs.ru/cup/teams",
+  "observedSeasonContext": "2026/27 currently selected in tournament index; team pages are mutable",
+  "sourcePermission": "not-established",
+  "bulkPlayerRosterCopied": false,
+  "playerIdentitiesImported": 0,
+  "verifiedAsOfRplSquads": 0,
+  "clubs": [
+    {
+      "clubId": "lp-nadir",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/26",
+      "realClubName": "Зенит",
+      "realCity": "Санкт-Петербург",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-zelenober",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/367",
+      "realClubName": "Краснодар",
+      "realCity": "Краснодар",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-vagon",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/20",
+      "realClubName": "Локомотив",
+      "realCity": "Москва",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-patriciy",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/33",
+      "realClubName": "Спартак",
+      "realCity": "Москва",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-ogkm",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/25",
+      "realClubName": "ЦСКА",
+      "realCity": "Москва",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-pacifica",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/83",
+      "realClubName": "Балтика",
+      "realCity": "Калининград",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-statika-m1",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/35",
+      "realClubName": "Динамо",
+      "realCity": "Москва",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-izumrud",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/29",
+      "realClubName": "Рубин",
+      "realCity": "Казань",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-uprek",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/37",
+      "realClubName": "Ахмат",
+      "realCity": "Грозный",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-spadov",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/38",
+      "realClubName": "Ростов",
+      "realCity": "Ростов-на-Дону",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-korni-zapretov",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/118",
+      "realClubName": "Крылья Советов",
+      "realCity": "Самара",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-orendorf",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/717",
+      "realClubName": "Оренбург",
+      "realCity": "Оренбург",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-nizon",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/3635",
+      "realClubName": "Акрон",
+      "realCity": "Тольятти",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-statika-m2",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/3637",
+      "realClubName": "Динамо Мх",
+      "realCity": "Махачкала",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-chuzhbina",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/3636",
+      "realClubName": "Родина",
+      "realCity": "Москва",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    },
+    {
+      "clubId": "lp-ognetushitel",
+      "rfuCupTeamUrl": "https://www.rfs.ru/cup/teams/292",
+      "realClubName": "Факел",
+      "realCity": "Воронеж",
+      "sourcePageReviewedOn": "2026-10-14",
+      "sourcePageKind": "mutable-RFU-Cup-team-index",
+      "asOfRplRosterVerified": false,
+      "firstTeamStaffVerified": false,
+      "licensedToImportPlayers": false
+    }
+  ]
+}

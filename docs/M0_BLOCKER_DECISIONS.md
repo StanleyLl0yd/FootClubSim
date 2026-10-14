@@ -1,10 +1,6 @@
 # M0 blockers: decision package and milestone scope boundaries
 
-**Status: PROPOSED, awaiting owner sign-off. Prepared 2026-10-14.**
-This document **does not accept D03-D12** on behalf of the owner, create
-redistribution rights, clear issue #15, finish either whole-repo audit pass,
-or authorize M1. The owner previously accepted only D01/D02 and the core
-D13 manager-origin/biography requirement.
+**Status: PARTIALLY RESOLVED on 2026-10-14.** The owner now approved the fictional **«Лига приколов»**, reverse/antonym club-name policy and **genuine effective RPL/RFU/IFAB rules**. The exact sixteen aliases are drafts in [ADR-0004](adr/0004-liga-prikolov-rpl-rules.md), not accepted. All other D03-D05 and D07-D11 proposals, detailed manager values, remaining regulation and rights checks, and M0-to-M2 gate changes still require approval. This record neither closes #15 nor authorizes M1.
 
 ## Principle: separate M0 architecture exit from gameplay release
 
@@ -28,19 +24,21 @@ dated acceptance update; the current open checkboxes remain open until then.
 | D03 | All clubs use one headless, event-ledger-based seeded simulator. No forced animated match viewing. A future tactical assistant can be delegated separately, without score shortcuts. | M1 event generator; M2 season/UX |
 | D04 | Keep original, synthetic **33 player attributes**, integers 1-100 for the first version. Separate potential, form, condition and manager skills; version future changes rather than silently modifying saves. | M1 weights; M3 development |
 | D05 | First layer: formation, XI/bench, mentality, pressing, compactness, defensive line, passing risk and tempo. Additional role/individual tactics remain extendable. No guaranteed wins from tactical controls. | M1 effects; M2 working controls |
-| D06 | First season: a 16-club, 30-round, 240-fixture home/away competition. **Source-rights option (A/B/C) remains undecided**; not every fictional test league is authentic RPL. Use a reviewed, separately versioned competition rules pack and separate genuine RPL nuances from intentional synthetic simplifications. | M2 season |
+| D06 | **ACCEPTED IN PRINCIPLE:** «Лига приколов» with 16 antithetically named fictional versions of current RPL 2026/27 clubs and **genuine effective RPL/RFU/IFAB sporting rules**, 30 rounds/240 fixtures. Exact names and full rule verification remain open; **do not silently replace genuine restrictions with fictional simplifications**. See [ADR-0004](adr/0004-liga-prikolov-rpl-rules.md). | M2 season |
 | D07 | Separate operating cash, commitments, salary and transfer budgets. Use bounded integer amounts in the declared currency and an auditable transaction ledger; no floating-point RUB finances. | M3 economy |
 | D08 | Offer, negotiation, contract, medical/eligibility check and competition registration are different steps with atomic outcomes. Work can be personally managed or delegated per area, not globally. | M3 contracts/transfers |
 | D09 | Each career pins data, generator, manager-profile, rules, engine and save versions. Invalid import cannot overwrite healthy saves; future revision changes are atomic and test migration/recovery. | M2+ persistence |
 | D10 | M2 focuses on one complete season (plus the owner-approved profile wizard and minimal delegation); M4 adds rolling career, youth/regens, aging and promotions. No implied complete FM feature parity in M2. | M2 and M4 exits |
 | D11 | Russian-first desktop-oriented browser UI, accessible keyboard/mouse, dense readable tables, explicit error diagnostics; local/offline data flow. | M2 UI/browser |
-| D12 | **Preferred initial safe scope:** distribute only authored fictional players, clubs, backgrounds and artwork, while using official rules **as researched source references**, not copying protected PDFs or databases. Introduce any real club roster/name/mark/photo material only after field-by-field rights evidence and release review. Public web access is not a license. | M0 source policy; each later data pack |
+| D12 | **APPROVED POLICY:** original fictional player/staff data, parody inverse club names and separate original artwork; genuine RPL/RFU/IFAB sporting rules verified from official editions. Real rosters, original team badges and league marks are not bundled by this choice. Name/visual rights and actual regulations require review before shipping. | M0 source policy; each later data pack |
 | D13-detail | Use distinct manager skills, same total preset/custom point budget, locally seeded chronological biographies and no hidden origin buffs. **Exact attribute names, number of points, scale and weights remain unapproved**, and can be frozen before M2 wizard implementation. | M2 manager creation; M3 gameplay effects |
 
 The table is a **review proposal**. No row is accepted just because it
 appears in the repository.
 
-## The major dataset choice
+## The major dataset choice (historical alternatives, resolved by ADR-0004)
+
+**Decision 2026-10-14:** the owner chose a fictional **«Лига приколов»** with inverse/antonym club names inspired by the 16 RPL 2026/27 participants, but with *actual real RPL sporting regulations*. This is **not** option C's authentic real roster. It uses an original fictional presentation plus an independently verified source-cited rules pack. The A/B/C options below are retained only as historical alternatives and **are no longer a decision request**. See [ADR-0004](adr/0004-liga-prikolov-rpl-rules.md).
 
 **Option A (recommended for a safe first playable M2):**
 a wholly fictional 16-club league, fictional players and original labels.
@@ -83,11 +81,7 @@ source, personal-data issue, trademark presentation and the accuracy of
 current-season registrations before inclusion. Wikidata is **not** a
 pre-verified complete 2026/27 player roster.
 
-**Decision required:** choose A (all fictional), B (real team names,
-synthetic rosters and separate identity/mark approval) or C (authentic
-rights-cleared league); record its explicit source, rights and milestone
-acceptance gates.
-No bundled third-party assets are present in the current M0 prototype.
+**Resolved (2026-10-14):** use the «Лига приколов» fictional reverse-name clubs and actual RPL/RFU/IFAB sporting regulations. Pending decisions are **exact creative club names and original branding**, precise interpretation of relevant official rules, and verified rights/edition evidence, not A/B/C. No bundled third-party assets are present in the current M0 prototype.
 
 ## Confirmed source-specific rule contracts (not a full review)
 
@@ -157,9 +151,7 @@ unimplemented gameplay persistence can actually be observed.
 
 ## Exit process remaining
 
-1. Record the owner's **specific response** for D03-D12, D13 detail,
-   data option A/B/C and M0-vs-M2 save-testing gates. Update ADRs and
-   implementation issues after approval, leaving undecided points open.
+1. Record the owner's decisions for **remaining** D03-D05/D07-D11, D13 numeric details, exact «Лига приколов» club aliases and M0-vs-M2 save-testing gates. The D06/D12 core league/source policy is now accepted via [ADR-0004](adr/0004-liga-prikolov-rpl-rules.md); do not mark details or issue #15 accepted by inference.
 2. Finish source/rights policy decision. Source **identification** and
    release rights are different; preserve the factual status of #15.
 3. Run the **first full source-by-source repo audit** after design

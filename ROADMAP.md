@@ -5,7 +5,7 @@
 ## Product contract
 
 - Browser-first, offline-capable, Russian-language single-player football **club management** simulation.
-- Initial playable competition should follow an RPL-scale model, with a **pending owner choice** between a wholly fictional 16-club initial league and a real RPL pack subject to independent data/branding rights. The existing target of an authentic RPL season is NOT silently replaced by a fictional one. See [M0 blocker decisions](docs/M0_BLOCKER_DECISIONS.md). Other competitions may have a reduced non-playable representation to support transfers, promotion and relegation.
+- Owner-approved initial playable league: the fictional **«Лига приколов»**, with club display names formed through antonyms/semantic inversions of the 16 current RPL 2026/27 clubs, **but sporting rules, quotas, standings, discipline and limits taken from genuinely verified effective RPL/RFU/IFAB regulations**. The sixteen exact names remain candidates; rights, full rules and exceptions are not yet reviewed. See [ADR-0004](docs/adr/0004-liga-prikolov-rpl-rules.md). Other competitions may have reduced non-playable representation, with official promotion/relegation rules required if modeled.
 - The application computes matches automatically; **no 2D or 3D match visualization** is planned for the initial milestones.
 - Prioritize macOS Safari and Windows Chrome/Edge, then compatible desktop browsers. No dedicated Linux application.
 - All career calculations take place locally. OCI/backend is optional and never required for single-player gameplay.
@@ -24,7 +24,7 @@
 | --- | --- | --- |
 | M0 | Requirements, architecture, data contracts, match specification, provenance policy, tooling and M1 backlog | [#2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) |
 | M1 | Reproducible, headless 11v11 event-driven match engine, tactical input and statistical calibration | [#3](https://github.com/StanleyLl0yd/FootClubSim/issues/3) |
-| M2 | Play a complete RPL season in the browser with club selection, fixtures, standings, match reports and durable saves | [#4](https://github.com/StanleyLl0yd/FootClubSim/issues/4) |
+| M2 | Play a complete «Лига приколов» season using authentic verified RPL sporting rules and fictional inverse-name clubs, with club selection, fixtures, standings, reports and durable saves | [#4](https://github.com/StanleyLl0yd/FootClubSim/issues/4) |
 | M3 | Transfers, contracts, finances, training, scouting foundation and AI club choices | [#5](https://github.com/StanleyLl0yd/FootClubSim/issues/5) |
 | M4 | Multi-season careers, player aging, academy/regens, promotion/relegation and modeled external market | [#6](https://github.com/StanleyLl0yd/FootClubSim/issues/6) |
 | M5 | Refined Russian UI, accessibility, performance, offline PWA install, data update UX and recovery | [#7](https://github.com/StanleyLl0yd/FootClubSim/issues/7) |
@@ -39,7 +39,7 @@ See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 - [ ] Approve product scope and [architecture](ARCHITECTURE.md); the independent staff-delegation principle [ADR-0002](docs/adr/0002-configurable-delegation.md) and manager-origin/biography principle [ADR-0003](docs/adr/0003-manager-origins-biographies.md) have been accepted, while numerical balance and remaining product decisions are open.
 - [ ] Finalize minimum player/club data contract and a legally usable initial **synthetic** dataset.
 - [ ] Specify deterministic match simulation and game-calendar transitions; [M1 calibration protocol](docs/M1_CALIBRATION_PROTOCOL.md) is drafted, but approved statistical reference baselines remain unavailable.
-- [ ] Establish provenance/rights gates for real RPL data and assets.
+- [ ] Establish provenance/rights gates for original league identity and satirical inverse club names, while excluding copied real rosters, league branding, club crests and unlicensed imagery. The source-of-truth rules require separate verified RPL/RFU/IFAB editions; see [ADR-0004](docs/adr/0004-liga-prikolov-rpl-rules.md).
 - [x] Bootstrap TypeScript/Vite/React shell, locked dependencies and CI for types, ESLint, source formatting, tests and production build. Native Safari and Windows Edge smoke verification is also automated; exceptional storage cases remain tracked.
 - [ ] Finish browser storage capability and fallback/export strategy testing: the initial career save/reload/restore and unavailable IndexedDB path are verified in actual Safari/macOS, Chrome/Edge Windows and Chromium/Linux (see [PR #67](https://github.com/StanleyLl0yd/FootClubSim/pull/67)); **macOS Safari private mode, genuine quota/eviction and backup/recovery across browser shutdown** remain unverified; native Windows Chrome/Edge private-session smoke is now covered by [browser-smoke.yml](.github/workflows/browser-smoke.yml).
 - [x] Open a [prioritized M1 implementation backlog](docs/M1_BACKLOG.md) with dependencies and preliminary effort/risks.
@@ -60,10 +60,10 @@ M0 documentation may be merged incrementally without claiming M0 completion. Do 
 - Invariant/property and regression testing, bounded runtime, proper error reports.
 - Whole-repository exit gate [#3](https://github.com/StanleyLl0yd/FootClubSim/issues/3).
 
-## M2: RPL season
+## M2: «Лига приколов» with real RPL rules
 
 - Russian-language desktop-oriented browser interface; **first create a manager profile** (former pro, theorist, or custom point allocation) with a seeded fictional biography to preview/accept, **then** pick a club. See [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
-- Season fixtures, fixtures chronology, results, standings and tiebreaker rule data.
+- Season fixtures, fixtures chronology, results, standings and all actually verified RPL/RFU/IFAB rule data, with real eligibility, substitution, foreign-player, match/interruption and standings constraints, not invented simplifications.
 - Computer clubs select legal lineups and adapt tactics; absences and suspensions respected.
 - Player's lineup/bench and tactics responsibilities are separately configurable: decide manually by default, or delegate to an eligible named club employee. Show decision authority and support manual takeover ([#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58)).
 - Simulate next event/tour rapidly, persist and restore game state, export/import career save. Preserve manager origin, competencies, accepted biography and its generator/template version across saves.
@@ -81,7 +81,7 @@ M3 introduces economy/transfer systems, training, staff and full per-area respon
 - Scraping Transfermarkt or club/league pages without appropriate authorization.
 - Shipping unlicensed crests, photos, player likeness collections, or third-party commercial data.
 - Automatic importing of live real-world transfers into existing careers.
-- Unverified promises about exact 2026/27 competition regulations; official rules must be versioned in a rules pack.
+- Unverified promises about exact 2026/27 competition regulations: official sporting rules are the approved target for «Лига приколов», and every encoded rule/exception must be article-verified and frozen in a versioned pack before claiming exact compliance.
 
 ## Related documents
 

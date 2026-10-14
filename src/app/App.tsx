@@ -113,6 +113,10 @@ export function App() {
         setMessage('Импорт отклонён: версия тестовой базы отличается. Текущее состояние не изменено.');
         return;
       }
+      if (imported.value.careerId !== CAREER_ID) {
+        setMessage('Импорт отклонён: идентификатор карьеры отличается. Текущее состояние не изменено.');
+        return;
+      }
       setCareer(imported.value);
       setSelectedClubId(imported.value.selectedClubId);
       setMessage('Стартовая карьера проверена и загружена в память, без перезаписи IndexedDB.');

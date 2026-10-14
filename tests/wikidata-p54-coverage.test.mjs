@@ -61,6 +61,16 @@ test('invalid calendar days and inverted source intervals never become membershi
   assert.equal(summary.registrationVerified, false);
 });
 
+test('empty P54 response still rejects impossible as-of dates', () => {
+  const empty = summarizeP54Bindings([], '2026-10-14');
+  assert.equal(empty.candidatePersonsAllSeasons, 0);
+  assert.equal(empty.registrationVerified, false);
+  for (const invalidDate of ['2026-02-29', '2026-04-31', '2026-13-01', '0000-10-14', 'not-a-date']) {
+    assert.throws(() => summarizeP54Bindings([], invalidDate), /Invalid reference date/);
+  }
+  assert.throws(() => summarizeP54Bindings([row(1)], '2026-02-29'), /Invalid reference date/);
+});
+
 test('same person with several historical spells contributes once to person counts', () => {
   const bindings = [
     row(12, t('2021-01-01'), t('2022-12-31'), 1),
@@ -78,6 +88,23 @@ test('same person with several historical spells contributes once to person coun
     registrationVerified: false,
     rosterCompletenessVerified: false,
   });
+});
+
+test('conflicting date qualifiers are unknown, not arbitrary order-dependent candidates', () => {
+  const earlier = row(30, t('2024-01-01'), t('2027-12-31'), 500);
+  const later = row(30, t('2025-01-01'), t('2027-12-31'), 500);
+  const conflictingEnd = row(30, t('2024-01-01'), t('2026-01-01'), 500);
+  for (const bindings of [[earlier, later], [later, earlier], [earlier, conflictingEnd]]) {
+    const summary = summarizeP54Bindings(bindings);
+    assert.equal(summary.statementCount, 1);
+    assert.equal(summary.statementClasses.unknown, 1);
+    assert.equal(summary.statementClasses.boundedCandidate, 0);
+    assert.equal(summary.distinctPersonClasses.unknown, 1);
+    assert.equal(summary.registrationVerified, false);
+  }
+  const duplicate = summarizeP54Bindings([earlier, { ...earlier }]);
+  assert.equal(duplicate.statementCount, 1);
+  assert.equal(duplicate.statementClasses.boundedCandidate, 1);
 });
 
 test('fail closed on query truncation and malformed response identifiers', () => {

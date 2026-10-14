@@ -64,6 +64,8 @@ For the approved «Лига приколов» initial release, use approved ori
 
 Season 2026/27 data may be incomplete or inconsistent across sources; unresolved identities/contract terms must remain unknown rather than invented facts. Missing fields can receive explicitly labeled **gameplay estimates** where appropriate, but must not be represented as official facts.
 
+The [measured M0 original-content inventory](M0_ORIGINAL_CONTENT_REVIEW.md) records the Git-tracked asset/artwork and synthetic-versus-research-only boundary with source and CI evidence. It does **not** replace independent release-specific rights review.
+
 ## Local repository review automation
 
 `python3 scripts/repo_audit.py` checks Git-tracked filenames, declared

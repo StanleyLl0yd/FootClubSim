@@ -39,3 +39,11 @@ The 12 MPL-2.0 entries correspond to `lightningcss` and its platform-specific pa
 `scripts/repo_audit.py` now reports a controlled error for an invalid but syntactically valid JSON manifest root (array, null, number or string). Previously `read_manifest()` could raise `AttributeError` on non-object JSON. Negative Python regression tests cover all four shapes. This change neither reinterprets valid manifests nor alters the M0 catalog or saves.
 
 **Status:** technical content inventory recorded; remaining legal assessment, rules/source verification, browser corner cases, two complete repository audit passes and final-main validation stay OPEN. See [ADR-0006](adr/0006-m0-m2-acceptance-boundary.md) and [M0 exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2).
+
+## Additional M0 inventory hardening (2026-10-14, pending verification)
+
+The tracked-file audit now recognizes additional binary and distributable file extensions (WASM, desktop/mobile executables, native libraries, Java archives, firmware-like binary payloads and compressed archives). It also flags NUL-containing content presented as an unrecognized extension or as ordinary text, and scans several additional text configuration/script formats for known token signatures. Negative tests exercise these paths without storing credentials.
+
+Crucially, the M0 synthetic provenance parser already requires an **empty** `assetPaths` list. The Python Git inventory must enforce the **same M0-only boundary**, rather than allowing an unreviewed file to be made acceptable merely by adding its name to the manifest. Any future material that needs a nonempty asset list requires a separately reviewed, versioned, post-M0 asset/provenance contract; it must not silently mutate the immutable M0 synthetic manifest.
+
+These are deterministic local repository heuristics, not positive copyright/trademark clearance or a substitute for production-bundle review. The actual GitHub PR and exact-main CI results must be recorded before counting this correction as merged or verified; **both full mandatory audits, original naming/branding release screening, and final M0 sign-off stay OPEN**.

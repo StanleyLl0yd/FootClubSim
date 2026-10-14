@@ -76,6 +76,34 @@ class RepositoryAuditTests(unittest.TestCase):
                  "  - uses: ./local-action\n")
         self.assertEqual(audit_files(self.root, files, set())[1], [])
 
+    def test_binary_build_outputs_cannot_evade_asset_inventory(self):
+        paths = [
+            "payload.wasm", "bin/tool.exe", "native/addon.so",
+            "native/addon.dylib", "app/build.apk", "app/bundle.aab",
+            "archives/content.jar", "archive/data.tar", "archive/data.zst",
+        ]
+        for name in paths:
+            self.put(name, b"binary payload")
+        metrics, concerns = audit_files(self.root, paths, set())
+        self.assertEqual(metrics["assetFiles"], len(paths))
+        self.assertEqual(len([c for c in concerns if "reviewed manifest" in c]), len(paths))
+        self.assertEqual(audit_files(self.root, paths, set(paths))[1], [])
+
+    def test_disguised_binary_payload_requires_review(self):
+        self.put("bin/blob.unknown", b"prefix\x00payload")
+        self.put("data/custom.txt", b"prefix\x00payload")
+        paths = ["bin/blob.unknown", "data/custom.txt"]
+        _, concerns = audit_files(self.root, paths, set())
+        self.assertEqual(len([c for c in concerns if "binary content" in c]), 2)
+
+    def test_extended_text_config_is_checked_for_secrets(self):
+        token = "gh" + "p_" + "z" * 36
+        for filename in ("config/settings.toml", "scripts/setup.sh", "app/build.gradle"):
+            self.put(filename, f"auth = '{token}'\\n")
+            _, concerns = audit_files(self.root, [filename], set())
+            self.assertTrue(any("GitHub classic token" in c for c in concerns))
+            self.assertFalse(any(token in c for c in concerns))
+
     def test_manifest_rejects_path_traversal_and_duplicates(self):
         manifest = "data/packs/m0-synthetic-manifest.json"
         self.put(manifest, '{"assetPaths":["../external.png"]}\n')
@@ -83,7 +111,10 @@ class RepositoryAuditTests(unittest.TestCase):
         self.put(manifest, '{"assetPaths":["assets/icon.png","assets/icon.png"]}\n')
         self.assertTrue(read_manifest(self.root)[1])
         self.put(manifest, '{"assetPaths":["assets/icon.png"]}\n')
-        self.assertEqual(read_manifest(self.root), ({"assets/icon.png"}, []))
+        self.assertEqual(read_manifest(self.root),
+                         (set(), ["M0 synthetic manifest must not declare external asset paths"]))
+        self.put(manifest, '{"assetPaths":[]}\n')
+        self.assertEqual(read_manifest(self.root), (set(), []))
 
     def test_manifest_rejects_non_object_json_with_typed_error(self):
         manifest = "data/packs/m0-synthetic-manifest.json"

@@ -16,9 +16,16 @@ ASSET_SUFFIXES = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".icns", ".svg",
     ".pdf", ".woff", ".woff2", ".ttf", ".otf", ".mp3", ".mp4", ".csv",
     ".sqlite", ".db", ".parquet", ".zip", ".7z", ".gz",
+    ".wasm", ".exe", ".dll", ".dylib", ".so", ".a", ".lib", ".jar",
+    ".class", ".apk", ".aab", ".ipa", ".bin", ".dat", ".rar",
+    ".tar", ".tgz", ".xz", ".zst",
 }
 SOURCE_SUFFIXES = {".ts", ".tsx", ".mjs", ".py", ".css"}
-TEXT_SUFFIXES = SOURCE_SUFFIXES | {".md", ".json", ".html", ".yml", ".yaml", ".txt"}
+TEXT_SUFFIXES = SOURCE_SUFFIXES | {
+    ".md", ".json", ".html", ".yml", ".yaml", ".txt", ".xml", ".toml",
+    ".ini", ".cfg", ".properties", ".sh", ".ps1", ".bat", ".cmd",
+    ".sql", ".gradle", ".kt", ".java", ".go", ".rs", ".graphql",
+}
 GENERATED_DIRS = {"node_modules", "dist", "web-dist", "build", ".git", ".venv"}
 # Repository inventory must not silently allow credential containers or private keys.
 # Public test certificates require explicit review rather than automatic bundling.
@@ -88,6 +95,8 @@ def audit_files(root: Path, files: list[str], declared_assets: set[str]):
         if suffix in SOURCE_SUFFIXES:
             stats["sourceFiles"] += 1
             stats["sourceLines"] += len(data.splitlines())
+        if suffix not in ASSET_SUFFIXES and b"\x00" in data:
+            concerns.append(f"{path}: binary content without reviewed asset declaration")
         if suffix not in TEXT_SUFFIXES and item.name not in {".gitignore"}:
             continue
         try:
@@ -123,7 +132,11 @@ def read_manifest(root: Path) -> tuple[set[str], list[str]]:
         return set(), ["synthetic asset manifest has invalid asset paths"]
     if len(set(values)) != len(values):
         return set(), ["synthetic asset manifest duplicates an asset path"]
-    return set(values), []
+    # M0 provenance.ts permits zero assets. The repository audit must not
+    # bypass this by accepting a new path merely because it was self-declared.
+    if values:
+        return set(), ["M0 synthetic manifest must not declare external asset paths"]
+    return set(), []
 
 
 def tracked_file_paths(root: Path) -> list[str]:

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
-import { classifyP54Statement, queryWikidata } from './wikidata-p54-coverage.mjs';
+import { classifyP54Bindings, queryWikidata } from './wikidata-p54-coverage.mjs';
 
 const API = 'https://www.wikidata.org/w/api.php';
 const USER_AGENT = 'FootClubSim-CC0-roster-diagnostic/0.1 (https://github.com/StanleyLl0yd/FootClubSim)';
@@ -10,10 +10,9 @@ const PROPS = ['P569', 'P27', 'P413'];
 
 export function openEndedCandidateQids(bindings) {
   const people = new Set();
-  for (const row of bindings) {
-    if (classifyP54Statement(row) !== 'openEndedCandidate') continue;
-    const uri = row?.person?.value;
-    const id = typeof uri === 'string' ? uri.replace(/^http:\/\/www\.wikidata\.org\/entity\//, '') : '';
+  for (const { person, type } of classifyP54Bindings(bindings)) {
+    if (type !== 'openEndedCandidate') continue;
+    const id = person.replace(/^http:\/\/www\.wikidata\.org\/entity\//, '');
     if (!QID.test(id)) throw new Error('Invalid candidate QID');
     people.add(id);
   }

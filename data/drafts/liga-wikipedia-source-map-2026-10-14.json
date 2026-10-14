@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "reviewedOn": "2026-10-14",
+  "targetAsOf": "2026-10-14",
+  "sourcePolicy": "wikipedia-first-prototype-research-with-independent-dated-crosschecks",
+  "importScope": "research-source-reference-only-not-a-playable-personnel-dataset",
+  "wikipediaSources": [
+    {
+      "id": "rpl-squads-2026-27",
+      "url": "https://ru.wikipedia.org/wiki/Чемпионат_России_по_футболу_2026/2027_(составы)",
+      "revisionId": 155579206,
+      "lastEditedOn": "2026-10-12",
+      "scope": "players-who-appeared-in-at-least-one-rpl-match-only",
+      "canProveCompleteRegisteredRoster": false
+    },
+    {
+      "id": "rpl-season-2026-27",
+      "url": "https://ru.wikipedia.org/wiki/Чемпионат_России_по_футболу_2026/2027",
+      "revisionId": 155571074,
+      "lastEditedOn": "2026-10-12",
+      "scope": "16-participants-season-coaches-captains-and-changes-unfrozen-roles",
+      "canProveCompleteRegisteredRoster": false
+    },
+    {
+      "id": "zenit-club-overview",
+      "url": "https://ru.wikipedia.org/wiki/Зенит_(футбольный_клуб,_Санкт-Петербург)",
+      "revisionId": 155561861,
+      "lastEditedOn": "2026-10-11",
+      "scope": "zenit-main-second-youth-loans-leadership-and-coaching-overview",
+      "canProveCompleteRegisteredRoster": false
+    }
+  ],
+  "participatingClubs": [
+    {
+      "clubId": "lp-nizon",
+      "wikipediaSquadsSection": "«Акрон» (Тольятти)"
+    },
+    {
+      "clubId": "lp-uprek",
+      "wikipediaSquadsSection": "«Ахмат» (Грозный)"
+    },
+    {
+      "clubId": "lp-pacifica",
+      "wikipediaSquadsSection": "«Балтика» (Калининград)"
+    },
+    {
+      "clubId": "lp-statika-m2",
+      "wikipediaSquadsSection": "«Динамо» (Махачкала)"
+    },
+    {
+      "clubId": "lp-statika-m1",
+      "wikipediaSquadsSection": "«Динамо» (Москва)"
+    },
+    {
+      "clubId": "lp-nadir",
+      "wikipediaSquadsSection": "«Зенит» (Санкт-Петербург)"
+    },
+    {
+      "clubId": "lp-zelenober",
+      "wikipediaSquadsSection": "«Краснодар» (Краснодар)"
+    },
+    {
+      "clubId": "lp-korni-zapretov",
+      "wikipediaSquadsSection": "«Крылья Советов» (Самара)"
+    },
+    {
+      "clubId": "lp-vagon",
+      "wikipediaSquadsSection": "«Локомотив» (Москва)"
+    },
+    {
+      "clubId": "lp-orendorf",
+      "wikipediaSquadsSection": "«Оренбург» (Оренбург)"
+    },
+    {
+      "clubId": "lp-chuzhbina",
+      "wikipediaSquadsSection": "«Родина» (Москва)"
+    },
+    {
+      "clubId": "lp-spadov",
+      "wikipediaSquadsSection": "«Ростов» (Ростов-на-Дону)"
+    },
+    {
+      "clubId": "lp-izumrud",
+      "wikipediaSquadsSection": "«Рубин» (Казань)"
+    },
+    {
+      "clubId": "lp-patriciy",
+      "wikipediaSquadsSection": "«Спартак» (Москва)"
+    },
+    {
+      "clubId": "lp-ognetushitel",
+      "wikipediaSquadsSection": "«Факел» (Воронеж)"
+    },
+    {
+      "clubId": "lp-ogkm",
+      "wikipediaSquadsSection": "ЦСКА (Москва)"
+    }
+  ],
+  "targetedNadirDiscrepancy": {
+    "clubId": "lp-nadir",
+    "approvedFictionalIdentityCount": 46,
+    "approvedPlayerIdentityCount": 26,
+    "wikipediaMainTeamListedPlayers": 24,
+    "wikipediaSecondTeamPrototypePointers": [
+      {
+        "fictionalPersonId": "lp-person-0004",
+        "fictionalIdentity": "Максим Зайкин",
+        "prototype": "Максим Зайцев"
+      }
+    ],
+    "wikipediaYouthTeamPrototypePointers": [
+      {
+        "fictionalPersonId": "lp-person-0018",
+        "fictionalIdentity": "Амир Музаев",
+        "prototype": "Амир Мусаев"
+      }
+    ],
+    "differingRoleClassificationsRequireFollowup": true,
+    "asOfMainTeamRegistrationEstablished": false
+  },
+  "contentLicense": "Wikipedia article text is CC BY-SA 4.0; article extracts and copied tables are not included; separate material may have other rights",
+  "imagesOrProtectedArticleTextsCopied": false,
+  "sourcePlayerRowsImported": 0,
+  "asOfRegisteredClubRostersVerified": 0,
+  "licensedPlayableFactRowsImported": 0,
+  "modifiesExistingSyntheticPack": false,
+  "modifiesExistingSaves": false
+}

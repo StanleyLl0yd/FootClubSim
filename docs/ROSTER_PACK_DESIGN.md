@@ -29,3 +29,7 @@ Wikidata's original structured records are generally available under CC0, but av
 6. Hold external release until rights, effective RFU sporting regulation editions and brand/publicity review pass. M0 completion still requires its separate full-repo two-pass audit.
 
 **Current recorded facts:** the draft contains 46 fictional names for «Надир» with stable IDs and zero asserted verified real roster facts; 15 other clubs have approved identities/badges but no roster facts yet. Do not report a verified 16-club 2026/27 personnel database.
+
+## Wikipedia sourcing for future prototype facts (owner instruction 2026-10-14)
+
+Wikipedia is now the **preferred first research/reference source** for real 2026/27 prototype people and roles. Use the [version-pinned 16-club source map](WIKIPEDIA_ROSTER_BASELINE.md) before official date-sensitive crosschecks. This does not change the still-proposed pack shape or approve source-derived playable facts. Any later person-level `birthDate`, `nationalityCodes`, `primaryPosition`, coaching/board role and loan/affiliation must carry the source revision and observation date, a separate effective date if known, and a legal-use review. Wikipedia's season *appearance* list is not a registered-player list. Keep minors and second/youth-team affiliation separate from senior eligibility. The `lp-person-0004` / `lp-person-0018` Nadir prototype placement observations are research-only; approved fictional identities and M0 saves stay unchanged.

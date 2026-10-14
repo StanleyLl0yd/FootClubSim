@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  buildP54Query, classifyP54Statement, summarizeP54Bindings,
+  buildP54Query, classifyP54Statement, classifyP54Bindings, summarizeP54Bindings,
   collectCoverage, ROW_LIMIT,
 } from '../scripts/wikidata-p54-coverage.mjs';
 
@@ -35,6 +35,22 @@ test('P54 temporal classes do not treat missing end date as verified membership'
   assert.equal(classifyP54Statement(row(1, t('2027-01-01'))), 'outside');
   assert.equal(classifyP54Statement(row(1, null, t('2025-01-01'))), 'outside');
   assert.equal(classifyP54Statement(row(1, '2025-01-01T12:00:00Z')), 'unknown');
+});
+
+test('all consumers share one statement-level temporal classification', () => {
+  const open = row(10, t('2026-01-01'), undefined, 90);
+  const closed = row(10, t('2026-01-01'), t('2026-12-31'), 90);
+  const separate = row(20, t('2026-02-01'), undefined, 91);
+  const classified = classifyP54Bindings([open, closed, separate]);
+  assert.deepEqual(classified, [
+    { person: entity(10), type: 'unknown' },
+    { person: entity(20), type: 'openEndedCandidate' },
+  ]);
+  const summary = summarizeP54Bindings([open, closed, separate]);
+  assert.equal(summary.statementCount, classified.length);
+  assert.equal(summary.statementClasses.unknown, 1);
+  assert.equal(summary.statementClasses.openEndedCandidate, 1);
+  assert.deepEqual(classifyP54Bindings([closed, open, separate]), classified);
 });
 
 test('invalid calendar days and inverted source intervals never become membership candidates', () => {

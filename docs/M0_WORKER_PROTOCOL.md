@@ -40,7 +40,7 @@ below formalize the boundaries that future M1/M2 implementations must respect.
 5. The application checks `readWorkerReply(reply, pending, currentRevision)`.
    Only a reply correlated with the exact active job, career, revision and
    fixture may advance to **further** ledger-identity/rules/permission checks.
-   The parser enforces summary arithmetic, but does **not** authenticate
+   The parser enforces team-stat arithmetic and a cross-team shot total below the M0 4,096-event budget (one event is full-time), but does **not** authenticate
    worker provenance or prove that the returned report equals the event ledger.
 6. Only then may the future application layer assemble a proposed new state,
    verify full roster/rules/budget/authority invariants and **atomically**

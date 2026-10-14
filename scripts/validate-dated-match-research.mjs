@@ -48,6 +48,21 @@ function sourceMatchesDeclaration(fixture) {
   assert.ok(rule.hosts.includes(url.hostname), 'source/provider host mismatch');
   assert.ok(!url.username && !url.password && !url.port && !url.hash, 'noncanonical source URL');
   assert.ok(rule.path.test(url.pathname), 'provider path mismatch');
+  // An official host/path alone is insufficient: reject unreviewed query variants.
+  const parameters = [...url.searchParams.entries()];
+  if (fixture.provider === 'Russian Football Union') {
+    assert.ok(parameters.length <= 1, 'unexpected federation query parameters');
+    if (parameters.length === 1) {
+      assert.equal(parameters[0][0], 'TournamentMatchesFilter[tournamentId]', 'unreviewed federation query');
+      assert.match(parameters[0][1], /^[1-9]\\d*$/, 'invalid federation tournament ID');
+    }
+  } else if (fixture.provider === 'FC Krasnodar') {
+    assert.equal(parameters.length, 1, 'expected source article ID');
+    assert.equal(parameters[0][0], 'object_id', 'unreviewed article query');
+    assert.match(parameters[0][1], /^[1-9]\\d*$/, 'invalid article ID');
+  } else {
+    assert.equal(parameters.length, 0, 'unexpected provider query parameters');
+  }
   assert.equal(fixture.sourceKind, rule.kind, 'source-kind mismatch');
   assert.equal(fixture.competition, rule.competition, 'competition/provider mismatch');
 }

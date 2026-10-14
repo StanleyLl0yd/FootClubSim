@@ -38,3 +38,11 @@ Optional ?start/?end and absent references are quality findings, not acceptable 
 The independent, non-playable [personnel manifest](../data/drafts/liga-personnel-pack-v1.json) is versioned `0.1.0` with 46 approved creative identities, **zero qualified factual rows**, and unchanged M0 compatibility. Its strict checks live in [scripts/validate-personnel-draft.mjs](../scripts/validate-personnel-draft.mjs) and [tests/personnel-draft.test.mjs](../tests/personnel-draft.test.mjs). The candidate validation function verifies declared source/rights metadata and basic field structure only: **it cannot establish legal authority, truth or employment/registration by itself**. No fictional names or source rights have been independently cleared for external release yet.
 
 Next: establish verified QID mappings and bounded source coverage measurements, then resolve remaining gaps with truly licensed providers or separately authored fictional fallbacks. Keep [issue #91](https://github.com/StanleyLl0yd/FootClubSim/issues/91), [rights/rules #15](https://github.com/StanleyLl0yd/FootClubSim/issues/15) and the M0 audit [#2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) open.
+
+## Entity disambiguation milestone (2026-10-14)
+
+All **16 club-level Wikidata entity IDs** have been identified and frozen in [the QID mapping](../data/drafts/liga-wikidata-club-map-v1.json), with explicit `lp-*` foreign keys and one canonical football-club page per participant. [Tests](../tests/wikidata-club-map.test.mjs) prevent duplicate/missing mappings and accidental promotion of these research pointers into playable personnel data.
+
+**Important disambiguations:** Moscow Dinamo football club is `Q17497`, not the broader `Q1269117` multisport society; Samara Krylia is `Q274778`, not its Moscow namesake. Makhachkala Dinamo `Q2494171` carries two historical inception dates (1927/2021) and requires an additional identity-continuity review. These mappings establish **club entities only**, not legal entities, squad membership, coaches or registered players.
+
+**Coverage remains unmeasured:** no successful dated `P54` extraction/denominator reconciliation is recorded. Do not translate 16/16 matched clubs into 16/16 verified rosters. The automated WDQS query was not run as part of this check; do not invent candidate counts.

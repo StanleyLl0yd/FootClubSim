@@ -14,7 +14,7 @@
 | **Safari normal mode, explicit IndexedDB deletion and JSON re-import** | New Safari WebDriver fixture under review: deletion, missing-save rejection, valid and tampered JSON file-input simulation | **Must be verified by actual macOS CI; not Private mode or organic eviction** |
 | **Real browser-enforced storage quota pressure** | No genuine per-origin eviction/quota outcome | **OPEN** |
 | **Actual storage eviction** | No observation of automatic browser eviction | **OPEN** |
-| **Backup/recovery across complete browser shutdown** | Same-tab reload smoke only | **OPEN** |
+| **Backup/recovery across complete browser shutdown** | Native Windows Chrome/Edge same disposable profile closed with `Browser.close`, full process exit, fresh process and IndexedDB Restore check added; **CI pending**. Actual JSON download, Safari shutdown and general eviction still outstanding | **PARTIAL only if CI passes** |
 | **Windows Chrome/Edge site-data clearing and same-process JSON import** | New CDP fixture under review in browser CI; restores a byte-for-byte stored M0 snapshot and rejects a corrupted backup | **Not equivalent to full shutdown or organic eviction** |
 | **Evolving career data and save migrations** | No implemented evolving career schema | M2, not a meaningful M0 functional test |
 
@@ -33,6 +33,8 @@ Requires **actual Safari on macOS** with a separate disposable testing profile/s
 5. If the export has been retained as a file, import into a new instance, check matching career/club, then import deliberately malformed/other-pack JSON and confirm the current memory state remains unchanged. Do not save a copied career over an existing ID.
 
 **Pass** requires explicit observed outcome for each applicable assertion; if the platform denies/blocks private automation, mark **BLOCKED**, give browser version and manual procedure, do not mark PASS.
+
+The native Windows test now also requests a genuine browser-process close, confirms the process exited, restarts with the **same isolated user-data directory** and checks the application Restore path. The test must pass in Windows Chrome and Edge CI before claiming that limited process-restart property. It does not replace the real OS file-download UX, Safari full-shutdown test, organic eviction or a manual recovery exercise.
 
 ## Persistent-profile full shutdown/restart and backup recovery
 

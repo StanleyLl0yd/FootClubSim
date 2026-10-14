@@ -53,6 +53,8 @@ why each startup failed and keeps **all application assertions single-attempt**
 once CDP is ready. A second startup failure remains a hard failure; this
 does not declare the underlying platform flakiness resolved.
 
+The macOS SafariDriver smoke additionally has an explicit isolated-origin IndexedDB deletion and **programmatic app JSON-import** recovery check, including rejection of a corrupted backup while preserving the active career. It is **not** a test of Safari Private Browsing, natural eviction, downloaded-file UX or full browser restart. A corresponding successful native Safari CI run is required before treating this added case as verified.
+
 ## Safari WebDriver startup variability
 
 [Browser run 38516820503](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38516820503)

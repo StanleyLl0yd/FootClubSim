@@ -2,7 +2,7 @@
 
 Status: policy and proposed workflow; no third-party dataset has been imported or licensed for redistribution.
 
-**M0 synthetic manifest:** [`data/packs/m0-synthetic-manifest.json`](../data/packs/m0-synthetic-manifest.json) declares the authored fictional generator, seed, pack version and absence of third-party records/artwork. `tests/manifest.test.mjs` checks it against actual generated data. This is an auditable **project declaration**, not external license proof or an authorization to redistribute third-party records. A real RPL data pack requires independently verified rights and a separate release review.
+**M0 synthetic manifest:** [`data/packs/m0-synthetic-manifest.json`](../data/packs/m0-synthetic-manifest.json) declares the authored fictional generator, seed, pack version and absence of third-party records/artwork. `tests/manifest.test.mjs` checks it against actual generated data. This is an auditable **project declaration**, not external license proof or an authorization to redistribute third-party records. A real RPL data pack requires independently verified rights and a separate release review. The M0 fictional-only manifest is now parsed by the pure, strict and bounded `src/core/provenance.ts` validator. It rejects unknown fields, inconsistent seed-derived pack versions, invalid dates, any declared third-party football records/artwork, and any assets not supported by the M0 schema. `tests/provenance.test.mjs` checks real manifest roundtrip, mismatch and malformed cases. This **only validates the author's declaration** and does not independently prove origin, authenticity or permission for real-world databases.
 
 ## Data sources
 

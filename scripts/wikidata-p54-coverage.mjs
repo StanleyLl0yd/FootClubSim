@@ -58,7 +58,7 @@ export function summarizeP54Bindings(bindings, asOf = AS_OF) {
     throw new Error('WDQS query result truncated or malformed; do not report complete counts');
   }
   const byPerson = new Map();
-  const qualifierByStatement = new Map();
+  const statements = new Map();
   const byType = { boundedCandidate: 0, openEndedCandidate: 0, unknown: 0, outside: 0 };
   for (const row of bindings) {
     const person = row?.person?.value;
@@ -68,14 +68,17 @@ export function summarizeP54Bindings(bindings, asOf = AS_OF) {
     }
     const key = person + '/' + statement;
     const qualifiers = JSON.stringify([row?.start?.value ?? null, row?.end?.value ?? null]);
-    if (qualifierByStatement.has(key)) {
-      if (qualifierByStatement.get(key) !== qualifiers) {
-        throw new Error('Conflicting P54 date qualifiers for a single statement');
-      }
+    const previouslySeen = statements.get(key);
+    if (previouslySeen) {
+      if (previouslySeen.qualifiers !== qualifiers) previouslySeen.ambiguous = true;
       continue;
     }
-    qualifierByStatement.set(key, qualifiers);
-    const type = classifyP54Statement(row, asOf);
+    statements.set(key, { person, row, qualifiers, ambiguous: false });
+  }
+  // Multiple P580/P582 values can create several WDQS rows for one statement.
+  // They are not separate relationships; flag the ambiguous statement as unknown.
+  for (const { person, row, ambiguous } of statements.values()) {
+    const type = ambiguous ? 'unknown' : classifyP54Statement(row, asOf);
     byType[type]++;
     if (!byPerson.has(person)) byPerson.set(person, new Set());
     byPerson.get(person).add(type);
@@ -92,7 +95,7 @@ export function summarizeP54Bindings(bindings, asOf = AS_OF) {
   }
   return {
     candidatePersonsAllSeasons: byPerson.size,
-    statementCount: qualifierByStatement.size,
+    statementCount: statements.size,
     statementClasses: byType,
     distinctPersonClasses: people,
     registrationVerified: false,

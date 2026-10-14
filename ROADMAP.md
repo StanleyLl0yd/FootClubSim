@@ -1,6 +1,6 @@
 # FootClubSim roadmap
 
-> Planning document. Updated 2026-10-13. The project is in **M0: design/foundation**; no playable release exists.
+> Planning document. Updated 2026-10-14. The project is in **M0: design/foundation**; no playable release exists.
 
 ## Product contract
 

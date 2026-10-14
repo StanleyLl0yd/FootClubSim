@@ -61,3 +61,9 @@ All **16 club-level Wikidata entity IDs** have been identified and frozen in [th
 «Надир»/FC Zenit: **733** all-time people, **792** statements, **43** open-ended date candidates, **295** temporally unknown and **395** outside-date. These are discoverability metrics, **not** evidence that 43 players are in the current squad.
 
 The result shows why CC0 availability is not sufficient for a playable league database: Wikidata lacks conclusive dated registration assertions for many historical links, and every 2026/27 squad still lacks an independently established roster denominator. Some P54 entries may be non-current, historical, or wrong; the current graph does not freeze Wikidata state as it existed on 2026-10-14. All 16 first-team rosters remain **not verified**, and M0/M2 publishing remains blocked.
+
+## Candidate person field completeness (P569/P27/P413)
+
+The supplementary [bounded diagnostic](../scripts/wikidata-candidate-fields.mjs) checks which **open-ended P54 candidate people**, as identified by the previous procedure, have at least one non-deprecated Wikidata value for date of birth (`P569`), citizenship (`P27`) and general position (`P413`). Calls to `wbgetentities` use a bounded batch (up to 40 QIDs), rate pacing, User-Agent and maxlag, with no real-world player identity or Wikidata person QID retained in published results. The [separate diagnostic workflow](../.github/workflows/wikidata-candidate-fields.yml) is for live research, not the production build.
+
+**Warning:** mere presence of `P27` does not establish RFU foreign-player status; `P413` may be coarser than the game's GK/CB/DM/etc positions; and `P569` does not itself confirm the accuracy of a birthday. Even all-three-field coverage does not constitute an effective-date roster validation, contract or registration proof, or permission to reuse third-party photographs.

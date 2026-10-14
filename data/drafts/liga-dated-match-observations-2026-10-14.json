@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "observedOn": "2026-10-14",
+  "targetAsOf": "2026-10-14",
+  "reportStatus": "dated-match-appearances-research-only",
+  "factualRosterDenominatorsVerified": 0,
+  "licensedPlayableFacts": 0,
+  "reproducedSourceLineupTables": false,
+  "sourcePlayerImagesCopied": false,
+  "sourceRightsForBulkRedistribution": "unverified",
+  "fixtures": [
+    {
+      "fixtureId": "rfs-cup-2026-09-02-zenit-dinamo-m",
+      "playedOn": "2026-09-02",
+      "competition": "RFU Cup 2026/27",
+      "sourceUrl": "https://www.rfs.ru/cup/tournament/match/57200",
+      "provider": "Russian Football Union",
+      "sourceKind": "dated-completed-official-cup-match-protocol",
+      "result": "Zenit 3:0 Dinamo Makhachkala",
+      "participants": [
+        {
+          "fictionalClubId": "lp-nadir",
+          "startingPlayers": 11,
+          "benchListed": 11,
+          "substitutesEntered": 5,
+          "uniquePlayersAppeared": 16
+        },
+        {
+          "fictionalClubId": "lp-statika-m2",
+          "startingPlayers": 11,
+          "benchListed": 11,
+          "substitutesEntered": 5,
+          "uniquePlayersAppeared": 16
+        }
+      ],
+      "isRegistrationList": false,
+      "asOfRosterVerified": false
+    },
+    {
+      "fixtureId": "rpl-2026-10-10-krasnodar-zenit",
+      "playedOn": "2026-10-10",
+      "competition": "RPL 2026/27",
+      "sourceUrl": "https://www.fckrasnodar.ru/team/news/object/?object_id=154192",
+      "provider": "FC Krasnodar",
+      "sourceKind": "dated-club-published-rpl-match-report-not-league-registration",
+      "result": "Krasnodar 2:3 Zenit",
+      "participants": [
+        {
+          "fictionalClubId": "lp-zelenober",
+          "startingPlayers": 11,
+          "benchListed": null,
+          "substitutesEntered": 5,
+          "uniquePlayersAppeared": 16
+        },
+        {
+          "fictionalClubId": "lp-nadir",
+          "startingPlayers": 11,
+          "benchListed": null,
+          "substitutesEntered": 3,
+          "uniquePlayersAppeared": 14
+        }
+      ],
+      "isRegistrationList": false,
+      "asOfRosterVerified": false
+    }
+  ],
+  "targetedCaseChecks": [
+    {
+      "observationId": "rpl-cup-case-2026-01",
+      "prototypeName": "Артём Карпукас",
+      "fictionalPersonId": "lp-person-0020",
+      "fictionalClubId": "lp-nadir",
+      "facts": [
+        {
+          "fixtureId": "rfs-cup-2026-09-02-zenit-dinamo-m",
+          "observedParticipation": "substitute-entered"
+        },
+        {
+          "fixtureId": "rpl-2026-10-10-krasnodar-zenit",
+          "observedParticipation": "starting-eleven"
+        }
+      ],
+      "finding": "appeared-for-club-in-two-dated-matches",
+      "asOf20261014Registered": false,
+      "footnote": "Appearance at a fixture date is not proof of uninterrupted employment, an October registration roster, citizenship or RFU eligibility."
+    },
+    {
+      "observationId": "rpl-cup-case-2026-02",
+      "prototypeName": "Сергей Семак",
+      "fictionalPersonId": "lp-person-0027",
+      "fictionalClubId": "lp-nadir",
+      "facts": [
+        {
+          "fixtureId": "rfs-cup-2026-09-02-zenit-dinamo-m",
+          "observedParticipation": "named-head-coach"
+        }
+      ],
+      "finding": "named-as-head-coach-in-dated-cup-protocol-only",
+      "asOf20261014Registered": false,
+      "footnote": "Head-coach attribution in a September match does not establish current appointment, coaching license or role as of October."
+    }
+  ]
+}

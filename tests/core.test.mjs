@@ -37,6 +37,19 @@ test('lineup has exactly one goalkeeper and valid competition rules', () => {
   assert.ok(validateLineup(noKeeper, club, playerMap, rules).some(e => e.code === 'GOALKEEPER_COUNT'));
   assert.ok(validateLineup(lineup, club, playerMap, { ...rules, starterCount: 12 }).some(e => e.code === 'INVALID_RULES'));
 });
+test('declared M0 bench capacity must be a bounded safe integer', () => {
+  for (const maxBench of [129, 4096, Number.MAX_SAFE_INTEGER + 1, 1e100, Infinity, NaN, -1, 0.5]) {
+    assert.deepEqual(
+      validateLineup(lineup, club, playerMap, { ...rules, maxBench }),
+      [{ code: 'INVALID_RULES', at: 'rules' }],
+      'bad maxBench: ' + maxBench,
+    );
+  }
+  assert.deepEqual(validateLineup(lineup, club, playerMap, { ...rules, maxBench: 128 }), []);
+  assert.ok(validateLineup(lineup, club, playerMap, { ...rules, maxBench: 11 })
+    .some(error => error.code === 'BENCH_TOO_LARGE'));
+});
+
 test('seeded RNG is repeatable and resume-state safe', () => {
   assert.equal(RNG_VERSION, 'xorshift32-v1');
   const a = new SeededRng(42); const b = new SeededRng(42);

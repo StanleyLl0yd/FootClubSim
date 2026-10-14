@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-14",
+  "sourceUrl": "https://pro.fc-zenit.ru/lokomotiv_ch_2026_27",
+  "sourceType": "official-club-digital-match-programme",
+  "sourceSeason": "2026/27",
+  "sourcePublicationDate": "not-independently-established",
+  "collectionMethod": "targeted-human-readable-review-no-bulk-extraction",
+  "copyrightedSourceMaterialCopied": false,
+  "attachedPhotographsOrCrests": false,
+  "sourceDataLicense": "unknown",
+  "redistributionOfUnderlyingSiteDatabase": "not-authorized",
+  "asOfDate": "2026-10-14",
+  "rosterVerified": false,
+  "factRowsAuthorizedForPlayablePack": 0,
+  "observations": [
+    {
+      "observationId": "nadir-transfer-lead-2026-01",
+      "wikidataPrototypeQid": "Q111635019",
+      "prototypeName": "Артём Карпукас",
+      "fromClubId": "lp-vagon",
+      "toClubId": "lp-nadir",
+      "transferWindow": "summer-2026",
+      "movementKind": "transfer-reported",
+      "fictionalPersonId": "lp-person-0020",
+      "status": "single-official-source-requires-date-and-registration-crosscheck"
+    },
+    {
+      "observationId": "nadir-transfer-lead-2026-02",
+      "wikidataPrototypeQid": "Q23799673",
+      "prototypeName": "Андрей Мостовой",
+      "fromClubId": "lp-nadir",
+      "toClubId": "lp-vagon",
+      "transferWindow": "early-september-2026",
+      "movementKind": "season-loan-reported",
+      "fictionalPersonId": null,
+      "status": "single-official-source-requires-date-and-registration-crosscheck"
+    }
+  ]
+}

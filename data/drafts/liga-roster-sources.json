@@ -13,11 +13,12 @@
       "sourceUrl": "https://fc-zenit.ru/",
       "pageKind": "official-site-index",
       "snapshotStatus": "public-squad-url-unconfirmed",
-      "note": "The primary site denied automated retrieval (HTTP 403). Do not use older cached 2024/25 English team pages as a 2026/27 snapshot.",
+      "note": "The primary site denied automated retrieval (HTTP 403). Do not use older cached 2024/25 English team pages as a 2026/27 snapshot. Supplemental official 2026/27 club digital programme is accessible at https://pro.fc-zenit.ru/lokomotiv_ch_2026_27 and records two transfer leads. It is not a verified full squad or authorization for bulk reuse.",
       "dataLicense": "unknown",
       "redistributionPermission": "not-established",
       "asOfRosterVerified": false,
-      "staffVerified": false
+      "staffVerified": false,
+      "supplementalDatedSourceUrl": "https://pro.fc-zenit.ru/lokomotiv_ch_2026_27"
     },
     {
       "clubId": "lp-zelenober",

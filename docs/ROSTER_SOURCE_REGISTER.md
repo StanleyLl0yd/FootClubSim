@@ -27,7 +27,7 @@ Finding a club's current team page is **not the same as proving a historical ros
 
 ## Special findings
 
-- `lp-nadir`: the primary Zenit website denied direct automated retrieval; don't infer current players from a cached old season page. Its 46 fictional Nadir names are owner-approved **creative drafts**, not official dated roster verification.
+- `lp-nadir`: the primary Zenit website denied direct automated retrieval; don't infer current players from a cached old season page. Its 46 fictional Nadir names are owner-approved **creative drafts**, not official dated roster verification. A secondary [official 2026/27 programme](https://pro.fc-zenit.ru/lokomotiv_ch_2026_27) supplies [two specifically reviewed transfer leads](NADIR_TRANSFER_CROSSCHECK.md), **not** a complete roster or data-reuse license.
 - `lp-statika-m1`: Dynamo Moscow explicitly has a [2026/27 squad page](https://fcdynamo.ru/teams/dynamo/2026-2027/players/), but this still needs as-of snapshot checks.
 - `lp-nizon`: the Akron first-team index currently yielded "К сожалению, данных не найдено" to the available text view; its [dated 2026/27 match protocol](https://fcakron.ru/game/287) can be used to verify *appearances*, not a complete eligible roster.
 - `lp-statika-m2`: use the [Makhachkala first-team squad](https://dinamo-mx.ru/list/osnovnoj-sostav-dinamo-mahachkala/) rather than the similar youth/MFL and Dinamo-2 URLs.

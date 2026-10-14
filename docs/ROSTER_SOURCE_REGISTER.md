@@ -2,7 +2,9 @@
 
 **Research date / intended snapshot:** 2026-10-14. The candidate primary-source URLs and their status are in [`data/drafts/liga-roster-sources.json`](../data/drafts/liga-roster-sources.json). This document lists **source locations only**, not the bulk content of third-party player/staff databases, and does not authorize automated scraping, database redistribution or protected image use. See [source/rights rules](DATA_SOURCES.md), [roster pack contract](ROSTER_PACK_DESIGN.md) and [M2 backlog #91](https://github.com/StanleyLl0yd/FootClubSim/issues/91).
 
-## Primary-source discovery
+**Research source order:** start from [revision-pinned Wikipedia personnel articles](WIKIPEDIA_ROSTER_BASELINE.md) for all 16 clubs; use the official links below for **independent dated verification**, particularly registrations, transfers and appointments. [Wikidata P54 diagnostics](WIKIDATA_ROSTER_FEASIBILITY.md) are supplementary entity/field cross-checks, not a replacement for Wikipedia and not proof of a current squad. The difference between research priority and official evidentiary authority is defined in [DATA_SOURCES.md](DATA_SOURCES.md).
+
+## Official club-source verification references
 
 | Fictional club | Real club inspiration | Source reference | Discovery result |
 | --- | --- | --- | --- |

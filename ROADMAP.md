@@ -1,6 +1,6 @@
 # FootClubSim roadmap
 
-> Planning document. Updated 2026-10-14. The project is in **M0: design/foundation**; no playable release exists.
+> Planning document. Updated 2026-10-14. The project is in **M0: design/foundation**; no playable release exists. The owner-approved [M0/M2 gate boundary](docs/adr/0006-m0-m2-acceptance-boundary.md) separates M0 source/contracts acceptance from M2 playable rosters and executable authentic rules.
 
 ## Product contract
 
@@ -37,9 +37,9 @@ See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 - [x] Public repository, README and original-derived `AGENTS.md`.
 - [x] Create non-optional audit issues for M0–M6.
 - [ ] Approve product scope and [architecture](ARCHITECTURE.md); the independent staff-delegation principle [ADR-0002](docs/adr/0002-configurable-delegation.md) and manager-origin/biography principle [ADR-0003](docs/adr/0003-manager-origins-biographies.md) have been accepted, while numerical balance and remaining product decisions are open.
-- [ ] Finalize minimum player/club data contract and a legally usable initial **synthetic** dataset.
-- [ ] Specify deterministic match simulation and game-calendar transitions; [M1 calibration protocol](docs/M1_CALIBRATION_PROTOCOL.md) is drafted, but approved statistical reference baselines remain unavailable.
-- [ ] Establish provenance/rights gates for original league identity and satirical inverse club names, while excluding copied real rosters, league branding, club crests and unlicensed imagery. The source-of-truth rules require separate verified RPL/RFU/IFAB editions; see [ADR-0004](docs/adr/0004-liga-prikolov-rpl-rules.md).
+- [x] Define and validate the initial **original synthetic** player/club data contract and immutable seeded pack (16 clubs/368 players); final sign-off and release-risk review remain open in [M0 acceptance](docs/M0_ACCEPTANCE.md). **This does not certify 2026/27 rosters.**
+- [ ] Sign off deterministic match/fixture input-output-event contracts and the [M1 calibration protocol](docs/M1_CALIBRATION_PROTOCOL.md); the seeded M0 fixtures already exist, but reference baselines and numerical tolerances are not yet approved. Actual event-driven match generation is M1.
+- [ ] Establish the M0 provenance/rights and original-synthetic-assets gate, dated Wikipedia-first source/revision contracts and an official RPL/RFU/IFAB rules **source/edition matrix**. Full 16-club registration reconciliation, third-party data-pack release rights and executable real-rules acceptance are deferred to M2 under [ADR-0006](docs/adr/0006-m0-m2-acceptance-boundary.md), without waiving the M0 legal/source risk review.
 - [x] Bootstrap TypeScript/Vite/React shell, locked dependencies and CI for types, ESLint, source formatting, tests and production build. Native Safari and Windows Edge smoke verification is also automated; exceptional storage cases remain tracked.
 - [ ] Finish browser storage capability and fallback/export strategy testing: the initial career save/reload/restore and unavailable IndexedDB path are verified in actual Safari/macOS, Chrome/Edge Windows and Chromium/Linux (see [PR #67](https://github.com/StanleyLl0yd/FootClubSim/pull/67)); **macOS Safari private mode, genuine quota/eviction and backup/recovery across browser shutdown** remain unverified; native Windows Chrome/Edge private-session smoke is now covered by [browser-smoke.yml](.github/workflows/browser-smoke.yml).
 - [x] Open a [prioritized M1 implementation backlog](docs/M1_BACKLOG.md) with dependencies and preliminary effort/risks.
@@ -63,7 +63,8 @@ M0 documentation may be merged incrementally without claiming M0 completion. Do 
 ## M2: «Лига приколов» with real RPL rules
 
 - Russian-language desktop-oriented browser interface; **first create a manager profile** (former pro, theorist, or custom point allocation) with a seeded fictional biography to preview/accept, **then** pick a club. See [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
-- Season fixtures, fixtures chronology, results, standings and all actually verified RPL/RFU/IFAB rule data, with real eligibility, substitution, foreign-player, match/interruption and standings constraints, not invented simplifications.
+- Versioned **Wikipedia-first, independently corroborated 2026/27 prototype personnel catalog for all 16 fictional clubs**, with original names/ratings, freeze date, rights/provenance review and save compatibility under [#91](https://github.com/StanleyLl0yd/FootClubSim/issues/91).
+- Season fixtures, fixtures chronology, results, standings and all actually verified RPL/RFU/IFAB executable rule data, with real eligibility, substitution, foreign-player, match/interruption and standings constraints, not invented simplifications.
 - Computer clubs select legal lineups and adapt tactics; absences and suspensions respected.
 - Player's lineup/bench and tactics responsibilities are separately configurable: decide manually by default, or delegate to an eligible named club employee. Show decision authority and support manual takeover ([#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58)).
 - Simulate next event/tour rapidly, persist and restore game state, export/import career save. Preserve manager origin, competencies, accepted biography and its generator/template version across saves.

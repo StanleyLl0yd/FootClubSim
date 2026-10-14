@@ -1,6 +1,6 @@
 # M0 acceptance checklist
 
-Status: **OPEN**. Evidence must come from actual implementation, source review or observed tests, not from the existence of this checklist. The [M0 blocker decision package](M0_BLOCKER_DECISIONS.md) lists concrete **pending** owner choices and proposed M0 vs M2 acceptance boundaries; it grants no automatic approval. Complete and cross-reference [M0 exit issue #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) before declaring M0 closed.
+Status: **OPEN**. The owner accepted the [M0 foundation versus M2 playable-personnel/rules boundary](adr/0006-m0-m2-acceptance-boundary.md) on 2026-10-14. M0 requires contracts, source/release-risk controls for its own synthetic pack and dated primary-source reference paths; completed 16-club registrations, M2 fictional player catalog and executable authentic rules are **not** M0 exit predicates. Evidence must come from actual implementation, source review or observed tests, not from the existence of this checklist. The [M0 blocker decision package](M0_BLOCKER_DECISIONS.md) lists concrete **pending** owner choices and proposed M0 vs M2 acceptance boundaries; it grants no automatic approval. Complete and cross-reference [M0 exit issue #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) before declaring M0 closed.
 
 ## Scope and documentation
 
@@ -14,14 +14,14 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 - [x] Agree on fictional **«Лига приколов»** with reversed/antonym-inspired names based on the 16 RPL 2026/27 participants, **but genuine source-verified effective RPL/RFU/IFAB sporting regulations** (owner decision 2026-10-14, [ADR-0004](adr/0004-liga-prikolov-rpl-rules.md)). **All 16 source-team aliases and circular badge concepts** are approved, with «Статика М1»/«Статика М2» and original ring-based graphics ([ADR-0005](adr/0005-liga-prikolov-brand-and-personnel.md)). Rights, current-season factual roster verification, full rule verification and external release clearance remain open. The original synthetic pack is unchanged.
 - [ ] Sign off player attributes, tactics, economy representation and the **remaining** detailed minimum-season rules. The fictional «Лига приколов» naming principle and **authentic-source RPL regulations requirement** are approved, while all 16 club aliases and badge design are accepted; numerical balance, third-party data rights, current roster accuracy, complete regulations and edge cases remain pending.
 - [ ] Record the **remaining** decisions in ADRs and resolve identified incompatibilities in the specifications. [ADR-0002](adr/0002-configurable-delegation.md), [ADR-0003](adr/0003-manager-origins-biographies.md) and [ADR-0004](adr/0004-liga-prikolov-rpl-rules.md) record accepted principles; future implementation is tracked in [#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58) and [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
-- [ ] Verify official RPL 2026/27 rules from primary document and cite exact revision for each encoded rule. [A sourced subset](RPL_2026_27_RULES.md) now includes match interruption, pre-kickoff substitution and cross-season discipline details; full rules, amendments and implementation checks remain open.
+- [ ] Approve the M0 source/edition matrix and source citation for **every currently encoded M0 check**; identify outstanding official amendments, conflicts, implementation tests and the exact M2 authentic-rules gate. [A sourced subset](RPL_2026_27_RULES.md) includes match interruption, pre-kickoff substitution and cross-season discipline; exhaustive executable coverage is **M2**, not a fictitious M0 success.
 
 ## Data readiness
 
 - [x] Define and implement the **M0 synthetic-only** catalog, revision-0 initial-career JSON/save and provenance declaration schemas with bounded validation: `src/core/import.ts`, `src/core/save.ts`, `src/core/provenance.ts`, and corresponding tests. This does **not** imply a full evolving career schema or a licensed real RPL data-pack provenance contract; both require new versions, tests and independent permission review.
 - [x] Add a **synthetic** fictional 16-club/368-player test dataset, seed-specific pack identity, author-origin manifest and runtime validation.
 - [x] Demonstrate duplicate identity detection, malformed/oversized data rejection and cross-reference checks in headless tests.
-- [ ] Complete rights review for the fictional league's original **parody club names/visual identities** and any separately included real club/league references; the owner approved original parody club/person identities informed by verified real 2026/27 prototypes, **not** redistribution of a real roster database, actual club crests, player photos or league marks. Any proposed source-derived factual player/staff records still need an independently date-verified and rights-cleared future pack; M0 remains synthetic.
+- [ ] Complete M0 source/provenance and branding **risk review** for actually included original names, visual identity definitions and the synthetic pack; confirm no third-party roster, image, protected expressive text or unlicensed material enters the M0 output. Wikipedia-first research references must pin revisions and retain effective-date/rights unknowns. Full M2 roster/coach registration verification and clearance of **future** release content are separate, still-blocking **M2** gates under [ADR-0006](adr/0006-m0-m2-acceptance-boundary.md).
 - [ ] Ensure no prohibited scraping, copyrighted assets, production/private credentials or secret values are committed.
 
 ## Code and tooling foundation
@@ -40,6 +40,12 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 - [ ] Approve the [M1 calibration protocol](M1_CALIBRATION_PROTOCOL.md) (metrics, 10,000-seed sampling, uncertainty and reference-rights gate drafted); select legally permitted external baselines and freeze tolerances before tuning.
 - [x] Specify **planned** rules-pack separation and dependencies for registration, standings, discipline and administrative outcomes in [M0_RPL_RULES_MATRIX.md](M0_RPL_RULES_MATRIX.md). Complete source/legal verification and executable rules remain **open** under issue #15.
 - [x] Open the [prioritized M1 implementation backlog](M1_BACKLOG.md); remaining effort estimates and technical risks still require approval.
+
+## Cross-milestone backlog explicitly NOT required to finish M0
+
+- [x] The **boundary decision** is owner-approved in [ADR-0006](adr/0006-m0-m2-acceptance-boundary.md): research-only 16-club Wikipedia references are sufficient at M0; the **0/16** complete registrations and no licensed playable person facts remain explicitly unresolved M2 tasks under [#91](https://github.com/StanleyLl0yd/FootClubSim/issues/91).
+- [ ] M2 (not M0): complete source-verified and rights-reviewed personnel pack for all 16 clubs, independent parody names and ratings, plus full real-RPL executable rules/edge cases. Do not tick these in M0.
+- [ ] M2 (not M0): production-career migrations, quota/eviction/recovery and backup testing for evolving saved careers. Current additional M0 browser exit conditions are **not** automatically waived by this boundary decision.
 
 ## Repository-wide milestone exit
 

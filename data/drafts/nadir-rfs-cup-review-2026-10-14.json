@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "researchDate": "2026-10-14",
+  "targetAsOfDate": "2026-10-14",
+  "fictionalClubId": "lp-nadir",
+  "researchState": "source-triangulation-only-not-an-as-of-roster",
+  "cupListing": {
+    "provider": "Russian Football Union",
+    "url": "https://www.rfs.ru/cup/teams/26",
+    "pageType": "dynamic-current-Cup-of-Russia-team-list",
+    "seasonInterpretation": "2026/27-current-season-context-not-a-frozen-as-of-snapshot",
+    "observedListedNames": 29,
+    "approvedNadirFootballerIdentityDrafts": 26,
+    "manuallyNameMatchedDraftPrototypes": 26,
+    "unmatchedIndexNames": 3,
+    "categoryDiscrepanciesToReview": 4,
+    "firstTeamRplRegistrationsVerified": 0,
+    "timeFrozen": false,
+    "permissionToRedistributeSourceTable": false,
+    "dataLicense": "unknown"
+  },
+  "outdatedOrConflictingIndexLeads": [
+    {
+      "leadId": "nadir-rfs-crosscheck-01",
+      "prototypeName": "Юрий Горшков",
+      "rfsIndexStillListsPlayer": true,
+      "reportedMovement": "permanent-transfer",
+      "reportedOn": "2026-08-15",
+      "reportedDestinationClubId": "lp-korni-zapretov",
+      "evidenceUrl": "https://old.pfcks.ru/cgi-bin/news.cgi?n=22617",
+      "evidenceKind": "receiving-club-transfer-announcement",
+      "asOfRegistrationEstablished": false,
+      "fictionalPersonId": null
+    },
+    {
+      "leadId": "nadir-rfs-crosscheck-02",
+      "prototypeName": "Ваня Дркушич",
+      "rfsIndexStillListsPlayer": true,
+      "reportedMovement": "season-loan",
+      "reportedOn": "2026-08-14",
+      "reportedDestinationExternal": "RCD Espanyol",
+      "evidenceUrl": "https://t.me/s/fczenit/36703",
+      "evidenceKind": "sending-club-announcement",
+      "asOfRegistrationEstablished": false,
+      "fictionalPersonId": null
+    },
+    {
+      "leadId": "nadir-rfs-crosscheck-03",
+      "prototypeName": "Андрей Мостовой",
+      "rfsIndexStillListsPlayer": true,
+      "reportedMovement": "season-loan",
+      "reportedInMonth": "2026-09",
+      "reportedDestinationClubId": "lp-vagon",
+      "evidenceUrl": "https://pro.fc-zenit.ru/lokomotiv_ch_2026_27",
+      "evidenceKind": "sending-club-digital-programme",
+      "asOfRegistrationEstablished": false,
+      "fictionalPersonId": null
+    }
+  ],
+  "groupingFlags": [
+    {
+      "fictionalPersonId": "lp-person-0009",
+      "approvedDraftGroup": "defenders",
+      "rfsBroadGroup": "midfielders"
+    },
+    {
+      "fictionalPersonId": "lp-person-0023",
+      "approvedDraftGroup": "attackers",
+      "rfsBroadGroup": "midfielders"
+    },
+    {
+      "fictionalPersonId": "lp-person-0024",
+      "approvedDraftGroup": "attackers",
+      "rfsBroadGroup": "midfielders"
+    },
+    {
+      "fictionalPersonId": "lp-person-0026",
+      "approvedDraftGroup": "attackers",
+      "rfsBroadGroup": "midfielders"
+    }
+  ],
+  "limitations": [
+    "29 is the visible RFU Cup index row count, not a dated 2026-10-14 RPL eligible-player denominator",
+    "Draft-prototype name matches are preliminary and do not verify birth dates, citizenship, exact positions, contracts or staff",
+    "Cup list may retain players who moved away in August and September 2026",
+    "RFS broad positional groupings do not determine a footballer's primary or secondary game position",
+    "The source index is mutable and its content is not archived as a licensed bulk dataset",
+    "No as-of RPL registrations, coach/support staff assignments, commercial reuse rights or playable fact rows have been cleared"
+  ],
+  "rightsAndRelease": {
+    "targetedManualResearchOnly": true,
+    "copiedBulkRosterTable": false,
+    "sourceMaterialsOrImagesIncluded": false,
+    "redistributionRightsVerified": false,
+    "playableFactRowsImported": 0,
+    "m0SeedOrSavesModified": false
+  }
+}

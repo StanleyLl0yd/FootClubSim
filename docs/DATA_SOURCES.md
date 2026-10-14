@@ -16,14 +16,25 @@ The initial decision called for independent fictional personnel. It is **superse
 
 This is **not** permission to ship an unlicensed real roster database, real team badges or other protected third-party assets. Keep all game participant IDs independently authored and stable. The source RPL participants are design references for creative naming; source references do not establish permission to reproduce logos, photographs, trade dress or databases. The exact 16 aliases and original badge geometry are approved by the owner, but release rights are not cleared. Full sporting-rule verification, later amendments and source-edition tracking remain **open** under [#15](https://github.com/StanleyLl0yd/FootClubSim/issues/15). Do not represent unverified rules as compliant with official documents.
 
+## Source priority for 2026/27 personnel research
+
+**Wikipedia is the primary discovery and research source** for 2026/27 player, coach, board, medical and other club-personnel prototypes. Start with [specific, pinned Wikipedia revisions](WIKIPEDIA_ROSTER_BASELINE.md) and the [16-club research index](../data/drafts/liga-wikipedia-source-map-2026-10-14.json); capture the article revision, section, observation date, fact type and uncertainty.
+
+**Official RFU/RPL documents, dated match protocols and club announcements are authoritative for formal facts** such as competition registration, actual match participation, transfer effectiveness, coaching appointments and sporting-rule validity. Their legal/evidentiary authority is distinct from discovery order: if an official dated record conflicts with Wikipedia on a formal status, record and investigate the conflict instead of treating Wikipedia as a registration certificate.
+
+**Wikidata is secondary, supplementary research only** for candidate entity reconciliation, birth/citizenship/position cross-checks and P54 relationship diagnostics. A Wikidata QID, open-ended P54 interval, coverage aggregate or CC0 status must not replace the Wikipedia-first research workflow, override a verified official status or establish a complete eligible roster. Store contradictory or missing facts as unresolved, not guessed. See [Wikidata diagnostics and limitations](WIKIDATA_ROSTER_FEASIBILITY.md).
+
+Source priority does **not** grant data-use rights. No bulk import, third-party article prose/table copying, photo reuse or release of real-prototype datasets without permission and an independent review; the M0 synthetic pack and existing careers stay unchanged.
+
 ## Data sources
 
 | Candidate | Possible facts | Status for bundling |
 | --- | --- | --- |
+| Wikipedia (primary personnel research) | Revision-pinned player, coach, management and support-personnel prototype facts and leads | Cite exact revisions; article text is generally CC BY-SA 4.0. Do not copy articles, tables or images into the game or repository without a compatible rights plan. Appearance lists do not prove registration. |
+| Wikidata (secondary cross-check only) | Independent entity reconciliation and incomplete structured facts (P54/P569/P27/P413) | CC0 where applicable, but temporal/entity quality and linked-media rights require review. Never treat an open-ended P54 as a verified current registration. |
 | Transfermarkt | Rosters, dates, transfer/contract and valuations context | **No automated scraping or bulk copying.** Its terms prohibit automated access/copying without authorization. Redistribution is not authorized by the fact that a page is public. |
 | Official club websites | Player roster, position, appearances, biographies | Review each site's terms and licenses; obtain permission for automated collection and redistribution as appropriate; logos and photos are separately rights-controlled. |
 | RFU/RPL official documents | Competition regulations, published schedules and results | Source authority for rule design, but access/redistribution/automation still need rights review. |
-| Wikidata (CC0 where applicable) | Basic independently licensed structured facts | Validate coverage, entity matching, dates and database provenance. Do not assume every linked image has CC0 rights. |
 | Independent licensed sports-data API | Statistics, player identities, schedules | Use only with written subscription/license terms covering client-side redistribution/offline packs and public GitHub where applicable. |
 | Synthetic records | Fictional teams/players, balancing/test fixtures | **Allowed M0/M1 bootstrap**; avoid resemblance to real branded clubs and personnel. |
 

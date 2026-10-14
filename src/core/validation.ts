@@ -21,7 +21,9 @@ export function validateCatalog(catalog: Catalog): readonly ValidationError[] {
       errors.push({ code: 'DUPLICATE_OR_INVALID_PLAYER', at: 'player:' + player.id });
     }
     players.add(player.id);
-    if (!player.displayName.trim() || !POSITIONS.includes(player.primaryPosition)) {
+    if (typeof player.displayName !== 'string' || !player.displayName.trim() ||
+        player.displayName.length > 256 || !POSITIONS.includes(player.primaryPosition) ||
+        typeof player.foreignerForCompetition !== 'boolean') {
       errors.push({ code: 'INVALID_PLAYER', at: 'player:' + player.id });
     }
     for (const key of [...FIELD_ATTRIBUTE_KEYS, ...GOALKEEPER_ATTRIBUTE_KEYS]) {
@@ -38,7 +40,10 @@ export function validateCatalog(catalog: Catalog): readonly ValidationError[] {
       errors.push({ code: 'DUPLICATE_OR_INVALID_CLUB', at: 'club:' + club.id });
     }
     clubs.add(club.id);
-    if (!club.displayName.trim()) errors.push({ code: 'INVALID_CLUB', at: 'club:' + club.id });
+    if (typeof club.displayName !== 'string' || !club.displayName.trim() ||
+        club.displayName.length > 256) {
+      errors.push({ code: 'INVALID_CLUB', at: 'club:' + club.id });
+    }
     const roster = new Set<string>();
     for (const id of club.registeredPlayerIds) {
       if (!players.has(id)) errors.push({ code: 'UNKNOWN_PLAYER', at: 'club:' + club.id + '.' + id });

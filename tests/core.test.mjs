@@ -46,3 +46,20 @@ test('seeded RNG is repeatable and resume-state safe', () => {
   assert.throws(() => new SeededRng(0), RangeError);
   assert.ok(new SeededRng(17).nextFloat() < 1);
 });
+
+test('typed catalog validation agrees with import on explicit competition status and name bounds', () => {
+  const invalidPlayerCases = [
+    { ...players[0], foreignerForCompetition: 'false' },
+    { ...players[0], foreignerForCompetition: null },
+    { ...players[0], displayName: 'X'.repeat(257) },
+    { ...players[0], displayName: null },
+  ];
+  for (const modified of invalidPlayerCases) {
+    const result = validateCatalog({ ...catalog, players: [modified, ...players.slice(1)] });
+    assert.ok(result.some(error => error.code === 'INVALID_PLAYER'));
+  }
+  for (const name of ['X'.repeat(257), null]) {
+    const result = validateCatalog({ ...catalog, clubs: [{ ...club, displayName: name }] });
+    assert.ok(result.some(error => error.code === 'INVALID_CLUB'));
+  }
+});

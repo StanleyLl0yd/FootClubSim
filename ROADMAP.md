@@ -4,7 +4,7 @@
 
 ## Product contract
 
-- Browser-first, offline-capable, Russian-language single-player football **club management** simulation.
+- Browser-first, **internet-connected** Russian-language single-player football **club management** simulation; mandatory offline gameplay is **not** required. Deterministic calculations and local career saves remain separate from network-dependent Google rates ([ADR-0008](docs/adr/0008-online-daily-fx-rounding.md)).
 - Owner-approved initial playable league: the fictional **«Лига приколов»**, with club display names formed through antonyms/semantic inversions of the 16 current RPL 2026/27 clubs, **but sporting rules, quotas, standings, discipline and limits taken from genuinely verified effective RPL/RFU/IFAB regulations**. All sixteen fictional names and circular badge designs are owner-approved (2026-10-14); factual squad licenses, registration accuracy, full sporting rules and exceptions remain unverified. See ADR-0005. See [ADR-0004](docs/adr/0004-liga-prikolov-rpl-rules.md) and [ADR-0005](docs/adr/0005-liga-prikolov-brand-and-personnel.md). Other competitions may have reduced non-playable representation, with official promotion/relegation rules required if modeled.
 - The application computes matches automatically; **no 2D or 3D match visualization** is planned for the initial milestones.
 - Prioritize macOS Safari and Windows Chrome/Edge, then compatible desktop browsers. No dedicated Linux application.
@@ -27,7 +27,7 @@
 | M2 | Play a complete «Лига приколов» season using authentic verified RPL sporting rules and fictional inverse-name clubs, with club selection, fixtures, standings, reports and durable saves | [#4](https://github.com/StanleyLl0yd/FootClubSim/issues/4) |
 | M3 | Transfers, contracts, finances, training, scouting foundation and AI club choices | [#5](https://github.com/StanleyLl0yd/FootClubSim/issues/5) |
 | M4 | Multi-season careers, player aging, academy/regens, promotion/relegation and modeled external market | [#6](https://github.com/StanleyLl0yd/FootClubSim/issues/6) |
-| M5 | Refined Russian UI, accessibility, performance, offline PWA install, data update UX and recovery | [#7](https://github.com/StanleyLl0yd/FootClubSim/issues/7) |
+| M5 | Refined Russian UI, accessibility, performance, optional PWA install, online update UX and recovery | [#7](https://github.com/StanleyLl0yd/FootClubSim/issues/7) |
 | M6 | Stable numbered release and optional macOS/Windows desktop packaging after explicit feasibility review | [#8](https://github.com/StanleyLl0yd/FootClubSim/issues/8) |
 
 ## M0: foundation and acceptance
@@ -36,7 +36,7 @@ See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 
 - [x] Public repository, README and original-derived `AGENTS.md`.
 - [x] Create non-optional audit issues for M0–M6.
-- [ ] Approve product scope and [architecture](ARCHITECTURE.md); the independent staff-delegation principle [ADR-0002](docs/adr/0002-configurable-delegation.md) and manager-origin/biography principle [ADR-0003](docs/adr/0003-manager-origins-biographies.md) have been accepted, while numerical balance and remaining product decisions are open.
+- [ ] Sign off the complete product scope and [architecture](ARCHITECTURE.md). Core delegation, manager-origin, match/tactics and multi-currency principles are owner-approved in ADR-0002/0003/0007, and internet-connected daily FX/rounding in [ADR-0008](docs/adr/0008-online-daily-fx-rounding.md). Remaining technical/numeric, original-content rights and source/regulation reviews are separate open gates.
 - [x] Define and validate the initial **original synthetic** player/club data contract and immutable seeded pack (16 clubs/368 players); final sign-off and release-risk review remain open in [M0 acceptance](docs/M0_ACCEPTANCE.md). **This does not certify 2026/27 rosters.**
 - [ ] Sign off deterministic match/fixture input-output-event contracts and the [M1 calibration protocol](docs/M1_CALIBRATION_PROTOCOL.md); the seeded M0 fixtures already exist, but reference baselines and numerical tolerances are not yet approved. Actual event-driven match generation is M1.
 - [ ] Establish the M0 provenance/rights and original-synthetic-assets gate, dated Wikipedia-first source/revision contracts and an official RPL/RFU/IFAB rules **source/edition matrix**. Full 16-club registration reconciliation, third-party data-pack release rights and executable real-rules acceptance are deferred to M2 under [ADR-0006](docs/adr/0006-m0-m2-acceptance-boundary.md), without waiving the M0 legal/source risk review.
@@ -68,12 +68,12 @@ M0 documentation may be merged incrementally without claiming M0 completion. Do 
 - Computer clubs select legal lineups and adapt tactics; absences and suspensions respected.
 - Player's lineup/bench and tactics responsibilities are separately configurable: decide manually by default, or delegate to an eligible named club employee. Show decision authority and support manual takeover ([#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58)).
 - Simulate next event/tour rapidly, persist and restore game state, export/import career save. Preserve manager origin, competencies, accepted biography and its generator/template version across saves.
-- Fully offline core behavior; tested Safari/Chromium compatibility.
+- Deterministic browser-local core with reliable network-error handling (mandatory offline play not required); tested Safari/Chromium compatibility.
 - Whole-repository exit gate [#4](https://github.com/StanleyLl0yd/FootClubSim/issues/4).
 
 ## M3–M6 scope controls
 
-M3 introduces economy/transfer systems, training, staff and full per-area responsibility delegation (player/staff contracts, recruitment, training), plus practical effects of manager competencies on these real systems. **Owner-approved D07** requires an auditable **RUB/USD/EUR** finance ledger and **automatic Google Finance-referenced currency conversion by current real-world day**, with date-pinned rates, no retroactive career changes and prior verification of Google's data-access/retention rights ([ADR-0007](docs/adr/0007-match-tactics-multicurrency.md), [M3 issue #131](https://github.com/StanleyLl0yd/FootClubSim/issues/131)). The approved manager-profile wizard is planned for M2, not M1. Neither stage introduces multiplayer. M4 introduces additional modeled divisions/world clubs without promising fully playable foreign leagues. M5 introduces PWA polish, not a required backend. M6 desktop packaging is conditional on real benefit and platform acceptance; no dedicated Linux app is promised.
+M3 introduces economy/transfer systems, training, staff and full per-area responsibility delegation (player/staff contracts, recruitment, training), plus practical effects of manager competencies on these real systems. **Owner-approved D07** requires an auditable **RUB/USD/EUR** finance ledger and **automatic Google Finance-referenced currency conversion using a single non-editable daily snapshot fetched at first game entry**, with USD/EUR -> RUB rounded to nearest **10,000 ₽** and RUB -> USD/EUR to nearest **1,000** target units, with date-pinned rates, no retroactive career changes and prior verification of Google's data-access/retention rights ([ADR-0007](docs/adr/0007-match-tactics-multicurrency.md), [ADR-0008](docs/adr/0008-online-daily-fx-rounding.md), [M3 issue #131](https://github.com/StanleyLl0yd/FootClubSim/issues/131)). The approved manager-profile wizard is planned for M2, not M1. Neither stage introduces multiplayer. M4 introduces additional modeled divisions/world clubs without promising fully playable foreign leagues. M5 introduces PWA polish, not a required backend. M6 desktop packaging is conditional on real benefit and platform acceptance; no dedicated Linux app is promised.
 
 ## Explicit exclusions until a future decision
 

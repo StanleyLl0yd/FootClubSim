@@ -1,6 +1,8 @@
 # ADR-0001: Local-first browser architecture
 
-**Status:** Proposed (2026-10-13; owner review before M0 exit).
+**Status:** SUPERSEDED in its mandatory offline-availability requirement by owner-approved [ADR-0008](0008-online-daily-fx-rounding.md) (2026-10-14). Other browser-local domain, IndexedDB and no-mandatory-backend design principles still apply.
+
+**Historical record:** This ADR is preserved to explain the original local-first design, but its claim that complete gameplay must be independent of internet access is **no longer a current requirement**. See ADR-0008 for the online-browser decision, daily Google currency snapshots and safeguarding local saves.
 
 ## Context
 

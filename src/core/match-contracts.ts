@@ -71,6 +71,7 @@ const MAX_EVENTS = 4096;
 const MAX_SECONDS = 130 * 60;
 const SHOT_KEYS = ['id', 'sequence', 'elapsedSeconds', 'type', 'teamId', 'playerId', 'xgMilli', 'outcome'] as const;
 const FULL_TIME_KEYS = ['id', 'sequence', 'elapsedSeconds', 'type'] as const;
+const SHOT_OUTCOMES = new Set<string>(['goal', 'saved', 'off-target', 'blocked']);
 const fail = (code: string, at: string): ValidationError => ({ code, at });
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -184,12 +185,10 @@ export function deriveMatchLedger(input: MatchLedgerInput): MatchLedgerResult {
       const active = event.teamId === fixture.homeClubId ? activeHome :
         event.teamId === fixture.awayClubId ? activeAway : null;
       if (!team || !active?.has(event.playerId)) errors.push(fail('INVALID_SHOOTER', at));
-      if (!Number.isInteger(event.xgMilli) || event.xgMilli < 0 || event.xgMilli > 1000 ||
-          !['goal', 'saved', 'off-target', 'blocked'].includes(event.outcome)) {
-        errors.push(fail('INVALID_SHOT', at));
-      }
-      if (team && Number.isInteger(event.xgMilli) && event.xgMilli >= 0 &&
-          event.xgMilli <= 1000 && ['goal', 'saved', 'off-target', 'blocked'].includes(event.outcome)) {
+      const validShot = Number.isInteger(event.xgMilli) &&
+        event.xgMilli >= 0 && event.xgMilli <= 1000 && SHOT_OUTCOMES.has(event.outcome);
+      if (!validShot) errors.push(fail('INVALID_SHOT', at));
+      if (team && validShot) {
         team.shots++;
         team.xgMilli += event.xgMilli;
         if (event.outcome === 'goal' || event.outcome === 'saved') team.shotsOnTarget++;

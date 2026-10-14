@@ -288,6 +288,50 @@ async function run() {
     await waitText('Начальная карьера записана в IndexedDB');
     console.log('PASS: isolated browser recovers from cleared IndexedDB through file import');
 
+    // Actual browser quota enforcement, using a bounded, disposable origin
+    // override. This is not ambient disk exhaustion or automatic eviction.
+    const quotaOrigin = new URL(targetUrl).origin;
+    await send('Storage.overrideQuotaForOrigin', {
+      origin: quotaOrigin, quotaSize: 512 * 1024,
+    });
+    let enforcedOutcome;
+    try {
+      enforcedOutcome = await evaluate(`new Promise(resolve => {
+        const open = indexedDB.open('footclubsim-quota-probe', 1);
+        const finish = value => resolve(value);
+        open.onupgradeneeded = () => open.result.createObjectStore('data');
+        open.onerror = () => finish(open.error?.name === 'QuotaExceededError' ? 'quota' : 'open-error');
+        open.onsuccess = () => {
+          const db = open.result;
+          const tx = db.transaction('data', 'readwrite');
+          let state = 0x12345678;
+          const bytes = new Uint8Array(2 * 1024 * 1024);
+          for (let i = 0; i < bytes.length; i++) {
+            state ^= state << 13;
+            state ^= state >>> 17;
+            state ^= state << 5;
+            bytes[i] = state & 255;
+          }
+          const request = tx.objectStore('data').add(bytes, 'oversized');
+          request.onerror = () => {};
+          tx.onabort = () => {
+            const name = request.error?.name ?? tx.error?.name;
+            db.close();
+            finish(name === 'QuotaExceededError' ? 'quota' : 'unexpected-' + name);
+          };
+          tx.oncomplete = () => { db.close(); finish('unexpected-success'); };
+        };
+      })`);
+    } finally {
+      await send('Storage.overrideQuotaForOrigin', { origin: quotaOrigin });
+    }
+    if (enforcedOutcome !== 'quota') {
+      throw new Error('Browser-enforced origin quota was not observed: ' + enforcedOutcome);
+    }
+    await click('Восстановить из браузера');
+    await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+    console.log('PASS: browser-enforced temporary quota rejects oversized IndexedDB record; original M0 save survives');
+
     // Simulate an IndexedDB open quota rejection in a real browser process.
     // This validates UI/error recovery, not real disk-quota or eviction behavior.
     await evaluate(`(() => {

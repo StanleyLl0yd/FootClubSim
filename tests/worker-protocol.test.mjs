@@ -99,6 +99,8 @@ test('late worker responses cannot overwrite a changed or cancelled career', () 
   failure(readWorkerReply({ ...reply, basedOnRevision: 1 }, pending, 0), 'STALE_RESULT');
   failure(readWorkerReply(reply, pending, 1), 'STALE_RESULT');
   failure(readWorkerReply(reply, { ...pending, cancelled: true }, 0), 'CANCELLED_JOB');
+  failure(readWorkerReply({ ...reply, kind: 'cancelled', basedOnRevision: 1 },
+    { ...pending, cancelled: true }, 0), 'STALE_RESULT');
 });
 
 test('typed worker progress, failure and cancellation signals are validated', () => {

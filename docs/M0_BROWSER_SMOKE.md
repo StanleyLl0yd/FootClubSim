@@ -57,6 +57,12 @@ does not declare the underlying platform flakiness resolved.
 
 The macOS SafariDriver smoke additionally has an explicit isolated-origin IndexedDB deletion and **programmatic app JSON-import** recovery check, including rejection of a corrupted backup while preserving the active career. It is **not** a test of Safari Private Browsing, natural eviction, downloaded-file UX or full browser restart. This explicit deletion + file-input exercise succeeded in native Safari in [PR #120](https://github.com/StanleyLl0yd/FootClubSim/pull/120); Safari Private Browsing and full process restart remain unverified.
 
+## Safari automation versus normal/private-browser persistence
+
+The official [WebKit SafariDriver safeguard description](https://webkit.org/blog/6900/webdriver-support-in-safari-10/) explains that Safari's orange-address-field **Automation** windows start from isolated browsing state, separate from normal browsing settings and previous test sessions. Thus the native Safari CI verifies real Safari's M0 app behavior *within the automation session* but does **not** establish a regular profile surviving complete Safari application restart or actual Private Browsing behavior. A second/new SafariDriver session is **not an acceptable replacement** for either test. Do not mark those manual cases PASS based on SafariDriver or a WebKit emulator.
+
+Follow [the dedicated exceptional-case matrix](M0_STORAGE_EDGE_ACCEPTANCE.md) for distinct disposable normal-profile full-application shutdown, real Safari downloaded-file recovery, and genuine File -> New Private Window observations. These remain open without explicit recorded native-browser evidence or an independently approved limited-acceptance decision.
+
 ## Safari WebDriver startup variability
 
 [Browser run 38516820503](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38516820503)

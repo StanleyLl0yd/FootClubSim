@@ -42,6 +42,8 @@ These automated cases are for the production React shell, not a claim that each 
 
 The native Windows Chrome/Edge CDP harness additionally contains a disposable-profile **explicit IndexedDB-clear and JSON-import recovery check**: after the ordinary save/restore flow it reads the known M0 snapshot as a test fixture, clears the origin's IndexedDB via the browser protocol, verifies `NOT_FOUND`, imports the saved file, rejects its intentionally corrupted variant and saves the recovered career. This is **not** confirmation of automatic eviction, downloaded-file UX, real quota exhaustion or full browser-process restart; those require separate evidence in [the edge-case matrix](M0_STORAGE_EDGE_ACCEPTANCE.md).
 
+An additional native Windows Chrome/Edge CDP assertion now exercises a **bounded browser-enforced per-origin storage quota** (512 KiB for a single 2 MiB test write in a disposable profile) and checks that the existing initial career can still be restored. This is a genuine browser policy limit, **not** simulated API failure, but does **not** test actual host-disk exhaustion, automatic eviction, Safari quota handling or restart persistence. See [storage acceptance matrix](M0_STORAGE_EDGE_ACCEPTANCE.md) and the browser CI result before treating this specific check as PASS.
+
 ## Headless Chrome startup reliability
 
 An intermittent Windows Chrome smoke failure was observed on the M0 main branch

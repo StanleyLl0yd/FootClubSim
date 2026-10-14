@@ -37,7 +37,7 @@ Optional ?start/?end and absent references are quality findings, not acceptable 
 
 The independent, non-playable [personnel manifest](../data/drafts/liga-personnel-pack-v1.json) is versioned `0.1.0` with 46 approved creative identities, **zero qualified factual rows**, and unchanged M0 compatibility. Its strict checks live in [scripts/validate-personnel-draft.mjs](../scripts/validate-personnel-draft.mjs) and [tests/personnel-draft.test.mjs](../tests/personnel-draft.test.mjs). The candidate validation function verifies declared source/rights metadata and basic field structure only: **it cannot establish legal authority, truth or employment/registration by itself**. No fictional names or source rights have been independently cleared for external release yet.
 
-Next: establish verified QID mappings and bounded source coverage measurements, then resolve remaining gaps with truly licensed providers or separately authored fictional fallbacks. Keep [issue #91](https://github.com/StanleyLl0yd/FootClubSim/issues/91), [rights/rules #15](https://github.com/StanleyLl0yd/FootClubSim/issues/15) and the M0 audit [#2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) open.
+Next after the completed club-QID and aggregate historical measurements below: independently establish as-of registration denominators, source revisions and legal permissions before any real prototype fact could enter a later M2 playable pack. Keep [issue #91](https://github.com/StanleyLl0yd/FootClubSim/issues/91), [rights/rules #15](https://github.com/StanleyLl0yd/FootClubSim/issues/15) and the M0 audit [#2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) open.
 
 ## Entity disambiguation milestone (2026-10-14)
 
@@ -45,11 +45,11 @@ All **16 club-level Wikidata entity IDs** have been identified and frozen in [th
 
 **Important disambiguations:** Moscow Dinamo football club is `Q17497`, not the broader `Q1269117` multisport society; Samara Krylia is `Q274778`, not its Moscow namesake. Makhachkala Dinamo `Q2494171` carries two historical inception dates (1927/2021) and requires an additional identity-continuity review. These mappings establish **club entities only**, not legal entities, squad membership, coaches or registered players.
 
-**Coverage remains unmeasured:** no successful dated `P54` extraction/denominator reconciliation is recorded. Do not translate 16/16 matched clubs into 16/16 verified rosters. The automated WDQS query was not run as part of this check; do not invent candidate counts.
+**State at this earlier QID-disambiguation checkpoint:** the WDQS query had not yet run and neither historical candidate aggregates nor real-roster denominators were established. The subsequent successful live historical P54 measurements are documented immediately below. **Actual registered-roster completeness still remains unmeasured**; do not translate 16/16 mapped clubs or 16/16 successful historical queries into verified 2026/27 rosters.
 
 ## Live WDQS results, 2026-10-14
 
-[GitHub Actions run 38537433952](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38537433952) successfully queried all 16 mapped club QIDs. The counts are recorded **only as aggregates** in [the dated diagnostic JSON](../data/drafts/liga-wikidata-p54-diagnostic-2026-10-14.json). Query script commit: `0cb125d081a612bbb202cde50b11f432e0f111c5`, extracted at `2026-10-14T08:46:41.134Z` UTC.
+[GitHub Actions run 38537433952](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38537433952) successfully queried all 16 mapped club QIDs. The counts are recorded **only as aggregates** in [the dated diagnostic JSON](../data/drafts/liga-wikidata-p54-diagnostic-2026-10-14.json). Query script commit: `0cb125d081a612bbb202cde50b11f432e0f111c5`, extracted at `2026-10-14T08:46:41.134Z` UTC. These are **frozen historical measurements**, not silently refreshed numbers: [PR #141](https://github.com/StanleyLl0yd/FootClubSim/pull/141) subsequently unified conservative **statement-level P580/P582 conflict handling** across the P54 summary, field availability and cross-club diagnostics. Later live measurements may legitimately differ because of corrected classification or changes in Wikidata itself; no as-of registration has thereby been verified.
 
 - **7518** cumulative club-person pairs, including past club membership; the same human can appear for several clubs. **Not** unique persons across the entire league.
 - **8297** historical P54 statement records.

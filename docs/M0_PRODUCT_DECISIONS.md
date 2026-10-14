@@ -12,6 +12,8 @@ FootClubSim is an offline-first, single-player, Russian-first football **club ma
 
 These constraints should be preserved while making the decisions below.
 
+The [single M0 sign-off package](M0_PRODUCT_SIGNOFF_PACKAGE.md) consolidates **D03-D05 and D07-D11** for explicit owner approval, while preserving the already accepted D01/D02/D06/D12/D13 principles. It is a proposal, not authorization or implemented gameplay.
+
 ## Proposed owner decisions
 
 | ID | Topic | Proposed M0 decision | Planned implementation | Status |

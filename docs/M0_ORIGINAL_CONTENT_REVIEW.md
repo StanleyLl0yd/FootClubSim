@@ -13,6 +13,27 @@
 
 Wikipedia article prose, third-party photographs, official crests, external compiled rosters, commercial player ratings and any release-specific material require a separate compatible rights evaluation. Wikipedia references do **not** prove complete registration as of 2026-10-14. Rights and effective competition-rule checks for the first playable 16-club personnel pack remain [M2 work #91](https://github.com/StanleyLl0yd/FootClubSim/issues/91), plus the executable-rules subset of [#15](https://github.com/StanleyLl0yd/FootClubSim/issues/15). Dependency notice review and release branding/legal assessment are also outstanding.
 
+## Locked NPM dependency metadata inventory (2026-10-14)
+
+Independently parsed [`package-lock.json` at `e4141c0`](https://github.com/StanleyLl0yd/FootClubSim/blob/e4141c02f24ececb0e4f7cec2601f70b5fa50971/package-lock.json) with the installed [`package.json`](../package.json). There are **2 direct runtime dependencies** (`react`, `react-dom`), **7 direct development dependencies**, and **192** non-root package entries in the lockfile. All 192 currently contain a `license` metadata field. This is package-manager metadata, **not** independent verification of copyright ownership, license validity, individual source-file exceptions or bundled notices.
+
+| Declared lockfile license expression | Package entries |
+| --- | ---: |
+| MIT | 142 |
+| Apache-2.0 | 16 |
+| ISC | 11 |
+| BSD-2-Clause | 6 |
+| BSD-3-Clause | 2 |
+| MPL-2.0 | 12 |
+| CC-BY-4.0 | 1 |
+| Python-2.0 | 1 |
+| BlueOak-1.0.0 | 1 |
+| **Total** | **192** |
+
+The 12 MPL-2.0 entries correspond to `lightningcss` and its platform-specific packages; the other exceptional entries are `caniuse-lite` (CC-BY-4.0), `argparse` (Python-2.0), and a nested `minimatch` (BlueOak-1.0.0). All of these entries are marked as development dependencies in the current lockfile, **not necessarily shipped application code**. Production bundle content and required notices must be verified separately, especially when the deployment/archive format changes.
+
+**Remaining before publishing a game:** inspect the actual production bundle and dependency license texts, preserve mandatory attribution/notices, confirm that no proprietary or incompatible data/code enters distributed artifacts, and repeat this analysis after any dependency changes. GitHub's dependency-vulnerability audit is a different check and does **not** determine license compatibility. No package replacements or removals are warranted based solely on these counts.
+
 ## Audit correction in this change
 
 `scripts/repo_audit.py` now reports a controlled error for an invalid but syntactically valid JSON manifest root (array, null, number or string). Previously `read_manifest()` could raise `AttributeError` on non-object JSON. Negative Python regression tests cover all four shapes. This change neither reinterprets valid manifests nor alters the M0 catalog or saves.

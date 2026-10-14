@@ -151,6 +151,7 @@ export function readWorkerReply(
     return fail('WRONG_JOB');
   }
   if (pending.cancelled) {
+    if (value.basedOnRevision !== pending.expectedRevision) return fail('STALE_RESULT');
     if (value.kind === 'cancelled' && hasKeys(value, [
       'protocolVersion', 'kind', 'jobId', 'careerId', 'basedOnRevision',
     ])) {

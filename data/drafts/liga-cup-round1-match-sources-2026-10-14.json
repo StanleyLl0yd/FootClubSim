@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "observedOn": "2026-10-14",
+  "targetAsOf": "2026-10-14",
+  "edition": "RFU Cup of Russia 2026/27 RPL path group stage round 1",
+  "scope": "source-link-discovery-only-not-an-as-of-registration-database",
+  "rightsForBulkSourceReuse": "not-established",
+  "rosterTablesCopied": false,
+  "playerOrStaffRecordsImported": 0,
+  "asOfRegistrationsVerified": 0,
+  "eligibleFirstTeamRosterDenominatorsVerified": 0,
+  "fixtures": [
+    {
+      "fixtureId": "rfs-cup-2026-08-04-akron-rostov",
+      "playedOn": "2026-08-04",
+      "sourceUrl": "https://www.rfs.ru/cup/tournament/match/57205",
+      "homeClubId": "lp-nizon",
+      "awayClubId": "lp-spadov",
+      "sourceKind": "federation-completed-match-page",
+      "asOfRosterVerified": false
+    },
+    {
+      "fixtureId": "rfs-cup-2026-08-04-dinamo-m-ks",
+      "playedOn": "2026-08-04",
+      "sourceUrl": "https://www.rfs.ru/cup/tournament/match/57197",
+      "homeClubId": "lp-statika-m2",
+      "awayClubId": "lp-korni-zapretov",
+      "sourceKind": "federation-completed-match-page",
+      "asOfRosterVerified": false
+    },
+    {
+      "fixtureId": "rfs-cup-2026-08-04-rodina-rubin",
+      "playedOn": "2026-08-04",
+      "sourceUrl": "https://www.rfs.ru/cup/tournament/match/57170",
+      "homeClubId": "lp-chuzhbina",
+      "awayClubId": "lp-izumrud",
+      "sourceKind": "federation-completed-match-page",
+      "asOfRosterVerified": false
+    },
+    {
+      "fixtureId": "rfs-cup-2026-08-04-loko-cska",
+      "playedOn": "2026-08-04",
+      "sourceUrl": "https://www.rfs.ru/cup/tournament/match/57206",
+      "homeClubId": "lp-vagon",
+      "awayClubId": "lp-ogkm",
+      "sourceKind": "federation-completed-match-page",
+      "asOfRosterVerified": false
+    },
+    {
+      "fixtureId": "rfs-cup-2026-08-05-spartak-orenburg",
+      "playedOn": "2026-08-05",
+      "sourceUrl": "https://www.rfs.ru/cup/tournament/match/57175",
+      "homeClubId": "lp-patriciy",
+      "awayClubId": "lp-orendorf",
+      "sourceKind": "federation-completed-match-page",
+      "asOfRosterVerified": false
+    },
+    {
+      "fixtureId": "rfs-cup-2026-08-05-fakel-dinamo-msk",
+      "playedOn": "2026-08-05",
+      "sourceUrl": "https://www.rfs.ru/cup/tournament/match/57191",
+      "homeClubId": "lp-ognetushitel",
+      "awayClubId": "lp-statika-m1",
+      "sourceKind": "federation-completed-match-page",
+      "asOfRosterVerified": false
+    },
+    {
+      "fixtureId": "rfs-cup-2026-08-05-krasnodar-akhmat",
+      "playedOn": "2026-08-05",
+      "sourceUrl": "https://www.rfs.ru/cup/tournament/match/57186",
+      "homeClubId": "lp-zelenober",
+      "awayClubId": "lp-uprek",
+      "sourceKind": "federation-completed-match-page",
+      "asOfRosterVerified": false
+    },
+    {
+      "fixtureId": "rfs-cup-2026-08-05-zenit-baltika",
+      "playedOn": "2026-08-05",
+      "sourceUrl": "https://www.rfs.ru/cup/tournament/match/57198",
+      "homeClubId": "lp-nadir",
+      "awayClubId": "lp-pacifica",
+      "sourceKind": "federation-completed-match-page",
+      "asOfRosterVerified": false
+    }
+  ]
+}

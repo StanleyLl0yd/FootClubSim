@@ -51,6 +51,17 @@ why each startup failed and keeps **all application assertions single-attempt**
 once CDP is ready. A second startup failure remains a hard failure; this
 does not declare the underlying platform flakiness resolved.
 
+## Safari WebDriver startup variability
+
+[Browser run 38516820503](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38516820503)
+initially failed on macOS because SafariDriver did not answer the **new session**
+request before the harness's previous 15-second HTTP timeout. The same
+application smoke passed when CI was rerun, without any source change.
+Only the Safari **session-creation request** now allows 45 seconds; each
+ordinary WebDriver command retains its 15-second timeout, and genuine
+application failures must still fail the job. The repeated success
+does not prove that SafariDriver startup cannot fail again.
+
 ## Remaining work
 
 The React/Vite technical shell and preliminary IndexedDB adapter already exist. Normal and flagged private Windows Chrome/Edge sessions are now in automated native-browser CI, but **macOS Safari Private Browsing, genuine disk-quota pressure, storage eviction and recovery after browser shutdown remain unverified**. Full career revisions and migrations, plus complete milestone exit audit, are also open. The adapter currently writes only new initial careers, with no overwrite or in-place revision update. This page is a non-shipping diagnostics artifact and is **not** a playable game.

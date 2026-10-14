@@ -18,6 +18,40 @@ const TEAM_FIELDS = ['fictionalClubId', 'startingPlayers', 'benchListed', 'subst
 const CASE_FIELDS = ['observationId', 'prototypeName', 'fictionalPersonId', 'fictionalClubId', 'facts', 'finding', 'asOf20261014Registered', 'footnote'];
 const FACT_FIELDS = ['fixtureId', 'observedParticipation'];
 const ROOT_FIELDS = ['schemaVersion', 'observedOn', 'targetAsOf', 'reportStatus', 'factualRosterDenominatorsVerified', 'licensedPlayableFacts', 'reproducedSourceLineupTables', 'sourcePlayerImagesCopied', 'sourceRightsForBulkRedistribution', 'fixtures', 'targetedCaseChecks'];
+const SOURCES = Object.freeze({
+  'Russian Football Union': {
+    hosts: ['www.rfs.ru'],
+    path: /^\/cup\/tournament\/match\/[1-9]\d*$/,
+    kind: 'dated-completed-official-cup-match-protocol',
+    competition: 'RFU Cup 2026/27',
+  },
+  'FC Krasnodar': {
+    hosts: ['www.fckrasnodar.ru', 'fckrasnodar.ru'],
+    path: /^\/team\/news\/object\/$/,
+    kind: 'dated-club-published-rpl-match-report-not-league-registration',
+    competition: 'RPL 2026/27',
+  },
+  'FC Lokomotiv': {
+    hosts: ['www.fclm.ru', 'fclm.ru'],
+    path: /^\/news\/n\/[a-z0-9-]+\/$/,
+    kind: 'dated-club-published-rpl-match-report-not-league-registration',
+    competition: 'RPL 2026/27',
+  },
+});
+function sourceMatchesDeclaration(fixture) {
+  const rule = SOURCES[fixture.provider];
+  assert.ok(rule, 'unreviewed source provider');
+  let url;
+  try { url = new URL(fixture.sourceUrl); }
+  catch { assert.fail('invalid source URL'); }
+  assert.equal(url.protocol, 'https:', 'source must use HTTPS');
+  assert.ok(rule.hosts.includes(url.hostname), 'source/provider host mismatch');
+  assert.ok(!url.username && !url.password && !url.port && !url.hash, 'noncanonical source URL');
+  assert.ok(rule.path.test(url.pathname), 'provider path mismatch');
+  assert.equal(fixture.sourceKind, rule.kind, 'source-kind mismatch');
+  assert.equal(fixture.competition, rule.competition, 'competition/provider mismatch');
+}
+
 
 /** Research-only shape/integrity check. Cannot verify third-party claims or legal rights. */
 export function validateDatedMatchResearch(doc, { clubIds, nadir }) {
@@ -50,6 +84,7 @@ export function validateDatedMatchResearch(doc, { clubIds, nadir }) {
     assert.ok(typeof fixture.sourceKind === 'string' && fixture.sourceKind.length < 100);
     assert.ok(typeof fixture.result === 'string' && fixture.result.length < 100);
     assert.match(fixture.sourceUrl, /^https:\/\/[a-z0-9.-]+\/\S+$/i);
+    sourceMatchesDeclaration(fixture);
     assert.equal(fixture.isRegistrationList, false);
     assert.equal(fixture.asOfRosterVerified, false);
     assert.ok(Array.isArray(fixture.participants) && fixture.participants.length === 2, 'two teams per fixture');

@@ -65,6 +65,7 @@ npm run check       # типы, headless-тесты, production-сборка о�
 - [docs/USER_EXPERIENCE.md](docs/USER_EXPERIENCE.md): пользовательские сценарии.
 - [docs/M0_ACCEPTANCE.md](docs/M0_ACCEPTANCE.md): проверяемые критерии M0.
 - [docs/M0_PRODUCT_DECISIONS.md](docs/M0_PRODUCT_DECISIONS.md): варианты ответственности менеджера, тактики и экономики на согласование.
+- [docs/M0_BLOCKER_DECISIONS.md](docs/M0_BLOCKER_DECISIONS.md): конкретные предложения по открытым решениям M0, реальным/вымышленным данным и распределению тестов по этапам (пока не утверждены).
 - [docs/adr/0001-web-offline-first.md](docs/adr/0001-web-offline-first.md): предлагаемое архитектурное решение.
 - [docs/adr/0002-configurable-delegation.md](docs/adr/0002-configurable-delegation.md): утверждённый принцип самостоятельного управления и назначения обязанностей сотрудникам.
 - [docs/adr/0003-manager-origins-biographies.md](docs/adr/0003-manager-origins-biographies.md): три типа прошлого менеджера, очки характеристик и генерация биографии для M2.

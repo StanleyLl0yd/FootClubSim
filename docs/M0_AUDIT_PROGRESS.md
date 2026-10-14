@@ -192,3 +192,7 @@ from an earlier revision or represented as the final reviewed `main`.
 - Reconcile unresolved requirements/rights/architecture approvals. Only after the above may [M0 exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) close and M1 implementation begin.
 
 **Do not treat this progress report as completion evidence for either whole-repository audit pass.**
+
+## Owner-approved milestone boundary (2026-10-14)
+
+[ADR-0006](adr/0006-m0-m2-acceptance-boundary.md) explicitly moves the **full** date-verified 16-club personnel catalog and exhaustive executable real-rule pack to M2. The M0 exit still requires the research/provenance and official source/edition contracts, M0 original-content rights review, pending owner interface decisions, applicable M0 browser acceptance and both complete whole-repository audit passes. 0/16 complete as-of registrations and 0 licensed playable person rows remain true, but **are not by themselves M0 exit blockers**. Historical references above to #91 completion as an M0 blocker are superseded only in that narrow sense. No pass of the final two full audits is claimed by this decision.

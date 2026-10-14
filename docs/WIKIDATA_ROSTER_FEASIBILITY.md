@@ -1,6 +1,6 @@
 # Wikidata 2026/27 roster feasibility and provenance gate
 
-**Date assessed:** 2026-10-14. **Result:** CC0 source eligible for consideration. Historical P54 discovery counts for all 16 clubs **have been measured**; actual first-team as-of roster completeness remains **unmeasured and unverified**. No Wikidata player facts were imported.
+**Date assessed:** 2026-10-14. **Role: SECONDARY ONLY.** Wikipedia, with pinned revisions, is the project's **main player/staff prototype research source** ([baseline](WIKIPEDIA_ROSTER_BASELINE.md)); Wikidata is only an auxiliary entity, field and temporal-claim diagnostic. Official dated RFU/RPL and club documents still govern formal registration/appointment questions. **Result:** Wikidata CC0 structured records are eligible for supplementary consideration. Historical P54 discovery counts for all 16 clubs **have been measured**; actual first-team as-of roster completeness remains **unmeasured and unverified**. No Wikidata player facts were imported.
 
 ## Permission and technical baseline
 

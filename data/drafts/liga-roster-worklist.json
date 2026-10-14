@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-10-14",
+  "status": "draft-only",
+  "meaning": "All 16 club names and badges approved. Real-world roster, age, nationality, role and skill research requires date-scoped verification and rights review before a new playable pack.",
+  "clubs": [
+    {
+      "clubId": "lp-nadir",
+      "rosterStatus": "parody-names-approved-facts-pending"
+    },
+    {
+      "clubId": "lp-zelenober",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-vagon",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-patriciy",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-ogkm",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-pacifica",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-statika-m1",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-izumrud",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-uprek",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-spadov",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-korni-zapretov",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-orendorf",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-nizon",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-statika-m2",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-chuzhbina",
+      "rosterStatus": "pending-source-and-rights-verification"
+    },
+    {
+      "clubId": "lp-ognetushitel",
+      "rosterStatus": "pending-source-and-rights-verification"
+    }
+  ]
+}

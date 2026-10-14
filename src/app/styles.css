@@ -42,6 +42,10 @@ button:disabled { opacity: .54; cursor: not-allowed; }
 .button-stack { display: flex; flex-wrap: wrap; gap: .5rem; }
 .file-label { margin-top: 1.25rem; }
 .career-info { margin-top: 1rem; border-radius: .7rem; padding: .85rem; background: #eff8f1; display: grid; gap: .3rem; font-size: .9rem; }
+.club-identity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 1rem; }
+.club-identity { display: flex; align-items: center; gap: .6rem; min-width: 0; font-weight: 650; font-size: .87rem; }
+.club-identity svg { flex: none; }
+.club-identity span { overflow-wrap: anywhere; }
 .matches { list-style: none; padding: 0; margin: 0; display: grid; gap: .4rem; }
 .matches li { display: grid; grid-template-columns: minmax(0, 1fr) 3rem minmax(0, 1fr); gap: .75rem; align-items: center; padding: .72rem 0; border-bottom: 1px solid #ebf0eb; }
 .matches li span:last-child { text-align: right; }

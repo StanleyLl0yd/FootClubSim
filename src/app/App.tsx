@@ -1,4 +1,6 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
+import { LIGA_PRIKOLOV_IDENTITIES } from '../branding/identities.js';
+import { ClubBadge } from './ClubBadge.js';
 import { createSyntheticRplScaleCatalog } from '../core/synthetic.js';
 import { generateDoubleRoundRobin } from '../core/fixtures.js';
 import { validateDoubleRoundRobin } from '../core/fixture-validation.js';
@@ -140,6 +142,17 @@ export function App() {
         <div><strong>{catalog.players.length}</strong><span>футболистов</span></div>
         <div><strong>{rounds.length}</strong><span>туров</span></div>
         <div><strong>{rounds.reduce((sum, round) => sum + round.fixtures.length, 0)}</strong><span>матчей в календаре</span></div>
+      </section>
+
+      <section className="panel" aria-labelledby="fictional-league-title">
+        <h2 id="fictional-league-title">Лига приколов · утверждённые эмблемы</h2>
+        <p className="subtle">Предпросмотр 16 будущих клубов. Это визуальные концепты, а не команды действующей тестовой карьеры M0.</p>
+        <div className="club-identity-grid">
+          {LIGA_PRIKOLOV_IDENTITIES.map(entry => <div className="club-identity" key={entry.id}>
+            <ClubBadge club={entry} size={58} />
+            <span>{entry.name}</span>
+          </div>)}
+        </div>
       </section>
 
       <div className="columns">

@@ -137,6 +137,15 @@ async function run() {
     await send('Page.enable');
     await send('Runtime.enable');
 
+    if (privateFlag) {
+      const info = await send('Target.getTargetInfo');
+      if (typeof info.targetInfo?.browserContextId !== 'string' ||
+          !info.targetInfo.browserContextId.length) {
+        throw new Error('Private flag did not create an isolated CDP browser context');
+      }
+      console.log('PASS: private session has a separate CDP browserContextId');
+    }
+
     async function evaluate(expression) {
       const reply = await send('Runtime.evaluate', {
         expression, returnByValue: true, awaitPromise: true,

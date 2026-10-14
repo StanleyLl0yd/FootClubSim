@@ -49,3 +49,25 @@ test('fictional personnel drafts are isolated, named, and never mistaken for pla
   assert.deepEqual(worklist.clubs.map(row => row.clubId), clubs.map(club => club.id));
   assert.equal(worklist.clubs.filter(row => row.rosterStatus === 'pending-source-and-rights-verification').length, 15);
 });
+
+function luminance(hex) {
+  const channels = [1, 3, 5].map(i => Number.parseInt(hex.slice(i, i + 2), 16) / 255);
+  const linear = channels.map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+test('central badge lettering passes WCAG 4.5:1 contrast on all 16 badge disks', () => {
+  for (const club of clubs) {
+    const a = luminance(club.letterColor);
+    const b = luminance(club.centerColor);
+    const contrast = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    assert.ok(contrast >= 4.5, club.name + ' has insufficient letter contrast: ' + contrast.toFixed(2));
+  }
+});
+test('clubs with equal initial letters have distinct three-zone badge palettes', () => {
+  const palettes = new Set();
+  for (const club of clubs) {
+    const key = [club.letter, club.outerColor, club.middleColor, club.centerColor].join('/');
+    assert.ok(!palettes.has(key), club.name + ' has a duplicated letter and palette');
+    palettes.add(key);
+  }
+});

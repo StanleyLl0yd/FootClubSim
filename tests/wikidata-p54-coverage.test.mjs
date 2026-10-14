@@ -61,6 +61,16 @@ test('invalid calendar days and inverted source intervals never become membershi
   assert.equal(summary.registrationVerified, false);
 });
 
+test('empty P54 response still rejects impossible as-of dates', () => {
+  const empty = summarizeP54Bindings([], '2026-10-14');
+  assert.equal(empty.candidatePersonsAllSeasons, 0);
+  assert.equal(empty.registrationVerified, false);
+  for (const invalidDate of ['2026-02-29', '2026-04-31', '2026-13-01', '0000-10-14', 'not-a-date']) {
+    assert.throws(() => summarizeP54Bindings([], invalidDate), /Invalid reference date/);
+  }
+  assert.throws(() => summarizeP54Bindings([row(1)], '2026-02-29'), /Invalid reference date/);
+});
+
 test('same person with several historical spells contributes once to person counts', () => {
   const bindings = [
     row(12, t('2021-01-01'), t('2022-12-31'), 1),

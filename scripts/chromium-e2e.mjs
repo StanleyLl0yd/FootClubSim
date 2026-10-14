@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Chromium DevTools Protocol smoke: native browser, no DOM emulator or extra packages.
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -256,6 +257,21 @@ async function run() {
     if (!fileInput.nodeId) throw new Error('Import file input missing');
     await send('DOM.setFileInputFiles', { nodeId: fileInput.nodeId, files: [backupPath] });
     await waitText('Стартовая карьера проверена и загружена в память');
+
+    // A correctly checksummed different career cannot be persisted by this
+    // deliberately single-career M0 shell, because its Restore ID is fixed.
+    const another = JSON.parse(savedJson);
+    const otherPayload = JSON.parse(another.payload);
+    otherPayload.careerId = 'another-valid-initial-career';
+    another.payload = JSON.stringify(otherPayload);
+    another.checksum = createHash('sha256').update(another.payload).digest('hex');
+    const differentIdPath = join(profile, 'm0-foreign-career-id.json');
+    await writeFile(differentIdPath, JSON.stringify(another), 'utf8');
+    await send('DOM.setFileInputFiles', { nodeId: fileInput.nodeId, files: [differentIdPath] });
+    await waitText('Импорт отклонён: идентификатор карьеры отличается');
+    if (!await evaluate("Boolean(document.querySelector('.career-info'))")) {
+      throw new Error('Foreign career ID import erased the active M0 career');
+    }
 
     // A backup whose payload changed without a matching checksum cannot replace
     // the just-recovered career, even after browser site data was removed.

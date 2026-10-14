@@ -4,14 +4,14 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 
 ## Scope and documentation
 
-Продуктовые решения и их статусы перечислены в [M0_PRODUCT_DECISIONS.md](M0_PRODUCT_DECISIONS.md). **2026-10-14 утверждены принципы распределения обязанностей по каждой задаче отдельно** ([ADR-0002](adr/0002-configurable-delegation.md)) и **трёх путей создания менеджера с характеристиками и вымышленной биографией** ([ADR-0003](adr/0003-manager-origins-biographies.md)). Остальные решения и конкретные численные параметры не считаются согласованными автоматически.
+Продуктовые решения и их статусы перечислены в [M0_PRODUCT_DECISIONS.md](M0_PRODUCT_DECISIONS.md). **2026-10-14 утверждены принципы распределения обязанностей по каждой задаче отдельно** ([ADR-0002](adr/0002-configurable-delegation.md)), **трёх путей создания менеджера с характеристиками и вымышленной биографией** ([ADR-0003](adr/0003-manager-origins-biographies.md)), а также **«Лиги приколов» с вымышленными клубами-антонимами и настоящими спортивными правилами РПЛ** ([ADR-0004](adr/0004-liga-prikolov-rpl-rules.md)). Остальные решения и конкретные численные параметры не считаются согласованными автоматически.
 
 - [x] Create public FootClubSim repository and adapt `AGENTS.md` from WindowTidy.
 - [x] Create dedicated whole-repo exit issues for M0–M6.
 - [ ] Review and approve roadmap, boundaries and platform plan.
 - [x] Agree on **default player control with independent delegation per responsibility** across coach/director/staff duties (owner decision 2026-10-14, [ADR-0002](adr/0002-configurable-delegation.md)). Detailed UX and feature-phase acceptance remain open.
 - [x] Agree on **three manager-origin paths**, starter competencies and biography generation based on the origin/skill distribution before club selection (owner decision 2026-10-14, [ADR-0003](adr/0003-manager-origins-biographies.md)); exact attribute list, point budget, templates and implementation are for later design/M2 under [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
-- [ ] Sign off player attributes, tactics, economy representation and minimum season rules.
+- [ ] Sign off player attributes, tactics, economy representation and the **remaining** detailed minimum-season rules. The fictional «Лига приколов» naming principle and **authentic-source RPL regulations requirement** are approved, while exact club aliases, numerical balance, complete regulations and edge cases are pending.
 - [ ] Record the **remaining** decisions in ADRs and resolve identified incompatibilities in the specifications. [ADR-0002](adr/0002-configurable-delegation.md) and [ADR-0003](adr/0003-manager-origins-biographies.md) record accepted principles; future implementation is tracked in [#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58) and [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
 - [ ] Verify official RPL 2026/27 rules from primary document and cite exact revision for each encoded rule. [A sourced subset](RPL_2026_27_RULES.md) now includes match interruption, pre-kickoff substitution and cross-season discipline details; full rules, amendments and implementation checks remain open.
 
@@ -20,7 +20,7 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 - [x] Define and implement the **M0 synthetic-only** catalog, revision-0 initial-career JSON/save and provenance declaration schemas with bounded validation: `src/core/import.ts`, `src/core/save.ts`, `src/core/provenance.ts`, and corresponding tests. This does **not** imply a full evolving career schema or a licensed real RPL data-pack provenance contract; both require new versions, tests and independent permission review.
 - [x] Add a **synthetic** fictional 16-club/368-player test dataset, seed-specific pack identity, author-origin manifest and runtime validation.
 - [x] Demonstrate duplicate identity detection, malformed/oversized data rejection and cross-reference checks in headless tests.
-- [ ] Decide what real RPL data/club imagery can legally be distributed, with recorded permission.
+- [ ] Complete rights review for the fictional league's original **parody club names/visual identities** and any separately included real club/league references; no real roster, team crest or licensed image is authorized for bundling by this design decision. The owner has explicitly chosen fictional participant identities, not a real roster database.
 - [ ] Ensure no prohibited scraping, copyrighted assets, production/private credentials or secret values are committed.
 
 ## Code and tooling foundation

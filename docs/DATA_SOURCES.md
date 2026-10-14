@@ -4,6 +4,12 @@ Status: policy and proposed workflow; no third-party dataset has been imported o
 
 **M0 synthetic manifest:** [`data/packs/m0-synthetic-manifest.json`](../data/packs/m0-synthetic-manifest.json) declares the authored fictional generator, seed, pack version and absence of third-party records/artwork. `tests/manifest.test.mjs` checks it against actual generated data. This is an auditable **project declaration**, not external license proof or an authorization to redistribute third-party records. A real RPL data pack requires independently verified rights and a separate release review. The M0 fictional-only manifest is now parsed by the pure, strict and bounded `src/core/provenance.ts` validator. It rejects unknown fields, inconsistent seed-derived pack versions, invalid dates, any declared third-party football records/artwork, and any assets not supported by the M0 schema. `tests/provenance.test.mjs` checks real manifest roundtrip, mismatch and malformed cases. This **only validates the author's declaration** and does not independently prove origin, authenticity or permission for real-world databases.
 
+## Approved «Лига приколов» data scope (2026-10-14)
+
+The owner has selected **a fictional league, fictional team names based on semantic opposites of the RPL 2026/27 participants, fictional personnel and original branding, but real effective RPL/RFU/IFAB sporting regulations**. See [ADR-0004](adr/0004-liga-prikolov-rpl-rules.md).
+
+This is **not** a request to ship a real player roster, real team badges or a licensed league database. Keep all game participant IDs independently authored and stable. The source RPL participants are design references for creative naming; source references do not establish permission to reproduce logos, photographs, trade dress or databases. The exact 16 aliases and any artwork are not yet approved or cleared for release. Full sporting-rule verification, later amendments and source-edition tracking remain **open** under [#15](https://github.com/StanleyLl0yd/FootClubSim/issues/15). Do not represent unverified rules as compliant with official documents.
+
 ## Data sources
 
 | Candidate | Possible facts | Status for bundling |
@@ -48,7 +54,7 @@ For a pack release, document `packId`, `schemaVersion`, `asOfDate`, provenance m
 
 ## RPL first and realistic game attributes
 
-Prefer actual official and rights-cleared factual player/club data. **Game attributes remain our original design**, not copied ratings from another game or a linear conversion of Transfermarkt market value. Estimating technical/physical/mental scores needs transparent methodology, uncertainty and bias checks, as described in [DATA_MODEL.md](DATA_MODEL.md).
+For the approved «Лига приколов» initial release, prefer **original fictional player, staff and club records** under actually verified RPL sporting regulations, not a redistributable real RPL roster. A separately licensed factual pack would require a later owner decision and its own rights review. **Game attributes remain our original design**, not copied ratings from another game or a linear conversion of Transfermarkt market value. Estimating technical/physical/mental scores needs transparent methodology, uncertainty and bias checks, as described in [DATA_MODEL.md](DATA_MODEL.md).
 
 Season 2026/27 data may be incomplete or inconsistent across sources; unresolved identities/contract terms must remain unknown rather than invented facts. Missing fields can receive explicitly labeled **gameplay estimates** where appropriate, but must not be represented as official facts.
 

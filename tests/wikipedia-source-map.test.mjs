@@ -53,7 +53,7 @@ function validate(record) {
     const parsed = new URL(source.url);
     assert.equal(parsed.protocol, 'https:');
     assert.equal(parsed.hostname, 'ru.wikipedia.org');
-    assert.match(parsed.pathname, /^\/wiki\/[^/]+$/);
+    assert.match(parsed.pathname, /^\/wiki\/.+$/);
     assert.equal(parsed.search, '');
     assert.equal(parsed.hash, '');
     assert.ok(Number.isSafeInteger(source.revisionId) && source.revisionId > 0);

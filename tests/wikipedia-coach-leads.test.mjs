@@ -30,7 +30,7 @@ const namedCoachLeads = new Map([
 
 function validate(doc) {
   assert.deepEqual(Object.keys(doc).sort(), [
-    'schemaVersion', 'reviewedOn', 'targetAsOf', 'wikipediaSourceId', 'wikipediaRevisionId',
+    'schemaVersion', 'reviewedOn', 'targetAsOf', 'wikipediaSourceId', 'wikipediaRevisionId', 'wikipediaRevisionUrl',
     'sourceArticleUrl', 'sourceSection', 'scope', 'reportedCoachLeads',
     'reportedCoachTransitions', 'licensedPlayableStaffFactsImported', 'completeVerifiedStaffLists',
     'sourceTableCopied', 'sourceTextOrImagesCopied', 'sourceRightsReview',
@@ -44,6 +44,7 @@ function validate(doc) {
   assert.equal(doc.wikipediaRevisionId, registered.revisionId);
   assert.equal(doc.wikipediaRevisionId, 155571074);
   assert.equal(doc.sourceArticleUrl, registered.url);
+  assert.equal(doc.wikipediaRevisionUrl, registered.revisionUrl);
   assert.equal(doc.sourceSection, 'Официальные представители / Тренерские изменения');
   assert.equal(doc.scope, 'observed-wikipedia-head-coach-candidates-not-verified-as-of-staff-appointments');
   const leagueIds = new Set(LIGA_PRIKOLOV_IDENTITIES.map(c => c.id));
@@ -125,6 +126,9 @@ test('Wikipedia dated coach movement and acting status require explicit review',
   const changedRevision = structuredClone(research);
   changedRevision.wikipediaRevisionId++;
   assert.throws(() => validate(changedRevision));
+  const mismatch = structuredClone(research);
+  mismatch.wikipediaRevisionUrl = 'https://ru.wikipedia.org/w/index.php?oldid=155571075';
+  assert.throws(() => validate(mismatch));
   const duplicate = structuredClone(research);
   duplicate.reportedCoachLeads[1].fictionalClubId = duplicate.reportedCoachLeads[0].fictionalClubId;
   assert.throws(() => validate(duplicate));

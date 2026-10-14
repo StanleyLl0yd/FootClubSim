@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "reviewedOn": "2026-10-14",
+  "intendedAsOfDate": "2026-10-14",
+  "scope": "Club-entity disambiguation only. No player, staff, registration or as-of roster claims.",
+  "sourceProvider": "Wikidata",
+  "sourceStructuredDataLicense": "CC0-1.0",
+  "qualifiedPersonFacts": 0,
+  "verifiedRosterCoverage": false,
+  "clubs": [
+    {
+      "clubId": "lp-nadir",
+      "wikidataQid": "Q29108",
+      "entityUrl": "https://www.wikidata.org/wiki/Q29108",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": ""
+    },
+    {
+      "clubId": "lp-zelenober",
+      "wikidataQid": "Q220854",
+      "entityUrl": "https://www.wikidata.org/wiki/Q220854",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": ""
+    },
+    {
+      "clubId": "lp-vagon",
+      "wikidataQid": "Q29115",
+      "entityUrl": "https://www.wikidata.org/wiki/Q29115",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": "An older QID redirects; retain canonical association-football-club item."
+    },
+    {
+      "clubId": "lp-patriciy",
+      "wikidataQid": "Q29112",
+      "entityUrl": "https://www.wikidata.org/wiki/Q29112",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": ""
+    },
+    {
+      "clubId": "lp-ogkm",
+      "wikidataQid": "Q176371",
+      "entityUrl": "https://www.wikidata.org/wiki/Q176371",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": "Do not confuse football team with CSKA multisport society."
+    },
+    {
+      "clubId": "lp-pacifica",
+      "wikidataQid": "Q795978",
+      "entityUrl": "https://www.wikidata.org/wiki/Q795978",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": ""
+    },
+    {
+      "clubId": "lp-statika-m1",
+      "wikidataQid": "Q17497",
+      "entityUrl": "https://www.wikidata.org/wiki/Q17497",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": "Do not confuse football club with Dynamo multisport society Q1269117."
+    },
+    {
+      "clubId": "lp-izumrud",
+      "wikidataQid": "Q170040",
+      "entityUrl": "https://www.wikidata.org/wiki/Q170040",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": ""
+    },
+    {
+      "clubId": "lp-uprek",
+      "wikidataQid": "Q240444",
+      "entityUrl": "https://www.wikidata.org/wiki/Q240444",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": "Former club name Terek appears as an alias."
+    },
+    {
+      "clubId": "lp-spadov",
+      "wikidataQid": "Q182930",
+      "entityUrl": "https://www.wikidata.org/wiki/Q182930",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": ""
+    },
+    {
+      "clubId": "lp-korni-zapretov",
+      "wikidataQid": "Q274778",
+      "entityUrl": "https://www.wikidata.org/wiki/Q274778",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": "Do not confuse Samara club with namesake Moscow club."
+    },
+    {
+      "clubId": "lp-orendorf",
+      "wikidataQid": "Q2095484",
+      "entityUrl": "https://www.wikidata.org/wiki/Q2095484",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": "Former club name Gazovik appears as an alias."
+    },
+    {
+      "clubId": "lp-nizon",
+      "wikidataQid": "Q65124755",
+      "entityUrl": "https://www.wikidata.org/wiki/Q65124755",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": ""
+    },
+    {
+      "clubId": "lp-statika-m2",
+      "wikidataQid": "Q2494171",
+      "entityUrl": "https://www.wikidata.org/wiki/Q2494171",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": "Item contains both 1927 and 2021 inception claims; club continuity requires manual adjudication before affiliations."
+    },
+    {
+      "clubId": "lp-chuzhbina",
+      "wikidataQid": "Q66210522",
+      "entityUrl": "https://www.wikidata.org/wiki/Q66210522",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": "Competition and staff statements may be stale; do not infer 2026/27 registration."
+    },
+    {
+      "clubId": "lp-ognetushitel",
+      "wikidataQid": "Q1388889",
+      "entityUrl": "https://www.wikidata.org/wiki/Q1388889",
+      "entityReview": "label-and-football-club-type-matched",
+      "rosterCoverage": "unmeasured",
+      "ambiguityNote": ""
+    }
+  ]
+}

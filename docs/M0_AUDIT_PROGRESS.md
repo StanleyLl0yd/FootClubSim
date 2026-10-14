@@ -204,3 +204,7 @@ from an earlier revision or represented as the final reviewed `main`.
 ## Browser exceptional-case acceptance protocol documented (2026-10-14)
 
 [The native-browser storage matrix](M0_STORAGE_EDGE_ACCEPTANCE.md) distinguishes verified normal Safari/Windows Chrome/Edge workflows, private Windows smoke, injected quota errors and **still unexecuted** Safari Private Browsing, real browser quota/eviction and full-shutdown JSON recovery. It provides specific manual evidence steps without claiming browser coverage not performed. The owner has **not** separately accepted any narrower M0 browser exit gate.
+
+## Pending owner product sign-off consolidated (2026-10-14)
+
+The [M0 decision package](M0_PRODUCT_SIGNOFF_PACKAGE.md) groups outstanding **D03-D05 and D07-D11** into one reviewable set with exact proposed interface scope, future implementation stage and PENDING state. Previously approved product choices remain intact. Exact D13 manager point totals and full calibration baselines remain later-stage design, **not** accepted by implication. No production match/financial behavior was added.

@@ -55,4 +55,4 @@ A manager may open an interactive match, inspect current match state and **pause
 
 **M2:** playable season and match-management UI, conditional on genuine RPL/RFU/IFAB rules, original 16-club personnel data rights and exact M2 sign-off. Full ongoing finance/FX mechanics do **not** become obligatory in M2 just because D07 is now approved for M3.
 
-**M3:** actual transaction ledger, three-currency cash/contracts, Google-source lawful FX integration, daily quotes/cache/replay and the corresponding tests. **Do not claim M3 finance is complete without a lawful Google integration or an explicit owner-approved revised source strategy.**
+**M3:** [issue #131](https://github.com/StanleyLl0yd/FootClubSim/issues/131) tracks actual transaction ledger, three-currency cash/contracts, Google-source lawful FX integration, daily quotes/cache/replay and the corresponding tests. **Do not claim M3 finance is complete without a lawful Google integration or an explicit owner-approved revised source strategy.**

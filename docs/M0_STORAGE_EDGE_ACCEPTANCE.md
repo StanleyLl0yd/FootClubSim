@@ -12,7 +12,7 @@
 | IndexedDB absent and simulated QuotaExceededError | Headless domain tests plus actual browsers with an injected rejection object | Error handling verified; **NOT real quota exhaustion** |
 | **Safari Private Browsing** | No confirmed native Private Safari execution | **OPEN** |
 | **Safari normal mode, explicit IndexedDB deletion and JSON re-import** | New Safari WebDriver fixture under review: deletion, missing-save rejection, valid and tampered JSON file-input simulation | **Must be verified by actual macOS CI; not Private mode or organic eviction** |
-| **Real browser-enforced storage quota pressure** | New Windows Chrome/Edge CDP diagnostic applies temporary 512 KiB per-origin quota, attempts a 2 MiB IndexedDB write, requires actual browser QuotaExceededError and verifies the original initial career remains recoverable | **CI verification pending; not ambient host-disk exhaustion or eviction** |
+| **Real browser-enforced storage quota pressure** | New Windows Chrome/Edge CDP diagnostic applies temporary 512 KiB per-origin quota, attempts a 24 MiB IndexedDB write, requires actual browser QuotaExceededError and verifies the original initial career remains recoverable | **CI verification pending; not ambient host-disk exhaustion or eviction** |
 | **Actual storage eviction** | No observation of automatic browser eviction | **OPEN** |
 | **Backup/recovery across complete browser shutdown** | Same-tab reload smoke only | **OPEN** |
 | **Windows Chrome/Edge site-data clearing and same-process JSON import** | New CDP fixture under review in browser CI; restores a byte-for-byte stored M0 snapshot and rejects a corrupted backup | **Not equivalent to full shutdown or organic eviction** |
@@ -40,7 +40,7 @@ Using an isolated normal Safari or Chrome/Edge profile, export a known-good JSON
 
 If genuine browser eviction happens during a controlled disposable-profile session, document it separately. **User-triggered site-data clearing is a recoverability exercise, not evidence that organic quota/LRU eviction was observed.**
 
-The Windows CDP smoke now **attempts real browser-enforced, artificial per-origin quota pressure** using `Storage.overrideQuotaForOrigin`, with a 512 KiB override and a 2 MiB IndexedDB record written only to a disposable test profile. It rejects `unexpected-success` and other errors rather than pretending a quota signal was observed; the resulting outcome still requires a successful native-browser CI job. The override is explicitly removed after the probe, and the original M0 save is restored. This is not evidence of ambient disk pressure, natural LRU eviction or Safari quota behavior.
+The Windows CDP smoke now **attempts real browser-enforced, artificial per-origin quota pressure** using `Storage.overrideQuotaForOrigin`, with a 512 KiB override and a 24 MiB IndexedDB record written only to a disposable test profile. It rejects `unexpected-success` and other errors rather than pretending a quota signal was observed; the resulting outcome still requires a successful native-browser CI job. The override is explicitly removed after the probe, and the original M0 save is restored. This is not evidence of ambient disk pressure, natural LRU eviction or Safari quota behavior.
 
 ## Actual quota/eviction requirement and safety
 

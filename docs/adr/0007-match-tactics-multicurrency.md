@@ -21,7 +21,7 @@
 
 **Final FX source selection (2026-10-14):** The owner **explicitly selected the Bank of Russia instead of Google Finance**, documented in [ADR-0009](0009-rub-only-ledger-and-cbr-source-option.md). Historical Google-specific wording in this ADR is **superseded** and must not be used to build a Google integration. The official CBR daily XML source is required subject to release rights and browser/CORS validation.
 
-**Superseding owner finance detail (2026-10-14):** [ADR-0009](0009-rub-only-ledger-and-cbr-source-option.md) overrides this ADR's former **multi-currency ledger** terminology: canonical internal accounts use **RUB alone**, posted to nearest **10,000 ₽**, while USD/EUR are permitted for contract quotations and display. EUR ↔ USD now rounds to nearest **1,000** target units. The CBR is a researched *option*, **not** yet authorized in place of Google.
+**Superseding owner finance detail (2026-10-14):** [ADR-0009](0009-rub-only-ledger-and-cbr-source-option.md) overrides this ADR's former **multi-currency ledger** terminology: canonical internal accounts use **RUB alone**, posted to nearest **10,000 ₽**, while USD/EUR are permitted for contract quotations and display. EUR ↔ USD now rounds to nearest **1,000** target units. The owner has **now explicitly authorized CBR instead of Google** as the only approved FX provider.
 
 ## D03/D05: in-match tactical commands and deterministic replays
 

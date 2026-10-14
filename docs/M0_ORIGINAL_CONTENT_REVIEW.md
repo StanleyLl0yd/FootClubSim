@@ -47,3 +47,11 @@ The tracked-file audit now recognizes additional binary and distributable file e
 Crucially, the M0 synthetic provenance parser already requires an **empty** `assetPaths` list. The Python Git inventory must enforce the **same M0-only boundary**, rather than allowing an unreviewed file to be made acceptable merely by adding its name to the manifest. Any future material that needs a nonempty asset list requires a separately reviewed, versioned, post-M0 asset/provenance contract; it must not silently mutate the immutable M0 synthetic manifest.
 
 These are deterministic local repository heuristics, not positive copyright/trademark clearance or a substitute for production-bundle review. The actual GitHub PR and exact-main CI results must be recorded before counting this correction as merged or verified; **both full mandatory audits, original naming/branding release screening, and final M0 sign-off stay OPEN**.
+
+## Generated Vite bundle boundary (incremental M0 guard)
+
+`scripts/check_m0_bundle.py` checks the **actual generated `web-dist/` output after the production Vite build** in Core CI. For the current M0 prototype, only the HTML entrypoint and Vite-generated JS/CSS assets are allowed. The test rejects downloaded images, roster JSON/CSV, WebAssembly, PDFs, executables, unexpected output paths, symbolic links, oversized/non-UTF-8 output and a limited set of recognizable research-source markers. Negative Python tests use isolated temporary directories.
+
+This complements the Git-tracked file scanner: a generated distribution can contain something not present as a separately tracked binary. The guard deliberately has a **M0-specific** whitelist; future M2 production images and versioned data packs will require an independently reviewed manifest and replacement checks rather than silently bypassing this gate.
+
+A clean bundle check **does not prove** that every bundled dependency includes required license notices, that all textual content is independently authored, or that parody branding is legally cleared. Those release checks remain separate; neither full M0 repository audit pass is complete.

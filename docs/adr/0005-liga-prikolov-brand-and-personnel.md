@@ -23,7 +23,9 @@ The owner approved **real 2026/27 club/player/staff prototypes** for the initial
 
 Each fictional person must have a stable non-name ID, original display name, independently reviewed factual-data provenance, as-of date, role(s), uncertainty markers and later simulation-only mutable career state. Coach qualifications, foreigner status and contract registration require separate rule verification; attributes are original gameplay estimates, not copied from third-party games. Local regeneration for future fictional players uses country-aware dictionaries, deterministic RNG and no external LLM/network. After career creation, snapshot person names and attributes; later pack updates do not retroactively edit saved characters.
 
-The names of the 46 proposed **Надир** characters approved by the owner are staged in `data/drafts/nadir-personnel-v0.json`, **not yet verified as accurate football registrations on 2026-10-14**. Remaining 15 clubs have an explicit `data/drafts/liga-roster-worklist.json` acquisition/review queue, not invented rosters. No photorealistic portraits or copied logos are authorized.
+The names of the 46 proposed **Надир** characters approved by the owner are staged in `data/drafts/nadir-personnel-v1.json`, **not yet verified as accurate football registrations on 2026-10-14**. Remaining 15 clubs have an explicit `data/drafts/liga-roster-worklist.json` acquisition/review queue, not invented rosters. No photorealistic portraits or copied logos are authorized.
+
+The creative identity draft now gives each of the 46 characters an immutable `lp-person-*` ID unrelated to their name. These are **not** source provider IDs, nor production-verified person records; nationality, birth date, real source reference, role, current registration and skill attributes will be added only via a separately vetted M2 pack.
 
 ## Gates and implementation boundaries
 

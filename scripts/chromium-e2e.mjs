@@ -256,6 +256,18 @@ async function run() {
     if (!fileInput.nodeId) throw new Error('Import file input missing');
     await send('DOM.setFileInputFiles', { nodeId: fileInput.nodeId, files: [backupPath] });
     await waitText('Стартовая карьера проверена и загружена в память');
+
+    // A backup whose payload changed without a matching checksum cannot replace
+    // the just-recovered career, even after browser site data was removed.
+    const corruptedJson = savedJson.replace('fictional-1', 'fictional-X');
+    if (corruptedJson === savedJson) throw new Error('Missing synthetic corruption fixture');
+    const invalidPath = join(profile, 'm0-corrupted.json');
+    await writeFile(invalidPath, corruptedJson, 'utf8');
+    await send('DOM.setFileInputFiles', { nodeId: fileInput.nodeId, files: [invalidPath] });
+    await waitText('Импорт отклонён: INTEGRITY_ERROR');
+    if (!await evaluate("Boolean(document.querySelector('.career-info'))")) {
+      throw new Error('Corrupted backup import erased the active career');
+    }
     await click('Сохранить в браузере');
     await waitText('Начальная карьера записана в IndexedDB');
     console.log('PASS: isolated browser recovers from cleared IndexedDB through file import');

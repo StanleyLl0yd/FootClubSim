@@ -62,6 +62,8 @@ ordinary WebDriver command retains its 15-second timeout, and genuine
 application failures must still fail the job. The repeated success
 does not prove that SafariDriver startup cannot fail again.
 
+The [exceptional storage acceptance matrix](M0_STORAGE_EDGE_ACCEPTANCE.md) supplies **separate, reproducible** native Safari Private Browsing, real quota/eviction, full browser shutdown and JSON backup/recovery procedures, along with an evidence form. It documents cases still **OPEN**; the existing injected quota error is not a real disk-quota test.
+
 ## Remaining work
 
 The React/Vite technical shell and preliminary IndexedDB adapter already exist. Normal and flagged private Windows Chrome/Edge sessions are now in automated native-browser CI, but **macOS Safari Private Browsing, genuine disk-quota pressure, storage eviction and recovery after browser shutdown remain unverified**. Full career revisions and migrations, plus complete milestone exit audit, are also open. The adapter currently writes only new initial careers, with no overwrite or in-place revision update. This page is a non-shipping diagnostics artifact and is **not** a playable game.

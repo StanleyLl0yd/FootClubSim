@@ -1,0 +1,29 @@
+{
+  "manifestSchemaVersion": 1,
+  "packId": "liga-prikolov-personnel",
+  "packVersion": "0.1.0",
+  "packKind": "identity-staging",
+  "asOfDate": "2026-10-14",
+  "releaseState": "blocked",
+  "availableForCareerStart": false,
+  "rightsReviewStatus": "pending",
+  "sourceRegistryPath": "data/drafts/liga-roster-sources.json",
+  "worklistPath": "data/drafts/liga-roster-worklist.json",
+  "identityDrafts": [
+    {
+      "clubId": "lp-nadir",
+      "path": "data/drafts/nadir-personnel-v1.json",
+      "approvedIdentityCount": 46,
+      "factsVerified": false
+    }
+  ],
+  "evidenceRecords": [],
+  "factRecords": [],
+  "verifiedFactCount": 0,
+  "m0Compatibility": {
+    "packId": "fictional-rpl-scale",
+    "packVersion": "1-seed-2026",
+    "modifiesM0Catalog": false,
+    "modifiesRevisionZeroSaves": false
+  }
+}

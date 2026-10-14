@@ -200,3 +200,7 @@ from an earlier revision or represented as the final reviewed `main`.
 ## Measured original-content inventory and invalid-manifest parser review (2026-10-14)
 
 [PR #114](https://github.com/StanleyLl0yd/FootClubSim/pull/114) addresses the JSON-root type guard in `scripts/repo_audit.py` and adds negative tests for arrays/scalars. The [original-content review](M0_ORIGINAL_CONTENT_REVIEW.md) preserves baseline `main` [Documentation CI 38556362413](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38556362413): **136** files, **800,903** tracked bytes, **67** source files, **5,884** source lines, **35** test files, **38** Markdown files, and **zero configured binary/artwork/database asset-file suffix hits**. This is inventory evidence, not legal clearance or either mandatory final repository-wide audit pass. The owner-approved M0/M2 boundary remains [ADR-0006](adr/0006-m0-m2-acceptance-boundary.md).
+
+## Browser exceptional-case acceptance protocol documented (2026-10-14)
+
+[The native-browser storage matrix](M0_STORAGE_EDGE_ACCEPTANCE.md) distinguishes verified normal Safari/Windows Chrome/Edge workflows, private Windows smoke, injected quota errors and **still unexecuted** Safari Private Browsing, real browser quota/eviction and full-shutdown JSON recovery. It provides specific manual evidence steps without claiming browser coverage not performed. The owner has **not** separately accepted any narrower M0 browser exit gate.

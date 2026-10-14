@@ -207,8 +207,12 @@ test('versioned match events reject undeclared fields and missing required field
   const malformed = [
     [{ ...end, debug: 'unexpected' }],
     [{ ...shot, debug: 'unexpected' }, { ...end, sequence: 2 }],
-    [{ ...shot, playerId: undefined }, { ...end, sequence: 2 }],
-    [{ ...shot, outcome: undefined }, { ...end, sequence: 2 }],
+    [{ id: shot.id, sequence: shot.sequence, elapsedSeconds: shot.elapsedSeconds,
+      type: shot.type, teamId: shot.teamId, xgMilli: shot.xgMilli, outcome: shot.outcome },
+    { ...end, sequence: 2 }],
+    [{ id: shot.id, sequence: shot.sequence, elapsedSeconds: shot.elapsedSeconds,
+      type: shot.type, teamId: shot.teamId, playerId: shot.playerId, xgMilli: shot.xgMilli },
+    { ...end, sequence: 2 }],
   ];
   for (const events of malformed) {
     const result = deriveMatchLedger({ ...base, events });

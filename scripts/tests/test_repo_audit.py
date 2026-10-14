@@ -85,6 +85,14 @@ class RepositoryAuditTests(unittest.TestCase):
         self.put(manifest, '{"assetPaths":["assets/icon.png"]}\n')
         self.assertEqual(read_manifest(self.root), ({"assets/icon.png"}, []))
 
+    def test_manifest_rejects_non_object_json_with_typed_error(self):
+        manifest = "data/packs/m0-synthetic-manifest.json"
+        for invalid in ("[]", "null", "42", '"hello"'):
+            self.put(manifest, invalid + "\\n")
+            allowed, errors = read_manifest(self.root)
+            self.assertEqual(allowed, set())
+            self.assertEqual(errors, ["synthetic asset manifest must be a JSON object"])
+
     def test_unsafe_paths_are_rejected(self):
         for value in ["/absolute.png", "../up.png", "folder/../up.png", "folder\\logo.png", ""]:
             self.assertFalse(is_safe_asset_path(value))

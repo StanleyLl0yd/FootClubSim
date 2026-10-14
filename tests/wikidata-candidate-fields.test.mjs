@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { openEndedCandidateQids, summarizeClaimAvailability, measureFieldAvailability, measureAllClubs } from '../scripts/wikidata-candidate-fields.mjs';
-const row = (id, start, end) => ({
+const row = (id, start, end, statementId = id) => ({
   person: { value: 'http://www.wikidata.org/entity/Q' + id },
+  statement: { value: 'http://www.wikidata.org/entity/statement/Q' + id + '-' + statementId },
   ...(start ? { start: { value: start + 'T00:00:00Z' } } : {}),
   ...(end ? { end: { value: end + 'T00:00:00Z' } } : {}),
 });
@@ -14,6 +15,18 @@ test('candidate field research excludes dated historical and unqualified members
   ];
   assert.deepEqual(openEndedCandidateQids(rows), ['Q10', 'Q30']);
 });
+test('field candidate QIDs reject conflicting qualifier fragments for the same statement', () => {
+  const open = row(10, '2026-01-01', undefined, 'same');
+  const closed = row(10, '2026-01-01', '2026-10-14', 'same');
+  const otherValid = row(20, '2026-01-01', undefined, 'valid');
+  for (const rows of [[open, closed, otherValid], [closed, open, otherValid]]) {
+    assert.deepEqual(openEndedCandidateQids(rows), ['Q20']);
+  }
+  assert.deepEqual(openEndedCandidateQids([open, { ...open }]), ['Q10']);
+  assert.deepEqual(openEndedCandidateQids([open, closed, row(10, '2026-02-01', undefined, 'independent')]), ['Q10']);
+  assert.throws(() => openEndedCandidateQids([{ ...open, statement: { value: 'bad' } }]), /statement URI/);
+});
+
 test('citizenship is not eligibility and counts omit deprecated/no-value claims', () => {
   const counts = summarizeClaimAvailability(['Q10', 'Q30'], {
     Q10: { claims: { P569: [statement('normal')], P27: [statement('normal')], P413: [statement('normal')] } },

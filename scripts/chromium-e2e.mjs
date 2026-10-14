@@ -294,6 +294,12 @@ async function run() {
     await send('Storage.overrideQuotaForOrigin', {
       origin: quotaOrigin, quotaSize: 512 * 1024,
     });
+    const quotaInfo = await send('Storage.getUsageAndQuota', { origin: quotaOrigin });
+    console.log('Quota policy probe: quota=' + quotaInfo.quota +
+      ', usage=' + quotaInfo.usage + ', overrideActive=' + quotaInfo.overrideActive);
+    if (!quotaInfo.overrideActive || quotaInfo.quota !== 512 * 1024) {
+      throw new Error('CDP quota override not applied to the test origin');
+    }
     let enforcedOutcome;
     try {
       enforcedOutcome = await evaluate(`new Promise(resolve => {
@@ -305,7 +311,7 @@ async function run() {
           const db = open.result;
           const tx = db.transaction('data', 'readwrite');
           let state = 0x12345678;
-          const bytes = new Uint8Array(2 * 1024 * 1024);
+          const bytes = new Uint8Array(24 * 1024 * 1024);
           for (let i = 0; i < bytes.length; i++) {
             state ^= state << 13;
             state ^= state >>> 17;

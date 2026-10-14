@@ -20,13 +20,13 @@ DRIVER = "http://127.0.0.1:4444"
 TIMEOUT = 75
 
 
-def request(url: str, method: str = "GET", payload: dict | None = None):
+def request(url: str, method: str = "GET", payload: dict | None = None, timeout: int = 15):
     encoded = json.dumps(payload).encode("utf-8") if payload is not None else None
     req = urllib.request.Request(
         url, data=encoded, method=method,
         headers={"Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=15) as response:
+    with urllib.request.urlopen(req, timeout=timeout) as response:
         body = response.read()
     return json.loads(body) if body else None
 
@@ -100,6 +100,7 @@ def main():
                     result = request(
                         DRIVER + "/session", "POST",
                         {"capabilities": {"alwaysMatch": {"browserName": "safari"}}},
+                        timeout=45,
                     )
                     value = result.get("value", {}) if isinstance(result, dict) else {}
                     session = value.get("sessionId")

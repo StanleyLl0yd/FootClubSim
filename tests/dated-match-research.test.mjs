@@ -45,7 +45,7 @@ test('historical fixture evidence rejects invented roster clearance, source copy
     d => {d.fixtures[0].participants[1].fictionalClubId=d.fixtures[0].participants[0].fictionalClubId;},
     d => {d.fixtures[1].fixtureId=d.fixtures[0].fixtureId;},
     d => {d.fixtures[0].players=['copied','from','official','source'];},
-    d => {d.targetedCaseChecks[0].asOf20261014Registered=true;},
+    d => {d.targetedCaseChecks[0].asOfRegistrationEstablished=true;},
     d => {d.targetedCaseChecks[0].fictionalPersonId='lp-person-9999';},
     d => {d.targetedCaseChecks[0].facts[0].fixtureId='nonexistent';},
     d => {d.targetedCaseChecks[0].facts[0].observedParticipation='confirmed-registered';},

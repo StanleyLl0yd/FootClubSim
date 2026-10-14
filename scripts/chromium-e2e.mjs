@@ -183,8 +183,30 @@ async function run() {
       if (!body.includes(text)) throw new Error('Missing M0 UI text: ' + text);
     }
 
+    // Select a non-default club so restore must recover actual saved UI state.
+    const switched = await evaluate(`(() => {
+      const select = document.querySelector('#club-select');
+      if (!select || select.options[1]?.value !== 'fictional-2') return false;
+      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
+      setter.call(select, 'fictional-2');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    })()`);
+    if (!switched) throw new Error('Non-default club selection failed');
+
+    async function assertNondefaultCareer(stage) {
+      const matches = await evaluate(`(() => {
+        const select = document.querySelector('#club-select');
+        const info = document.querySelector('.career-info')?.innerText ?? '';
+        return select?.value === 'fictional-2' &&
+          info.includes('Fictional Club 2') && info.includes('Ревизия 0');
+      })()`);
+      if (!matches) throw new Error('Club identity or revision missing after ' + stage);
+    }
+
     await click('Создать стартовую карьеру');
     await waitText('Стартовая карьера создана в памяти браузера');
+    await assertNondefaultCareer('creation');
     await click('Сохранить в браузере');
 
     if (privateFlag) {
@@ -203,11 +225,13 @@ async function run() {
         await waitText('Выберите вымышленный клуб');
         await click('Восстановить из браузера');
         await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+        await assertNondefaultCareer('private-session restore');
       } else {
         // A browser blocking private storage must not silently drop the career.
         if (!await evaluate("Boolean(document.querySelector('.career-info'))")) {
           throw new Error('Private-mode storage rejection erased the active career');
         }
+        await assertNondefaultCareer('private-session storage failure');
         await click('Экспортировать JSON');
         await waitText('Файл JSON экспортирован');
       }
@@ -237,6 +261,7 @@ async function run() {
     await waitText('Выберите вымышленный клуб');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+    await assertNondefaultCareer('normal profile restore');
 
     // Recover a valid initial career after clearing IndexedDB in a disposable
     // browser profile. Clearing site data is NOT organic eviction or real quota.
@@ -274,6 +299,7 @@ async function run() {
     if (!fileInput.nodeId) throw new Error('Import file input missing');
     await send('DOM.setFileInputFiles', { nodeId: fileInput.nodeId, files: [backupPath] });
     await waitText('Стартовая карьера проверена и загружена в память');
+    await assertNondefaultCareer('downloaded backup import');
 
     // A correctly checksummed different career cannot be persisted by this
     // deliberately single-career M0 shell, because its Restore ID is fixed.
@@ -328,6 +354,7 @@ async function run() {
     await waitText('Начало карьеры');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+    await assertNondefaultCareer('normal profile restore');
     console.log('PASS: initial M0 career survives complete browser restart with same profile');
 
 

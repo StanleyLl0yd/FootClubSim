@@ -41,6 +41,8 @@ Status: **OPEN**. The owner accepted the [M0 foundation versus M2 playable-perso
 - [x] Specify **planned** rules-pack separation and dependencies for registration, standings, discipline and administrative outcomes in [M0_RPL_RULES_MATRIX.md](M0_RPL_RULES_MATRIX.md). Complete source/legal verification and executable rules remain **open** under issue #15.
 - [x] Open the [prioritized M1 implementation backlog](M1_BACKLOG.md); remaining effort estimates and technical risks still require approval.
 
+**Further D07 owner refinement, 2026-10-14:** [ADR-0009](adr/0009-rub-only-ledger-and-cbr-source-option.md) approves **RUB-only ledger postings to nearest 10,000 ₽** irrespective of deal currency and **all USD/EUR target conversion rounding to nearest 1,000 units**, including direct EUR ↔ USD. CBR exchange rates are a documented, credited-source **candidate**, not yet a confirmed replacement for Google Finance. No M0 finance code or browser/source acceptance is implied.
+
 ## Cross-milestone backlog explicitly NOT required to finish M0
 
 - [x] The **boundary decision** is owner-approved in [ADR-0006](adr/0006-m0-m2-acceptance-boundary.md): research-only 16-club Wikipedia references are sufficient at M0; the **0/16** complete registrations and no licensed playable person facts remain explicitly unresolved M2 tasks under [#91](https://github.com/StanleyLl0yd/FootClubSim/issues/91).

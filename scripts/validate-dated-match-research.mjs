@@ -15,7 +15,7 @@ function count(n, name, min = 0, max = 99) {
 }
 const FIXTURE_FIELDS = ['fixtureId', 'playedOn', 'competition', 'sourceUrl', 'provider', 'sourceKind', 'result', 'participants', 'isRegistrationList', 'asOfRosterVerified'];
 const TEAM_FIELDS = ['fictionalClubId', 'startingPlayers', 'benchListed', 'substitutesEntered', 'uniquePlayersAppeared'];
-const CASE_FIELDS = ['observationId', 'prototypeName', 'fictionalPersonId', 'fictionalClubId', 'facts', 'finding', 'asOf20261014Registered', 'footnote'];
+const CASE_FIELDS = ['observationId', 'prototypeName', 'fictionalPersonId', 'fictionalClubId', 'facts', 'finding', 'asOfRegistrationEstablished', 'footnote'];
 const FACT_FIELDS = ['fixtureId', 'observedParticipation'];
 const ROOT_FIELDS = ['schemaVersion', 'observedOn', 'targetAsOf', 'reportStatus', 'factualRosterDenominatorsVerified', 'licensedPlayableFacts', 'reproducedSourceLineupTables', 'sourcePlayerImagesCopied', 'sourceRightsForBulkRedistribution', 'fixtures', 'targetedCaseChecks'];
 const SOURCES = Object.freeze({
@@ -116,7 +116,7 @@ export function validateDatedMatchResearch(doc, { clubIds, nadir }) {
     assert.ok(typeof person.prototypeName === 'string' && person.prototypeName.trim().length >= 3);
     assert.ok(typeof person.finding === 'string' && person.finding.length > 10 && person.finding.length <= 100);
     assert.ok(typeof person.footnote === 'string' && person.footnote.length > 20 && person.footnote.length <= 250);
-    assert.equal(person.asOf20261014Registered, false);
+    assert.equal(person.asOfRegistrationEstablished, false);
     assert.ok(Array.isArray(person.facts) && person.facts.length >= 1 && person.facts.length <= doc.fixtures.length);
     const factRefs = new Set();
     for (const fact of person.facts) {

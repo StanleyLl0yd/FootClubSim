@@ -135,7 +135,7 @@
         }
       ],
       "finding": "appeared-for-club-in-two-dated-matches",
-      "asOf20261014Registered": false,
+      "asOfRegistrationEstablished": false,
       "footnote": "Appearance at a fixture date is not proof of uninterrupted employment, an October registration roster, citizenship or RFU eligibility."
     },
     {
@@ -150,7 +150,7 @@
         }
       ],
       "finding": "named-as-head-coach-in-dated-cup-protocol-only",
-      "asOf20261014Registered": false,
+      "asOfRegistrationEstablished": false,
       "footnote": "Head-coach attribution in a September match does not establish current appointment, coaching license or role as of October."
     }
   ]

@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "status": "research-field-presence-only",
+  "targetAsOf": "2026-10-14",
+  "measuredAt": "2026-10-14T08:55:12.741Z",
+  "method": "P54 open-ended candidate field presence: P569, P27, P413",
+  "source": "current Wikidata graph plus current wbgetentities claims",
+  "sourceRun": "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38538448265",
+  "sourceCodeCommit": "72dce43b61b52f16dd77f793b8c22aac70573d45",
+  "completeForAll16": true,
+  "countsAreClubPersonPairsNotUniqueAcrossClubs": true,
+  "realPersonRecordsPersisted": 0,
+  "factsVerifiedAsOfTargetDate": 0,
+  "rosterRegistrationsVerified": 0,
+  "notes": [
+    "Open-ended P54 statements do not prove current team membership.",
+    "P569, P27 and P413 presence does not certify accuracy or Russian Football Union eligibility."
+  ],
+  "aggregate": {
+    "candidateClubPersonPairs": 504,
+    "birthDatePresent": 504,
+    "citizenshipPresent": 504,
+    "positionPresent": 498,
+    "allThreePresent": 498
+  },
+  "clubs": [
+    {
+      "clubId": "lp-nadir",
+      "wikidataQid": "Q29108",
+      "candidatePersons": 43,
+      "birthDate": 43,
+      "citizenship": 43,
+      "position": 43,
+      "allThree": 43
+    },
+    {
+      "clubId": "lp-zelenober",
+      "wikidataQid": "Q220854",
+      "candidatePersons": 45,
+      "birthDate": 45,
+      "citizenship": 45,
+      "position": 45,
+      "allThree": 45
+    },
+    {
+      "clubId": "lp-vagon",
+      "wikidataQid": "Q29115",
+      "candidatePersons": 31,
+      "birthDate": 31,
+      "citizenship": 31,
+      "position": 31,
+      "allThree": 31
+    },
+    {
+      "clubId": "lp-patriciy",
+      "wikidataQid": "Q29112",
+      "candidatePersons": 73,
+      "birthDate": 73,
+      "citizenship": 73,
+      "position": 70,
+      "allThree": 70
+    },
+    {
+      "clubId": "lp-ogkm",
+      "wikidataQid": "Q176371",
+      "candidatePersons": 19,
+      "birthDate": 19,
+      "citizenship": 19,
+      "position": 19,
+      "allThree": 19
+    },
+    {
+      "clubId": "lp-pacifica",
+      "wikidataQid": "Q795978",
+      "candidatePersons": 30,
+      "birthDate": 30,
+      "citizenship": 30,
+      "position": 29,
+      "allThree": 29
+    },
+    {
+      "clubId": "lp-statika-m1",
+      "wikidataQid": "Q17497",
+      "candidatePersons": 22,
+      "birthDate": 22,
+      "citizenship": 22,
+      "position": 22,
+      "allThree": 22
+    },
+    {
+      "clubId": "lp-izumrud",
+      "wikidataQid": "Q170040",
+      "candidatePersons": 53,
+      "birthDate": 53,
+      "citizenship": 53,
+      "position": 53,
+      "allThree": 53
+    },
+    {
+      "clubId": "lp-uprek",
+      "wikidataQid": "Q240444",
+      "candidatePersons": 40,
+      "birthDate": 40,
+      "citizenship": 40,
+      "position": 39,
+      "allThree": 39
+    },
+    {
+      "clubId": "lp-spadov",
+      "wikidataQid": "Q182930",
+      "candidatePersons": 47,
+      "birthDate": 47,
+      "citizenship": 47,
+      "position": 46,
+      "allThree": 46
+    },
+    {
+      "clubId": "lp-korni-zapretov",
+      "wikidataQid": "Q274778",
+      "candidatePersons": 31,
+      "birthDate": 31,
+      "citizenship": 31,
+      "position": 31,
+      "allThree": 31
+    },
+    {
+      "clubId": "lp-orendorf",
+      "wikidataQid": "Q2095484",
+      "candidatePersons": 30,
+      "birthDate": 30,
+      "citizenship": 30,
+      "position": 30,
+      "allThree": 30
+    },
+    {
+      "clubId": "lp-nizon",
+      "wikidataQid": "Q65124755",
+      "candidatePersons": 5,
+      "birthDate": 5,
+      "citizenship": 5,
+      "position": 5,
+      "allThree": 5
+    },
+    {
+      "clubId": "lp-statika-m2",
+      "wikidataQid": "Q2494171",
+      "candidatePersons": 5,
+      "birthDate": 5,
+      "citizenship": 5,
+      "position": 5,
+      "allThree": 5
+    },
+    {
+      "clubId": "lp-chuzhbina",
+      "wikidataQid": "Q66210522",
+      "candidatePersons": 0,
+      "birthDate": 0,
+      "citizenship": 0,
+      "position": 0,
+      "allThree": 0
+    },
+    {
+      "clubId": "lp-ognetushitel",
+      "wikidataQid": "Q1388889",
+      "candidatePersons": 30,
+      "birthDate": 30,
+      "citizenship": 30,
+      "position": 30,
+      "allThree": 30
+    }
+  ]
+}

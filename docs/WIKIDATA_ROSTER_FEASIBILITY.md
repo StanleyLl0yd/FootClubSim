@@ -62,8 +62,17 @@ All **16 club-level Wikidata entity IDs** have been identified and frozen in [th
 
 The result shows why CC0 availability is not sufficient for a playable league database: Wikidata lacks conclusive dated registration assertions for many historical links, and every 2026/27 squad still lacks an independently established roster denominator. Some P54 entries may be non-current, historical, or wrong; the current graph does not freeze Wikidata state as it existed on 2026-10-14. All 16 first-team rosters remain **not verified**, and M0/M2 publishing remains blocked.
 
-## Candidate person field completeness (P569/P27/P413)
+### Candidate field measurement, 2026-10-14
 
-The supplementary [bounded diagnostic](../scripts/wikidata-candidate-fields.mjs) checks which **open-ended P54 candidate people**, as identified by the previous procedure, have at least one non-deprecated Wikidata value for date of birth (`P569`), citizenship (`P27`) and general position (`P413`). Calls to `wbgetentities` use a bounded batch (up to 40 QIDs), rate pacing, User-Agent and maxlag, with no real-world player identity or Wikidata person QID retained in published results. The [separate diagnostic workflow](../.github/workflows/wikidata-candidate-fields.yml) is for live research, not the production build.
+[Successful GitHub Actions run 38538448265](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38538448265) measured P569/P27/P413 field presence for **all 16 club QIDs** in the present Wikidata graph. [Dated aggregate-only snapshot](../data/drafts/liga-wikidata-candidate-field-diagnostic-2026-10-14.json):
 
-**Warning:** mere presence of `P27` does not establish RFU foreign-player status; `P413` may be coarser than the game's GK/CB/DM/etc positions; and `P569` does not itself confirm the accuracy of a birthday. Even all-three-field coverage does not constitute an effective-date roster validation, contract or registration proof, or permission to reuse third-party photographs.
+| Historical open-ended P54 club-person pair measurement | Count |
+| --- | ---: |
+| Candidate person/club links | 504 |
+| P569 date-of-birth field present | 504 |
+| P27 citizenship field present | 504 |
+| P413 general playing position field present | 498 |
+| All three fields present | 498 |
+| Verified first-team registrations / effective roster facts | **0** |
+
+«Надир» alone has 43 open-ended candidates with all three fields present. **This is not a 43-player current squad.** The source is a live, mutable Wikidata graph (observed 2026-10-14T08:55:12.741Z UTC), not an official 2026/27 registration freeze. Some P413 positions are too general, field values can be outdated, and P27 is not Russian player-limit eligibility. Other candidate groups with undated P54 membership (1761 historical club-person pairs in the first diagnostic) were **not included** in this narrower field-presence measurement. Absence of a candidate or an attribute is not evidence that a player is absent from the real club.

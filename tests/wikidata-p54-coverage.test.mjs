@@ -90,6 +90,16 @@ test('same person with several historical spells contributes once to person coun
   });
 });
 
+test('duplicate P54 statements with conflicting qualifiers cannot be counted in arbitrary row order', () => {
+  const earlier = row(30, t('2024-01-01'), t('2027-12-31'), 500);
+  const later = row(30, t('2025-01-01'), t('2027-12-31'), 500);
+  const conflictingEnd = row(30, t('2024-01-01'), t('2026-01-01'), 500);
+  assert.throws(() => summarizeP54Bindings([earlier, later]), /Conflicting P54 date qualifiers/);
+  assert.throws(() => summarizeP54Bindings([later, earlier]), /Conflicting P54 date qualifiers/);
+  assert.throws(() => summarizeP54Bindings([earlier, conflictingEnd]), /Conflicting P54 date qualifiers/);
+  assert.equal(summarizeP54Bindings([earlier, { ...earlier }]).statementCount, 1);
+});
+
 test('fail closed on query truncation and malformed response identifiers', () => {
   assert.throws(() => summarizeP54Bindings(new Array(ROW_LIMIT).fill(row(1))), /truncated/);
   assert.throws(() => summarizeP54Bindings([{ person: { value: 'bad' }, statement: { value: stmt(1) } }]));

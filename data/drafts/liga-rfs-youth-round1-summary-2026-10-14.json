@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "reviewedOn": "2026-10-14",
+  "targetAsOf": "2026-10-14",
+  "sourcePublishedOn": "2026-08-06",
+  "sourceUrl": "https://www.rfs.ru/news/224801",
+  "sourceKind": "official-rfu-post-round-youth-appearance-summary",
+  "competition": "RFU Cup 2026/27 RPL path round 1",
+  "eventDates": [
+    "2026-08-04",
+    "2026-08-05"
+  ],
+  "scope": "historical-youth-match-participation-aggregates-only",
+  "reportedUnder20Participants": 21,
+  "reportedClubsWithUnder20Appearances": 10,
+  "countsByFictionalClub": [
+    {
+      "clubId": "lp-nizon",
+      "under20Appeared": 3
+    },
+    {
+      "clubId": "lp-pacifica",
+      "under20Appeared": 2
+    },
+    {
+      "clubId": "lp-statika-m1",
+      "under20Appeared": 2
+    },
+    {
+      "clubId": "lp-nadir",
+      "under20Appeared": 1
+    },
+    {
+      "clubId": "lp-zelenober",
+      "under20Appeared": 2
+    },
+    {
+      "clubId": "lp-vagon",
+      "under20Appeared": 2
+    },
+    {
+      "clubId": "lp-orendorf",
+      "under20Appeared": 2
+    },
+    {
+      "clubId": "lp-spadov",
+      "under20Appeared": 3
+    },
+    {
+      "clubId": "lp-patriciy",
+      "under20Appeared": 3
+    },
+    {
+      "clubId": "lp-ogkm",
+      "under20Appeared": 1
+    }
+  ],
+  "targetedNadirCase": {
+    "fictionalPersonId": "lp-person-0019",
+    "prototypeName": "Даниил Кондаков",
+    "clubId": "lp-nadir",
+    "playedOn": "2026-08-05",
+    "sourceFixtureUrl": "https://www.rfs.ru/cup/tournament/match/57198",
+    "observation": "started-and-assist-attributed-in-official-sources",
+    "asOfRplRegistrationEstablished": false
+  },
+  "unmentionedClubsEvaluatedAsZero": false,
+  "asOfRplRegistrationsVerified": 0,
+  "licensedPlayableFactsImported": 0,
+  "sourceLineupTablesCopied": false,
+  "redistributionRightsEstablished": false
+}

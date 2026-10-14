@@ -45,7 +45,7 @@ function validate(record) {
   const sources = new Map();
   for (const source of record.wikipediaSources) {
     assert.deepEqual(Object.keys(source).sort(), [
-      'id','url','revisionId','lastEditedOn','scope','canProveCompleteRegisteredRoster',
+      'id','url','revisionId','revisionUrl','lastEditedOn','scope','canProveCompleteRegisteredRoster',
     ].sort());
     assert.match(source.id, /^[a-z0-9-]+$/);
     assert.equal(sources.has(source.id), false);
@@ -57,6 +57,13 @@ function validate(record) {
     assert.equal(parsed.search, '');
     assert.equal(parsed.hash, '');
     assert.ok(Number.isSafeInteger(source.revisionId) && source.revisionId > 0);
+    const frozen = new URL(source.revisionUrl);
+    assert.equal(frozen.protocol, 'https:');
+    assert.equal(frozen.hostname, parsed.hostname);
+    assert.equal(frozen.pathname, '/w/index.php');
+    assert.deepEqual([...frozen.searchParams.keys()], ['oldid']);
+    assert.equal(frozen.searchParams.get('oldid'), String(source.revisionId));
+    assert.equal(frozen.hash, '');
     assert.match(source.lastEditedOn, /^2026-10-1[12]$/);
     assert.ok(source.lastEditedOn <= record.targetAsOf);
     assert.equal(source.canProveCompleteRegisteredRoster, false);
@@ -133,6 +140,14 @@ test('Wikipedia source and Nadir affiliation change requires explicit review', (
   const wrongRevision = structuredClone(research);
   wrongRevision.wikipediaSources[0].revisionId++;
   assert.throws(() => validate(wrongRevision));
+  const driftingUrl = structuredClone(research);
+  driftingUrl.wikipediaSources[0].revisionUrl =
+    'https://ru.wikipedia.org/wiki/Чемпионат_России_по_футболу_2026/2027_(составы)';
+  assert.throws(() => validate(driftingUrl));
+  const mismatchedOldid = structuredClone(research);
+  mismatchedOldid.wikipediaSources[0].revisionUrl =
+    'https://ru.wikipedia.org/w/index.php?oldid=155579207';
+  assert.throws(() => validate(mismatchedOldid));
   const duplicatedSection = structuredClone(research);
   duplicatedSection.participatingClubs[1].wikipediaSquadsSection = duplicatedSection.participatingClubs[0].wikipediaSquadsSection;
   assert.throws(() => validate(duplicatedSection));

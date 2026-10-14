@@ -37,6 +37,30 @@ test('P54 temporal classes do not treat missing end date as verified membership'
   assert.equal(classifyP54Statement(row(1, '2025-01-01T12:00:00Z')), 'unknown');
 });
 
+test('invalid calendar days and inverted source intervals never become membership candidates', () => {
+  const invalidQualifiers = [
+    row(90, t('2026-02-29')),
+    row(91, t('2026-02-31')),
+    row(92, t('2026-13-01')),
+    row(93, t('0000-05-01')),
+    row(94, t('1900-02-29')),
+    row(95, t('2026-04-20'), t('2026-04-10')),
+    row(96, t('2026-06-01'), t('2026-02-30')),
+  ];
+  for (const candidate of invalidQualifiers) {
+    assert.equal(classifyP54Statement(candidate), 'unknown');
+  }
+  assert.equal(classifyP54Statement(row(97, t('2000-02-29'))), 'openEndedCandidate');
+  assert.equal(classifyP54Statement(row(98, t('2024-02-29'), t('2027-04-01'))), 'boundedCandidate');
+  for (const invalid of ['2026-02-29', '2026-13-01', '1900-02-29', '2026-04-31', '0000-01-01']) {
+    assert.throws(() => classifyP54Statement(row(97), invalid), /Invalid reference date/);
+  }
+  const summary = summarizeP54Bindings(invalidQualifiers);
+  assert.equal(summary.statementClasses.unknown, invalidQualifiers.length);
+  assert.equal(summary.statementClasses.openEndedCandidate, 0);
+  assert.equal(summary.registrationVerified, false);
+});
+
 test('same person with several historical spells contributes once to person counts', () => {
   const bindings = [
     row(12, t('2021-01-01'), t('2022-12-31'), 1),

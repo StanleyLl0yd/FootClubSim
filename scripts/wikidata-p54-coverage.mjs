@@ -24,17 +24,29 @@ SELECT ?person ?statement ?start ?end WHERE {
 LIMIT ${ROW_LIMIT}`;
 }
 
+/** A date-looking qualifier is only usable if its calendar day exists. */
+function isValidCalendarDay(value) {
+  if (typeof value !== 'string' || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  if (year < 1 || month < 1 || month > 12 || day < 1) return false;
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= daysInMonth[month - 1];
+}
+
 export function classifyP54Statement(row, asOf = AS_OF) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(asOf)) throw new Error('Invalid reference date');
+  if (!isValidCalendarDay(asOf)) throw new Error('Invalid reference date');
   const read = key => {
-    const value = row[key]?.value;
+    const value = row?.[key]?.value;
     if (value === undefined) return null;
-    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T00:00:00Z$/.test(value)) return 'uncertain';
-    return value.slice(0, 10);
+    if (typeof value !== 'string' || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}T00:00:00Z$/.test(value)) return 'uncertain';
+    const date = value.slice(0, 10);
+    return isValidCalendarDay(date) ? date : 'uncertain';
   };
   const start = read('start'), end = read('end');
-  if (start === 'uncertain' || end === 'uncertain') return 'unknown';
-  if (start && start > asOf || end && end < asOf) return 'outside';
+  if (start === 'uncertain' || end === 'uncertain' ||
+      (start && end && start > end)) return 'unknown';
+  if ((start && start > asOf) || (end && end < asOf)) return 'outside';
   if (start && end) return 'boundedCandidate';
   if (start) return 'openEndedCandidate';
   return 'unknown';

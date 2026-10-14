@@ -28,7 +28,7 @@ dated acceptance update; the current open checkboxes remain open until then.
 | D03 | All clubs use one headless, event-ledger-based seeded simulator. No forced animated match viewing. A future tactical assistant can be delegated separately, without score shortcuts. | M1 event generator; M2 season/UX |
 | D04 | Keep original, synthetic **33 player attributes**, integers 1-100 for the first version. Separate potential, form, condition and manager skills; version future changes rather than silently modifying saves. | M1 weights; M3 development |
 | D05 | First layer: formation, XI/bench, mentality, pressing, compactness, defensive line, passing risk and tempo. Additional role/individual tactics remain extendable. No guaranteed wins from tactical controls. | M1 effects; M2 working controls |
-| D06 | First season: a 16-club, 30-round, 240-fixture home/away competition. **Source-rights option remains undecided**; not every fictional test league is authentic RPL. Use a reviewed, separately versioned competition rules pack and separate genuine RPL nuances from intentional synthetic simplifications. | M2 season |
+| D06 | First season: a 16-club, 30-round, 240-fixture home/away competition. **Source-rights option (A/B/C) remains undecided**; not every fictional test league is authentic RPL. Use a reviewed, separately versioned competition rules pack and separate genuine RPL nuances from intentional synthetic simplifications. | M2 season |
 | D07 | Separate operating cash, commitments, salary and transfer budgets. Use bounded integer amounts in the declared currency and an auditable transaction ledger; no floating-point RUB finances. | M3 economy |
 | D08 | Offer, negotiation, contract, medical/eligibility check and competition registration are different steps with atomic outcomes. Work can be personally managed or delegated per area, not globally. | M3 contracts/transfers |
 | D09 | Each career pins data, generator, manager-profile, rules, engine and save versions. Invalid import cannot overwrite healthy saves; future revision changes are atomic and test migration/recovery. | M2+ persistence |
@@ -52,21 +52,32 @@ rights-cleared real pack. Fictional data avoids unauthorized roster/artwork
 distribution but does **not** remove the need to verify the rules we
 claim to implement.
 
-**Option B (real RPL as the first playable league):**
+**Option B (hybrid, requires separate approval):** real club
+**names as independently sourced facts**, but entirely fictional players,
+staff, careers, fixtures and logos (or none). This can retain geographic
+identity without bundling a copied real roster. A neutral name reference,
+club trademarks and implied official league affiliation raise **different**
+legal issues; verify the allowed product presentation and naming rights
+before bundling or claiming endorsement. Never market a synthetic roster
+as authentic 2026/27 RPL data.
+
+**Option C (authentic real RPL as the first playable league):**
 real club identities, squads, registrations, dates and branding require
-a **field-level, use-case-specific rights assessment**. Certain plain
+a **field-level, use-case-specific rights assessment**. Plain
 football facts, licensed structured data and trademarks have distinct
 legal implications and must not be conflated. Do not presume every real
 club name is automatically prohibited; equally, factual public access
 does not license an entire proprietary roster database, portraits or
 badges in an offline client pack. Collect only by permitted methods.
 If real records cannot be verified, the feature stays blocked or reverts
-to a clearly fictional scope with owner approval. Accurate live RPL
-eligibility/discipline and amendments additionally demand legal and
-sporting-rules review.
+to a clearly labeled fictional scope with owner approval. Accurate live
+RPL eligibility/discipline and amendments additionally demand legal
+and sporting-rules review.
 
-**Decision required:** choose A for initial playable M2, or B with a
-real-data licensing/source dependency and corresponding schedule risk.
+**Decision required:** choose A (all fictional), B (real team names,
+synthetic rosters and separate identity/mark approval) or C (authentic
+rights-cleared league); record its explicit source, rights and milestone
+acceptance gates.
 No bundled third-party assets are present in the current M0 prototype.
 
 ## Confirmed source-specific rule contracts (not a full review)
@@ -138,7 +149,7 @@ unimplemented gameplay persistence can actually be observed.
 ## Exit process remaining
 
 1. Record the owner's **specific response** for D03-D12, D13 detail,
-   data option A/B and M0-vs-M2 save-testing gates. Update ADRs and
+   data option A/B/C and M0-vs-M2 save-testing gates. Update ADRs and
    implementation issues after approval, leaving undecided points open.
 2. Finish source/rights policy decision. Source **identification** and
    release rights are different; preserve the factual status of #15.

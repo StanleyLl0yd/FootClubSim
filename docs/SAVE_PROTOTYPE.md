@@ -11,6 +11,7 @@ This is a **headless initial-career format**, not a playable career. The format 
 - SHA-256 via Web Crypto detects accidental corruption. It **does not establish authenticity**, prevent intentional changes by a person who can recompute the checksum, encrypt saves or confer copyright permissions.
 - Export requires secure-context Web Crypto. Import returns `CRYPTO_UNAVAILABLE` when the runtime lacks it.
 - The generated 16-club synthetic pack uses `packVersion=1-seed-N`, where N is the deterministic generator seed. An M0 browser shell tied to one seed rejects importing/restoring careers from a different seed or older unversioned synthetic pack. It does not delete or silently overwrite those saved records. The core importer itself can still inspect any independently valid M0 synthetic save.
+- The **M0 React shell** has a single fixed restore slot, `m0-ui-initial-career`. It rejects a checksum-valid imported snapshot with another career ID instead of offering Save on a record the UI could not restore after reload. This is a **UI-only** limitation: the core importer and add-only IndexedDB adapter still support independently valid initial-career IDs; multi-career selection is future scope.
 - Unknown `saveSchemaVersion` is rejected rather than silently migrated. `saveSchemaVersion=1` only represents a newly created **initial** career, with `revision=0`. Versioned migrations and complete evolving career state belong to subsequent milestones.
 
 ## Required next steps

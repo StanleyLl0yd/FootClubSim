@@ -49,3 +49,7 @@ All 16 2026/27 RPL participants also have individually matched [RFU Cup team ind
 ## First dated match-participation evidence (2026-10-14)
 
 [Two played 2026/27 match records](DATED_MATCH_APPEARANCE_CROSSCHECK.md) independently confirm narrow appearance observations on 2 September (RFU Cup Zenit - Dinamo Makhachkala) and 10 October (RPL Krasnodar - Zenit). Structured aggregates and two targeted draft-ID spot checks are in [`data/drafts/liga-dated-match-observations-2026-10-14.json`](../data/drafts/liga-dated-match-observations-2026-10-14.json). This **does not** establish three verified RPL registration denominators: match appearances, unused bench places and current-squad registration are different states. Rights review and all 16 as-of roster gates remain blocked.
+
+## Dated federation fixture source coverage (2026-10-14)
+
+In addition to the mutable [16 RFU Cup team index pages](RFS_CUP_TEAM_INDEX_FEASIBILITY.md), [eight completed 4–5 August 2026 official federation **fixture pages**](RFS_CUP_ROUND1_SOURCE_COVERAGE.md) provide **one concrete historical dated match pointer for every one of the 16** fictional participant clubs. [Machine-readable link-only mapping](../data/drafts/liga-cup-round1-match-sources-2026-10-14.json) and tests keep these separate from the six-club more recent [dated participation research](DATED_MATCH_APPEARANCE_CROSSCHECK.md). The August fixtures precede later transfers; they prove neither active October registration nor redistributable player data. All 16 date-frozen as-of roster verifications remain **unresolved**.

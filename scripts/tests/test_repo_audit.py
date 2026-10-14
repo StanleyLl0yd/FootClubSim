@@ -98,6 +98,23 @@ class RepositoryAuditTests(unittest.TestCase):
             self.assertFalse(is_safe_asset_path(value))
         self.assertTrue(is_safe_asset_path("assets/original.png"))
 
+    def test_sensitive_filenames_are_flagged_even_without_known_token_signatures(self):
+        paths = [
+            "config/.npmrc", "config/.pypirc", "config/.netrc",
+            "keys/id_rsa", "keys/id_ed25519", "keys/id_ecdsa",
+            "keys/dev.pem", "keys/device.key", "keys/client.p12",
+            "keys/client.pfx", "keys/client.jks", "keys/device.keystore",
+            "keys/passwords.kdbx",
+        ]
+        for name in paths:
+            self.put(name, "dummy placeholder, no actual credential")
+        stats, concerns = audit_files(self.root, paths, set())
+        self.assertEqual(stats["trackedFiles"], len(paths))
+        self.assertEqual(len([x for x in concerns if "possible private key" in x]), len(paths))
+        self.assertFalse(any("dummy placeholder" in x for x in concerns))
+        self.put("keys/id_rsa.pub", "PUBLIC TEST KEY")
+        self.assertEqual(audit_files(self.root, ["keys/id_rsa.pub"], set())[1], [])
+
     def test_environment_file_and_binary_text_mismatch(self):
         self.put(".env", "NO_REAL_SECRET=true\n")
         self.put("README.md", b"\xff")

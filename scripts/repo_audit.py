@@ -20,6 +20,12 @@ ASSET_SUFFIXES = {
 SOURCE_SUFFIXES = {".ts", ".tsx", ".mjs", ".py", ".css"}
 TEXT_SUFFIXES = SOURCE_SUFFIXES | {".md", ".json", ".html", ".yml", ".yaml", ".txt"}
 GENERATED_DIRS = {"node_modules", "dist", "web-dist", "build", ".git", ".venv"}
+# Repository inventory must not silently allow credential containers or private keys.
+# Public test certificates require explicit review rather than automatic bundling.
+SENSITIVE_SUFFIXES = {".pem", ".key", ".p12", ".pfx", ".jks", ".keystore", ".kdbx"}
+SENSITIVE_BASENAMES = {
+    ".npmrc", ".pypirc", ".netrc", "id_rsa", "id_ed25519", "id_ecdsa",
+}
 TOKEN_PATTERNS = {
     "GitHub classic token": re.compile(r"\bgh[oprsu]_[A-Za-z0-9]{36}\b"),
     "GitHub fine-grained token": re.compile(r"\bgithub_pat_[A-Za-z0-9_]{60,}\b"),
@@ -64,6 +70,9 @@ def audit_files(root: Path, files: list[str], declared_assets: set[str]):
             concerns.append(f"{path}: generated/dependency tree tracked")
         if PurePosixPath(path).name == ".env" or PurePosixPath(path).name.startswith(".env."):
             concerns.append(f"{path}: environment file tracked")
+        name = PurePosixPath(path).name.lower()
+        if name in SENSITIVE_BASENAMES or PurePosixPath(name).suffix in SENSITIVE_SUFFIXES:
+            concerns.append(f"{path}: possible private key or credential container tracked")
         data = item.read_bytes()
         stats["trackedFiles"] += 1
         stats["trackedBytes"] += len(data)

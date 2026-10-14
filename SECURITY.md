@@ -14,6 +14,7 @@ Do not publish keys, private saves, sensitive personal data, exploit payloads or
 - No mandatory game backend; local simulation cannot accidentally require an OCI service.
 - Do not ship a scraper or unlicensed real-world player database.
 - Keep workflows least-privilege, pin externally sourced actions to full immutable SHAs, and avoid secrets in untrusted PR jobs.
+- Treat committed private-key/credential-looking files (for example `.pem`, `.key`, `.p12`, `.pfx`, `.npmrc`, `id_ed25519`) as review failures even if no known token signature is present; keep intentionally public test material separately reviewed.
 - Never weaken deterministic game-state validation or corrupt a save silently on parsing errors.
 
 More detailed threat modeling is required if accounts, remote sync, third-party credentials or cloud APIs are introduced.

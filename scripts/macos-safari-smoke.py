@@ -132,6 +132,19 @@ def main():
             wait_for_text(session, "Выберите вымышленный клуб")
             click(session, "Восстановить из браузера")
             wait_for_text(session, "Стартовая карьера восстановлена и проверена по SHA-256")
+            run_script(session, """
+                Object.defineProperty(window, 'indexedDB', {configurable: true, value: {
+                    open() {
+                        const request = { error: new DOMException('Full', 'QuotaExceededError') };
+                        queueMicrotask(() => request.onerror?.());
+                        return request;
+                    }
+                }});
+            """)
+            click(session, "Сохранить в браузере")
+            wait_for_text(session, "Недостаточно места в хранилище браузера")
+            if not run_script(session, "return Boolean(document.querySelector('.career-info'))"):
+                raise AssertionError("Safari lost active career after simulated quota error")
             run_script(session, "Object.defineProperty(window, 'indexedDB', {configurable: true, value: undefined});")
             click(session, "Сохранить в браузере")
             wait_for_text(session, "Сохранение отклонено: UNAVAILABLE")

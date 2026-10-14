@@ -1,9 +1,11 @@
 # ADR-0004: Liga Prikolov with genuine RPL sporting regulations and fictional reverse-name clubs
 
 **Status: Core product direction ACCEPTED by owner on 2026-10-14.**
-**The sixteen exact club names below are creative candidates, NOT approved
-names or a ready-to-ship catalog.** Neither official RPL regulatory completeness
-nor external branding/source rights are declared satisfied.
+**Five exact club names were selected by the owner on 2026-10-14**:
+«Зеленобер», «Статика» (for both Dynamo teams), «Изумруд» and «Низон».
+The other eleven source-team aliases are **candidates**, not an approved
+ready-to-ship catalog. Neither official RPL regulatory completeness nor
+external branding/source rights are declared satisfied.
 
 ## Owner-approved direction
 
@@ -42,7 +44,7 @@ nor external branding/source rights are declared satisfied.
    bypass actual RPL coaching accreditation or registration requirements
    where a specific playable rules-pack model requires them.
 
-## 2026/27 source-team mapping: candidate club names only
+## 2026/27 source-team mapping: owner-approved and candidate aliases
 
 The current participant list comes from the club-published [2026/27 RPL
 participant list](https://www.fc-akhmat.ru/news/press/vse-uchastniki-rpl-v-sezone-202627/),
@@ -50,37 +52,54 @@ cross-checked against the RFU [2026/27 RPL Cup fixture announcement](https://www
 [PDF documentId 2164](https://www.rfs.ru/subject/1/documents/preview?documentId=2164).
 The real names below are **source references for the parody**, not
 licensed game data, and are not actual in-game club records today.
+**Approval refers to exact names, not approval of new data packs or game behavior.**
 
-| Real participating club | Proposed fictional display name | Transformation class | Rationale |
+| Real participating club | Fictional club name | Status | Transformation rationale |
 | --- | --- | --- | --- |
-| Зенит | Надир | Direct antonym | Upper celestial point vs lower |
-| Краснодар | Зеленозабор | Compound wordplay | Red -> green, give -> take; `забор` also humorously suggests a fence |
-| Локомотив | Вагон | Role reversal | Pulling engine vs hauled carriage |
-| Спартак (Москва) | Патриций | Historical inversion | Gladiator/slave leader vs Roman aristocrat |
-| ЦСКА | ОГКМ | Acronym inversion | Окраинный гражданский клуб мира vs Центральный спортивный клуб армии; playful, not a literal 1:1 acronym |
-| Балтика | Пацифика | Geographic contrast | Baltic inland/European sea vs vast distant Pacific |
-| Динамо (Москва) | Статика-Москва | Direct antonym | Dynamics vs statics, retain geographical distinction |
-| Рубин | Уголь | Value/color contrast | Valuable red stone vs ordinary black carbon |
-| Ахмат | Упрёк | Name-meaning wordplay | Praise-worthy name vs reproach; **not** a literal antonym of a person's name |
-| Ростов | Спадов | Stem antonym | Рост vs спад, retaining a place-name-like form |
-| Крылья Советов | Корни Запретов | Dual inversion | Wings vs roots; advice vs prohibitions |
-| Оренбург | Оренсело | Compound suffix contrast | `бург` town/fortress vs village; `Орен` has no dictionary opposite |
-| Акрон | Подножье | Loose semantic contrast | Evokes high point/peak vs foot of a mountain; not a verified etymology of the commercial club brand |
-| Динамо (Махачкала) | Статика-Махачкала | Direct antonym | Dynamics vs statics, geographic distinction |
-| Родина | Чужбина | Direct antonym | Homeland vs foreign land |
-| Факел | Огнетушитель | Functional reversal | Fire-bearing torch vs fire-extinguishing device |
+| Зенит | Надир | Candidate | Direct antonym: upper celestial point vs lower |
+| Краснодар | **Зеленобер** | **Approved 2026-10-14** | Красный -> зелёный; дарить -> брать, «бер» (игровое усечение от «берёт») |
+| Локомотив | Вагон | Candidate | Pulling engine vs hauled carriage |
+| Спартак (Москва) | Патриций | Candidate | Historical contrast: gladiator/slave leader vs Roman aristocrat |
+| ЦСКА | ОГКМ | Candidate | Окраинный гражданский клуб мира vs Центральный спортивный клуб армии; playful acronym |
+| Балтика | Пацифика | Candidate | Baltic sea vs vast distant Pacific; geographic rather than dictionary antonym |
+| Динамо (Москва) | **Статика** | **Approved 2026-10-14** | Динамо -> Статика; **Москва is not part of the club's approved display name** |
+| Рубин | **Изумруд** | **Approved 2026-10-14** | Red gemstone -> green gemstone; color opposition without losing precious-stone theme |
+| Ахмат | Упрёк | Candidate | Praise-worthy name vs reproach; not a dictionary antonym of a name |
+| Ростов | Спадов | Candidate | Рост vs спад, retaining place-name-like form |
+| Крылья Советов | Корни Запретов | Candidate | Wings vs roots; advice vs prohibitions |
+| Оренбург | **Орендорф** / **Оренвайлер** | **Pending owner choice** | German Burg (fortified castle/stronghold) vs Dorf (village) or Weiler (hamlet). Not strict dictionary antonyms; preserve recognizable toponym |
+| Акрон | **Низон** | **Approved 2026-10-14** | A crafted name suggesting низ / нижняя точка in contrast with the upper/акро association; this is wordplay, not proven source etymology |
+| Динамо (Махачкала) | **Статика** | **Approved 2026-10-14** | Динамо -> Статика; **Махачкала is not part of the club's approved display name** |
+| Родина | Чужбина | Candidate | Homeland vs foreign land |
+| Факел | Огнетушитель | Candidate | Fire-bearing torch vs fire-extinguishing device |
 
-**Alternatives still under consideration:** «Зеленобер»,
-«Тихоокеаника», «Изумруд», «Низон», «Орендеревня»,
-«Гражданские». Naming polish is allowed, but no replacement
-is recorded as accepted until owner review.
+**Other alternative proposals:** «Тихоокеаника», «Гражданские» and
+«Орендеревня»; for Orenburg specifically, propose «Орендорф» (Dorf),
+«Оренвайлер» (Weiler) or «Оренфельд» (Feld; looser contrast).
+**No Orenburg option has yet been selected.** The five confirmed aliases
+above must not be replaced with prior options in subsequent revisions.
+
+**Two different clubs intentionally share the exact public-facing
+`displayName = «Статика»`.** They must carry **different permanent
+internal `clubId` values** and a separately modeled home-city/
+locality/region qualifier in tables, search, fixtures, match reports,
+notifications and save roundtrips. Never add «-Москва» or
+«-Махачкала» to either approved **club** name merely to satisfy a
+unique-display-name assumption. The actual locality names may also be
+parodied in a separate explicitly reviewed mapping; none has yet been
+approved. One conceptual suggestion is to invert the *proposed* moist/
+marshy meaning of Москва into a dry/waterless place name, but the
+etymology of Москва is disputed and should not be treated as a fact.
+For Махачкала, `кала/qala` is conventionally interpreted as a
+fortress/town component; a speculative locality name «Махачаул» could
+contrast that with a rural settlement. Neither geographical suggestion
+is an approved name.
 
 Do not implement a real-name-to-game-ID relationship in the initial
 save schema without explicit versioning, a reviewed rights policy and
 separate catalog validation. Avoid source name or external team ID in
 the public-facing UI unless there is a clear design reason and a rights
-review. Club identities must be independently distinguishable,
-including the two «Статика» proposals.
+review. The game must not use `displayName` as an identity key.
 
 ## Rules architecture and no invented shortcuts
 
@@ -112,10 +131,14 @@ including the two «Статика» proposals.
 
 **Accepted now:** the league name «Лига приколов», the
 real-regulations-only rule-source policy, semantic-reversal approach
-to fictional club names, and 2026/27 participants as source inspiration.
+to fictional club names, 2026/27 participants as source inspiration,
+and five exact club aliases: «Зеленобер», «Статика» for each of the two
+separate Dynamo-inspired clubs, «Изумруд» and «Низон».
 
-**NOT accepted/verified:** the precise sixteen fictional names,
-their club designs and city names, rights/trademark clearance, full
+**NOT accepted/verified:** the remaining eleven fictional source-team
+aliases, all fictional city names (including any separate locality names
+for the two «Статика» clubs), their club designs, rights/trademark
+clearance, full
 article-by-article review of all effective RPL/RFU/IFAB source editions,
 modelling and tests of all relevant legal sporting edge cases, staff
 qualifications, true-official branding claims, M1 implementation

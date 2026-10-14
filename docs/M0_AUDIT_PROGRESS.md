@@ -124,6 +124,32 @@ first and second source-by-source audit passes or the complete M0 acceptance
 criteria have been satisfied. Actual Safari/Chrome/Edge storage **quota,
 eviction and private browsing** scenarios remain untested.
 
+## October 14 repository review snapshot (still not milestone exit)
+
+Audit input: Git `main` after [#72](https://github.com/StanleyLl0yd/FootClubSim/pull/72), plus the documentation/QA-only [#73](https://github.com/StanleyLl0yd/FootClubSim/pull/73). Tracked-file inventory and safety checks were executed in [Documentation verification run 38512503830](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38512503830) for the #73 head, not extrapolated from the working directory. The repository uses `python3 scripts/repo_audit.py` to reproduce the measurement.
+
+| Measured quantity | #73 PR head | Counting method |
+| --- | ---: | --- |
+| Tracked files | 76 | Git index (`git ls-files -z`) |
+| Tracked file bytes | 452,894 | Sum of Git-indexed working tree file sizes |
+| Source files | 41 | `.ts`, `.tsx`, `.mjs`, `.py`, `.css` |
+| Source lines | 3,492 | `bytes.splitlines()` for those same source file extensions |
+| Test files | 16 | `tests/` or `scripts/tests/` prefixes |
+| Markdown documentation files | 23 | `.md` extensions |
+| Binary/artwork/data file paths | 0 | The audit script's reviewed asset suffixes |
+
+The [Core run 38512503839](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38512503839) passed **68/68 Node tests**, with TypeScript checks, ESLint, source-format gate and Vite production build. The same run reported browser JS **237.73 kB**, gzip **74.77 kB** and CSS **2.89 kB**. These are CI display measurements, not a reproducible runtime performance benchmark. [#72 browser run 38512235297](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38512235297) passed actual Safari, Windows Chrome/Edge and Linux Chromium. #73 changes the *standalone* manual QA HTML; automated production-app browser smoke does **not** establish that new standalone HTML exercised the cross-pack test.
+
+### Preliminary source-by-source review categories
+
+The reviewed inventory encompasses domain logic (`src/core/**`), React shell and stylesheet (`src/app/**`), IndexedDB adapter, standalone QA HTML, JS/Python test and tooling scripts, npm lockfile and configs, `.github/workflows/**`, repository governance files and Markdown design/regulation/rights documents. File listing is reproducible via `git ls-files`; this paragraph is not a proof that every behavioral edge case has been tested.
+
+**Implemented reliability corrections:** [#71](https://github.com/StanleyLl0yd/FootClubSim/pull/71) aligned direct catalog validation with the JSON importer's boolean-foreigner and 256-character name requirements; malformed domain objects can no longer bypass this check. [#72](https://github.com/StanleyLl0yd/FootClubSim/pull/72) required cancellation acknowledgements to refer to the original worker job revision. [#73](https://github.com/StanleyLl0yd/FootClubSim/pull/73) rejected imported/restored careers from incompatible synthetic packs in the standalone manual QA page without replacing an active career and corrected obsolete Chrome/storage documentation.
+
+**Additional reviewed areas preserved intentionally:** synthetic PRNG and schedule generator, initial save envelope and checksums (integrity detection, not authentication), add-only IndexedDB, React single-career M0 UI, test scripts, dependencies in the pinned lockfile, official-rule *source notes*, rights restrictions and reserved-code license. No actual match engine, worker executor, licensing permission or employee AI is claimed. The first playable career, historical-save migrations, actual multi-season IndexedDB revisions, per-area delegation UI and authentic sanctioned RPL rules all remain later milestones.
+
+**Limitations that still block final exit:** architecture/owner acceptance beyond D01-D02; full official regulation and amendment review; explicit rights on real club/player data and imagery; private-mode/quota/eviction browser checks; definitive remaining source-by-source simplification and mandatory full second pass **after** all M0 functional/decision changes; final-main complete security/CI pass. This work is an evidence-backed **interim review**, not a completed first or second mandatory exit pass.
+
 ## Gaps and blockers
 
 1. **Owner decisions:** the concrete [M0 product proposal](M0_PRODUCT_DECISIONS.md) from [#54](https://github.com/StanleyLl0yd/FootClubSim/pull/54) documents manager/coach/director responsibilities, tactics, economy and season scope, but each decision remains **unapproved** until the owner explicitly accepts/revises it.

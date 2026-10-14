@@ -52,14 +52,13 @@ export function classifyP54Statement(row, asOf = AS_OF) {
   return 'unknown';
 }
 
-export function summarizeP54Bindings(bindings, asOf = AS_OF) {
+/** One conservative classification for each distinct P54 statement, shared by all diagnostics. */
+export function classifyP54Bindings(bindings, asOf = AS_OF) {
   if (!isValidCalendarDay(asOf)) throw new Error('Invalid reference date');
   if (!Array.isArray(bindings) || bindings.length >= ROW_LIMIT) {
     throw new Error('WDQS query result truncated or malformed; do not report complete counts');
   }
-  const byPerson = new Map();
   const statements = new Map();
-  const byType = { boundedCandidate: 0, openEndedCandidate: 0, unknown: 0, outside: 0 };
   for (const row of bindings) {
     const person = row?.person?.value;
     const statement = row?.statement?.value;
@@ -68,17 +67,25 @@ export function summarizeP54Bindings(bindings, asOf = AS_OF) {
     }
     const key = person + '/' + statement;
     const qualifiers = JSON.stringify([row?.start?.value ?? null, row?.end?.value ?? null]);
-    const previouslySeen = statements.get(key);
-    if (previouslySeen) {
-      if (previouslySeen.qualifiers !== qualifiers) previouslySeen.ambiguous = true;
+    const previous = statements.get(key);
+    if (previous) {
+      if (previous.qualifiers !== qualifiers) previous.ambiguous = true;
       continue;
     }
     statements.set(key, { person, row, qualifiers, ambiguous: false });
   }
-  // Multiple P580/P582 values can create several WDQS rows for one statement.
-  // They are not separate relationships; flag the ambiguous statement as unknown.
-  for (const { person, row, ambiguous } of statements.values()) {
-    const type = ambiguous ? 'unknown' : classifyP54Statement(row, asOf);
+  // Several Wikidata qualifiers for the same statement may generate multiple rows.
+  // Never count one unqualified fragment of an ambiguous statement as membership.
+  return [...statements.values()].map(({ person, row, ambiguous }) => ({
+    person, type: ambiguous ? 'unknown' : classifyP54Statement(row, asOf),
+  }));
+}
+
+export function summarizeP54Bindings(bindings, asOf = AS_OF) {
+  const byPerson = new Map();
+  const classified = classifyP54Bindings(bindings, asOf);
+  const byType = { boundedCandidate: 0, openEndedCandidate: 0, unknown: 0, outside: 0 };
+  for (const { person, type } of classified) {
     byType[type]++;
     if (!byPerson.has(person)) byPerson.set(person, new Set());
     byPerson.get(person).add(type);
@@ -95,7 +102,7 @@ export function summarizeP54Bindings(bindings, asOf = AS_OF) {
   }
   return {
     candidatePersonsAllSeasons: byPerson.size,
-    statementCount: statements.size,
+    statementCount: classified.length,
     statementClasses: byType,
     distinctPersonClasses: people,
     registrationVerified: false,

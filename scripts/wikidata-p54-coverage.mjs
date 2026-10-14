@@ -53,6 +53,7 @@ export function classifyP54Statement(row, asOf = AS_OF) {
 }
 
 export function summarizeP54Bindings(bindings, asOf = AS_OF) {
+  if (!isValidCalendarDay(asOf)) throw new Error('Invalid reference date');
   if (!Array.isArray(bindings) || bindings.length >= ROW_LIMIT) {
     throw new Error('WDQS query result truncated or malformed; do not report complete counts');
   }

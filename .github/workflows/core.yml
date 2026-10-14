@@ -32,3 +32,5 @@ jobs:
         run: |
           test -s dist/core/save.js
           test -s web-dist/index.html
+      - name: Check generated M0 shipping-bundle boundary
+        run: python3 scripts/check_m0_bundle.py

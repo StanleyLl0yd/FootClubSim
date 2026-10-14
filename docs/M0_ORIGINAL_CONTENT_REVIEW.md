@@ -13,6 +13,10 @@
 
 Wikipedia article prose, third-party photographs, official crests, external compiled rosters, commercial player ratings and any release-specific material require a separate compatible rights evaluation. Wikipedia references do **not** prove complete registration as of 2026-10-14. Rights and effective competition-rule checks for the first playable 16-club personnel pack remain [M2 work #91](https://github.com/StanleyLl0yd/FootClubSim/issues/91), plus the executable-rules subset of [#15](https://github.com/StanleyLl0yd/FootClubSim/issues/15). Dependency notice review and release branding/legal assessment are also outstanding.
 
+## Early approved-name collision review
+
+The [separate 16-name preliminary screening](M0_PARODY_BRAND_SCREENING.md) documents a specific **name overlap** for the owner's approved «Изумруд» identity: both a historical «Изумруд» football-club designation and a 2026 youth-team «ФК Изумруд» appear in public sources. The 15 other names remain **unassessed for formal trademark/legal clearance**; narrow search results are not evidence of uniqueness. This is an **elevated risk-review lead**, not a finding of infringement or a proposal to rename an approved club. Full territory/class searches, badge/trade-dress comparisons and owner release sign-off remain OPEN. No gameplay or assets changed.
+
 ## Locked NPM dependency metadata inventory (2026-10-14)
 
 Independently parsed [`package-lock.json` at `e4141c0`](https://github.com/StanleyLl0yd/FootClubSim/blob/e4141c02f24ececb0e4f7cec2601f70b5fa50971/package-lock.json) with the installed [`package.json`](../package.json). There are **2 direct runtime dependencies** (`react`, `react-dom`), **7 direct development dependencies**, and **192** non-root package entries in the lockfile. All 192 currently contain a `license` metadata field. This is package-manager metadata, **not** independent verification of copyright ownership, license validity, individual source-file exceptions or bundled notices.

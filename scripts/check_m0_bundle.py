@@ -10,7 +10,7 @@ import re
 import sys
 from pathlib import Path
 
-ASSET_PATH = re.compile(r"^assets/[A-Za-z0-9_-]+\\.(?:js|css)$")
+ASSET_PATH = re.compile(r"^assets/[A-Za-z0-9_-]+\.(?:js|css)$")
 RESEARCH_MARKERS = (
     "data/drafts/", "data/packs/", "wikipedia.org", "wikidata.org",
     "transfermarkt.", "reportedCoachLeads", "sourcePlayerRowsImported",
@@ -51,7 +51,7 @@ def inspect_bundle(root: Path) -> tuple[dict[str, int], list[str]]:
         except UnicodeError:
             concerns.append(f"{rel}: production entry is not UTF-8 text")
             continue
-        if "\\x00" in text:
+        if "\x00" in text:
             concerns.append(f"{rel}: NUL in production text")
         for marker in RESEARCH_MARKERS:
             if marker.casefold() in text.casefold():

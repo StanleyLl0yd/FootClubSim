@@ -179,6 +179,24 @@ async function run() {
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
 
+    // Simulate an IndexedDB open quota rejection in a real browser process.
+    // This validates UI/error recovery, not real disk-quota or eviction behavior.
+    await evaluate(`(() => {
+      Object.defineProperty(window, 'indexedDB', { configurable: true, value: {
+        open() {
+          const request = { error: new DOMException('Full', 'QuotaExceededError') };
+          queueMicrotask(() => request.onerror?.());
+          return request;
+        }
+      } });
+      return true;
+    })()`);
+    await click('Сохранить в браузере');
+    await waitText('Недостаточно места в хранилище браузера');
+    if (!await evaluate("Boolean(document.querySelector('.career-info'))")) {
+      throw new Error('Active career lost after simulated storage quota rejection');
+    }
+
     // A blocked/disabled storage API must not silently drop the open career.
     await evaluate("(() => { Object.defineProperty(window, 'indexedDB', { configurable: true, value: undefined }); return true; })()");
     await click('Сохранить в браузере');

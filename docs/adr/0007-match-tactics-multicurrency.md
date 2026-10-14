@@ -19,6 +19,8 @@
 
 **D13 detailed manager skill names/point budgets/biography UX, optional city presentation, legally verified 2026/27 official eligibility rules and remaining M0 browser/rights/audit gates were not included in this sign-off.**
 
+**Final FX source selection (2026-10-14):** The owner **explicitly selected the Bank of Russia instead of Google Finance**, documented in [ADR-0009](0009-rub-only-ledger-and-cbr-source-option.md). Historical Google-specific wording in this ADR is **superseded** and must not be used to build a Google integration. The official CBR daily XML source is required subject to release rights and browser/CORS validation.
+
 **Superseding owner finance detail (2026-10-14):** [ADR-0009](0009-rub-only-ledger-and-cbr-source-option.md) overrides this ADR's former **multi-currency ledger** terminology: canonical internal accounts use **RUB alone**, posted to nearest **10,000 ₽**, while USD/EUR are permitted for contract quotations and display. EUR ↔ USD now rounds to nearest **1,000** target units. The CBR is a researched *option*, **not** yet authorized in place of Google.
 
 ## D03/D05: in-match tactical commands and deterministic replays
@@ -45,9 +47,9 @@ A manager may open an interactive match, inspect current match state and **pause
 **Amended by owner on 2026-10-14 in [ADR-0008](0008-online-daily-fx-rounding.md):**
 
 - This browser game **may require internet connectivity**; mandatory offline play and stale-quote fallback are **not** approved product requirements. Protect saved careers from connectivity errors; never fabricate a quote on failure.
-- At the **first entry to the game for each real calendar day**, if access is lawful, obtain **one immutable daily Google quotation snapshot for RUB/USD/EUR**. Re-entering on the same calendar date or making further conversions reuses that saved snapshot **without re-querying Google**. On the next date append another snapshot, leaving previous quotations and transactions untouched.
+- At the **first entry to the game for each real calendar day**, obtain **one immutable daily Bank of Russia XML quotation snapshot for RUB/USD/EUR**, once accessible under the reviewed source terms. Re-entering on the same calendar date or making further conversions reuses that saved snapshot **without re-querying the Bank of Russia**. On the next date append another snapshot, leaving previous quotations and transactions untouched.
 - Converting from **USD/EUR to RUB** rounds the final target amount to the nearest **10,000 RUB**; from **RUB to USD/EUR** to the nearest **1,000 USD/EUR**. EUR/USD cross conversions use coherent base quotes; **[ADR-0009](0009-rub-only-ledger-and-cbr-source-option.md) now approves nearest 1,000 units of the USD/EUR target currency**. Use deterministic exact arithmetic; never silently erase a small positive payment by rounding it to zero.
-- Google Finance's [published disclaimer](https://www.google.com/intl/en/googlefinance/disclaimer/) restricts copying/downloading/storing/redistribution or commercial reuse without prior written permission. The owner has chosen Google's displayed quotations as the desired source, **not** granted permission for an undocumented API, scraping or caching. Finding an authorized supported automated interface remains an **M3 implementation blocker** [#131](https://github.com/StanleyLl0yd/FootClubSim/issues/131).
+- [ADR-0009](0009-rub-only-ledger-and-cbr-source-option.md) replaces the former Google-source proposal with **Bank of Russia official daily XML**; source attribution, actual commercial-use terms, CORS/browser access and proxy feasibility remain **M3 blockers** [#131](https://github.com/StanleyLl0yd/FootClubSim/issues/131). No Google fallback.
 - No exchange-rate data is imported into the **M0 synthetic catalog** and no finance integration is implemented during M0.
 
 ## Explicit milestone gates
@@ -58,4 +60,4 @@ A manager may open an interactive match, inspect current match state and **pause
 
 **M2:** playable season and match-management UI, conditional on genuine RPL/RFU/IFAB rules, original 16-club personnel data rights and exact M2 sign-off. Full ongoing finance/FX mechanics do **not** become obligatory in M2 just because D07 is now approved for M3.
 
-**M3:** [issue #131](https://github.com/StanleyLl0yd/FootClubSim/issues/131) tracks actual transaction ledger, three-currency cash/contracts, Google-source lawful FX integration, one daily entry-time immutable quotes/replay and coarse target-currency rounding and the corresponding tests. **Do not claim M3 finance is complete without a lawful Google integration or an explicit owner-approved revised source strategy.**
+**M3:** [issue #131](https://github.com/StanleyLl0yd/FootClubSim/issues/131) tracks actual transaction ledger, three-currency cash/contracts, Bank of Russia XML FX integration, one daily entry-time immutable quotes/replay and coarse target-currency rounding and the corresponding tests. **Do not claim M3 finance is complete without a verified lawful Bank of Russia integration.**

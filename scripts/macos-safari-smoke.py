@@ -109,6 +109,33 @@ def click(session: str, name: str):
         raise AssertionError(f"Safari button missing or disabled: {name}")
 
 
+def select_nondefault_club(session: str):
+    # Exercise restore of non-default state, not merely the initial selected club.
+    changed = run_script(session, """
+        const select = document.querySelector('#club-select');
+        if (!select || select.options[1]?.value !== 'fictional-2') return false;
+        const setter = Object.getOwnPropertyDescriptor(
+            HTMLSelectElement.prototype, 'value'
+        ).set;
+        setter.call(select, 'fictional-2');
+        select.dispatchEvent(new Event('change', {bubbles: true}));
+        return true;
+    """)
+    if changed is not True:
+        raise AssertionError("Safari could not select the non-default synthetic club")
+
+
+def assert_restored_club(session: str):
+    selected = run_script(session, """
+        const selected = document.querySelector('#club-select')?.value;
+        const text = document.querySelector('.career-info')?.innerText ?? '';
+        return selected === 'fictional-2' &&
+            text.includes('Fictional Club 2') && text.includes('Ревизия 0');
+    """)
+    if selected is not True:
+        raise AssertionError("Safari did not restore non-default club and initial revision")
+
+
 def main():
     with open("/tmp/footclubsim-m0-preview.log", "w", encoding="utf-8") as preview_log, \
          open("/tmp/footclubsim-m0-safari-driver.log", "w", encoding="utf-8") as driver_log:
@@ -165,14 +192,17 @@ def main():
                 if expected not in text:
                     raise AssertionError(f"Safari rendered UI without {expected!r}")
 
+            select_nondefault_club(session)
             click(session, "Создать стартовую карьеру")
             wait_for_text(session, "Стартовая карьера создана в памяти браузера")
+            assert_restored_club(session)
             click(session, "Сохранить в браузере")
             wait_for_text(session, "Начальная карьера записана в IndexedDB")
             wd(session, "refresh", {})
             wait_for_text(session, "Выберите вымышленный клуб")
             click(session, "Восстановить из браузера")
             wait_for_text(session, "Стартовая карьера восстановлена и проверена по SHA-256")
+            assert_restored_club(session)
             # Real Safari IndexedDB deletion followed by app file-input recovery.
             # The File object is injected by WebDriver, not chosen via OS dialog.
             backup = load_indexeddb_backup(session)
@@ -191,6 +221,7 @@ def main():
             wait_for_text(session, "Восстановление отклонено: NOT_FOUND")
             set_test_file(session, backup, "m0-recovery.json")
             wait_for_text(session, "Стартовая карьера проверена и загружена в память")
+            assert_restored_club(session)
             other = json.loads(backup)
             payload = json.loads(other["payload"])
             payload["careerId"] = "another-valid-initial-career"

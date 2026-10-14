@@ -4,6 +4,10 @@
 
 **Status: PARTIALLY RESOLVED on 2026-10-14.** The owner has approved **all 16 exact club aliases**, the two distinct «Статика М1»/«Статика М2» labels, original three-ring badge designs, and the principle of real season-specific football/staff prototypes with original parody identities under **genuine RPL/RFU/IFAB rules**. These later decisions are authoritative in [ADR-0005](adr/0005-liga-prikolov-brand-and-personnel.md) and supersede the historical five-name status in ADR-0004. Fictional locality presentation (if needed), D03-D05/D07-D11 proposals, manager numeric details, source/rights and sporting-regulation verification, and M0-to-M2 save-testing allocation remain open. This does not close #15 or authorize M1.
 
+## Owner-approved data/rules milestone split (2026-10-14)
+
+[ADR-0006](adr/0006-m0-m2-acceptance-boundary.md) is accepted. M0 must finish original-synthetic-pack and provenance architecture, source/revision and official rule-edition references, an honest M0 rights/risk review and interface approvals. **Do not hold the M0 exit hostage to verifying all 16 October RPL registrations, assigning the 15 remaining clubs playable parodic personnel or implementing every real-RPL rule:** these are M2 gates, kept OPEN in [#91](https://github.com/StanleyLl0yd/FootClubSim/issues/91) and the M2 subset of [#15](https://github.com/StanleyLl0yd/FootClubSim/issues/15). This does not grant third-party licenses, declare exact sporting compliance or waive any M0 required audit, browser check or remaining D03-D05/D07-D11 owner decision. The separate proposed browser-test allocation below is **not** approved by this personnel/rules decision.
+
 ## Principle: separate M0 architecture exit from gameplay release
 
 M0's purpose is to freeze **interfaces, constraints, sources, milestones and
@@ -153,7 +157,7 @@ unimplemented gameplay persistence can actually be observed.
 
 ## Exit process remaining
 
-1. Record the owner's remaining decisions on D03-D05/D07-D11, D13 numeric details, optional fictional locality display and M0-vs-M2 save-testing gates. The 16 club names, original badges and roster prototype direction are already approved in [ADR-0005](adr/0005-liga-prikolov-brand-and-personnel.md); do not reopen these choices or mark outstanding issue #15 resolved by inference.
+1. Record the owner's remaining M0-level decisions on D03-D05/D07-D11, optional fictional locality display and M0-vs-M2 browser/save-testing gates. D13 detailed manager numbers are M2 implementation design, but its M0 interface/skill-version contract still requires agreement. The 16 club names, original badges and roster prototype direction are already approved in [ADR-0005](adr/0005-liga-prikolov-brand-and-personnel.md); do not reopen these choices or mark outstanding issue #15 resolved by inference.
 2. Finish source/rights policy decision. Source **identification** and
    release rights are different; preserve the factual status of #15.
 3. Run the **first full source-by-source repo audit** after design

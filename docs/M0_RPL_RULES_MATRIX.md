@@ -40,6 +40,12 @@ RFU official index used for cross-checking linked disciplinary/transfer editions
 
 The official [RFU 24 June 2026 summary and subsequent primary IFAB Law 3 review](IFAB_2026_27_CHANGE_NOTES.md) identify specific new substitution timing, temporary-absence, VAR, penalty and restart semantics. **Only the Law 3/10-second protocol subset** has been cross-checked with 2026/27 full IFAB primary text; other aspects remain **non-executable source leads**. Future live-match intervention requires explicitly versioned M1 events. The international-friendly substitution exception must not silently become an RPL rule.
 
+## Primary-source conflict register: standings citations
+
+**Checked 2026-10-14:** primary [RFU RPL 2026/27 regulations, p. 47 / PDF page 47](https://www.rfs.ru/subject/1/documents/preview?documentId=2164), Article **18.3-18.7**, take precedence over [Wikipedia 2026/27 season revision 155571074](https://ru.wikipedia.org/w/index.php?oldid=155571074), which labels the standings excerpt **17.3/17.4** and omits the later tiebreak criteria, current-table previous-season fallback, disciplinary points and final-table extra-match distinction. The linked [rules notes](RPL_2026_27_RULES.md) record the complete checked Article 18 order. This is a known **secondary-source conflict**; do not replicate those Wikipedia article numbers or its incomplete sorting instructions in tests or code.
+
+Wikipedia remains **the owner's primary 2026/27 personnel-research source**, not the authority for official football rules or as-of competition eligibility. No M2 standings implementation, regulatory amendment sweep or owner rule-pack sign-off occurred here. Article 18.7 requires effective-date-aware standing revisions after rulings.
+
 ## Cross-source review to finish before runnable RPL rules
 
 - [ ] Verify the **full** June 25 RPL document plus publication amendments/circulars after that date (not only already cited clauses).

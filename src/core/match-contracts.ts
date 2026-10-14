@@ -69,6 +69,8 @@ export type MatchLedgerResult =
 
 const MAX_EVENTS = 4096;
 const MAX_SECONDS = 130 * 60;
+const SHOT_KEYS = ['id', 'sequence', 'elapsedSeconds', 'type', 'teamId', 'playerId', 'xgMilli', 'outcome'] as const;
+const FULL_TIME_KEYS = ['id', 'sequence', 'elapsedSeconds', 'type'] as const;
 const fail = (code: string, at: string): ValidationError => ({ code, at });
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -154,6 +156,13 @@ export function deriveMatchLedger(input: MatchLedgerInput): MatchLedgerResult {
   for (const [index, event] of events.entries()) {
     const at = 'events[' + index + ']';
     if (event === null || typeof event !== 'object' || Array.isArray(event)) {
+      errors.push(fail('INVALID_EVENT_SHAPE', at));
+      continue;
+    }
+    const fields = event.type === 'shot' ? SHOT_KEYS :
+      event.type === 'full-time' ? FULL_TIME_KEYS : null;
+    if (fields && (Object.keys(event).length !== fields.length ||
+        fields.some(key => !Object.hasOwn(event, key)))) {
       errors.push(fail('INVALID_EVENT_SHAPE', at));
       continue;
     }

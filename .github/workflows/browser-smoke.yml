@@ -141,7 +141,10 @@ jobs:
             if (-not $executable) { throw "$browserName executable unavailable on Windows runner" }
             node scripts/chromium-e2e.mjs "$executable"
             if ($LASTEXITCODE -ne 0) { throw "$browserName interactive smoke failed with code $LASTEXITCODE" }
-            Write-Host "React M0 shell rendered, saved and restored in Windows $browserName"
+            $privateFlag = if ($browserName -eq 'Chrome') { '--incognito' } else { '--inprivate' }
+            node scripts/chromium-e2e.mjs "$executable" 'http://127.0.0.1:4173/' "$privateFlag"
+            if ($LASTEXITCODE -ne 0) { throw "$browserName private-session smoke failed with code $LASTEXITCODE" }
+            Write-Host "React M0 shell rendered, saved and restored in Windows $browserName and private-mode smoke passed"
           } finally {
             Stop-Process -Id $preview.Id -Force -ErrorAction SilentlyContinue
           }

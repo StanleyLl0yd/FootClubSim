@@ -6,6 +6,7 @@ The runner must already have Safari remote automation enabled.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -190,6 +191,15 @@ def main():
             wait_for_text(session, "Восстановление отклонено: NOT_FOUND")
             set_test_file(session, backup, "m0-recovery.json")
             wait_for_text(session, "Стартовая карьера проверена и загружена в память")
+            other = json.loads(backup)
+            payload = json.loads(other["payload"])
+            payload["careerId"] = "another-valid-initial-career"
+            other["payload"] = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+            other["checksum"] = hashlib.sha256(other["payload"].encode("utf-8")).hexdigest()
+            set_test_file(session, json.dumps(other), "m0-foreign-career-id.json")
+            wait_for_text(session, "Импорт отклонён: идентификатор карьеры отличается")
+            if not run_script(session, "return Boolean(document.querySelector('.career-info'))"):
+                raise AssertionError("Safari lost active M0 career after foreign-ID import")
             invalid = backup.replace("fictional-1", "fictional-X", 1)
             if invalid == backup:
                 raise AssertionError("Safari invalid-file fixture unchanged")

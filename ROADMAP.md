@@ -5,7 +5,7 @@
 ## Product contract
 
 - Browser-first, offline-capable, Russian-language single-player football **club management** simulation.
-- Initially playable league: Russian Premier League (RPL). Other competitions may have a reduced non-playable representation to support transfers, promotion and relegation.
+- Initial playable competition should follow an RPL-scale model, with a **pending owner choice** between a wholly fictional 16-club initial league and a real RPL pack subject to independent data/branding rights. The existing target of an authentic RPL season is NOT silently replaced by a fictional one. See [M0 blocker decisions](docs/M0_BLOCKER_DECISIONS.md). Other competitions may have a reduced non-playable representation to support transfers, promotion and relegation.
 - The application computes matches automatically; **no 2D or 3D match visualization** is planned for the initial milestones.
 - Prioritize macOS Safari and Windows Chrome/Edge, then compatible desktop browsers. No dedicated Linux application.
 - All career calculations take place locally. OCI/backend is optional and never required for single-player gameplay.

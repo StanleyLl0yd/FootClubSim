@@ -10,17 +10,24 @@ const career = createInitialCareer(catalog, catalog.clubs[0].id, 12, 'test-caree
 function makeDatabaseStub() {
   const entries = new Map();
   let closeCount = 0;
+  let quotaOnAdd = false;
+  let quotaOnOpen = false;
   const db = {
     objectStoreNames: { contains: () => true },
     close() { closeCount++; },
     transaction(_store, mode) {
-      const tx = { oncomplete: null, onabort: null, onerror: null, objectStore() {
+      const tx = { error: null, oncomplete: null, onabort: null, onerror: null, objectStore() {
         return {
           add(value, key) {
             assert.equal(mode, 'readwrite');
             const request = { error: null, onerror: null };
             queueMicrotask(() => {
-              if (entries.has(key)) {
+              if (quotaOnAdd) {
+                request.error = { name: 'QuotaExceededError' };
+                tx.error = { name: 'QuotaExceededError' };
+                request.onerror?.();
+                tx.onabort?.();
+              } else if (entries.has(key)) {
                 request.error = { name: 'ConstraintError' };
                 request.onerror?.();
                 tx.onabort?.();
@@ -49,9 +56,16 @@ function makeDatabaseStub() {
   return {
     entries,
     get closeCount() { return closeCount; },
+    setQuotaOnAdd(value) { quotaOnAdd = value; },
+    setQuotaOnOpen(value) { quotaOnOpen = value; },
     indexedDB: { open() {
-      const request = { result: db, onupgradeneeded: null, onerror: null, onblocked: null, onsuccess: null };
-      queueMicrotask(() => request.onsuccess?.());
+      const request = { result: db, error: null, onupgradeneeded: null, onerror: null, onblocked: null, onsuccess: null };
+      queueMicrotask(() => {
+        if (quotaOnOpen) {
+          request.error = { name: 'QuotaExceededError' };
+          request.onerror?.();
+        } else request.onsuccess?.();
+      });
       return request;
     } },
   };
@@ -138,6 +152,58 @@ test('synchronous transaction, object-store and request failures are typed and c
       assert.equal(closed, 2);
       assert.equal(JSON.stringify(career), unchanged);
     }
+  } finally {
+    if (original === undefined) delete globalThis.indexedDB;
+    else globalThis.indexedDB = original;
+  }
+});
+
+test('quota failure never commits a partial record or destroys an earlier career', async () => {
+  const original = globalThis.indexedDB;
+  const stub = makeDatabaseStub();
+  globalThis.indexedDB = stub.indexedDB;
+  try {
+    await saveNewInitialCareer(career);
+    const previouslySaved = stub.entries.get(career.careerId);
+    const second = createInitialCareer(catalog, catalog.clubs[1].id, 15, 'quota-second');
+    stub.setQuotaOnAdd(true);
+    await assert.rejects(saveNewInitialCareer(second), { code: 'QUOTA_EXCEEDED' });
+    assert.equal(stub.entries.size, 1);
+    assert.equal(stub.entries.get(second.careerId), undefined);
+    assert.equal(stub.entries.get(career.careerId), previouslySaved);
+    assert.deepEqual(await loadInitialCareer(career.careerId), career);
+    stub.setQuotaOnOpen(true);
+    await assert.rejects(saveNewInitialCareer(second), { code: 'QUOTA_EXCEEDED' });
+    await assert.rejects(loadInitialCareer(career.careerId), { code: 'QUOTA_EXCEEDED' });
+    stub.setQuotaOnOpen(false);
+    assert.deepEqual(await loadInitialCareer(career.careerId), career);
+  } finally {
+    if (original === undefined) delete globalThis.indexedDB;
+    else globalThis.indexedDB = original;
+  }
+});
+
+test('quota abort caused by transaction error is reported even without request error', async () => {
+  const original = globalThis.indexedDB;
+  let closes = 0;
+  globalThis.indexedDB = { open() {
+    const db = { close() { closes++; }, transaction() {
+      const tx = { error: { name: 'QuotaExceededError' }, onabort: null, onerror: null,
+        objectStore() { return { add() {
+          const request = { onerror: null, error: null };
+          queueMicrotask(() => tx.onabort?.());
+          return request;
+        } }; },
+      };
+      return tx;
+    } };
+    const request = { result: db, onupgradeneeded: null, onerror: null, onblocked: null, onsuccess: null };
+    queueMicrotask(() => request.onsuccess?.());
+    return request;
+  } };
+  try {
+    await assert.rejects(saveNewInitialCareer(career), { code: 'QUOTA_EXCEEDED' });
+    assert.equal(closes, 1);
   } finally {
     if (original === undefined) delete globalThis.indexedDB;
     else globalThis.indexedDB = original;

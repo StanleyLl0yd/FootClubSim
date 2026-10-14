@@ -216,6 +216,20 @@ async function run() {
     }
     await waitText('Начальная карьера записана в IndexedDB');
 
+    // Verify an ACTUAL browser-downloaded JSON file, not merely a UI message
+    // or a synthetic file written by the test harness.
+    const downloadedPath = join(profile, 'footclubsim-initial-career.json');
+    await send('Browser.setDownloadBehavior', {
+      behavior: 'allow', downloadPath: profile, eventsEnabled: true,
+    });
+    await click('Экспортировать JSON');
+    await waitText('Файл JSON экспортирован');
+    const downloadedJson = await until(async () => {
+      const content = await readFile(downloadedPath, 'utf8');
+      return content.includes('footclubsim-initial-career') ? content : null;
+    }, 'native Chrome/Edge exported JSON download');
+    console.log('PASS: native browser downloaded real M0 career JSON to disposable profile');
+
     await click('Сохранить в браузере');
     await waitText('Сохранение отклонено: DUPLICATE');
 
@@ -242,8 +256,10 @@ async function run() {
     if (typeof savedJson !== 'string' || !savedJson.includes('footclubsim-initial-career')) {
       throw new Error('Could not read valid initial-career backup from isolated browser');
     }
-    const backupPath = join(profile, 'm0-recovery.json');
-    await writeFile(backupPath, savedJson, 'utf8');
+    if (savedJson !== downloadedJson) {
+      throw new Error('Actual browser-downloaded JSON does not match the stored career');
+    }
+    const backupPath = downloadedPath;
     await send('Storage.clearDataForOrigin', {
       origin: new URL(targetUrl).origin, storageTypes: 'indexeddb',
     });

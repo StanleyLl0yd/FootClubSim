@@ -54,6 +54,25 @@ test('goals, on-target shots and fixed-point xG follow ordered events only', () 
   assert.deepEqual(deriveMatchLedger({ ...base, events: [...shots, { ...end, sequence: 4 }] }), result);
 });
 
+test('all four shot outcomes preserve report arithmetic and invalid outcomes fail', () => {
+  const outcomes = ['goal', 'saved', 'off-target', 'blocked'];
+  const shots = outcomes.map((outcome, i) => ({
+    id: 'outcome-' + i, sequence: i + 1, elapsedSeconds: i * 100,
+    type: 'shot', teamId: fixture.homeClubId, playerId: homeLineup.starters[10],
+    xgMilli: 100 + i * 10, outcome,
+  }));
+  const result = deriveMatchLedger({ ...base, events: [...shots, { ...end, sequence: 5 }] });
+  assert.equal(result.ok, true);
+  if (result.ok) assert.deepEqual(result.report.home, {
+    goals: 1, shots: 4, shotsOnTarget: 2, xgMilli: 460,
+  });
+  const invalid = deriveMatchLedger({ ...base, events: [
+    { ...shots[0], outcome: 'penalty' }, { ...end, sequence: 2 },
+  ] });
+  assert.equal(invalid.ok, false);
+  if (!invalid.ok) assert.ok(invalid.errors.some(e => e.code === 'INVALID_SHOT'));
+});
+
 test('wrong fixture clubs and illegal lineups prevent ledger evaluation', () => {
   const wrong = deriveMatchLedger({ ...base, fixture: { ...fixture, awayClubId: fixture.homeClubId } });
   assert.equal(wrong.ok, false);

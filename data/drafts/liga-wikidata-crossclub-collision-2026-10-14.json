@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "status": "diagnostic-open-ended-membership-conflicts",
+  "observedAt": "2026-10-14T09:05:59.714Z",
+  "targetAsOf": "2026-10-14",
+  "source": "Wikidata Query Service",
+  "sourceRun": "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38539620742",
+  "sourceAttempt": 2,
+  "sourceCodeCommit": "5a1949efbda073dfcea26cf5b012b3a06fce48b7",
+  "method": "Open-ended P54 membership leads, not registered or currently contracted players",
+  "confirmedOfficialDoubleRegistrations": 0,
+  "sourcePersonIdentifiersPublished": 0,
+  "allClubQueriesSucceeded": true,
+  "totalClubPersonPairs": 504,
+  "uniqueWikidataPersons": 486,
+  "personsInMultipleCandidateClubs": 16,
+  "excessClubPersonPairs": 18,
+  "clubs": [
+    {
+      "clubId": "lp-nadir",
+      "candidatePairs": 43,
+      "flaggedConflictingPairs": 4
+    },
+    {
+      "clubId": "lp-zelenober",
+      "candidatePairs": 45,
+      "flaggedConflictingPairs": 1
+    },
+    {
+      "clubId": "lp-vagon",
+      "candidatePairs": 31,
+      "flaggedConflictingPairs": 3
+    },
+    {
+      "clubId": "lp-patriciy",
+      "candidatePairs": 73,
+      "flaggedConflictingPairs": 2
+    },
+    {
+      "clubId": "lp-ogkm",
+      "candidatePairs": 19,
+      "flaggedConflictingPairs": 4
+    },
+    {
+      "clubId": "lp-pacifica",
+      "candidatePairs": 30,
+      "flaggedConflictingPairs": 4
+    },
+    {
+      "clubId": "lp-statika-m1",
+      "candidatePairs": 22,
+      "flaggedConflictingPairs": 2
+    },
+    {
+      "clubId": "lp-izumrud",
+      "candidatePairs": 53,
+      "flaggedConflictingPairs": 3
+    },
+    {
+      "clubId": "lp-uprek",
+      "candidatePairs": 40,
+      "flaggedConflictingPairs": 0
+    },
+    {
+      "clubId": "lp-spadov",
+      "candidatePairs": 47,
+      "flaggedConflictingPairs": 4
+    },
+    {
+      "clubId": "lp-korni-zapretov",
+      "candidatePairs": 31,
+      "flaggedConflictingPairs": 3
+    },
+    {
+      "clubId": "lp-orendorf",
+      "candidatePairs": 30,
+      "flaggedConflictingPairs": 0
+    },
+    {
+      "clubId": "lp-nizon",
+      "candidatePairs": 5,
+      "flaggedConflictingPairs": 1
+    },
+    {
+      "clubId": "lp-statika-m2",
+      "candidatePairs": 5,
+      "flaggedConflictingPairs": 0
+    },
+    {
+      "clubId": "lp-chuzhbina",
+      "candidatePairs": 0,
+      "flaggedConflictingPairs": 0
+    },
+    {
+      "clubId": "lp-ognetushitel",
+      "candidatePairs": 30,
+      "flaggedConflictingPairs": 3
+    }
+  ]
+}

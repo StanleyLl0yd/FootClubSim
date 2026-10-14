@@ -1,0 +1,32 @@
+name: Wikidata cross-club conflict diagnostic
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/wikidata-crossclub-conflicts.mjs'
+      - 'tests/wikidata-crossclub-conflicts.test.mjs'
+      - 'data/drafts/liga-wikidata-club-map-v1.json'
+      - '.github/workflows/wikidata-crossclub-conflicts.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  diagnostic:
+    name: Cross-club P54 open-ended identity conflicts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Count dated candidate collisions without publishing identities
+        run: node scripts/wikidata-crossclub-conflicts.mjs

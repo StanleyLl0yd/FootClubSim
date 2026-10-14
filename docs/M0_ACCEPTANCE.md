@@ -51,11 +51,11 @@ Status: **OPEN**. The owner accepted the [M0 foundation versus M2 playable-perso
 
 ## Repository-wide milestone exit
 
-Текущие подтверждённые находки и исправления документируются в [M0_AUDIT_PROGRESS.md](M0_AUDIT_PROGRESS.md). Этот отчёт промежуточный: полный первый и обязательный второй проходы ещё не приняты и галочки ниже остаются незакрытыми.
+Промежуточные исправления документированы в [M0_AUDIT_PROGRESS.md](M0_AUDIT_PROGRESS.md). Обязательные **первый и второй полные проходы по всему Git-дереву проведены отдельно**, с выводами и проверками в [M0_EXIT_AUDIT_REPORT.md](M0_EXIT_AUDIT_REPORT.md). **Это не означает согласия владельца на оставшиеся ограничения хранения, юридические риски или окончательное закрытие M0.**
 
-- [ ] Inspect **entire repo**, including docs, scripts, source, tests, dependencies, build, workflows and settings.
-- [ ] Do a first complete audit and implement safe corrections/refactoring.
-- [ ] Do a mandatory second full pass over the already-refactored repo.
+- [x] Inspect **entire repo**, including docs, scripts, source, tests, dependencies, build, workflows and settings. [Файловый охват двух проходов](M0_EXIT_AUDIT_REPORT.md) с отдельными SHA.
+- [x] Do a first complete audit and implement safe corrections/refactoring. [PR #153](https://github.com/StanleyLl0yd/FootClubSim/pull/153), regression test and measured CI.
+- [x] Do a mandatory second full pass over the already-refactored repo. [Second full inventory and findings](M0_EXIT_AUDIT_REPORT.md) at `d610cf4c`.
 - [ ] Run full applicable tests, build, format, types, security, source-rights and browser verification, with evidence; never claim checks that were not run.
 - [ ] Publish M0 audit report: findings, changes, unchanged risks, limitations, before/after metrics with consistent method.
 - [ ] Attach audit report, PRs and final-main CI results to issue #2 and close only after criteria actually pass.

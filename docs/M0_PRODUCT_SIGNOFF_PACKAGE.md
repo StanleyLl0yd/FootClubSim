@@ -1,0 +1,37 @@
+# M0 owner sign-off package: remaining product/interface decisions
+
+**Prepared 2026-10-14; status: PROPOSED, not approved.** This summarizes remaining M0-level acceptance choices from [M0_PRODUCT_DECISIONS.md](M0_PRODUCT_DECISIONS.md) and [M0_BLOCKER_DECISIONS.md](M0_BLOCKER_DECISIONS.md). The owner has already accepted all 16 fictional club identities/emblems, the Wikipedia-first research priority, the real-RPL-rules requirement, configurable per-responsibility delegation, manager origins/fictional biography and the [M0/M2 gate allocation](adr/0006-m0-m2-acceptance-boundary.md). **Do not reopen approved choices or silently interpret continued development as a sign-off.**
+
+The recommendations below freeze only what is necessary to define the **M0 architecture and M1/M2 contracts**. Numerical balance and actual gameplay remain later-stage measured/implemented work.
+
+| Decision | Specific proposed contract to accept/revise | Actual implementation stage | Owner state |
+| --- | --- | --- | --- |
+| **D03** match behavior | Same seeded, headless event-driven engine for user and AI matches; deterministic event ledger/report; no mandatory live 2D/3D or player-time button prompts. Pre-match tactical and roster control may be manual or independently delegated | M1 simulation, M2 match/season orchestration | **PENDING** |
+| **D04** footballer abilities | Preserve M0's **33 distinct fields** (28 outfield plus 5 GK), integer ratings 1..100, versioned without silently rewriting revision-0 saves. Potential, condition and form are **separate** future state, not changes to the 33 original fields | M1 calibration/M3 development | **PENDING** |
+| **D05** tactical inputs | Use M0 `TacticalPlan`: formation, XI/bench, mentality (-2..2) and 0..100 sliders for pressing, compactness, defensive line, passing risk, tempo. Effects must be probabilistic, tested with paired seeds; no guaranteed wins | M1 probability effects, M2 UX | **PENDING** |
+| **D07** money | Separate available operating cash, committed contractual spend, wage ceiling and transfer budget. Model movements as bounded integer RUB and auditable atomic ledger entries, not binary floating-point currency | M3 finance | **PENDING** |
+| **D08** player/staff agreements | Offers, negotiation, signing, medical/eligibility validation and competition registration are **distinct transactional states**; accepted contract does not imply immediate RPL eligibility, and delegation does not bypass authorization | M3 contracts and transfers; M2 eligibility hooks | **PENDING** |
+| **D09** save compatibility | New careers pin catalog, rules, engine, generator, manager-profile, PRNG and save schema IDs/versions. Changing reference content must not rewrite active saves; future revision transactions and migrations must be atomic and rollback-safe, with manual JSON export | M2 state/recovery, M3+ migrations | **PENDING** |
+| **D10** first playable scope | M2 delivers one complete coherent 16-team/30-round first season. Multi-season aging, youth/regens, promotions and transitions are M4. No promise of complete Football Manager feature parity in M2 | M2 and M4 | **PENDING** |
+| **D11** UI baseline | Russian-first, offline desktop browser UI with accessible keyboard/mouse controls, dense readable tables, explicit errors and recoverability. Prioritize real Safari/macOS plus Chrome/Edge/Windows; keep internal IDs language-neutral | M2 UI, M5 polish | **PENDING** |
+
+## Decisions already approved and not part of this proposal
+
+- **D01 and D02:** the player controls implemented tasks by default, with independent assignment to eligible named staff and manual takeover.
+- **D06 and D12:** «Лига приколов», exactly 16 approved club names and original three-ring badges; recognizable **fictional** player/staff identities based on independently checked 2026/27 real prototypes, Wikipedia-first for research, while genuine effective RFU/RPL/IFAB rules are the required execution target.
+- **D13 principle:** before choosing a club the manager has a former professional, theorist or custom points-based origin with coherent generated fictional biography and separately versioned management skill model. **Specific skill names, point budget, balancing, editing UX and templates remain M2 design decisions**, not covert approvals here.
+- **ADR-0006 milestone split:** M0 remains original-synthetic-only; 16 real prototype rosters, M2 playing attributes, staff employments and source-specific release clearance are not required to end M0.
+
+## What cannot be signed off from this table
+
+**Rules and rights:** M0 still needs reviewed source-edition/article contracts, original-asset risk and prohibited-data/secrets review. Complete executable 2026/27 RPL/IFAB exception behavior is M2. Neither Wikipedia's readable articles nor original-looking badges automatically supply commercial publication rights.
+
+**M1 calibration:** [M1_CALIBRATION_PROTOCOL.md](M1_CALIBRATION_PROTOCOL.md) defines seeded cohorts, confidence intervals, held-out evaluation and rights-gated external baselines. External target numbers and tolerance bands must be frozen **before M1 tuning**, once an independently lawful reference has been chosen. Do not invent numerical PASS thresholds at M0.
+
+**Browser storage:** the owner did **not** approve the separately suggested reduction of M0 private Safari/quota/eviction/recovery acceptance. The untested cases and [reproducible procedures](M0_STORAGE_EDGE_ACCEPTANCE.md) remain open.
+
+**Mandatory exit audit:** none of these proposals waive [AGENTS.md](../AGENTS.md) first **complete** and second **complete** repository-wide passes, all final-main tests/security/browser checks, the final report and exit [#2](https://github.com/StanleyLl0yd/FootClubSim/issues/2).
+
+## Recording a real decision
+
+For each D03-D05/D07-D11, record the exact owner response **Accepted / Revised / Rejected**, date and any replacement terms in [M0_PRODUCT_DECISIONS.md](M0_PRODUCT_DECISIONS.md) and an ADR where appropriate. A single explicit acceptance of this named table may close **those eight decision checkboxes only**. It must not be inferred from PR merger, green CI, approval of ADR-0006 or permission to continue M0 work. **M1 remains blocked until M0 is accepted and the owner separately authorizes M1 implementation.**

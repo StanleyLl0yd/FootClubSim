@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 2,
+  "reviewStatus": "identity-only-unverified",
+  "asOf": "2026-10-14",
+  "description": "Owner-approved fictional identities, each with immutable person ID. All real roster facts and staff affiliations remain unverified and rights-gated.",
+  "clubId": "lp-nadir",
+  "groups": {
+    "goalkeepers": [
+      {
+        "personId": "lp-person-0001",
+        "displayName": "Денис Адамантов"
+      },
+      {
+        "personId": "lp-person-0002",
+        "displayName": "Богдан Мокричёв"
+      },
+      {
+        "personId": "lp-person-0003",
+        "displayName": "Даниил Удоевский"
+      },
+      {
+        "personId": "lp-person-0004",
+        "displayName": "Максим Зайкин"
+      }
+    ],
+    "defenders": [
+      {
+        "personId": "lp-person-0005",
+        "displayName": "Дуглас Фантос"
+      },
+      {
+        "personId": "lp-person-0006",
+        "displayName": "Вячеслав Батонов"
+      },
+      {
+        "personId": "lp-person-0007",
+        "displayName": "Кевин Антраде"
+      },
+      {
+        "personId": "lp-person-0008",
+        "displayName": "Нуралы Олимп"
+      },
+      {
+        "personId": "lp-person-0009",
+        "displayName": "Густаво Мантуанго"
+      },
+      {
+        "personId": "lp-person-0010",
+        "displayName": "Нано"
+      },
+      {
+        "personId": "lp-person-0011",
+        "displayName": "Роман Вегас"
+      },
+      {
+        "personId": "lp-person-0012",
+        "displayName": "Игорь Диванев"
+      },
+      {
+        "personId": "lp-person-0013",
+        "displayName": "Сергей Волчков"
+      }
+    ],
+    "midfielders": [
+      {
+        "personId": "lp-person-0014",
+        "displayName": "Вильмар Барьерос"
+      },
+      {
+        "personId": "lp-person-0015",
+        "displayName": "Вентел"
+      },
+      {
+        "personId": "lp-person-0016",
+        "displayName": "Джон Бон"
+      },
+      {
+        "personId": "lp-person-0017",
+        "displayName": "Александр Горохин"
+      },
+      {
+        "personId": "lp-person-0018",
+        "displayName": "Амир Музаев"
+      },
+      {
+        "personId": "lp-person-0019",
+        "displayName": "Даниил Кондачков"
+      },
+      {
+        "personId": "lp-person-0020",
+        "displayName": "Артём Карапукас"
+      }
+    ],
+    "attackers": [
+      {
+        "personId": "lp-person-0021",
+        "displayName": "Александр Боболев"
+      },
+      {
+        "personId": "lp-person-0022",
+        "displayName": "Фелипе Септембро"
+      },
+      {
+        "personId": "lp-person-0023",
+        "displayName": "Максим Шуменков"
+      },
+      {
+        "personId": "lp-person-0024",
+        "displayName": "Луис Энриче"
+      },
+      {
+        "personId": "lp-person-0025",
+        "displayName": "Педрино"
+      },
+      {
+        "personId": "lp-person-0026",
+        "displayName": "Вадим Мылов"
+      }
+    ],
+    "coaches": [
+      {
+        "personId": "lp-person-0027",
+        "displayName": "Сергей Семяч"
+      },
+      {
+        "personId": "lp-person-0028",
+        "displayName": "Анатолий Тихощук"
+      },
+      {
+        "personId": "lp-person-0029",
+        "displayName": "Александр Анчуков"
+      },
+      {
+        "personId": "lp-person-0030",
+        "displayName": "Игорь Симулянков"
+      },
+      {
+        "personId": "lp-person-0031",
+        "displayName": "Вильям де Оливье"
+      },
+      {
+        "personId": "lp-person-0032",
+        "displayName": "Михаил Бирючков"
+      },
+      {
+        "personId": "lp-person-0033",
+        "displayName": "Михаил Кержиков"
+      },
+      {
+        "personId": "lp-person-0034",
+        "displayName": "Юрий Окрошкин"
+      },
+      {
+        "personId": "lp-person-0035",
+        "displayName": "Иван Кардионати"
+      },
+      {
+        "personId": "lp-person-0036",
+        "displayName": "Арис Нагрузич"
+      },
+      {
+        "personId": "lp-person-0037",
+        "displayName": "Антонио Топиа"
+      },
+      {
+        "personId": "lp-person-0038",
+        "displayName": "Кирилл Кроссин"
+      }
+    ],
+    "board": [
+      {
+        "personId": "lp-person-0039",
+        "displayName": "Константин Зорянов"
+      },
+      {
+        "personId": "lp-person-0040",
+        "displayName": "Андрей Аршин"
+      }
+    ],
+    "support": [
+      {
+        "personId": "lp-person-0041",
+        "displayName": "Михаил Гришкин"
+      },
+      {
+        "personId": "lp-person-0042",
+        "displayName": "Владимир Халатин"
+      },
+      {
+        "personId": "lp-person-0043",
+        "displayName": "Илья Горбачин"
+      },
+      {
+        "personId": "lp-person-0044",
+        "displayName": "Дмитрий Пучкин"
+      },
+      {
+        "personId": "lp-person-0045",
+        "displayName": "Александр Попадович"
+      },
+      {
+        "personId": "lp-person-0046",
+        "displayName": "Павел Скоркин"
+      }
+    ]
+  }
+}

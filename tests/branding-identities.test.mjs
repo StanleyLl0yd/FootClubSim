@@ -38,13 +38,21 @@ test('Nadir and both Statika emblems retain exact owner-approved zone ordering a
   }
 });
 test('fictional personnel drafts are isolated, named, and never mistaken for playable M0 data', () => {
-  const roster = JSON.parse(readFileSync(new URL('../data/drafts/nadir-personnel-v0.json', import.meta.url), 'utf8'));
+  const roster = JSON.parse(readFileSync(new URL('../data/drafts/nadir-personnel-v1.json', import.meta.url), 'utf8'));
   const worklist = JSON.parse(readFileSync(new URL('../data/drafts/liga-roster-worklist.json', import.meta.url), 'utf8'));
   const counts = Object.fromEntries(Object.entries(roster.groups).map(([key, group]) => [key, group.length]));
   assert.deepEqual(counts, { goalkeepers: 4, defenders: 9, midfielders: 7, attackers: 6, coaches: 12, board: 2, support: 6 });
   const allNames = Object.values(roster.groups).flat();
   assert.equal(allNames.length, 46);
-  assert.equal(new Set(allNames).size, 46);
+  const ids = allNames.map(person => person.personId);
+  const names = allNames.map(person => person.displayName);
+  assert.equal(new Set(ids).size, 46);
+  assert.equal(new Set(names).size, 46);
+  for (const person of allNames) {
+    assert.match(person.personId, /^lp-person-[0-9]{4}$/);
+    assert.ok(person.displayName.length >= 3 && person.displayName.length <= 100);
+  }
+  assert.equal(roster.schemaVersion, 2);
   assert.equal(roster.reviewStatus, 'identity-only-unverified');
   assert.deepEqual(worklist.clubs.map(row => row.clubId), clubs.map(club => club.id));
   assert.equal(worklist.clubs.filter(row => row.rosterStatus === 'pending-source-and-rights-verification').length, 15);

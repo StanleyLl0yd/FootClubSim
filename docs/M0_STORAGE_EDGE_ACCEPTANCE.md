@@ -11,6 +11,7 @@
 | Windows Chrome Incognito and Edge InPrivate (within one private session) | Windows browser CI private-session branch, save/reload **or explicit denial with JSON export** | Verified within private session; no after-close persistence guarantee |
 | IndexedDB absent and simulated QuotaExceededError | Headless domain tests plus actual browsers with an injected rejection object | Error handling verified; **NOT real quota exhaustion** |
 | **Safari Private Browsing** | No confirmed native Private Safari execution | **OPEN** |
+| **Safari normal mode, explicit IndexedDB deletion and JSON re-import** | New Safari WebDriver fixture under review: deletion, missing-save rejection, valid and tampered JSON file-input simulation | **Must be verified by actual macOS CI; not Private mode or organic eviction** |
 | **Real browser-enforced storage quota pressure** | No genuine per-origin eviction/quota outcome | **OPEN** |
 | **Actual storage eviction** | No observation of automatic browser eviction | **OPEN** |
 | **Backup/recovery across complete browser shutdown** | Same-tab reload smoke only | **OPEN** |
@@ -18,6 +19,8 @@
 | **Evolving career data and save migrations** | No implemented evolving career schema | M2, not a meaningful M0 functional test |
 
 The CDP harness now contains an additional **isolated disposable Windows browser-profile** recovery scenario that clears real IndexedDB using a browser protocol command and exercises the app's file import with a valid and a tampered snapshot. Its result must be confirmed from the corresponding actual browser CI run before claiming PASS. It does **not** demonstrate that the user clicked Export and downloaded a file, or that browser data is naturally evicted after background storage pressure.
+
+The Safari WebDriver harness also now includes a real IndexedDB deletion and **programmatic `File` / `DataTransfer` assignment** into the app's input (not an OS file picker). Its assertions test integrity rejection and in-memory career preservation; no PASS is claimed without the actual macOS CI run. The Chrome/Edge Windows suite uses DevTools to set a file path instead. Both are narrower than the outstanding native manual backup/download and full-restart acceptance.
 
 ## Native Safari Private Browsing manual protocol
 

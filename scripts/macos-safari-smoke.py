@@ -45,6 +45,45 @@ def run_script(session: str, code: str):
     return wd(session, "execute/sync", {"script": code, "args": []})
 
 
+def run_async_script(session: str, code: str):
+    return wd(session, "execute/async", {"script": code, "args": []})
+
+
+def load_indexeddb_backup(session: str) -> str:
+    result = run_async_script(session, """
+        const done = arguments[arguments.length - 1];
+        const request = indexedDB.open('footclubsim-m0', 1);
+        request.onerror = () => done(null);
+        request.onsuccess = () => {
+            const db = request.result;
+            const tx = db.transaction('initial-careers', 'readonly');
+            const get = tx.objectStore('initial-careers').get('m0-ui-initial-career');
+            let value;
+            get.onsuccess = () => { value = get.result; };
+            tx.oncomplete = () => { db.close(); done(value ?? null); };
+            tx.onabort = () => { db.close(); done(null); };
+        };
+    """)
+    if not isinstance(result, str) or "footclubsim-initial-career" not in result:
+        raise AssertionError("Safari could not obtain isolated M0 test backup")
+    return result
+
+
+def set_test_file(session: str, content: str, filename: str):
+    script = (
+        "const input = document.querySelector('#import-file');"
+        "if (!input) return false;"
+        "const transfer = new DataTransfer();"
+        "transfer.items.add(new File([" + json.dumps(content, ensure_ascii=False) +
+        "], " + json.dumps(filename) + ", {type: 'application/json'}));"
+        "input.files = transfer.files;"
+        "input.dispatchEvent(new Event('change', {bubbles: true}));"
+        "return true;"
+    )
+    if run_script(session, script) is not True:
+        raise AssertionError("Safari file-input test injection failed")
+
+
 def wait_for_text(session: str, fragment: str, timeout: int = 20):
     deadline = time.monotonic() + timeout
     last = ""
@@ -133,6 +172,35 @@ def main():
             wait_for_text(session, "Выберите вымышленный клуб")
             click(session, "Восстановить из браузера")
             wait_for_text(session, "Стартовая карьера восстановлена и проверена по SHA-256")
+            # Real Safari IndexedDB deletion followed by app file-input recovery.
+            # The File object is injected by WebDriver, not chosen via OS dialog.
+            backup = load_indexeddb_backup(session)
+            removed = run_async_script(session, """
+                const done = arguments[arguments.length - 1];
+                const request = indexedDB.deleteDatabase('footclubsim-m0');
+                request.onsuccess = () => done('deleted');
+                request.onerror = () => done('failed');
+                request.onblocked = () => done('blocked');
+            """)
+            if removed != "deleted":
+                raise AssertionError(f"Safari IndexedDB clearing failed: {removed!r}")
+            wd(session, "refresh", {})
+            wait_for_text(session, "Выберите вымышленный клуб")
+            click(session, "Восстановить из браузера")
+            wait_for_text(session, "Восстановление отклонено: NOT_FOUND")
+            set_test_file(session, backup, "m0-recovery.json")
+            wait_for_text(session, "Стартовая карьера проверена и загружена в память")
+            invalid = backup.replace("fictional-1", "fictional-X", 1)
+            if invalid == backup:
+                raise AssertionError("Safari invalid-file fixture unchanged")
+            set_test_file(session, invalid, "m0-corrupted.json")
+            wait_for_text(session, "Импорт отклонён: INTEGRITY_ERROR")
+            if not run_script(session, "return Boolean(document.querySelector('.career-info'))"):
+                raise AssertionError("Safari lost recovered career on corrupted JSON import")
+            click(session, "Сохранить в браузере")
+            wait_for_text(session, "Начальная карьера записана в IndexedDB")
+            print("PASS: Safari recovers from explicit IndexedDB deletion via app JSON import")
+
             run_script(session, """
                 Object.defineProperty(window, 'indexedDB', {configurable: true, value: {
                     open() {

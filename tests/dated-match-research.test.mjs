@@ -10,9 +10,9 @@ const nadir = read('data/drafts/nadir-personnel-v1.json');
 const pack = read('data/drafts/liga-personnel-pack-v1.json');
 const input = {clubIds:clubs, nadir};
 
-test('both fixture sources record bounded played appearances, not dated league registrations', () => {
+test('four fixture sources record bounded played appearances, not dated league registrations', () => {
   assert.deepEqual(validateDatedMatchResearch(observations, input), {
-    fixtures: 2, teamsObserved: 3, datedTeamAppearanceSlots: 62,
+    fixtures: 4, teamsObserved: 6, datedTeamAppearanceSlots: 125,
     distinctRegisteredPlayersEstablished: 0, legallyClearedPlayableFacts: 0,
   });
   assert.equal(pack.availableForCareerStart, false);

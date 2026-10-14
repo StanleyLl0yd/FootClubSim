@@ -1,6 +1,6 @@
 # FootClubSim M0 product decisions for owner review
 
-**Status: PARTIALLY APPROVED.** Initial proposal prepared 2026-10-13; on 2026-10-14 the owner confirmed D01-D02: all implemented coach/director responsibilities start under player control, but the player chooses per area whether they or a designated employee make decisions. See [ADR-0002](adr/0002-configurable-delegation.md) and [implementation issue #58](https://github.com/StanleyLl0yd/FootClubSim/issues/58). D03-D12 and detailed UX options remain proposals unless otherwise accepted.
+**Status: PARTIALLY APPROVED.** Initial proposal prepared 2026-10-13. On 2026-10-14 the owner confirmed D01-D02 (default player control and independent staff delegation), plus D13 (manager origin, characteristic profile and generated biography at career start). See [ADR-0002](adr/0002-configurable-delegation.md), [ADR-0003](adr/0003-manager-origins-biographies.md), and implementation issues [#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58), [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76). D03-D12 and exact D13 attribute names, numeric budgets and UX details remain proposals.
 
 ## What is already established by project scope
 
@@ -24,6 +24,13 @@ These constraints should be preserved while making the decisions below.
 | D10 | Timeline | M2 targets one coherent complete season, not all lifelong manager features. M4 adds multi-season history, player aging, academy/regens and promotion/relegation. | M2/M4 | **Needs owner approval of first playable scope** |
 | D11 | User experience | Russian interface first, dense desktop-friendly tables, keyboard-accessible controls, explicit diagnostics instead of silent save failures. UI translation boundaries remain independent of internal IDs. | M2/M5 | **Needs owner approval of presentation priorities** |
 | D12 | External data | Release a fictional authored test pack until legal sourcing for real names/rosters/club images is fully approved and documented. Official rules may be paraphrased with source citations but protected PDF/artwork may not be copied. | All stages | **Rights review still open** |
+| D13 | Manager background and biography | **Before choosing a club**, the player selects former professional footballer, self-taught/educated theorist (no pro career), or a custom manager with a limited pool of points allocated manually. Each option produces a different competency distribution and the application generates a plausible biography reflecting the origin, strengths and weaknesses: playing clubs/achievements for the practitioner, courses/study/work for the theorist, inferred coherent history for custom. Preview before confirmation. See [ADR-0003](adr/0003-manager-origins-biographies.md). | M2 profile creation + persistence; M3+ full characteristic effects | **Accepted core requirement 2026-10-14; exact attributes/values/biography editing proposed** |
+
+## Approved manager creation principle
+
+A new career begins with **creating the manager**, before selecting a club. The **former professional footballer**, **theorist without professional playing history**, and **custom point-allocation** origins must all be viable. Starting manager ratings belong to their own schema, distinct from footballer attributes. The game generates a consistent fictional biography grounded in the origin, starting competencies, chronology, playing career/achievements or studies/work; the custom profile generates history from the actual distribution, not an arbitrary generic story. The user reviews the resulting biography before accepting it. The exact competency list, numerical balance and details of the generator have not yet been agreed. See [ADR-0003](adr/0003-manager-origins-biographies.md) and [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
+
+The new manager's origin does **not** change the approved default/manual staff delegation authority in D01-D02: all available responsibilities remain under player control until expressly assigned to employees.
 
 ## Proposed responsibility boundary
 
@@ -34,11 +41,11 @@ The simulation should not imply the human controls all club staff or owns the cl
 - **AI assistant/staff:** may **make** decisions in explicitly delegated areas and may advise on manually controlled decisions. Must not override player-controlled responsibilities. A named eligible employee makes the decision; the player can reclaim the area at any time. Proposed review/approval mode is separate from full staff autonomy.
 - **Rival clubs:** use the same legal squad, fixture and match interfaces, with deterministic AI planning rather than privileged score shortcuts.
 
-The **principle of independent responsibility delegation is approved**, but technical contracts for employee authorization, pending approvals, logs, AI behavior and UX must be separately designed/tested before their M2/M3 implementation. The principle alone does not approve the remaining D03-D12 decisions. M1 may not start until M0 closes and the owner explicitly authorizes it.
+The **principles of independent responsibility delegation and manager-origin biography generation are approved**, but technical contracts for employee authorization, pending approvals, logs, AI behavior and UX must be separately designed/tested before their M2/M3 implementation. These principles do not approve the remaining D03-D12 decisions or the detailed D13 numbers. M1 may not start until M0 closes and the owner explicitly authorizes it.
 
 ## First-playable-season acceptance proposal (M2)
 
-1. Select one club from a legally usable versioned league dataset and inspect a valid 23+ player squad/registration list where permitted by rules.
+1. **Create a manager profile:** choose practitioner, theorist or custom point allocation, preview the generated biography and approve; then select one club from a legally usable versioned league dataset and inspect its squad/registration list where permitted by rules.
 2. Choose a legal starting XI, bench and basic tactics; inaccessible players and foreigner limits are handled explicitly. The user can **independently** assign XI/bench preparation and pre-match tactical choices to an eligible employee via a working responsibility setting; manual remains the default.
 3. Process all fixtures of an initial 16-team home/away schedule through the common match engine, including the AI fixtures, without rendering the pitch.
 4. Display consistent results, reports, table, tie-breakers, fatigue/discipline and next match information.
@@ -50,7 +57,7 @@ This is an **acceptance proposal**, not a claim any listed feature already works
 
 ## Owner sign-off protocol
 
-For each D01-D12, record a date and one of **Accepted / Revised / Rejected** (or **Partially accepted** where only the principle is agreed), plus any replacement rule. D01 and the core of D02 were accepted by the owner on 2026-10-14; do not treat remaining details or other entries as approved. Link resulting architectural/rules decisions from `ARCHITECTURE.md`, `docs/USER_EXPERIENCE.md` and the [M0 checklist](M0_ACCEPTANCE.md). Avoid automatic sign-off or changing an existing design without an explicit decision. Until that happens, M0 acceptance and [exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) remain open.
+For each D01-D13, record a date and one of **Accepted / Revised / Rejected** (or **Partially accepted** where only the principle is agreed), plus any replacement rule. D01, the core of D02 and the core of D13 were accepted by the owner on 2026-10-14; do not treat remaining details or other entries as approved. Link resulting architectural/rules decisions from `ARCHITECTURE.md`, `docs/USER_EXPERIENCE.md` and the [M0 checklist](M0_ACCEPTANCE.md). Avoid automatic sign-off or changing an existing design without an explicit decision. Until that happens, M0 acceptance and [exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) remain open.
 
 ### Outstanding legal and engineering dependencies
 

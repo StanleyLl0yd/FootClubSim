@@ -1,6 +1,6 @@
 # FootClubSim roadmap
 
-> Planning document. Updated 2026-10-13. The project is in **M0: design/foundation**; no playable release exists.
+> Planning document. Updated 2026-10-14. The project is in **M0: design/foundation**; no playable release exists.
 
 ## Product contract
 
@@ -14,6 +14,7 @@
 - Version numbers, when introduced, are numeric-only (no alpha/beta/rc suffixes).
 - Match reality is judged against recorded simulation events and reproducible aggregate measurements, not hand-tuned preferred scores.
 - **Configurable responsibility delegation:** the player initially controls all implemented coaching/director duties, but independently chooses who decides each area. Club staff cannot silently take over manual areas. Owner-approved principle: [ADR-0002](docs/adr/0002-configurable-delegation.md); implementation [#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58).
+- **Manager identity at career start:** the human chooses an ex-professional, a formally educated/self-taught football theorist with no pro playing career, or a custom **point-allocated** skill profile; the game generates a relevant, believable fictional biography before club selection. Accepted principle: [ADR-0003](docs/adr/0003-manager-origins-biographies.md); implementation [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
 
 ## Milestone gates
 
@@ -35,7 +36,7 @@ See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 
 - [x] Public repository, README and original-derived `AGENTS.md`.
 - [x] Create non-optional audit issues for M0–M6.
-- [ ] Approve product scope and [architecture](ARCHITECTURE.md); independent staff delegation has been approved in principle under [ADR-0002](docs/adr/0002-configurable-delegation.md), while other product decisions remain open.
+- [ ] Approve product scope and [architecture](ARCHITECTURE.md); the independent staff-delegation principle [ADR-0002](docs/adr/0002-configurable-delegation.md) and manager-origin/biography principle [ADR-0003](docs/adr/0003-manager-origins-biographies.md) have been accepted, while numerical balance and remaining product decisions are open.
 - [ ] Finalize minimum player/club data contract and a legally usable initial **synthetic** dataset.
 - [ ] Specify deterministic match simulation and game-calendar transitions; [M1 calibration protocol](docs/M1_CALIBRATION_PROTOCOL.md) is drafted, but approved statistical reference baselines remain unavailable.
 - [ ] Establish provenance/rights gates for real RPL data and assets.
@@ -61,17 +62,17 @@ M0 documentation may be merged incrementally without claiming M0 completion. Do 
 
 ## M2: RPL season
 
-- Russian-language desktop-oriented browser interface; pick one RPL club.
+- Russian-language desktop-oriented browser interface; **first create a manager profile** (former pro, theorist, or custom point allocation) with a seeded fictional biography to preview/accept, **then** pick a club. See [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
 - Season fixtures, fixtures chronology, results, standings and tiebreaker rule data.
 - Computer clubs select legal lineups and adapt tactics; absences and suspensions respected.
 - Player's lineup/bench and tactics responsibilities are separately configurable: decide manually by default, or delegate to an eligible named club employee. Show decision authority and support manual takeover ([#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58)).
-- Simulate next event/tour rapidly, persist and restore game state, export/import career save.
+- Simulate next event/tour rapidly, persist and restore game state, export/import career save. Preserve manager origin, competencies, accepted biography and its generator/template version across saves.
 - Fully offline core behavior; tested Safari/Chromium compatibility.
 - Whole-repository exit gate [#4](https://github.com/StanleyLl0yd/FootClubSim/issues/4).
 
 ## M3–M6 scope controls
 
-M3 introduces economy/transfer systems, training, staff and full per-area responsibility delegation (player/staff contracts, recruitment, training), not multiplayer. M4 introduces additional modeled divisions/world clubs without promising fully playable foreign leagues. M5 introduces PWA polish, not a required backend. M6 desktop packaging is conditional on real benefit and platform acceptance; no dedicated Linux app is promised.
+M3 introduces economy/transfer systems, training, staff and full per-area responsibility delegation (player/staff contracts, recruitment, training), plus practical effects of manager competencies on these real systems. The approved manager-profile wizard is planned for M2, not M1. Neither stage introduces multiplayer. M4 introduces additional modeled divisions/world clubs without promising fully playable foreign leagues. M5 introduces PWA polish, not a required backend. M6 desktop packaging is conditional on real benefit and platform acceptance; no dedicated Linux app is promised.
 
 ## Explicit exclusions until a future decision
 

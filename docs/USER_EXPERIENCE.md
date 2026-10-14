@@ -2,6 +2,36 @@
 
 The interface should feel like a detailed manager, not a console or match-viewing game. No 2D/3D pitch animation is in initial scope.
 
+## Starting a new career: manager creation
+
+**Owner-approved experience (2026-10-14):** before the club-selection step,
+the game asks the player to create a human manager with one of three origins:
+
+1. **Бывший профессиональный футболист**: their practical experience shapes
+   stronger/weaker starting managerial competencies, and the generated
+   biography mentions fictional playing clubs and achievements.
+2. **Теоретик / «ноутбучный менеджер»**: no professional playing career; stronger
+   theoretical/analytical or coaching-methodology competencies. Biography
+   describes learning, courses, analysis and work experience.
+3. **Свой профиль**: independently allocate a **limited pool of points** to
+   managerial skills; the game constructs a plausible biography from the
+   dominant and weaker competencies, not a generic random background.
+
+The user sees a **summary of abilities and a generated biography**, can
+regenerate a plausible biography **without changing the allocated points**
+and confirms before choosing a club. All personal biographies initially use
+original fictional clubs, institutions, careers and honours; no invented
+real-world qualifications. Settings and details including the exact number
+of points, list of abilities, manager age and editing controls still need
+design acceptance. See [ADR-0003](adr/0003-manager-origins-biographies.md)
+and [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
+
+Manager competencies are separate from footballers' 33 ratings.
+This choice does **not** switch or restrict which club responsibilities are
+controlled manually: independent delegation under
+[ADR-0002](adr/0002-configurable-delegation.md) remains available to all
+three backgrounds.
+
 ## Main navigation
 
 - **Главная:** current career date, next fixture, club goals, inbox/news and alerts.
@@ -17,7 +47,7 @@ The interface should feel like a detailed manager, not a console or match-viewin
 
 ## Play loop
 
-1. Select a club and a versioned dataset; create career snapshot.
+1. Create the **manager's background and competency profile**, preview/confirm a seeded fictional biography, then select a club and a versioned dataset; create the initial career snapshot.
 2. Select tactics and legal squad; review fixture preparation.
 3. Press **Продолжить**: the controller processes the next calendar boundary and due fixtures in deterministic order.
 4. The worker calculates matches automatically, reports computation progress when needed; no visual match playback.

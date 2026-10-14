@@ -45,6 +45,25 @@ Starting data pack  --validated on load-->  new-career snapshot
 
 Direction of dependencies: platform adapters -> application -> domain. Pure domain code may not import React, browser globals, IndexedDB, Tauri, HTTP clients, or UI localization strings. Adapters implement narrow interfaces at the outside boundary.
 
+## Manager origin and biography boundary
+
+A new career must first create a **human manager**, before club selection.
+The owner approved three origins: former professional player, football
+theorist educated outside professional playing, or a custom constrained
+manager skill allocation. The manager's competencies form their **own domain
+model**, not a reuse of footballer ratings. A locally seeded, versioned
+biography generator must produce a coherent fictional chronology consistent
+with the origin and skills. A structured history belongs to career state;
+generated prose must not be the sole authoritative record. A biography
+regeneration changes history seed and proposed backstory, **not** the
+competency pool or a committed existing career.
+
+This is a future M2 feature and requires its own save-schema version,
+import validation, offline/browser tests and source-rights review. Neither
+the current M0 revision-0 initial save nor M1 match-engine protocol should
+be retroactively treated as implementing it. Details: [ADR-0003](docs/adr/0003-manager-origins-biographies.md),
+[#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
+
 ## Player/staff decision authority
 
 The player controls all implemented football decisions by default. Per [ADR-0002](docs/adr/0002-configurable-delegation.md), the player may independently delegate individual responsibilities to qualified staff; this is not a one-time choice of a fixed head-coach versus sporting-director role. The full responsibility map and current decision-maker belong to canonical career state once implemented. Both player and staff commands must use the same validated application transaction boundary, with explicit actor identity, authorization, revision checks and audit log. Manual areas cannot be changed autonomously by staff. The staff-delegation principle is owner-approved; its specific command/UI implementation in [#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58) remains proposed for M2/M3, not completed M0 gameplay.

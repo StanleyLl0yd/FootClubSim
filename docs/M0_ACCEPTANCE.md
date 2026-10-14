@@ -4,14 +4,15 @@ Status: **OPEN**. Evidence must come from actual implementation, source review o
 
 ## Scope and documentation
 
-Продуктовые решения и их статусы перечислены в [M0_PRODUCT_DECISIONS.md](M0_PRODUCT_DECISIONS.md). **Принцип назначения ответственности за каждую задачу отдельно утверждён 2026-10-14** и описан в [ADR-0002](adr/0002-configurable-delegation.md); остальные решения не считаются согласованными автоматически.
+Продуктовые решения и их статусы перечислены в [M0_PRODUCT_DECISIONS.md](M0_PRODUCT_DECISIONS.md). **2026-10-14 утверждены принципы распределения обязанностей по каждой задаче отдельно** ([ADR-0002](adr/0002-configurable-delegation.md)) и **трёх путей создания менеджера с характеристиками и вымышленной биографией** ([ADR-0003](adr/0003-manager-origins-biographies.md)). Остальные решения и конкретные численные параметры не считаются согласованными автоматически.
 
 - [x] Create public FootClubSim repository and adapt `AGENTS.md` from WindowTidy.
 - [x] Create dedicated whole-repo exit issues for M0–M6.
 - [ ] Review and approve roadmap, boundaries and platform plan.
-- [x] Agree on **default player control with independent delegation per responsibility** across coach/director/staff duties (owner decision 2026-10-14, [ADR-0002](adr/0002-configurable-delegation.md)). Detailed UX, worker contracts and feature-phase acceptance remain open.
+- [x] Agree on **default player control with independent delegation per responsibility** across coach/director/staff duties (owner decision 2026-10-14, [ADR-0002](adr/0002-configurable-delegation.md)). Detailed UX and feature-phase acceptance remain open.
+- [x] Agree on **three manager-origin paths**, starter competencies and biography generation based on the origin/skill distribution before club selection (owner decision 2026-10-14, [ADR-0003](adr/0003-manager-origins-biographies.md)); exact attribute list, point budget, templates and implementation are for later design/M2 under [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
 - [ ] Sign off player attributes, tactics, economy representation and minimum season rules.
-- [ ] Record the **remaining** decisions in ADRs and resolve identified incompatibilities in the specifications. [ADR-0002](adr/0002-configurable-delegation.md) records the approved responsibility principle; the implementation and test plan are tracked in [#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58).
+- [ ] Record the **remaining** decisions in ADRs and resolve identified incompatibilities in the specifications. [ADR-0002](adr/0002-configurable-delegation.md) and [ADR-0003](adr/0003-manager-origins-biographies.md) record accepted principles; future implementation is tracked in [#58](https://github.com/StanleyLl0yd/FootClubSim/issues/58) and [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
 - [ ] Verify official RPL 2026/27 rules from primary document and cite exact revision for each encoded rule. [A sourced subset](RPL_2026_27_RULES.md) now includes match interruption, pre-kickoff substitution and cross-season discipline details; full rules, amendments and implementation checks remain open.
 
 ## Data readiness

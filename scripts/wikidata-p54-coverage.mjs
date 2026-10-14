@@ -125,8 +125,11 @@ export async function queryWikidata(qid, fetchImpl = fetch) {
       },
       signal: controller.signal,
     });
-    if (response.status === 429) {
-      const error = new Error('Wikidata rate limit; stop requests and honor Retry-After');
+    if (response.status === 429 || response.status === 503) {
+      // On overload/service unavailability do not continue querying other clubs.
+      const error = new Error(response.status === 429
+        ? 'Wikidata rate limit; stop requests and honor Retry-After'
+        : 'Wikidata service unavailable (503); stop further requests');
       error.rateLimited = true;
       error.retryAfter = response.headers.get('retry-after');
       throw error;

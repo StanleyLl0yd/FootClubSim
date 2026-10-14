@@ -54,7 +54,7 @@ def inspect_bundle(root: Path) -> tuple[dict[str, int], list[str]]:
         if "\\x00" in text:
             concerns.append(f"{rel}: NUL in production text")
         for marker in RESEARCH_MARKERS:
-            if marker in text.casefold():
+            if marker.casefold() in text.casefold():
                 concerns.append(f"{rel}: research-only reference included in M0 bundle ({marker})")
     if not (root / "index.html").is_file():
         concerns.append("index.html: missing Vite browser entrypoint")

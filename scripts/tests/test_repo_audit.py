@@ -88,7 +88,7 @@ class RepositoryAuditTests(unittest.TestCase):
     def test_manifest_rejects_non_object_json_with_typed_error(self):
         manifest = "data/packs/m0-synthetic-manifest.json"
         for invalid in ("[]", "null", "42", '"hello"'):
-            self.put(manifest, invalid + "\\n")
+            self.put(manifest, invalid + "\n")
             allowed, errors = read_manifest(self.root)
             self.assertEqual(allowed, set())
             self.assertEqual(errors, ["synthetic asset manifest must be a JSON object"])

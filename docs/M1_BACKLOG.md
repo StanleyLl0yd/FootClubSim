@@ -107,6 +107,12 @@ The pure `applyM1MatchResultBatch` API now validates **1..16 sequential fixture 
 
 `src/core/m1-referee-decisions.ts` adds an **isolated v1 referee decision journal** under IFAB 2026/27 Law 3/12. It replay-checks source ID/fixture/team/active participant, first and second cautions, direct send-off and **explicit permanent medical withdrawal**. An unavailable player is removed only from this separate state, not from legacy v5 action/roster. No automatic permanent injury detection, no VAR or competition-specific bans. A missing goalkeeper or fewer than seven players produces an unresolved **ruling-required hold** rather than automatic continuation or invented forfeit. Origin strings are not cryptographic proof and must be verified by an external trusted referee/medical boundary. [Sources and gaps](M1_REFEREE_DECISIONS_PROVENANCE.md). **P3 and M1 remain OPEN.**
 
+## M1 P4 replay-verified synthetic scorers and playing-time report (2026-10-15)
+
+`src/core/m1-scorer-report.ts` adds a separate **read-only report schema v1** for the existing validated v5 shot/substitution stream. The public entrypoint regenerates the entire canonical match from original trusted prematch, actor assignments, seed and accepted commands, rejects any byte-semantically mismatching result, then aggregates active shooter goals, shots, shots on target, xG (millis) and per-player on-field seconds through normal substitutions. Original starters, entering bench players and departures have explicit participation start/end seconds. A goal entry always references its actual v5 **shot event ID**; neither arbitrary scorers nor final scores are sampled. Counts, xG and 11×90-minute on-field time per team must reconcile with the validated original match and substitutions.
+
+Output deliberately identifies itself as `SYNTHETIC_V5_OPEN_PLAY_ONLY`. It **does not** fabricate own goals, penalty shoot-outs, cards, injuries, disciplinary bans, actual stoppage time, RPL minute notation or any unimplemented competition events, and it does not migrate original M0 saves or write to browser storage. Future P3 event-schema integration and P4 transaction persistence remain blockers. **P4 #30 remains OPEN.**
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

@@ -65,6 +65,12 @@ The `m1-diagnostics` CLI also supports `--paired-home-tempo=N`: two different ap
 
 The v4 model is **not calibrated**, contains no true persistent player condition, accumulation of field-zone possessions, substitutions, tackles, cards, injuries or official rules exceptions. Zone, stamina and focus effects are provisional synthetic assumptions for directional regression only. The v4 implementation currently runs an automatic 18-phase match, and the earlier v3 checkpoint replay must **not** be used to resume v4 events. A separate versioned v4 continuation protocol is required. P1/P2 remain OPEN; no M2 playable content or existing save format changed.
 
+## M1 P2 v4 replay-verified checkpoint boundary (2026-10-15)
+
+The first independently versioned v4 action checkpoint API in `src/core/m1-v4-checkpoint.ts` can stop at any exact phase boundary 0..18, preserving the original v4 outfield player-focus commands, team tactics, shot zone/fatigue/xG events, exact consumed xorshift32 draw count and final score only after full time. Saved checkpoint input is treated as untrusted: resume reconstructs the **entire prior action history from the trusted original prematch and staff policy**, including both independent command streams, and compares complete own-key structure and event values before allowing new commands. Commands before the saved virtual second are rejected. Tests compare uninterrupted vs paused output across independently seeded matches, with negative tests for altered focus/authority, events, time, RNG and schema.
+
+**Efficiency limitation:** unlike the existing optimized v3 trusted continuation, v4 checkpoints currently recompute the bounded 18-phase fixture to create a canonical prefix. This is a correctness-first replay validator, **not** a final optimized v4 PRNG continuation or a cryptographic save authentication layer. Existing v3 checkpoints must never be passed off as v4, and actual M2 career input provenance remains separately required. P2 remains OPEN until stateful field modeling, official match rule transitions, verified fatigue/stamina changes and the full M1 acceptance campaign.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

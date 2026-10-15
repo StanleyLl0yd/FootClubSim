@@ -2,6 +2,10 @@
 
 **Prepared:** 2026-10-14. **Status: TEST PLAN, NOT EXECUTED ACCEPTANCE.** Supports [M0_BROWSER_SMOKE.md](M0_BROWSER_SMOKE.md), [M0 acceptance](M0_ACCEPTANCE.md) and [M0 exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2). Neither documentation nor mocked IndexedDB errors constitutes a completed native-browser test.
 
+## Owner's M0-only limited acceptance (2026-10-15)
+
+The owner explicitly changed **M0 exit criteria only** in [ADR-0010](adr/0010-m0-final-acceptance.md), accepting existing verified normal-session native-browser smoke and mocked error handling for M0. The following remain **NOT TESTED** rather than PASS: real Safari Private window, normal-profile Safari full app exit/restart, Safari OS-level downloaded-file recovery, actual enforced IndexedDB quota failure and automatic eviction. They are now tracked as mandatory **pre-release blockers** in [M2 issue #155](https://github.com/StanleyLl0yd/FootClubSim/issues/155). This documented M0-only limitation is not a waiver of browser career recovery or an M2/M5 shipping sign-off.
+
 ## Already observed versus missing
 
 | Scenario | Evidence already recorded | Current status |

@@ -123,8 +123,7 @@ function readSides<T>(candidate: unknown, read: (value: unknown, side: 'home' | 
   const away = read(candidate.away, 'away');
   return home !== null && away !== null ? { home, away } : null;
 }
-function readCommand(candidate: unknown, state: Pick<M1ControlledState, 'clock'>):
-  M1TacticsCommand | null {
+function readCommand(candidate: unknown): M1TacticsCommand | null {
   if (!isRecord(candidate) || !keysMatch(candidate, COMMAND_KEYS) ||
       candidate.schemaVersion !== M1_TACTICS_COMMAND_VERSION ||
       candidate.kind !== 'set-tactics' || !isStableId(candidate.commandId) ||
@@ -190,7 +189,7 @@ function readState(value: unknown): M1ControlledState | null {
     if (!isRecord(raw) || !keysMatch(raw, RECORDED_KEYS) || raw.sequence !== i + 1) return null;
     const candidate: Record<string, unknown> = { ...raw };
     delete candidate.sequence;
-    const command = readCommand(candidate, state);
+    const command = readCommand(candidate);
     if (!command || command.fixtureId !== clock.fixtureId ||
         command.elapsedSeconds > clock.elapsedSeconds ||
         command.elapsedSeconds < previousTime || seen.has(command.commandId)) return null;
@@ -233,7 +232,7 @@ export function submitM1TacticalCommand(snapshot: unknown, candidate: unknown): 
   const state = readState(snapshot);
   if (!state) return fail('INVALID_CONTROL_STATE');
   if (state.clock.status === 'full-time') return fail('MATCH_FINISHED');
-  const command = readCommand(candidate, state);
+  const command = readCommand(candidate);
   if (!command) return fail('INVALID_COMMAND');
   if (command.fixtureId !== state.clock.fixtureId) return fail('WRONG_FIXTURE');
   const side = sideOf(state, command.teamId);

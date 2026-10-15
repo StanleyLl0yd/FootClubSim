@@ -175,6 +175,10 @@ The new **action engine version `5` / event schema `6`** consumes `m1-availabili
 
 This initial v6 checkpoint intentionally recomputes a full 18-phase fixture before truncating its prefix, so it is **not** yet an optimized incremental live simulation and cannot generate future real-time referee decisions without a trusted adapter. It is also not a cryptographic authority token, a M0 save migration, or a signed source-of-truth. Any official goalkeeper/under-seven ruling and 2026/27 IFAB procedural exceptions still require separate versioned work.
 
+## M1 P4 v6 scorer and disciplinary-minute attribution
+
+The independent `m1-v6-appearance-report` reader replay-verifies a full v6 result against its trusted prematch, actor policy, seed and source command list, then produces exact per-player participation seconds, goal scorers linked to synthetic shot events, shots, on-target, fixed-point xG, yellow-card counts, second-yellow/straight-red dismissal status and confirmed permanent medical withdrawals. Normal substitutes enter at their recorded virtual second; red/medical exits subtract unused playing seconds from the club total. The reader independently reconciles per-player shot totals and remaining team seconds to the **canonical v6 ledger**, rather than inventing a second match score. It does not add injury healing, card suspensions, league fines, VAR, penalty/own goals or browser save writes. Historic v5 match report semantics and M0 career files are unchanged.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

@@ -35,6 +35,12 @@ Synthetic chance weights use team passing/decision/marking aggregates, home adva
 
 **A one-shot reference generator is not yet a fully interactive stateful P2 action-resume protocol**: the output's action ledger and final RNG state are preserved, but intermediate phase snapshots cannot independently resume generation yet. That remains future M1 work alongside verified probability tuning. No changes are made to the M0 synthetic catalog format, identities, save data or shipped browser UI.
 
+## M1 P2 replay-verified intermediate action checkpoints (2026-10-15)
+
+`src/core/m1-phase-checkpoint.ts` adds a bounded, **replay-verified** action snapshot API for every exact 300-second boundary (0 through 18 phases). It regenerates the entire prior synthetic stream from the **trusted original prematch snapshot, policy, accepted historical tactical commands and seed**, then returns only the events, RNG state and clock history at the requested boundary. Upon resume, it independently reconstructs the previous checkpoint and checks its exact own-key/value structure before allowing new commands **only at or after the saved virtual second**. Recomputing from seed is deliberately bounded (18 phases) and maintains identical event prefixes even when new tactics are supplied for the later portion.
+
+This technique favors **correctness and reproducibility**, not efficient live incremental stepping: each checkpoint is reconstructed from kickoff, not from a persisted high-performance probability-process stack. Input authenticity, cryptographic integrity of career records, user identity and entrusted staff delegation must be enforced by the future M2 career repository; a tampered but fully self-consistent set of *both* trusted inputs and checkpoint cannot be detected by a pure function. The action model still has no substitutions/injuries/cards or 10k-seed lawful-reference calibration, and does not establish P2 exit success. Future work can optimize true PRNG continuation under a new schema without changing the currently versioned replay contract.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

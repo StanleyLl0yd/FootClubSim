@@ -33,6 +33,26 @@ const record = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 const keysMatch = (value: Record<string, unknown>, keys: readonly string[]): boolean =>
   Object.keys(value).length === keys.length && keys.every(k => Object.hasOwn(value, k));
+/** Compare full own-key structure, not JSON strings (which omit undefined fields). */
+function sameCanonicalValue(expected: unknown, actual: unknown): boolean {
+  if (expected === actual) return true;
+  if (Array.isArray(expected) || Array.isArray(actual)) {
+    if (!Array.isArray(expected) || !Array.isArray(actual) ||
+        expected.length !== actual.length) return false;
+    for (let i = 0; i < expected.length; i++) {
+      if (!Object.hasOwn(expected, i) || !Object.hasOwn(actual, i) ||
+          !sameCanonicalValue(expected[i], actual[i])) return false;
+    }
+    return true;
+  }
+  if (!record(expected) || !record(actual)) return false;
+  const expectedKeys = Object.keys(expected);
+  const actualKeys = Object.keys(actual);
+  return expectedKeys.length === actualKeys.length &&
+    expectedKeys.every(key => Object.hasOwn(actual, key) &&
+      sameCanonicalValue(expected[key], actual[key]));
+}
+
 const CHECKPOINT_KEYS = [
   'engineVersion', 'schemaVersion', 'completedPhases', 'rngSeed', 'rngState',
   'rngDraws', 'controlled', 'events', 'report',
@@ -142,7 +162,7 @@ export function resumeM1PhaseCheckpoint(
   }
   const regenerated = createM1PhaseCheckpoint(prematch, policy, priorPhase, priorCommands);
   if (!regenerated.ok ||
-      JSON.stringify(regenerated.checkpoint) !== JSON.stringify(previous)) {
+      !sameCanonicalValue(regenerated.checkpoint, previous)) {
     return { ok: false, error: 'INVALID_CHECKPOINT' };
   }
   const minimum = priorPhase * M1_CLOCK_STEP_SECONDS;

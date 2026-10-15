@@ -27,6 +27,14 @@ The `authority` snapshot **must originate in a trusted career/admission context*
 
 The engine is still **P1 INCOMPLETE** because actual meaningful football actions, deterministic probability draw scheduling, individual instructions and substitutions remain future work in #27/#28/#29. In this clock-only stage all 18 transitions consume **zero random draws** and a completed 0-0 is an intentionally empty simulation result, not evidence of match realism. Do not auto-close #27.
 
+## M1 P2 first executable shot phases (2026-10-15, experimental)
+
+`src/core/m1-phases.ts` adds a bounded **synthetic-only** match-action model to the accepted 18x300-second P1 virtual clock. It uses **a new action-engine version `2` and event schema `3`**, separate from M0 `shot/full-time` ledger v1, M1 clock schema v2 and M1 tactical command protocol v1. Each phase consumes exactly **five `xorshift32-v1` draws** regardless of whether a shot occurs: possession, chance, shooter, pre-outcome shot quality/xG and outcome. The final PRNG continuation state is reported independently of the earlier clock-only state. One or zero shots may occur per phase; no action is sampled after 90 minutes.
+
+Synthetic chance weights use team passing/decision/marking aggregates, home advantage and bounded mentality/tempo/passing risk; shooter selection is weighted by role, off-ball movement and finishing; xG uses finishing, composure, shot-quality draw and opposing goalkeeper reflexes, **computed before** the goal/save/blocked/missed resolution draw. Every recorded v3 shot has bounded fixed-point xG, eligible active non-GK shooter, stable deterministic phase time and canonical ID. A separate strict `deriveM1SyntheticLedger` produces the score, shots, shots on target and xG **only from the event sequence**, rejecting invalid foreign-schema/type/participant/time/event fields. No final score is sampled directly. Tactics commands from the separate P1 module may be applied before their phase checkpoint, never retroactively, with fixed PRNG draw consumption. Actual production play, injuries, cards, penalties, substitutes, condition changes, league rules, suspended matches, genuine statistical calibration and the M1 exit audit are **not** implemented. Aggregated internal paired-seed directional tests demonstrate sensitivity, **not** independently validated football realism.
+
+**A one-shot reference generator is not yet a fully interactive stateful P2 action-resume protocol**: the output's action ledger and final RNG state are preserved, but intermediate phase snapshots cannot independently resume generation yet. That remains future M1 work alongside verified probability tuning. No changes are made to the M0 synthetic catalog format, identities, save data or shipped browser UI.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

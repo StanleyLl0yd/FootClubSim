@@ -235,3 +235,22 @@ test('pre-kickoff replacements are not in-match substitutions and malformed sour
   reject(startM1SubstitutionMatch({ ...input, rngSeed: 0 }, policy), 'INVALID_PREMATCH');
   reject(startM1SubstitutionMatch(input, {}), 'INVALID_PREMATCH');
 });
+
+test('competition-specific on-field foreigner cap is rechecked after each accepted substitution', () => {
+  const game = { ...input, rosterRules: { ...input.rosterRules, maxForeignersOnField: 1 } };
+  const eligibleForeignBench = home.bench.filter(id =>
+    players.get(id).foreignerForCompetition && players.get(id).primaryPosition !== 'GK');
+  assert.ok(eligibleForeignBench.length >= 2);
+  let state = requireSuccess(startM1SubstitutionMatch(game, policy));
+  state = requireSuccess(advanceM1SubstitutionMatch(game, policy, state));
+  const base = command(state, { id: 'foreign-first' });
+  state = requireSuccess(submitM1NormalSubstitution(game, policy, state, {
+    ...base, outPlayerId: homeOut[0], inPlayerId: eligibleForeignBench[0],
+  }));
+  assert.equal(state.teams.home.normalUsed, 1);
+  reject(submitM1NormalSubstitution(game, policy, state, {
+    ...base, commandId: 'foreign-second',
+    outPlayerId: homeOut[1], inPlayerId: eligibleForeignBench[1],
+  }), 'FOREIGNER_CAP');
+  assert.equal(state.teams.home.normalUsed, 1);
+});

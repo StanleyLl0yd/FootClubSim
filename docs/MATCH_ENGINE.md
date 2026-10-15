@@ -10,6 +10,14 @@ This document specifies a future headless football match simulation. No graphica
 
 **Tactical input (M0):** `src/core/tactics.ts` supplies a versioned per-club plan. The formation's outfield line counts must sum to 10; mentality is an integer from -2 to 2, and pressing, compactness, defensive line, passing risk and tempo are integers from 0 to 100. Both teams' plans are required and checked with the fixture. These controls do not yet influence match outcomes; tactical response curves and formation/position fit are M1 design and calibration tasks. Do not present these prototype records as complete RPL match rules.
 
+## M1 P1 partial implementation: deterministic clock/checkpoints
+
+With explicit owner authorization on 2026-10-15, `src/core/m1-clock.ts` adds a **separate** `M1_ENGINE_VERSION='1'` and `M1_CLOCK_SCHEMA_VERSION=2`. It reuses the M0 full-time-only validator as a strict pre-match admission check; it does **not** modify the M0 `engineVersion='0'` or ledger v1 meaning. Once started, the machine holds only a minimal copy of validated fixture and rules IDs, PRNG seed and clock events, **not the caller's mutable data**.
+
+A single `advanceM1Clock` call moves the virtual clock five minutes and appends one canonical checkpoint; step 18 appends the only `full-time` event. `runM1Clock` composes precisely those same transitions, guaranteeing identical replay for paused/resumed JSON-serialized progress and uninterrupted auto-runs. The current zero-goal result has **no random football actions**, deliberately consumes **zero** `xorshift32-v1` draws, and is NOT presented as a completed simulation or calibrated 0-0 probability. Every serialized continuation is revalidated against the canonical 18-event schedule, bounded time and ID/version fields before use. Bad state fails closed with typed errors.
+
+This is a **P1 partial checkpoint**, not P1/P2 completion: no command scheduling, player activity engine, possession decisions, chances or tactical dynamics yet. Adding actual action events or new participant semantics requires explicit engine/event schema review and regression vectors. Future pauses, staff-authorized in-match commands and fast-forward will share this pure stepping boundary; command authorization is not implemented by this early clock alone. M1 remains OPEN.
+
 ## Contract
 
 Input: frozen pre-match player/team snapshots, validated lineups and tactics, versioned competition rules, engine version, explicit PRNG algorithm/version and seed.

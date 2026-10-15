@@ -54,6 +54,10 @@ Later maintenance does not waive any unverified release task.
 
 ## M1: simulation engine
 
+**M1 START AUTHORIZED BY OWNER 2026-10-15.** The complete [M0 exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) and a subsequent post-M0 whole-repo review #157 are closed. Begin with [M1-P1 #27](https://github.com/StanleyLl0yd/FootClubSim/issues/27) via narrow, versioned, reproducible headless state-machine increments; no M2 registration/rules or playable-release claims. M1 itself stays **OPEN** until tasks #27-#31 and mandatory two full whole-repo exit audits under [#3](https://github.com/StanleyLl0yd/FootClubSim/issues/3) pass.
+
+
+
 - Player match attributes and tactical roles with typed contracts.
 - Seeded deterministic, replayable match action/event model independent of React.
 - Coherent goals, assists, shots, xG, cards, injuries, substitutions, fatigue and disciplinary records.

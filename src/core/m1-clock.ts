@@ -1,6 +1,6 @@
 import { isStableId } from './identifiers.js';
 import {
-  deriveMatchLedger, MATCH_LEDGER_VERSION, M0_ENGINE_VERSION,
+  deriveMatchLedger, M0_ENGINE_VERSION,
   M0_RULES_PACK_ID, M0_RULES_PACK_VERSION,
   type MatchLedgerInput, type MatchLedgerReport,
 } from './match-contracts.js';

@@ -95,6 +95,10 @@ This is **bounded full replay of a maximum 18-phase synthetic match**, not yet o
 
 This is a **pure domain transaction proposal**: the future storage layer still must atomically compare-and-swap career ID+revision; independently forged persisted old journal history is not cryptographically authenticated by the local validator. **Not yet P4-complete:** own goals/card totals/scorers, injuries, actual condition deltas, abandoned/incomplete games, performance/rating reports, integrated league table and browser career persistence remain blocked on future versioned legal P3 events and trusted M2 data. Do not conflate this M1 journal with M0 initial-save bytes or claim release compatibility.
 
+## M1 P4 multi-fixture atomic batch proposal (2026-10-15)
+
+The pure `applyM1MatchResultBatch` API now validates **1..16 sequential fixture commits as one bounded transaction proposal**. Every step invokes the same replay-verified single-match admission/revision/command-ID/fixture-ID checks; if any later step fails, no partially updated journal is returned and the original state is unchanged. The caller must persist **only the final** returned journal through an external revision-checked compare-and-swap operation. Tests include exact serial/batch equivalence, late fabricated-score rejection, duplicate command/fixture inside the same batch, and invalid/oversized batch denial. This does **not** establish an actual atomic browser/database storage adapter or a completed season. P4 #30 remains OPEN.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

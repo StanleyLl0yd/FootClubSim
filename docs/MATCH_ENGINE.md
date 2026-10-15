@@ -141,6 +141,10 @@ The distinct `m1-result-journal` schema establishes a **pure apply-once** step f
 
 **Important:** the module returns a new object only. A future persistence adapter must issue an atomic compare-and-swap of career ID plus revision, or concurrent writers could race despite pure validation. This step neither edits the historical M0 snapshot nor stores a revised playable season; no claim of M1/P4 acceptance, cryptographic authentication or real RPL standings/scorers/injury accounting follows from its present limited report.
 
+## M1 P4 multiple fixtures, one pure commit
+
+`applyM1MatchResultBatch` stages up to 16 already-versioned final match report commands in memory. Each requires an independently replayable v5 event result and sequential expected journal revisions; no partial state leaks from a failed third or later game. Equal input and commands yield identical results. The method returns **a new journal object only**, and does not write to disk, IndexedDB or the M0 initial-career save. A future true persistence adapter must atomically compare-and-swap the old career revision when committing the *final batch state*. Do not mark P4 or league season persistence PASS from this preliminary invariant.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

@@ -19,6 +19,14 @@ The initial `src/core/m1-clock.ts` and `tests/m1-clock.test.mjs` implement a **p
 
 Next work under #27: versioned, admitted in-match command queue and deterministic command ordering/authority; meaningful on-field state and PRNG consumption once P2 possessions/actions begin; preserve historical event protocol IDs rather than silently overloading the clock events. Authentic RPL exceptions remain M2 source-verified gates. **Do not interpret a green clock test as M1 milestone acceptance.**
 
+## M1 P1 second increment: versioned tactical command control (2026-10-15)
+
+`src/core/m1-control.ts` implements a **separate M1-only command protocol** for the P1 checkpoint scaffold. `M1_CONTROL_SCHEMA_VERSION=1` and `M1_TACTICS_COMMAND_VERSION=1` are distinct from historical M0 match ledger v1 and M1 clock schema v2. The control state includes original per-team tactical plans, a current plan, explicit owner/delegated-staff tactical authority, a bounded **64-command** history and the already-tested serialized M1 clock. Every accepted command is stamped with its unique stable ID, fixture/team, current virtual second and ascending sequence; command replay reconstructs final tactics and rejects stale times, forged actors, duplicates, history gaps, invalid tactics and history/current-state discrepancies. Normal and fast-forward clocks use identical `advanceM1Clock` transitions and retain the ordered command history. This increment does **not** implement tactical effectiveness, shots, substitutions, card policy or gameplay UI.
+
+The `authority` snapshot **must originate in a trusted career/admission context**. A modified serialized state with internally consistent but forged authority cannot be cryptographically distinguished by this purely local schema check; external storage integrity/authorization will be required when connecting M2 player/staff context. Staff IDs and assignments are hypothetical P1 inputs, **not** an official personnel pack. The control layer is designed as a closed-system consistency validator, not a security capability token or an online matchmaking anti-cheat boundary.
+
+The engine is still **P1 INCOMPLETE** because actual meaningful football actions, deterministic probability draw scheduling, individual instructions and substitutions remain future work in #27/#28/#29. In this clock-only stage all 18 transitions consume **zero random draws** and a completed 0-0 is an intentionally empty simulation result, not evidence of match realism. Do not auto-close #27.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

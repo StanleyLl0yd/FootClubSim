@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
+import { readWikidataJson } from './wikidata-response.mjs';
 
 export const ROW_LIMIT = 1501;
 const AS_OF = '2026-10-14';
@@ -135,15 +136,12 @@ export async function queryWikidata(qid, fetchImpl = fetch) {
       throw error;
     }
     if (!response.ok) throw new Error('Wikidata HTTP ' + response.status);
-    const size = Number(response.headers.get('content-length'));
-    if (size > 4_000_000) throw new Error('Unexpectedly large response');
-    const body = await response.text();
-    if (body.length > 4_000_000) throw new Error('Wikidata response exceeds 4MB');
-    const data = JSON.parse(body);
+    const data = await readWikidataJson(response);
     if (!Array.isArray(data?.results?.bindings)) throw new Error('Malformed SPARQL result');
     return data.results.bindings;
   } finally {
     clearTimeout(timeout);
+    controller.abort();
   }
 }
 

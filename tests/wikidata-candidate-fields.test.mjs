@@ -59,3 +59,23 @@ test('transport error is not disguised as all missing person attributes', async 
   assert.equal(response.results[0].status, 'query-failed');
   assert.ok(!Object.hasOwn(response.results[0], 'candidatePersons'));
 });
+
+test('empty-string missing markers and malformed entities cannot become zero-availability reports', () => {
+  for (const entity of [null, [], { missing: '' }, { missing: false, claims: {} }, {}]) {
+    assert.throws(() => summarizeClaimAvailability(['Q10'], { Q10: entity }), /candidate entity/);
+  }
+  assert.deepEqual(summarizeClaimAvailability(['Q10'], { Q10: { claims: {} } }), {
+    candidatePersons: 1, birthDate: 0, citizenship: 0, position: 0, allThree: 0,
+  });
+});
+
+test('failed measurements do not publish source-person IDs in error summaries', async () => {
+  const result = await measureAllClubs([{ clubId: 'lp-nadir', wikidataQid: 'Q29108' }], {
+    query: async () => [row(10, '2026-01-01')],
+    entities: async () => ({ Q10: { missing: '' } }),
+    pause: async () => {},
+  });
+  assert.equal(result.completeForRequestedClubs, false);
+  assert.equal(result.results[0].status, 'query-failed');
+  assert.ok(!JSON.stringify(result).includes('Q10'));
+});

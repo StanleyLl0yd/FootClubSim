@@ -1,5 +1,7 @@
 # M0 «Лига приколов»: preliminary parody-brand collision screening (2026-10-14)
 
+**Historical snapshot:** M0 subsequently closed on 2026-10-15 under [ADR-0010](adr/0010-m0-final-acceptance.md) and [exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2). Earlier pending M0 approvals below are superseded by that acceptance; M2/M3/release constraints remain open and M1 is not authorized.
+
 **Status: PRELIMINARY PUBLIC-WEB NAME SEARCH ONLY. NOT LEGAL, TRADEMARK OR RELEASE CLEARANCE.** The owner approved all 16 names and original three-ring badge concepts. Do **not** rename, alter palettes or silently replace an approved identity based on these observations. This file is part of the M0 original-content **risk inventory**, not a change to M0 gameplay, RPL registration, M2 personnel or release rights.
 
 ## Method and limitations

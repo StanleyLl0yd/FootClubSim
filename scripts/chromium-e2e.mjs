@@ -316,6 +316,41 @@ async function run() {
       throw new Error('Foreign career ID import erased the active M0 career');
     }
 
+    // Pack/version strings alone do not prove that a club exists in this shell.
+    const foreignClub = JSON.parse(savedJson);
+    const foreignPayload = JSON.parse(foreignClub.payload);
+    const selected = foreignPayload.catalog.clubs.find(club => club.id === foreignPayload.selectedClubId);
+    selected.id = 'foreign-valid-club';
+    foreignPayload.selectedClubId = selected.id;
+    foreignClub.payload = JSON.stringify(foreignPayload);
+    foreignClub.checksum = createHash('sha256').update(foreignClub.payload).digest('hex');
+    const foreignClubJson = JSON.stringify(foreignClub);
+    const foreignClubPath = join(profile, 'm0-foreign-club.json');
+    await writeFile(foreignClubPath, foreignClubJson, 'utf8');
+    await send('DOM.setFileInputFiles', { nodeId: fileInput.nodeId, files: [foreignClubPath] });
+    await waitText('Импорт отклонён: клуб отсутствует в тестовой базе');
+    await assertNondefaultCareer('foreign club import rejection');
+
+    const storedForeignClub = await evaluate(`new Promise((resolve, reject) => {
+      const open = indexedDB.open('footclubsim-m0', 1);
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result;
+        const tx = db.transaction('initial-careers', 'readwrite');
+        tx.objectStore('initial-careers').add(${JSON.stringify(foreignClubJson)}, 'm0-ui-initial-career');
+        tx.oncomplete = () => { db.close(); resolve(true); };
+        tx.onabort = () => { db.close(); reject(tx.error); };
+      };
+    })`);
+    if (!storedForeignClub) throw new Error('Could not set foreign-club restore fixture');
+    await click('Восстановить из браузера');
+    await waitText('Восстановление отклонено: клуб отсутствует в тестовой базе');
+    await assertNondefaultCareer('foreign club restore rejection');
+    await send('Storage.clearDataForOrigin', {
+      origin: new URL(targetUrl).origin, storageTypes: 'indexeddb',
+    });
+    console.log('PASS: checksum-valid foreign clubs cannot replace or crash the active M0 shell');
+
     // A backup whose payload changed without a matching checksum cannot replace
     // the just-recovered career, even after browser site data was removed.
     const corruptedJson = savedJson.replace('fictional-1', 'fictional-X');

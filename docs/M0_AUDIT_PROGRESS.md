@@ -1,5 +1,7 @@
 # M0 audit evidence and open exit blockers
 
+**Historical incremental log:** the final two-pass report is [M0_EXIT_AUDIT_REPORT.md](M0_EXIT_AUDIT_REPORT.md); M0 closed on 2026-10-15 under [ADR-0010](adr/0010-m0-final-acceptance.md) and [exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2). Earlier open M0 gates below record past checkpoints. M1 remains unauthorized.
+
 **Status: IN PROGRESS (2026-10-13).** This document records code review and verified fixes already completed. It is **not** the required final two-pass whole-repository audit report and does not approve or close M0. The milestone exit remains [#2](https://github.com/StanleyLl0yd/FootClubSim/issues/2).
 
 ## Baseline, scope and rules

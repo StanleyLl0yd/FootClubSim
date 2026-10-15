@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { classifyP54Bindings, queryWikidata } from './wikidata-p54-coverage.mjs';
+import { readWikidataJson } from './wikidata-response.mjs';
 
 const API = 'https://www.wikidata.org/w/api.php';
 const USER_AGENT = 'FootClubSim-CC0-roster-diagnostic/0.1 (https://github.com/StanleyLl0yd/FootClubSim)';
@@ -20,14 +21,20 @@ export function openEndedCandidateQids(bindings) {
 }
 
 export function summarizeClaimAvailability(ids, entities) {
+  if (!entities || typeof entities !== 'object' || Array.isArray(entities)) {
+    throw new Error('Malformed candidate entity response');
+  }
   if (Object.keys(entities).length > ids.length) throw new Error('Unexpected entities in response');
   const counts = { candidatePersons: ids.length, birthDate: 0, citizenship: 0, position: 0, allThree: 0 };
   for (const id of ids) {
-    if (!QID.test(id) || !Object.hasOwn(entities, id) || entities[id]?.missing) {
-      throw new Error('Missing candidate entity in response: ' + id);
+    const entity = entities[id];
+    if (!QID.test(id) || !Object.hasOwn(entities, id) || !entity ||
+        typeof entity !== 'object' || Array.isArray(entity) || Object.hasOwn(entity, 'missing') ||
+        !entity.claims || typeof entity.claims !== 'object' || Array.isArray(entity.claims)) {
+      throw new Error('Missing candidate entity or claims in response');
     }
-    const flags = PROPS.map(prop => Array.isArray(entities[id].claims?.[prop])
-      && entities[id].claims[prop].some(statement => statement.rank !== 'deprecated'
+    const flags = PROPS.map(prop => Array.isArray(entity.claims[prop])
+      && entity.claims[prop].some(statement => statement.rank !== 'deprecated'
         && statement.mainsnak?.snaktype === 'value'));
     if (flags[0]) counts.birthDate++;
     if (flags[1]) counts.citizenship++;
@@ -37,7 +44,7 @@ export function summarizeClaimAvailability(ids, entities) {
   return counts;
 }
 
-async function fetchEntityBatch(ids, fetchImpl = fetch) {
+export async function fetchEntityBatch(ids, fetchImpl = fetch) {
   if (!Array.isArray(ids) || ids.length < 1 || ids.length > MAX_IDS_PER_BATCH || ids.some(id => !QID.test(id))) {
     throw new Error('Invalid Wikidata entity batch');
   }
@@ -60,9 +67,7 @@ async function fetchEntityBatch(ids, fetchImpl = fetch) {
       throw error;
     }
     if (!response.ok) throw new Error('Wikidata API HTTP ' + response.status);
-    const value = await response.text();
-    if (value.length > 4_000_000) throw new Error('Entity response exceeds 4MB');
-    const json = JSON.parse(value);
+    const json = await readWikidataJson(response);
     if (json.error?.code === 'maxlag') {
       const error = new Error('Wikidata maxlag; halt requests');
       error.rateLimited = true;
@@ -74,23 +79,25 @@ async function fetchEntityBatch(ids, fetchImpl = fetch) {
     return json.entities;
   } finally {
     clearTimeout(timeout);
+    controller.abort();
   }
 }
 
 export async function measureFieldAvailability(club, { query = queryWikidata, entities = fetchEntityBatch, pause = delay } = {}) {
   const membershipRows = await query(club.wikidataQid);
   const ids = openEndedCandidateQids(membershipRows);
-  const all = {};
+  const counts = summarizeClaimAvailability([], {});
   for (let index = 0; index < ids.length; index += MAX_IDS_PER_BATCH) {
     if (index) await pause(1500);
     const batch = ids.slice(index, index + MAX_IDS_PER_BATCH);
-    Object.assign(all, await entities(batch));
+    const measured = summarizeClaimAvailability(batch, await entities(batch));
+    for (const key of Object.keys(counts)) counts[key] += measured[key];
   }
   return {
     clubId: club.clubId,
     wikidataQid: club.wikidataQid,
     status: 'measured-current-wikidata',
-    ...summarizeClaimAvailability(ids, all),
+    ...counts,
   };
 }
 

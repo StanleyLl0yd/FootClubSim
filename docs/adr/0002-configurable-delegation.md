@@ -72,4 +72,4 @@ This **amends** provisional D01 and D02 in [M0_PRODUCT_DECISIONS.md](../M0_PRODU
 
 Employee skill model and assignments, whether match-day changes are allowed in the initial automatic engine, granular vs bulk setting presets, UI information architecture, escalation/notification thresholds, emergency roster policies and exact staff recruitment system remain proposals, not accepted details.
 
-**M0 exit remains open** until the rest of its independent acceptance and two-pass audit criteria are passed. M1 must not start automatically after M0.
+**M0 subsequently closed** under [ADR-0010](0010-m0-final-acceptance.md). The detailed later-stage delegation design remains open; M1 still requires separate authorization.

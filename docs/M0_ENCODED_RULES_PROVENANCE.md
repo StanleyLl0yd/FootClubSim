@@ -1,5 +1,7 @@
 # M0 encoded football assumptions: source and version inventory
 
+**Historical snapshot:** M0 subsequently closed on 2026-10-15 under [ADR-0010](adr/0010-m0-final-acceptance.md) and [exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2). Earlier pending M0 approvals below are superseded by that acceptance; M2/M3/release constraints remain open and M1 is not authorized.
+
 **Reviewed 2026-10-14. M0 DESIGN/PROVENANCE INVENTORY, NOT OWNER SIGN-OFF OR AN EXECUTABLE OFFICIAL RPL RULES PACK.** This table enumerates the actual M0 football-facing validations and differentiates *project-authored synthetic assumptions* from *effective third-party sporting rules*. It supports [M0 acceptance](M0_ACCEPTANCE.md), [official source edition matrix](M0_RPL_RULES_MATRIX.md), [match contract](MATCH_ENGINE.md) and the [M0/M2 boundary decision](adr/0006-m0-m2-acceptance-boundary.md). The 16-club/368-player M0 seed is **not** the owner's approved future «Лига приколов» person/club pack.
 
 ## Current executable contract inventory

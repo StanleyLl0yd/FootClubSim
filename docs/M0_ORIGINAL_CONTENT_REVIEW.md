@@ -1,5 +1,7 @@
 # M0 original-content review (2026-10-14)
 
+**Historical inventory:** M0 subsequently closed under [ADR-0010](adr/0010-m0-final-acceptance.md). The [post-M0 audit](REPOSITORY_AUDIT_2026_10_15.md) adds generated production dependency notices and verifies them against installed package license texts; earlier pending M0 statements below are historical. Release-specific rights remain open.
+
 **Baseline:** `main` commit `620f58335b2bf14061c564348caa0321d3722736`. Technical inventory only; not legal clearance or the mandatory final two-pass audit.
 
 [Documentation CI 38556362413](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38556362413) ran `scripts/repo_audit.py` against that exact commit and reported 136 Git-tracked files, 800,903 tracked bytes, 67 source files, 5,884 source lines, 35 test files, 38 Markdown documents and **zero** files with configured binary/artwork/archive/database suffixes. It passed its known-secret-pattern, declared-asset and pinned-action checks. These are **heuristic** checks; independent rights/security review remains necessary.

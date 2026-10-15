@@ -54,7 +54,8 @@ function openDatabase(): Promise<IDBDatabase> {
  * Resolve only on transaction completion, not on the request's success event.
  */
 export async function saveNewInitialCareer(snapshot: InitialCareerSave): Promise<void> {
-  if (!isStableId(snapshot.careerId)) throw new CareerStorageError('INVALID_ID');
+  const careerId = snapshot.careerId;
+  if (!isStableId(careerId)) throw new CareerStorageError('INVALID_ID');
   const encoded = await exportInitialCareer(snapshot);
   const db = await openDatabase();
   try {
@@ -64,7 +65,7 @@ export async function saveNewInitialCareer(snapshot: InitialCareerSave): Promise
       catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
       let requestError: CareerStorageErrorCode = 'STORAGE_FAILED';
       let request: IDBRequest<IDBValidKey>;
-      try { request = transaction.objectStore(STORE).add(encoded, snapshot.careerId); }
+      try { request = transaction.objectStore(STORE).add(encoded, careerId); }
       catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
       request.onerror = () => {
         if (request.error?.name === 'ConstraintError') requestError = 'DUPLICATE';

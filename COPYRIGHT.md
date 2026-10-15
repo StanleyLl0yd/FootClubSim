@@ -9,3 +9,5 @@ The repository may be viewed and interacted with through GitHub under its servic
 Names, logos, trademarks, player images, third-party data and other materials not owned by this project remain with their respective rightsholders. Their presence as a reference or URL does not grant permission to import, bundle or reuse them.
 
 Licensing or contribution arrangements require express permission from the copyright holder. For provenance and data rules, read [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md).
+
+Third-party dependencies retain their own licenses. The production build includes their complete notices in `THIRD_PARTY_LICENSES.txt`; this does not grant a license to FootClubSim source code.

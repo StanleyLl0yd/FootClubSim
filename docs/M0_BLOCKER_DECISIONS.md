@@ -1,5 +1,7 @@
 # M0 blockers: decision package and milestone scope boundaries
 
+**Historical snapshot:** M0 subsequently closed on 2026-10-15 under [ADR-0010](adr/0010-m0-final-acceptance.md) and [exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2). Earlier pending M0 approvals below are superseded by that acceptance; M2/M3/release constraints remain open and M1 is not authorized.
+
 **Final status, 2026-10-15:** The owner explicitly approved the three conditions to **close technical M0 after final exact-main CI** in [ADR-0010](adr/0010-m0-final-acceptance.md). The many 2026-10-14 unapproved options and steps below are preserved **historically**; they are **not current M0 owner blockers**. The actual Safari/real quota cases are NOT TESTED and tracked in [M2 pre-release #155](https://github.com/StanleyLl0yd/FootClubSim/issues/155). Original branding/real-data rights, registrations and full genuine effective RPL/IFAB execution remain **M2/M6** release gates. **M1 remains prohibited without separate permission.**
 
 **Current owner decisions (2026-10-14):** the 16 club aliases, `Статика М1`/`Статика М2`, abstract three-ring badges and parody real-roster-prototype direction are now approved in [ADR-0005](adr/0005-liga-prikolov-brand-and-personnel.md). Any earlier unresolved choices for these exact names or city suffixes below are historical and superseded. Data licensing, actual player/coach status and M0 exit gates are still open.

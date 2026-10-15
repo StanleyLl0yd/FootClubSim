@@ -24,7 +24,9 @@ M0 requires a defensible **rights and provenance gate for what it actually ships
 
 For regulations, M0 must document source editions and the rule-validation obligations. Exact playable execution is an M2 gate; the synthetic M0 `maxForeignersOnField` check is not a full official eligibility implementation. For personnel, a Wikipedia 2026/27 appearance table is not a complete 2026-10-14 registration list and the presence of a coach on a page does not establish a current contract or coaching license.
 
-## Still open before M0 closes
+## Historical M0 conditions, resolved by ADR-0010
+
+M0 subsequently closed under [ADR-0010](0010-m0-final-acceptance.md). The following records the conditions at this earlier decision, not current M0 blockers.
 
 This decision is **not** approval of pending product choices D03-D05/D07-D11, unstated numeric calibration tolerances, a modified browser quota/private-mode gate or legal clearance. Finish those **M0-level** interface/sign-off decisions, make the required source/rights inventory, resolve M0 browser acceptance, and perform the two full audits and final verification. Update checklists and issue scopes accordingly rather than silently marking checks as passed.
 

@@ -62,6 +62,10 @@ export function App() {
         setMessage('Восстановление отклонено: сохранение относится к другой версии тестовой базы. Существующее сохранение не изменено.');
         return;
       }
+      if (!catalog.clubs.some(entry => entry.id === restored.selectedClubId)) {
+        setMessage('Восстановление отклонено: клуб отсутствует в тестовой базе. Текущее состояние не изменено.');
+        return;
+      }
       setCareer(restored);
       setSelectedClubId(restored.selectedClubId);
       setMessage('Стартовая карьера восстановлена и проверена по SHA-256.');
@@ -115,6 +119,10 @@ export function App() {
       }
       if (imported.value.careerId !== CAREER_ID) {
         setMessage('Импорт отклонён: идентификатор карьеры отличается. Текущее состояние не изменено.');
+        return;
+      }
+      if (!catalog.clubs.some(entry => entry.id === imported.value.selectedClubId)) {
+        setMessage('Импорт отклонён: клуб отсутствует в тестовой базе. Текущее состояние не изменено.');
         return;
       }
       setCareer(imported.value);

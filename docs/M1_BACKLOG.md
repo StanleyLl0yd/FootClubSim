@@ -45,6 +45,10 @@ The previous implementation reconstructed **all 18 phases** for every snapshot. 
 
 `src/core/m1-phases.ts` now centralizes the canonical single-phase action decision and provides an **internal trusted-window** continuation operation. It never accepts a serialized snapshot as authoritative on its own. The public `resumeM1PhaseCheckpoint` first replays prior seed/commands using the validated trusted prematch/authority input and checks its complete own-key history; **only then** does it resume from the verified `xorshift32-v1` state to calculate the missing phases. The initial checkpoint at phase zero consumes no draws, each additional phase exactly five; identical commanded runs yield identical shot events, report and final RNG state to full auto-run. The original M0 save format, M1 action-v3 and clock-v2 schemas remain unchanged. The prefix integrity replay still costs work proportional to already played time; this is not an authenticated storage mechanism or demonstrated performance benchmark.
 
+## M1 P5 bounded synthetic diagnostic implementation (2026-10-15)
+
+The first **partial** P5 step introduces \`runM1SyntheticDiagnostics\` and \`scripts/m1-diagnostics.mjs\`. A 128-seed deterministic internal smoke runs in Core CI and a separately requested CLI cohort can use up to 10,000 independently seeded matches. It reports event-derived wins/draws, goals, shots, on-target, xG, Brier score, uncertainty and shot-quality bins, without a licensed external benchmark. \`npm run diagnose:m1 -- --count=10000 --first-seed=1\` only **measures the current synthetic model**. It is not a claim that football realism is accepted, nor proof that 10,000 independent scenarios, balanced mirrors or held-out data have been compared. Full #31 remains OPEN for source-approved empirical baselines, holdout, sensitivity, diagnostics of all event types, performance and safety.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

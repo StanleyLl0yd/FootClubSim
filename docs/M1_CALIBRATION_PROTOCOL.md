@@ -1,6 +1,12 @@
 # Match engine M1 calibration protocol (defined during M0)
 
-**Status: METHODOLOGY OWNER-APPROVED 2026-10-15 FOR THE M0 DESIGN CONTRACT under [ADR-0010](adr/0010-m0-final-acceptance.md); still a prospective measurement plan, NOT a passed realism benchmark.** As of 2026-10-13 there is no implemented match generator or legally approved statistical benchmark dataset. Any numeric results would be invented. This specification defines how M1 must produce and assess real measurements after implementation.
+**Status: METHODOLOGY OWNER-APPROVED 2026-10-15 FOR THE M0 DESIGN CONTRACT under [ADR-0010](adr/0010-m0-final-acceptance.md); still a prospective measurement plan, NOT a passed realism benchmark.** As of 2026-10-15 the preliminary **synthetic shot-phase model exists**, but no legally approved external statistical benchmark dataset, threshold or empirical football realism acceptance has been established. Its internal measurements are permitted as **diagnostics only**, never as proof of calibration. This specification describes the later lawful evaluation process.
+
+## M1 P5 internal diagnostics only (2026-10-15)
+
+For transparent baseline-free engineering diagnostics, run \`npm run diagnose:m1\` (default 128 consecutive nonzero seeds), or \`npm run diagnose:m1 -- --count=10000 --first-seed=1\` for an explicitly larger **synthetic-only** cohort. The CLI builds the core locally before running. The bounded pure module \`src/core/m1-diagnostics.ts\` accepts 1..10000 unique seeds in the specified range and derives scores only from the authoritative simulated v3 shot-event ledger; it calculates actual local home/draw/away and 0-0 counts, per-match goals/shots/shots-on-target/xG means with uncertainty, shot conversion/Brier score and 10 xG buckets. Wilson intervals describe binary rates and sample-mean normal 95% intervals describe synthetic samples; these are **not** external calibration evidence. Low-count buckets (<30 shots) are explicitly marked. Empty buckets have null observed/predicted rates, not fabricated zeros.
+
+The [Core CI smoke workflow](../.github/workflows/core.yml) checks a fixed 128-seed diagnostic in addition to unit tests. Neither that PASS nor a voluntarily executed 10,000-seed synthetic report approves probability realism: there is still **no rights-reviewed real football benchmark, no pre-registered target ranges, no balanced/mirrored scenario campaign, no held-out evaluation or actual completed M1-P5 calibration**. The generated JSON explicitly identifies itself as \`SYNTHETIC_INTERNAL_ONLY_NOT_CALIBRATED\` with \`NO_LICENSED_EXTERNAL_REFERENCE\`. Record an exact commit and CI/runtime separately before comparing runs.
 
 ## Fixed, reproducible experiment
 

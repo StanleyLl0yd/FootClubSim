@@ -1,3 +1,4 @@
+import { sameCanonicalValue } from './canonical-value.js';
 import { startM1ControlledMatch, type M1ControlledState, type M1RecordedCommand } from './m1-control.js';
 import { M1_CLOCK_MAX_EVENTS, M1_CLOCK_STEP_SECONDS, type M1PrematchInput } from './m1-clock.js';
 import type { MatchLedgerReport } from './match-contracts.js';
@@ -32,26 +33,6 @@ const record = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 const keysMatch = (value: Record<string, unknown>, keys: readonly string[]): boolean =>
   Object.keys(value).length === keys.length && keys.every(k => Object.hasOwn(value, k));
-/** Compare full own-key structure, not JSON strings (which omit undefined fields). */
-function sameCanonicalValue(expected: unknown, actual: unknown): boolean {
-  if (expected === actual) return true;
-  if (Array.isArray(expected) || Array.isArray(actual)) {
-    if (!Array.isArray(expected) || !Array.isArray(actual) ||
-        expected.length !== actual.length) return false;
-    for (let i = 0; i < expected.length; i++) {
-      if (!Object.hasOwn(expected, i) || !Object.hasOwn(actual, i) ||
-          !sameCanonicalValue(expected[i], actual[i])) return false;
-    }
-    return true;
-  }
-  if (!record(expected) || !record(actual)) return false;
-  const expectedKeys = Object.keys(expected);
-  const actualKeys = Object.keys(actual);
-  return expectedKeys.length === actualKeys.length &&
-    expectedKeys.every(key => Object.hasOwn(actual, key) &&
-      sameCanonicalValue(expected[key], actual[key]));
-}
-
 const CHECKPOINT_KEYS = [
   'engineVersion', 'schemaVersion', 'completedPhases', 'rngSeed', 'rngState',
   'rngDraws', 'controlled', 'events', 'report',

@@ -134,9 +134,7 @@ function readCommand(candidate: unknown, state: Pick<M1ControlledState, 'clock'>
       (candidate.elapsedSeconds as number) % M1_CLOCK_STEP_SECONDS !== 0) return null;
   const actor = readActor(candidate.actor);
   if (!actor) return null;
-  const expected = candidate.teamId === state.clock.homeClubId ? state.clock.homeClubId :
-    candidate.teamId === state.clock.awayClubId ? state.clock.awayClubId : '';
-  const plan = readPlan(candidate.plan, expected);
+  const plan = readPlan(candidate.plan, candidate.teamId as string);
   if (!plan) return null;
   return {
     schemaVersion: M1_TACTICS_COMMAND_VERSION,
@@ -190,7 +188,8 @@ function readState(value: unknown): M1ControlledState | null {
   for (let i = 0; i < value.commands.length; i++) {
     const raw: unknown = value.commands[i];
     if (!isRecord(raw) || !keysMatch(raw, RECORDED_KEYS) || raw.sequence !== i + 1) return null;
-    const { sequence: _sequence, ...candidate } = raw;
+    const candidate: Record<string, unknown> = { ...raw };
+    delete candidate.sequence;
     const command = readCommand(candidate, state);
     if (!command || command.fixtureId !== clock.fixtureId ||
         command.elapsedSeconds > clock.elapsedSeconds ||

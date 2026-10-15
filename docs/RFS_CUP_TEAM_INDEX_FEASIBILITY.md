@@ -36,4 +36,4 @@ Club identity is resolved using the **combination of the RFU directory's RPL-pat
 
 **Next:** combine the 16 link pointers with date-stamped **registration reports and match protocols**, then reconcile loans/departures one club at a time (starting with «Надир», then «Зеленобер»). Only then can a denominator and credible field coverage be measured. Staff and coaching require independent dated sources. Relevant gates: [#91](https://github.com/StanleyLl0yd/FootClubSim/issues/91), [#15](https://github.com/StanleyLl0yd/FootClubSim/issues/15), [#2](https://github.com/StanleyLl0yd/FootClubSim/issues/2).
 
-**State remains: 16/16 official Cup source links discovered, 0/16 as-of RPL rosters verified, 0 factual player records licensed or placed into playable packs, M0 open.**
+**State remains: 16/16 official Cup source links discovered, 0/16 as-of RPL rosters verified, 0 factual player records licensed or placed into playable packs. M0 subsequently closed under [ADR-0010](adr/0010-m0-final-acceptance.md); M2 release gates remain open.**

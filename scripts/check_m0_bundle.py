@@ -3,9 +3,11 @@
 
 Inspect the built Vite directory, not just Git-tracked source. M0 intentionally
 ships no downloaded football databases, images, fonts, PDFs or other binary files.
+The only extra text artifact is the generated dependency license notice.
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -16,11 +18,13 @@ RESEARCH_MARKERS = (
     "transfermarkt.", "reportedCoachLeads", "sourcePlayerRowsImported",
 )
 MAX_FILE_BYTES = 5_000_000
+LICENSE_FILE = "THIRD_PARTY_LICENSES.txt"
 
 
-def inspect_bundle(root: Path) -> tuple[dict[str, int], list[str]]:
+def inspect_bundle(root: Path, required_notices: dict[str, str] | None = None) -> tuple[dict[str, int], list[str]]:
     metrics = {"files": 0, "bytes": 0, "scripts": 0, "styles": 0}
     concerns: list[str] = []
+    license_text = ""
     if not root.is_dir() or root.is_symlink():
         return metrics, ["web build directory missing or is a symlink"]
     for item in sorted(root.rglob("*")):
@@ -36,7 +40,7 @@ def inspect_bundle(root: Path) -> tuple[dict[str, int], list[str]]:
         metrics["files"] += 1
         size = item.stat().st_size
         metrics["bytes"] += size
-        if rel != "index.html" and not ASSET_PATH.fullmatch(rel):
+        if rel not in {"index.html", LICENSE_FILE} and not ASSET_PATH.fullmatch(rel):
             concerns.append(f"{rel}: unexpected shipped file type or path")
             continue
         if rel.endswith(".js"):
@@ -53,6 +57,8 @@ def inspect_bundle(root: Path) -> tuple[dict[str, int], list[str]]:
             continue
         if "\x00" in text:
             concerns.append(f"{rel}: NUL in production text")
+        if rel == LICENSE_FILE:
+            license_text = text
         for marker in RESEARCH_MARKERS:
             if marker.casefold() in text.casefold():
                 concerns.append(f"{rel}: research-only reference included in M0 bundle ({marker})")
@@ -60,18 +66,33 @@ def inspect_bundle(root: Path) -> tuple[dict[str, int], list[str]]:
         concerns.append("index.html: missing Vite browser entrypoint")
     if metrics["scripts"] < 1 or metrics["styles"] < 1:
         concerns.append("production bundle missing JavaScript or CSS")
+    if not license_text.strip():
+        concerns.append(f"{LICENSE_FILE}: missing dependency license notices")
+    for heading, notice in (required_notices or {}).items():
+        if f"{heading}\n\n{notice.strip()}" not in license_text:
+            concerns.append(f"{LICENSE_FILE}: missing or incomplete notice for {heading}")
     return metrics, concerns
 
 
 def main() -> int:
-    root = Path(__file__).resolve().parents[1] / "web-dist"
-    metrics, concerns = inspect_bundle(root)
+    repo = Path(__file__).resolve().parents[1]
+    notices = {}
+    try:
+        for name in ("react", "react-dom", "scheduler"):
+            package = repo / "node_modules" / name
+            metadata = json.loads((package / "package.json").read_text(encoding="utf-8"))
+            heading = f"## {name} - {metadata['version']} ({metadata['license']})"
+            notices[heading] = (package / "LICENSE").read_text(encoding="utf-8")
+    except (OSError, UnicodeError, ValueError, KeyError):
+        print("ERROR: installed dependency license texts unavailable; run npm ci first", file=sys.stderr)
+        return 1
+    metrics, concerns = inspect_bundle(repo / "web-dist", notices)
     print(f"M0_WEB_BUNDLE_FILES={metrics['files']} BYTES={metrics['bytes']}")
     for message in concerns:
         print("ERROR: " + message, file=sys.stderr)
     if concerns:
         return 1
-    print("PASS: generated M0 bundle is HTML/JS/CSS only, without known research markers")
+    print("PASS: M0 HTML/JS/CSS and exact dependency notices, without known research markers")
     print("NOTE: this is a bounded artifact check, not proof of source rights or absence of all third-party code")
     return 0
 

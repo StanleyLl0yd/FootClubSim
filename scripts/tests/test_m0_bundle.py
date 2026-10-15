@@ -16,6 +16,7 @@ class M0BundleTests(unittest.TestCase):
         self.put("index.html", "<html><div id='root'></div></html>")
         self.put("assets/app-123.js", "console.log('fictional');")
         self.put("assets/app-123.css", "body { color: black; }")
+        self.put("THIRD_PARTY_LICENSES.txt", "Dependency notice fixture")
 
     def put(self, name, text):
         p = self.root / name
@@ -29,9 +30,24 @@ class M0BundleTests(unittest.TestCase):
     def test_expected_m0_static_bundle(self):
         metrics, concerns = inspect_bundle(self.root)
         self.assertEqual(concerns, [])
-        self.assertEqual(metrics["files"], 3)
+        self.assertEqual(metrics["files"], 4)
         self.assertEqual(metrics["scripts"], 1)
         self.assertEqual(metrics["styles"], 1)
+
+    def test_dependency_notices_must_be_present(self):
+        (self.root / "THIRD_PARTY_LICENSES.txt").unlink()
+        _, concerns = inspect_bundle(self.root)
+        self.assertTrue(any("missing dependency license" in c for c in concerns))
+
+    def test_dependency_notices_must_preserve_full_text_and_package_identity(self):
+        heading = "## react - 19.3.0 (MIT)"
+        notice = "First license paragraph.\n\nSecond license paragraph."
+        expected = {heading: notice}
+        self.put("THIRD_PARTY_LICENSES.txt", heading + "\n\n" + notice + "\n")
+        self.assertEqual(inspect_bundle(self.root, expected)[1], [])
+        for text in (heading + "\n\nFirst license paragraph.", "## wrong - 1 (MIT)\n\n" + notice):
+            self.put("THIRD_PARTY_LICENSES.txt", text)
+            self.assertTrue(any("incomplete notice" in c for c in inspect_bundle(self.root, expected)[1]))
 
     def test_research_data_artwork_and_mobile_package_are_not_shipped(self):
         for name in (

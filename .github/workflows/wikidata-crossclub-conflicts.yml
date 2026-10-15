@@ -5,6 +5,12 @@ on:
     paths:
       - 'scripts/wikidata-crossclub-conflicts.mjs'
       - 'tests/wikidata-crossclub-conflicts.test.mjs'
+      - 'scripts/wikidata-response.mjs'
+      - 'tests/wikidata-response.test.mjs'
+      - 'scripts/wikidata-p54-coverage.mjs'
+      - 'tests/wikidata-p54-coverage.test.mjs'
+      - 'scripts/wikidata-candidate-fields.mjs'
+      - 'tests/wikidata-candidate-fields.test.mjs'
       - 'data/drafts/liga-wikidata-club-map-v1.json'
       - '.github/workflows/wikidata-crossclub-conflicts.yml'
   workflow_dispatch:

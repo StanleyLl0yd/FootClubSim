@@ -231,6 +231,17 @@ def main():
             wait_for_text(session, "Импорт отклонён: идентификатор карьеры отличается")
             if not run_script(session, "return Boolean(document.querySelector('.career-info'))"):
                 raise AssertionError("Safari lost active M0 career after foreign-ID import")
+            foreign = json.loads(backup)
+            foreign_payload = json.loads(foreign["payload"])
+            selected = next(club for club in foreign_payload["catalog"]["clubs"]
+                            if club["id"] == foreign_payload["selectedClubId"])
+            selected["id"] = "foreign-valid-club"
+            foreign_payload["selectedClubId"] = selected["id"]
+            foreign["payload"] = json.dumps(foreign_payload, ensure_ascii=False, separators=(",", ":"))
+            foreign["checksum"] = hashlib.sha256(foreign["payload"].encode("utf-8")).hexdigest()
+            set_test_file(session, json.dumps(foreign), "m0-foreign-club.json")
+            wait_for_text(session, "Импорт отклонён: клуб отсутствует в тестовой базе")
+            assert_restored_club(session)
             invalid = backup.replace("fictional-1", "fictional-X", 1)
             if invalid == backup:
                 raise AssertionError("Safari invalid-file fixture unchanged")

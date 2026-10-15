@@ -1,6 +1,6 @@
 # FootClubSim roadmap
 
-> Planning document. **M0 owner-accepted 2026-10-15**, pending final exact-main CI and exit issue #2 closure; no playable release exists. **M1 implementation NOT AUTHORIZED**, regardless of M0 closure. [Final acceptance ADR-0010](docs/adr/0010-m0-final-acceptance.md). The owner-approved [M0/M2 gate boundary](docs/adr/0006-m0-m2-acceptance-boundary.md) separates M0 source/contracts acceptance from M2 playable rosters and executable authentic rules.
+> Planning document. **M0 closed 2026-10-15**, with successful exact-main CI and completed exit issue #2; no playable release exists. **M1 implementation NOT AUTHORIZED**, regardless of M0 closure. [Final acceptance ADR-0010](docs/adr/0010-m0-final-acceptance.md). The owner-approved [M0/M2 gate boundary](docs/adr/0006-m0-m2-acceptance-boundary.md) separates M0 source/contracts acceptance from M2 playable rosters and executable authentic rules.
 
 ## Product contract
 
@@ -22,7 +22,7 @@
 
 | Stage | Planned result | Mandatory exit |
 | --- | --- | --- |
-| M0 (owner-approved 2026-10-15) | Requirements, architecture, data contracts, match specification, provenance policy, tooling and M1 backlog; closure after exact-main CI, with explicit pre-release deferrals under ADR-0010 | [#2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) |
+| M0 (closed 2026-10-15) | Requirements, architecture, data contracts, match specification, provenance policy, tooling and M1 backlog; closed after exact-main CI, with explicit pre-release deferrals under ADR-0010 | [#2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) |
 | M1 | Reproducible, headless 11v11 event-driven match engine, tactical input and statistical calibration | [#3](https://github.com/StanleyLl0yd/FootClubSim/issues/3) |
 | M2 | Play a complete «Лига приколов» season using authentic verified RPL sporting rules and fictional inverse-name clubs, with club selection, fixtures, standings, reports and durable saves | [#4](https://github.com/StanleyLl0yd/FootClubSim/issues/4) |
 | M3 | Transfers, contracts, finances, training, scouting foundation and AI club choices | [#5](https://github.com/StanleyLl0yd/FootClubSim/issues/5) |
@@ -32,25 +32,25 @@
 
 ## M0: foundation and acceptance
 
-**Owner-approved 2026-10-15** under [ADR-0010](docs/adr/0010-m0-final-acceptance.md), contingent only on final exact-main CI and completion of [issue #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2). The explicit limited-browser M0 acceptance preserves **NOT TESTED** pre-release blockers in [#155](https://github.com/StanleyLl0yd/FootClubSim/issues/155); legal/real-roster rights remain in #15/#87/#91. This is not a release sign-off, and **M1 cannot start without a fresh explicit owner instruction**.
+**Closed 2026-10-15** under [ADR-0010](docs/adr/0010-m0-final-acceptance.md), with successful final verification of `f71b7873448b3043a0ab8de463259d3f854e7729` recorded in completed [issue #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2). The explicit limited-browser M0 acceptance preserves **NOT TESTED** pre-release blockers in [#155](https://github.com/StanleyLl0yd/FootClubSim/issues/155); legal/real-roster rights remain in #15/#87/#91. This is not a release sign-off, and **M1 cannot start without a fresh explicit owner instruction**.
 
 See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 
 - [x] Public repository, README and original-derived `AGENTS.md`.
 - [x] Create non-optional audit issues for M0–M6.
 - [x] **M0-only** product scope, platform and versioned architecture owner-accepted under [ADR-0010](docs/adr/0010-m0-final-acceptance.md). Actual numerical M1 tuning, legally cleared reference baselines, brand clearance and executable real RPL implementation are future separately tracked gates.
-- [x] Define and validate the initial **original synthetic** player/club data contract and immutable seeded pack (16 clubs/368 players); final sign-off and release-risk review remain open in [M0 acceptance](docs/M0_ACCEPTANCE.md). **This does not certify 2026/27 rosters.**
+- [x] Define and validate the initial **original synthetic** player/club data contract and immutable seeded pack (16 clubs/368 players); M0 sign-off is recorded in [M0 acceptance](docs/M0_ACCEPTANCE.md), with release-specific risks carried forward. **This does not certify 2026/27 rosters.**
 - [x] Owner approved **M0-only** deterministic match/fixture/input-output ledger, PRNG and **M1 calibration method**, not a running match generator or numerical targets. Reference baselines and tolerance bands require agreement **before M1 tuning** [#31](https://github.com/StanleyLl0yd/FootClubSim/issues/31).
 - [x] M0 provenance/rights **risk inventory** and synthetic artifact boundary owner-accepted under [ADR-0010](docs/adr/0010-m0-final-acceptance.md); Wikipedia-first frozen revisions and official rules-source matrix established. **No legal trademark/data-rights clearance** is claimed; real player registrations, release permissions and executable real-RPL rules remain M2 gates [#15](https://github.com/StanleyLl0yd/FootClubSim/issues/15), [#87](https://github.com/StanleyLl0yd/FootClubSim/issues/87) and [#91](https://github.com/StanleyLl0yd/FootClubSim/issues/91).
 - [x] Bootstrap TypeScript/Vite/React shell, locked dependencies and CI for types, ESLint, source formatting, tests and production build. Native Safari and Windows Edge smoke verification is also automated; exceptional storage cases remain tracked.
 - [x] Owner explicitly accepted **limited M0-only** browser/storage evidence with ordinary Safari/macOS, Windows Chrome/Edge and Linux Chromium positive cases. Safari **true Private/full-app restart/native-download**, enforced quota and organic eviction are **NOT TESTED** and hard pre-release gate [#155](https://github.com/StanleyLl0yd/FootClubSim/issues/155), **not** passed or waived for the first playable career release.
 - [x] Open a [prioritized M1 implementation backlog](docs/M1_BACKLOG.md) with dependencies and preliminary effort/risks.
 - [x] M0 architecture accepted; remaining M1 simulation trade-offs, empirical calibration reference baselines and numeric bounds deliberately deferred to M1 backlog [#27](https://github.com/StanleyLl0yd/FootClubSim/issues/27) through [#31](https://github.com/StanleyLl0yd/FootClubSim/issues/31) and require separate owner authorization before any M1 development.
-- [x] Two **complete sequential entire-repository audit passes** and justified safe fixes executed and documented in [M0 exit report](docs/M0_EXIT_AUDIT_REPORT.md), [PR #153](https://github.com/StanleyLl0yd/FootClubSim/pull/153) and [PR #154](https://github.com/StanleyLl0yd/FootClubSim/pull/154). Final exact-main CI must be attached to #2 before formal closure.
+- [x] Two **complete sequential entire-repository audit passes** and justified safe fixes executed and documented in [M0 exit report](docs/M0_EXIT_AUDIT_REPORT.md), [PR #153](https://github.com/StanleyLl0yd/FootClubSim/pull/153) and [PR #154](https://github.com/StanleyLl0yd/FootClubSim/pull/154). Successful final exact-main CI is recorded in completed #2.
 
-M0 documentation may be merged incrementally without claiming M0 completion. Do not mark unverified tasks complete.
+Later maintenance does not waive any unverified release task.
 
-**Mandatory handoff pause:** after this M0 owner-accepted documentation change merges and all seven final exact-main CI jobs pass, record their IDs, close M0 exit #2 as **completed**, then **STOP implementation work**. Do not start any M1 feature, prototype or PR without a **separate explicit** subsequent authorization from the owner. M2/M5/M6 pre-release blockers remain OPEN and are not silently considered complete.
+**Mandatory milestone boundary:** M0 exit #2 is completed with all seven final exact-main CI jobs successful. Further maintenance is separate from M1 feature work. Do not start any M1 feature, prototype or PR without a **separate explicit** subsequent authorization from the owner. M2/M5/M6 pre-release blockers remain OPEN and are not silently considered complete.
 
 ## M1: simulation engine
 

@@ -209,3 +209,20 @@ test('quota abort caused by transaction error is reported even without request e
     else globalThis.indexedDB = original;
   }
 });
+
+test('an asynchronous save keeps the storage key tied to its validated payload', async () => {
+  const original = globalThis.indexedDB;
+  const stub = makeDatabaseStub();
+  globalThis.indexedDB = stub.indexedDB;
+  try {
+    const mutable = structuredClone(career);
+    const saving = saveNewInitialCareer(mutable);
+    mutable.careerId = 'changed-during-export';
+    await saving;
+    assert.deepEqual(await loadInitialCareer(career.careerId), career);
+    assert.equal(stub.entries.has(mutable.careerId), false);
+  } finally {
+    if (original === undefined) delete globalThis.indexedDB;
+    else globalThis.indexedDB = original;
+  }
+});

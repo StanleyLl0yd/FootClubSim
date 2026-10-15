@@ -35,3 +35,9 @@ Formal applicable-territory/class name and stylized-mark/trade-dress checks, pla
 - Any feature change following M0, particularly the **M1 match simulator**, requires a **new, separate and explicit owner instruction**. M1 issue [#3](https://github.com/StanleyLl0yd/FootClubSim/issues/3) remains open. No M1 commits/PRs should be started as part of this closure.
 
 **Result:** The technical M0 exit is authorized **subject only to successful final-main CI and recording the resulting evidence**. Deferred release checks retain their own hard blockers and honest status.
+
+## Recorded closure evidence (2026-10-15)
+
+The acceptance PR #156 merged as `f71b7873448b3043a0ab8de463259d3f854e7729`.
+All exact-main runs completed successfully: [Core 38681258310](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38681258310), [Docs 38681258265](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38681258265), [dependency security 38681258316](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38681258316) and [four-browser smoke 38681258290](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38681258290).
+[Exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) was closed after those checks. **M0 is complete; M1 still requires separate owner authorization.** The conditional wording above preserves the decision as made before its CI ran.

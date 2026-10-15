@@ -1,12 +1,12 @@
 # FootClubSim architecture (M0 design)
 
-Status: **partly implemented M0 architecture**. Pure TypeScript domain, a minimal React/Vite shell, and a preliminary IndexedDB adapter exist. Match generation, actual game orchestration/worker execution, PWA and long-term career storage remain proposed. Versioned **command and worker-message validators** exist, but they do not run a worker or apply career changes. Architectural changes require review and the relevant ADR.
+Status: **owner-accepted M0 foundation, closed 2026-10-15** ([ADR-0010](docs/adr/0010-m0-final-acceptance.md), [exit evidence #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2)). M1 remains unauthorized. Pure TypeScript domain, a minimal React/Vite shell, and a preliminary IndexedDB adapter exist. Match generation, actual game orchestration/worker execution, PWA and long-term career storage remain proposed. Versioned **command and worker-message validators** exist, but they do not run a worker or apply career changes. Architectural changes require review and the relevant ADR.
 
 ## Product and platforms
 
 FootClubSim is a Russian-first, browser-based, single-player club management simulation. Initial playable competition: the fictional **«Лига приколов»**, with source-verified actual RPL/RFU/IFAB sporting rules and original inverse/antonym-inspired names for the 16 2026/27 RPL-inspired clubs ([ADR-0004](docs/adr/0004-liga-prikolov-rpl-rules.md)). All match outcomes are calculated headlessly. A dedicated Linux desktop release is not a goal. macOS Safari and Windows Chrome/Edge are priority browser acceptance targets.
 
-The application must remain playable without a central server after its assets and a starting dataset are installed. OCI is an optional future host for distributing static data and optional sync, not the authoritative source of match results.
+Domain calculations and saves remain browser-local. Internet connectivity may be required under ADR-0008/0009, including the future CBR quotation adapter; connectivity failures must preserve local saves. OCI is an optional future host, never the authority for match results.
 
 ## Proposed technology baseline
 
@@ -14,7 +14,7 @@ The application must remain playable without a central server after its assets a
 - Vite + React for a data-dense, accessible, Russian-language user interface.
 - Web Worker for potentially long calculations; the main UI thread only dispatches commands and displays immutable results.
 - IndexedDB for local career state; explicit versioned file export/import and recovery checks.
-- Vitest for deterministic engine/unit/property checks; Playwright or equivalent for browser tests. Include real Safari validation, since a WebKit automation pass does not prove the exact installed Safari behavior.
+- Node built-in tests for current domain contracts; Python stdlib tests for repository tools. Native Safari WebDriver and Chromium CDP harnesses verify the current browser shell. Additional engine/property tooling remains a future choice; a WebKit substitute does not prove installed Safari behavior.
 - PWA/service worker only once caching and upgrade semantics are tested; packaging using Tauri or another wrapper remains a separate future decision.
 - Dependency choices such as Zustand/Dexie are **candidates, not a commitment** until their concrete use is demonstrated.
 - No Node.js runtime dependency for playing the game. Build tools run in development/CI only.

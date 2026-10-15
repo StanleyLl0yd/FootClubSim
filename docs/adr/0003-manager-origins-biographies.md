@@ -225,6 +225,6 @@ growth/reputation and gameplay influence weights are **proposals awaiting
 owner design approval**. The accepted principle does not sign off these
 numbers. See implementation tracking issue linked from the project roadmap.
 
-**M0 exit remains OPEN** until all other requirements, rights verification
-and two whole-repository review passes are complete. After M0 completion,
-report it to the owner and **STOP** before M1 until explicitly authorized.
+**M0 subsequently closed** under [ADR-0010](0010-m0-final-acceptance.md).
+Detailed M2 profile design and release rights remain open; **STOP** before
+M1 until explicitly authorized.

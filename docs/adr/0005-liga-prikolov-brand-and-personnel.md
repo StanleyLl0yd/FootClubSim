@@ -33,4 +33,4 @@ The creative identity draft now gives each of the 46 characters an immutable `lp
 - Use a **new** vetted, dated and versioned game catalog in M2, independent from RPL rules-pack versions. Do not silently extend current M0 synthetic importer with real-person records.
 - Verify season snapshot, source terms, rights, minors, duplicate identities, ages, affiliations and roster eligibility before importing each club. Avoid bulk scraping restricted databases.
 - Perform an original crest/name/trademark/publicity review before any external release. Satirical name transformation and abstract colors do not by themselves prove clearance.
-- The pending M0 milestone audit and explicit stop before M1 under `AGENTS.md` remain in force. This is M0 foundation/preview work only.
+- M0 audit and acceptance subsequently completed under [ADR-0010](0010-m0-final-acceptance.md). The explicit stop before M1 under `AGENTS.md` remains in force.

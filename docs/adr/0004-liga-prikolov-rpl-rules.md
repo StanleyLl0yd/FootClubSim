@@ -91,7 +91,7 @@ All entries were approved by the owner on 2026-10-14. The real club names below 
 
 **Approved:** all 16 exact names, two independently named «Статика» teams, original concentric circular badges with «М1»/«М2», recognizable but original parody person names, real roster prototypes as a future product direction, and authentic source-verified sporting rules.
 
-**Still OPEN:** factual roster/source verification, permissions for distributing substantial third-party records in this public proprietary repository, rights/publicity and original-name/trademark review, official effective rule edition completeness, frozen versioned playable data pack, migrations and both required whole-repository M0 exit audit passes.
+**Still OPEN:** factual roster/source verification, permissions for distributing substantial third-party records in this public proprietary repository, rights/publicity and original-name/trademark review, official effective rule edition completeness, frozen versioned playable data pack, migrations. The two whole-repository M0 exit passes and M0 acceptance subsequently completed under [ADR-0010](0010-m0-final-acceptance.md).
 
 The 46 «Надир» parody names are approved but are not certification that all referenced real people were registered with «Зенит» on 2026-10-14. Fifteen more squads remain to be researched; no generated placeholder can be reported as a verified real-world roster. Current M0 remains a synthetic test pack.
 

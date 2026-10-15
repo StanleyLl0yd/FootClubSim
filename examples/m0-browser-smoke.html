@@ -104,7 +104,8 @@
       try {
         const restored = await loadInitialCareer('m0-manual-test');
         if (restored.basePackId !== catalog.packId ||
-            restored.basePackVersion !== catalog.packVersion) {
+            restored.basePackVersion !== catalog.packVersion ||
+            !catalog.clubs.some(club => club.id === restored.selectedClubId)) {
           result.textContent = 'Восстановление отклонено: другая версия тестовой базы. Сохранение не перезаписано.';
           return;
         }
@@ -130,8 +131,11 @@
         if (!parsed.ok) {
           result.textContent = 'Импорт отклонён: ' + parsed.error;
         } else if (parsed.value.basePackId !== catalog.packId ||
-                   parsed.value.basePackVersion !== catalog.packVersion) {
+                   parsed.value.basePackVersion !== catalog.packVersion ||
+                   !catalog.clubs.some(club => club.id === parsed.value.selectedClubId)) {
           result.textContent = 'Импорт отклонён: другая версия тестовой базы. Текущая карьера сохранена.';
+        } else if (parsed.value.careerId !== 'm0-manual-test') {
+          result.textContent = 'Импорт отклонён: идентификатор карьеры отличается. Текущая карьера сохранена.';
         } else {
           activeCareer = parsed.value;
           clubSelect.value = activeCareer.selectedClubId;

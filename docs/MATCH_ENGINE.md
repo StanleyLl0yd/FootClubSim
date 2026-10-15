@@ -153,6 +153,10 @@ The distinct `m1-result-journal` schema establishes a **pure apply-once** step f
 
 The new `m1-referee-decisions` schema v1 is a **separate and explicitly bounded** record of active-player cautions, double-yellow dismissal, straight-red dismissal and medical-confirmed permanent withdrawal, based on [IFAB 2026/27 source constraints](M1_REFEREE_DECISIONS_PROVENANCE.md). Replay from source prematch and exact clock prevents casual manipulation of the current on-field roster. A goalkeeper removal or sub-seven side holds for an explicit external referee ruling and never auto-generates a score. The module does not determine foul timing, medical recovery or cards generated from randomness, and **it does not yet modify v5 shots or M1-P4 results**. That integration requires a fresh event-schema version with verified availability transitions.
 
+## M1 P4 verified read-only scorers and minutes
+
+The new `m1-scorer-report` entrypoint derives an **independent v1 report** only after full trusted prematch/policy/seed/command replay matches the supplied full-time v5 result exactly. It aggregates each goal from a real `goal` shot outcome, uses substitution events to compute playing seconds for starting and entering players, and reconciles participant-level goals, shots, target counts, xG and 11×5400 seconds per club to the canonical synthetic v5 match. This is a **read-only projection**, not a second source of truth for goal creation and not an upgrade of M0 career-save semantics. All goals are explicitly synthetic open-play events until new independently versioned P3 penalty/own-goal/disciplinary protocols exist.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

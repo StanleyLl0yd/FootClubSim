@@ -12,6 +12,12 @@ The [Core CI smoke workflow](../.github/workflows/core.yml) checks a fixed 128-s
 
 The internal `runM1PairedTacticalDiagnostics` routine reuses **exactly the same seed and identical fixture/catalog/lineup/competition inputs** for each baseline/variant pair. Only valid tactical plans may differ. It reports per-seed variant-minus-baseline shifts in home shots/goals/xG, away shots, total goals, uncertainty intervals and the fraction of paired seeds with increased/tied/decreased home shot totals. No standalone final score is sampled and this does not represent football causation or external realism. CLI example: `npm run diagnose:m1 -- --count=10000 --paired-home-tempo=100`. A 64-seed paired smoke is added to CI; an internal diagnostic with a positive change does **not** establish true-to-life effect sizes or remove the owner requirement for licensed reference distributions, mirrored cohorts, held-out samples and pre-registered tolerances.
 
+## M1 P5 deterministic negative-ledger campaign (2026-10-15)
+
+`tests/m1-invariant-campaign.test.mjs` adds a reproducible **internal contract/fuzz corpus**, not a random external football dataset. It exercises a pinned set of nonzero seed boundaries (including `0xffffffff`), 80 additional fixed seeds for v5 score/event and exact 90-draw PRNG conservation, 16 substituted v5 fixtures with two-team active-player/bench eligibility and verified playing time, systematic invalid fields across sampled shot events (version, participant ID, time, sequence, xG, fatigue, zone, outcome and unknown extras) and 11 referee snapshot mutations. Every corrupt event should be rejected instead of silently affecting the official score or field availability. Initial M0 catalog and fixture inputs are verified unchanged.
+
+This campaign **cannot certify sports realism, referee authenticity, an actual field distribution, the IFAB match laws beyond the source-limited implementations or production security**. Its deterministic corpus is intended to be expanded with independent hold-out reference cohorts and performance/constraint checks. P5 #31 and M1 exit #3 remain OPEN.
+
 ## Fixed, reproducible experiment
 
 1. Freeze the exact `catalog.packId`, `catalog.packVersion`, engine version, ledger schema, rules-pack ID/version, tactical plans, fixture matrix and Node/browser runtime metadata.

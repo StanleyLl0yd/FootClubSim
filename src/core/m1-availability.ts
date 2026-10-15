@@ -7,7 +7,7 @@ import {
   type M1SubstitutionCommand, type M1SubstitutionState,
 } from './m1-substitutions.js';
 import {
-  M1_REFEREE_EVENT_LIMIT, M1_REFEREE_RULES_ID,
+  M1_REFEREE_EVENT_LIMIT,
   M1_REFEREE_SCHEMA_VERSION, type M1RefereeDecision,
 } from './m1-referee-decisions.js';
 

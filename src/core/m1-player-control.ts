@@ -131,7 +131,7 @@ function applyCommand(
   return { ok: true, state: {
     ...state,
     instructions: [...state.instructions.filter(x => x.playerId !== command.playerId), updated]
-      .sort((a, b) => a.playerId.localeCompare(b.playerId, 'en')),
+      .sort((a, b) => a.playerId < b.playerId ? -1 : a.playerId > b.playerId ? 1 : 0),
     commands: [...state.commands, recorded],
   } };
 }
@@ -212,6 +212,20 @@ export function submitM1PlayerInstruction(
   const checked = readState(prematch, policy, state);
   if (!checked) return fail('INVALID_STATE');
   return applyCommand(prematch as M1PrematchInput, checked, command);
+}
+
+/** Team and individual orders share clock/authority but have distinct v1 schemas. */
+export function submitM1TeamTacticsWithPlayerControl(
+  prematch: unknown, policy: unknown, state: unknown, command: unknown,
+): M1PlayerControlResult {
+  const checked = readState(prematch, policy, state);
+  if (!checked) return fail('INVALID_STATE');
+  if (isRecord(command) && checked.commands.some(c => c.commandId === command.commandId)) {
+    return fail('DUPLICATE_COMMAND');
+  }
+  const next = submitM1TacticalCommand(checked.controlled, command);
+  if (!next.ok) return fail('INVALID_COMMAND');
+  return { ok: true, state: { ...checked, controlled: next.state } };
 }
 
 /** Pausing simply retains this canonical JSON-serializable state. */

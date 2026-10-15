@@ -1,6 +1,6 @@
 # FootClubSim roadmap
 
-> Planning document. **M0 closed 2026-10-15**, with successful exact-main CI and completed exit issue #2; no playable release exists. **M1 implementation NOT AUTHORIZED**, regardless of M0 closure. [Final acceptance ADR-0010](docs/adr/0010-m0-final-acceptance.md). The owner-approved [M0/M2 gate boundary](docs/adr/0006-m0-m2-acceptance-boundary.md) separates M0 source/contracts acceptance from M2 playable rosters and executable authentic rules.
+> Planning document. **M0 closed 2026-10-15**, with successful exact-main CI and completed exit issue #2; no playable release exists. **M1 separately authorized by the owner and actively in development since 2026-10-15**; milestone #3 remains OPEN and M2 has not begun. [Final acceptance ADR-0010](docs/adr/0010-m0-final-acceptance.md). The owner-approved [M0/M2 gate boundary](docs/adr/0006-m0-m2-acceptance-boundary.md) separates M0 source/contracts acceptance from M2 playable rosters and executable authentic rules.
 
 ## Product contract
 
@@ -32,7 +32,7 @@
 
 ## M0: foundation and acceptance
 
-**Closed 2026-10-15** under [ADR-0010](docs/adr/0010-m0-final-acceptance.md), with successful final verification of `f71b7873448b3043a0ab8de463259d3f854e7729` recorded in completed [issue #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2). The explicit limited-browser M0 acceptance preserves **NOT TESTED** pre-release blockers in [#155](https://github.com/StanleyLl0yd/FootClubSim/issues/155); legal/real-roster rights remain in #15/#87/#91. This is not a release sign-off, and **M1 cannot start without a fresh explicit owner instruction**.
+**Closed 2026-10-15** under [ADR-0010](docs/adr/0010-m0-final-acceptance.md), with successful final verification of `f71b7873448b3043a0ab8de463259d3f854e7729` recorded in completed [issue #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2). The explicit limited-browser M0 acceptance preserves **NOT TESTED** pre-release blockers in [#155](https://github.com/StanleyLl0yd/FootClubSim/issues/155); legal/real-roster rights remain in #15/#87/#91. This was not a release sign-off; a **separate explicit M1 authorization was subsequently granted on 2026-10-15**. M1 is now active, and M2 still requires its own milestone gates.
 
 See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 
@@ -50,9 +50,11 @@ See [M0 acceptance checklist](docs/M0_ACCEPTANCE.md).
 
 Later maintenance does not waive any unverified release task.
 
-**Mandatory milestone boundary:** M0 exit #2 is completed with all seven final exact-main CI jobs successful. Further maintenance is separate from M1 feature work. Do not start any M1 feature, prototype or PR without a **separate explicit** subsequent authorization from the owner. M2/M5/M6 pre-release blockers remain OPEN and are not silently considered complete.
+**Milestone boundary evidence:** M0 exit #2 completed with all seven exact-main checks. The owner **subsequently authorized M1** on 2026-10-15, and M1 source work now proceeds under #27-#31. M2/M5/M6 release blockers remain OPEN; M1 authorization does not automatically authorize M2 or a playable release.
 
 ## M1: simulation engine
+
+**Current technical progress:** PR #159 clock checkpoints; #160 authorized tactical commands; #161 v3 synthetic shot ledger; #162 replay-verified checkpoints; #163 verified true seeded continuation; #164 synthetic-only cohort diagnostics; #165 matched-seed tactical comparisons. All are partial M1 work, **not** M1 acceptance. P1/P2/P5 and subsequent P3/P4 remain open, including reference-rights/calibration and two complete post-acceptance M1 exit audits.
 
 **M1 START AUTHORIZED BY OWNER 2026-10-15.** The complete [M0 exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) and a subsequent post-M0 whole-repo review #157 are closed. Begin with [M1-P1 #27](https://github.com/StanleyLl0yd/FootClubSim/issues/27) via narrow, versioned, reproducible headless state-machine increments; no M2 registration/rules or playable-release claims. M1 itself stays **OPEN** until tasks #27-#31 and mandatory two full whole-repo exit audits under [#3](https://github.com/StanleyLl0yd/FootClubSim/issues/3) pass.
 

@@ -4,7 +4,7 @@ import {
 } from './m1-control.js';
 import { M1_CLOCK_MAX_EVENTS, M1_CLOCK_STEP_SECONDS, type M1PrematchInput } from './m1-clock.js';
 import type { MatchLedgerReport, ShotOutcome } from './match-contracts.js';
-import type { Player, Catalog, MatchLineup } from './model.js';
+import type { Player, MatchLineup } from './model.js';
 import { SeededRng, RNG_VERSION } from './rng.js';
 import type { TacticalPlan } from './tactics.js';
 import { isStableId } from './identifiers.js';

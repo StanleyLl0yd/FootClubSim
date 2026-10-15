@@ -8,6 +8,10 @@ For transparent baseline-free engineering diagnostics, run \`npm run diagnose:m1
 
 The [Core CI smoke workflow](../.github/workflows/core.yml) checks a fixed 128-seed diagnostic in addition to unit tests. Neither that PASS nor a voluntarily executed 10,000-seed synthetic report approves probability realism: there is still **no rights-reviewed real football benchmark, no pre-registered target ranges, no balanced/mirrored scenario campaign, no held-out evaluation or actual completed M1-P5 calibration**. The generated JSON explicitly identifies itself as \`SYNTHETIC_INTERNAL_ONLY_NOT_CALIBRATED\` with \`NO_LICENSED_EXTERNAL_REFERENCE\`. Record an exact commit and CI/runtime separately before comparing runs.
 
+## Paired-seed tactical sensitivity (2026-10-15)
+
+The internal `runM1PairedTacticalDiagnostics` routine reuses **exactly the same seed and identical fixture/catalog/lineup/competition inputs** for each baseline/variant pair. Only valid tactical plans may differ. It reports per-seed variant-minus-baseline shifts in home shots/goals/xG, away shots, total goals, uncertainty intervals and the fraction of paired seeds with increased/tied/decreased home shot totals. No standalone final score is sampled and this does not represent football causation or external realism. CLI example: `npm run diagnose:m1 -- --count=10000 --paired-home-tempo=100`. A 64-seed paired smoke is added to CI; an internal diagnostic with a positive change does **not** establish true-to-life effect sizes or remove the owner requirement for licensed reference distributions, mirrored cohorts, held-out samples and pre-registered tolerances.
+
 ## Fixed, reproducible experiment
 
 1. Freeze the exact `catalog.packId`, `catalog.packVersion`, engine version, ledger schema, rules-pack ID/version, tactical plans, fixture matrix and Node/browser runtime metadata.

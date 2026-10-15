@@ -49,6 +49,10 @@ The previous implementation reconstructed **all 18 phases** for every snapshot. 
 
 The first **partial** P5 step introduces \`runM1SyntheticDiagnostics\` and \`scripts/m1-diagnostics.mjs\`. A 128-seed deterministic internal smoke runs in Core CI and a separately requested CLI cohort can use up to 10,000 independently seeded matches. It reports event-derived wins/draws, goals, shots, on-target, xG, Brier score, uncertainty and shot-quality bins, without a licensed external benchmark. \`npm run diagnose:m1 -- --count=10000 --first-seed=1\` only **measures the current synthetic model**. It is not a claim that football realism is accepted, nor proof that 10,000 independent scenarios, balanced mirrors or held-out data have been compared. Full #31 remains OPEN for source-approved empirical baselines, holdout, sensitivity, diagnostics of all event types, performance and safety.
 
+## M1 P5 paired scenario sensitivity (2026-10-15)
+
+The `m1-diagnostics` CLI also supports `--paired-home-tempo=N`: two different approved tactical plans evaluated on **identical seed ranges**, with the exact same source fixture, source catalog, registered synthetic lineups and PRNG. Results include paired mean deltas, normal-approximate 95% uncertainty and a Wilson interval for the fraction of seeds favoring the variant. A changed model's internal effects can now be compared reproducibly without falsely calling it empirically calibrated. The Core workflow checks a 64-seed paired example. There are still **no lawful real-football calibration baselines, owner-approved realism tolerances, held-out results, fatigue/cards/substitution metrics or M1 exit sign-off**.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

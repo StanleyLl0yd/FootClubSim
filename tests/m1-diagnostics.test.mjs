@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { m1Wilson95, M1_DIAGNOSTICS_SCHEMA_VERSION, runM1SyntheticDiagnostics }
+import {
+  m1Wilson95, M1_DIAGNOSTICS_SCHEMA_VERSION, runM1SyntheticDiagnostics,
+  runM1PairedTacticalDiagnostics,
+}
   from '../dist/core/m1-diagnostics.js';
 import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
 import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
@@ -126,4 +129,74 @@ test('seed range is an explicit immutable plan, not global randomness', () => {
     assert.equal(first.report.lastSeed, 91);
     assert.equal(first.report.meanShotsPerMatch.count, 12);
   }
+});
+
+
+test('identical paired tactical plans yield exactly zero per-seed deltas', () => {
+  const opts = { firstSeed: 1, matchCount: 24 };
+  const paired = runM1PairedTacticalDiagnostics(input, structuredClone(input), policy, opts);
+  assert.equal(paired.ok, true);
+  if (!paired.ok) return;
+  assert.equal(paired.report.status, 'SYNTHETIC_PAIRED_SENSITIVITY_NOT_CALIBRATED');
+  assert.equal(paired.report.referenceStatus, 'NO_LICENSED_EXTERNAL_REFERENCE');
+  assert.equal(paired.report.matchCount, 24);
+  for (const key of [
+    'deltaHomeShots', 'deltaHomeGoals', 'deltaHomeXMilli',
+    'deltaAwayShots', 'deltaTotalGoals',
+  ]) {
+    assert.equal(paired.report[key].total, 0);
+    assert.equal(paired.report[key].mean, 0);
+    assert.equal(paired.report[key].sampleStdDev, 0);
+    assert.deepEqual(paired.report[key].normalMean95, { lower: 0, upper: 0 });
+  }
+  assert.equal(paired.report.homeShotDirection.increased.count, 0);
+  assert.equal(paired.report.homeShotDirection.decreased.count, 0);
+  assert.equal(paired.report.homeShotDirection.tied.count, 24);
+});
+
+test('paired seeded home-tempo comparison is deterministic with honest uncertainty', () => {
+  const variant = { ...input, homeTactics: { ...input.homeTactics, tempo: 100 } };
+  const opts = { firstSeed: 10, matchCount: 64 };
+  const a = runM1PairedTacticalDiagnostics(input, variant, policy, opts);
+  const b = runM1PairedTacticalDiagnostics(structuredClone(input),
+    structuredClone(variant), structuredClone(policy), opts);
+  assert.deepEqual(a, b);
+  assert.equal(a.ok, true);
+  if (!a.ok) return;
+  assert.equal(a.report.baselineHomeTempo, 50);
+  assert.equal(a.report.variantHomeTempo, 100);
+  assert.equal(a.report.lastSeed, 73);
+  assert.equal(a.report.deltaHomeShots.count, 64);
+  assert.equal(a.report.homeShotDirection.increased.count +
+    a.report.homeShotDirection.tied.count +
+    a.report.homeShotDirection.decreased.count, 64);
+  assert.ok(Number.isFinite(a.report.deltaHomeXMilli.mean));
+  assert.ok(Number.isFinite(a.report.deltaTotalGoals.sampleStdDev));
+  assert.ok(a.report.deltaHomeShots.normalMean95.lower <= a.report.deltaHomeShots.mean);
+  assert.ok(a.report.deltaHomeShots.normalMean95.upper >= a.report.deltaHomeShots.mean);
+  assert.equal(a.report.referenceStatus, 'NO_LICENSED_EXTERNAL_REFERENCE');
+});
+
+test('paired scenarios must share the same protected fixture/catalog/lineup', () => {
+  const opts = { firstSeed: 1, matchCount: 3 };
+  const extra = structuredClone(input);
+  extra.catalog.players[0].attributes.finishing = 99;
+  assert.deepEqual(
+    runM1PairedTacticalDiagnostics(input, extra, policy, opts),
+    { ok: false, error: 'INVALID_PLAN' },
+  );
+  assert.deepEqual(
+    runM1PairedTacticalDiagnostics(input, { ...input, rngAlgorithmVersion: 'other' },
+      policy, opts),
+    { ok: false, error: 'INVALID_PLAN' },
+  );
+  const malformed = { ...input, homeTactics: { ...input.homeTactics, tempo: 101 } };
+  assert.deepEqual(
+    runM1PairedTacticalDiagnostics(input, malformed, policy, opts),
+    { ok: false, error: 'MATCH_FAILED' },
+  );
+  assert.deepEqual(
+    runM1PairedTacticalDiagnostics(input, input, policy, { firstSeed: 0, matchCount: 10 }),
+    { ok: false, error: 'INVALID_PLAN' },
+  );
 });

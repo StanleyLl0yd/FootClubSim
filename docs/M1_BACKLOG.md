@@ -59,6 +59,12 @@ The `m1-diagnostics` CLI also supports `--paired-home-tempo=N`: two different ap
 
 **Important limited scope:** this command protocol **records individual instructions but does not yet affect the M1 action-v3 shot probabilities or midfield/defensive phase decisions**. A subsequent **explicitly new action-engine and event schema** is required to integrate player focus with the probability engine without silently changing historical match replay semantics. It does not change M0 saves/club IDs or implement substitution; inactive bench or goalkeeper instruction is rejected. The trusted source-policy/identity boundary is still supplied by a future career repository, not cryptographically inferred from local JSON. P1/P2 remain OPEN.
 
+## M1 P2 experimental v4 focus, zones and fatigue (2026-10-15)
+
+`src/core/m1-phases-v4.ts` is an **independent, explicitly versioned** experimental action simulation with `M1_V4_ENGINE_VERSION='3'` and `M1_V4_EVENT_SCHEMA_VERSION=4`. It uses the trusted-authorized P1 individual `balanced/attack/defend` orders plus team tactical orders at 300-second boundaries. Player focus modifies outfield shooter selection and modestly shifts chance formation, while pressing, stamina and elapsed phases produce a deterministic bounded per-shot fatigue factor; a separate deterministic left/center/right attacking zone affects *pre-outcome* xG. Outcomes are still produced by exactly **five seeded draws per phase** and the final score only by validated version-4 events. A strict reader verifies the new shot fields and maps the limited common shot-goal arithmetic through the historical v3 ledger validator without changing or accepting v4 records in that old schema.
+
+The v4 model is **not calibrated**, contains no true persistent player condition, accumulation of field-zone possessions, substitutions, tackles, cards, injuries or official rules exceptions. Zone, stamina and focus effects are provisional synthetic assumptions for directional regression only. The v4 implementation currently runs an automatic 18-phase match, and the earlier v3 checkpoint replay must **not** be used to resume v4 events. A separate versioned v4 continuation protocol is required. P1/P2 remain OPEN; no M2 playable content or existing save format changed.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

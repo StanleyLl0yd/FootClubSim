@@ -174,3 +174,41 @@ test('checkpoint source inputs and command order are preserved without mutation'
   assert.equal(JSON.stringify(policy), beforePolicy);
   assert.equal(JSON.stringify(commands), beforeCommands);
 });
+
+
+test('verified true RNG continuation matches direct full-run across independent seeds', () => {
+  for (const seed of [1, 7, 42, 103, 0x12345678, 0xffffffff]) {
+    const input = { ...prematch, rngSeed: seed };
+    let checkpoint = good(createM1PhaseCheckpoint(input, policy, 0));
+    const kickoff = command({ tempo: 95, mentality: 2 }, 0);
+    checkpoint = good(resumeM1PhaseCheckpoint(input, policy, checkpoint, 3, [kickoff]));
+    const away = command({ pressing: 75 }, 900, 'away');
+    checkpoint = good(resumeM1PhaseCheckpoint(input, policy, checkpoint, 9, [away]));
+    const expectedPrefix = checkpoint.events.map(e => ({ ...e }));
+    checkpoint = good(resumeM1PhaseCheckpoint(input, policy, checkpoint, 18));
+    const direct = simulateM1SyntheticPhases(input, policy, [kickoff, away]);
+    assert.equal(direct.ok, true);
+    if (!direct.ok) continue;
+    assert.deepEqual(checkpoint.events, direct.events, 'seed=' + seed);
+    assert.deepEqual(checkpoint.report, direct.report, 'seed=' + seed);
+    assert.deepEqual(checkpoint.controlled, direct.controlled, 'seed=' + seed);
+    assert.equal(checkpoint.rngState, direct.rngState, 'seed=' + seed);
+    assert.equal(checkpoint.rngDraws, direct.rngDraws, 'seed=' + seed);
+    assert.deepEqual(checkpoint.events.filter(e => e.elapsedSeconds < 2700),
+      expectedPrefix, 'already played events must remain unchanged, seed=' + seed);
+  }
+});
+
+test('direct checkpoint creation at the opening has no draws or future events', () => {
+  const first = good(createM1PhaseCheckpoint(prematch, policy, 0));
+  assert.equal(first.rngDraws, 0);
+  assert.equal(first.rngState, prematch.rngSeed);
+  assert.deepEqual(first.events, []);
+  assert.deepEqual(first.controlled.clock.events, []);
+  assert.equal(first.report, null);
+  const one = good(resumeM1PhaseCheckpoint(prematch, policy, first, 1));
+  assert.equal(one.rngDraws, 5);
+  assert.equal(one.controlled.clock.elapsedSeconds, 300);
+  assert.ok(one.events.length <= 1);
+  assert.ok(one.events.every(e => e.elapsedSeconds === 299));
+});

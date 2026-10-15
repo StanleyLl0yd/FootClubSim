@@ -174,5 +174,5 @@ test('v4 finalized snapshot cannot append post-full-time instructions', () => {
   assert.equal(final.controlled.controlled.clock.status, 'full-time');
   assert.deepEqual(ok(resumeM1V4Checkpoint(input, policy, final, 18)), final);
   fail(resumeM1V4Checkpoint(input, policy, final, 18,
-    [individual('too-late', 'attack', 5400)]), 'INVALID_SOURCE');
+    [individual('too-late', 'attack', 5400)]), 'INVALID_SCHEDULE');
 });

@@ -1,6 +1,6 @@
 # Match engine M1 calibration protocol (defined during M0)
 
-**Status: prospective measurement plan, not a passed realism benchmark.** As of 2026-10-13 there is no implemented match generator or legally approved statistical benchmark dataset. Any numeric results would be invented. This specification defines how M1 must produce and assess real measurements after implementation.
+**Status: METHODOLOGY OWNER-APPROVED 2026-10-15 FOR THE M0 DESIGN CONTRACT under [ADR-0010](adr/0010-m0-final-acceptance.md); still a prospective measurement plan, NOT a passed realism benchmark.** As of 2026-10-13 there is no implemented match generator or legally approved statistical benchmark dataset. Any numeric results would be invented. This specification defines how M1 must produce and assess real measurements after implementation.
 
 ## Fixed, reproducible experiment
 

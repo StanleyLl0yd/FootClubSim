@@ -1,6 +1,6 @@
 # M1 execution backlog (prepared during M0)
 
-**Status:** prioritized planning only. Implementation of M1 must not start before completion and whole-repository two-pass review of M0 [exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2). The tasks here are estimates of relative complexity, not delivery dates.
+**Status: M1 explicitly authorized by the project owner on 2026-10-15.** [M0 exit #2](https://github.com/StanleyLl0yd/FootClubSim/issues/2) was closed after complete acceptance. M1 implementation may now proceed incrementally through the listed issues; **M1 exit #3 stays OPEN** pending complete engine, meaningful empirical calibration, owner acceptance, two whole-repository exit audits and final CI. Relative effort estimates are not delivery dates.
 
 | Order | Issue | Depends on | Relative effort | Main risk |
 | --- | --- | --- | --- | --- |
@@ -12,6 +12,12 @@
 | Exit | [#3: two-pass full-repository audit](https://github.com/StanleyLl0yd/FootClubSim/issues/3) | all M1 criteria | L | CI/browser and rights evidence gaps |
 
 Relative effort here is qualitative (L > M), not a duration guarantee. Dependencies determine execution order; limited overlap is possible after core event and rule interfaces have stabilized.
+
+## M1 P1 first implementation checkpoint (2026-10-15)
+
+The initial `src/core/m1-clock.ts` and `tests/m1-clock.test.mjs` implement a **pure and bounded 90-minute virtual match clock**, with 18 five-minute transitions, an explicitly separate `engineVersion='1'` and **clock event schema v2**, validated M0 synthetic pre-match inputs, serialized checkpoint pause/resume, automatic/single-step equivalence and strict rejection of altered continuation history. The preliminary 0-0 terminal report is **not a football outcome generator**: there are no shots, possessions, tactical effects, substitutions or disciplinary incidents. All checkpoints consume **zero** PRNG draws; the seed/continuation state is pinned for future explicitly versioned action scheduling. This increment is a **partial** implementation of [#27](https://github.com/StanleyLl0yd/FootClubSim/issues/27), not a P1/P2 completion or a realistic match. The existing M0 v1 shot/full-time validator and revision-0 saves remain unmodified.
+
+Next work under #27: versioned, admitted in-match command queue and deterministic command ordering/authority; meaningful on-field state and PRNG consumption once P2 possessions/actions begin; preserve historical event protocol IDs rather than silently overloading the clock events. Authentic RPL exceptions remain M2 source-verified gates. **Do not interpret a green clock test as M1 milestone acceptance.**
 
 ## M1 definition of done
 

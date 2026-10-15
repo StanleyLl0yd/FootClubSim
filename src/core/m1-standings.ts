@@ -57,7 +57,10 @@ export function deriveM1SyntheticUnrankedTotals(
   initialCareer: unknown, candidateJournal: unknown,
 ): M1UnrankedTotalsResult {
   const journal = validateM1MatchResultJournal(initialCareer, candidateJournal);
-  if (!journal.ok) return { ok: false, error: journal.error };
+  if (!journal.ok) {
+    return { ok: false, error: journal.error === 'INVALID_INITIAL_CAREER' ?
+      'INVALID_INITIAL_CAREER' : 'INVALID_JOURNAL' };
+  }
   const initial = initialCareer as InitialCareerSave;
   const totals = initial.catalog.clubs.map(club => empty(club.id));
   const byId = new Map(totals.map(team => [team.clubId, team]));

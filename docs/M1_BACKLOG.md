@@ -99,6 +99,10 @@ This is a **pure domain transaction proposal**: the future storage layer still m
 
 The pure `applyM1MatchResultBatch` API now validates **1..16 sequential fixture commits as one bounded transaction proposal**. Every step invokes the same replay-verified single-match admission/revision/command-ID/fixture-ID checks; if any later step fails, no partially updated journal is returned and the original state is unchanged. The caller must persist **only the final** returned journal through an external revision-checked compare-and-swap operation. Tests include exact serial/batch equivalence, late fabricated-score rejection, duplicate command/fixture inside the same batch, and invalid/oversized batch denial. This does **not** establish an actual atomic browser/database storage adapter or a completed season. P4 #30 remains OPEN.
 
+## M1 P4 unranked synthetic standings aggregates (2026-10-15)
+
+`src/core/m1-standings.ts` adds a **read-only, explicitly NOT officially ranked** per-club statistical projection from previously validated P4 match-journal entries. It first validates the saved journal and unchanged M0 pack/career identity, then accumulates appearances, won/drawn/lost, goals for/against, goal difference and **provisional 3/1/0 synthetic points**, with arithmetic conservation tests and no mutation of the source journal. The output deliberately retains **original source club order** and `UNRANKED_SYNTHETIC_NOT_OFFICIAL_RPL` status. Real RPL 2026/27 standings ranking, current/final head-to-head tie conditions, discipline and exceptional match statuses require the official Article 18 decision tree and completed P3/P4 event sources. This feature is not a ranking, league champion selector, M0 save migration, or playable league table.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

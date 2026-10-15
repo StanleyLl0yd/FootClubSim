@@ -1,0 +1,22 @@
+# M1 P3: normal substitutions, source-limited 2026/27 subset
+
+**Status: implemented as an isolated headless acceptance prototype, NOT complete RPL/IFAB execution or a playable match.** Date checked: 2026-10-15. No external real-person or registration records are imported.
+
+## Normative references and frozen scope
+
+- Official [RFU/RPL 2026/27 regulation, 56-page edition](https://m.rfs.ru/subject/1/documents/preview?documentId=2164), **Article 8.8, PDF page 25 (zero-based index 24)**: up to **5 normal replacements per club**, at most **3 in-play substitution opportunities**, half-time substitutions do **not** count as in-play opportunities; both teams replacing simultaneously consume one opportunity **each**.
+- Same official regulation, Article 8.7.4, PDF page 25: **7–11 named starters** and up to **12 named substitutes** in match form #9. The current 11+12 M0 synthetic admission is a narrower starting fixture, not a substitute for true registration or medical clearance.
+- Official [IFAB Laws of the Game 2026/27](https://theifab.com/documents/) and [Law 3: the players](https://theifab.com/laws/latest/the-players/): a substitution needs referee authorization, actual stoppage, named bench eligibility, player off before entry and the referee's final signal. See the 2026/27 changes for **10-second departure** and post-delay entry rules. Those physical and referee-procedure states are **not available in the current 300-second P1 clock**.
+- Articles **8.9–8.10** cross-reference **concussion substitutions** and additional medical obligations. The current `substitute-normal` contract **rejects** attempts to silently treat these as ordinary substitutions. A separately sourced, verified concussion protocol is a future requirement.
+
+## Executable subset
+
+`src/core/m1-substitutions.ts` defines **schema version 1**, pinned normal-only rule ID `rpl-2026-27-art-8.8-normal`. It is independent of both the current M1 action v3/v4 ledgers and M0 save schema. Every in-match order contains a distinct ID, fixture, team, actor, outgoing starter, named substitute, exact virtual timestamp and a **caller-asserted external referee-authorized stoppage**. A specific half-time order is permitted only at **2700 virtual seconds**. An in-play replacement at an arbitrary 300-second mark is **not accepted without the explicit `referee-authorized` external assertion**; the current standalone code does not independently prove a whistle/stoppage or satisfy IFAB's 2026/27 procedural timing.
+
+At the approved checkpoint the validator requires: the ordering actor matches the **trusted** human/delegated staff appointment; outgoing player is currently active; incoming player is still on the named bench; no removed person re-enters; the resulting team still has **exactly one GK**; the roster's competition-provided **foreigner cap** is rechecked; no team exceeds 5 normal replacements and 3 distinct in-play stoppages; simultaneous replacements for either/both sides count separately and one stoppage per team. Invalid commands fail without changing lineup, time or substitution counters. Every operation independently replays the history from the validated original source and staff policy and rejects altered authority, commands, clocks and active/bench states. Involuntary red-card reduction of the XI is **not modeled** yet.
+
+## Explicit remaining blockers
+
+This module is a *standalone* provisional referee-assisted admission layer. It is not wired to the shot phases and therefore does **not yet alter the v3/v4 active player selection** or report event ledger. The full M1-P3 integration requires a **new versioned combined action/availability event contract**, proof that both interactive and auto calculations share the legal transition, legal substitution opportunities arising from true on-field stoppages, authoritative match-time roles, red-card/injury/penalty/own-goal effects and all effective competition exceptions.
+
+The explicit foreigner cap currently comes from synthetic `rosterRules` and **is not a claim that 7 is the legally current 2026/27 RPL match limit**. Proper registration, non-homegrown limitations, medical requirements, concussion procedure, referee decisions and applicable later amendments are M2 source/release requirements under [ADR-0006](adr/0006-m0-m2-acceptance-boundary.md). Do not mark [M1-P3 #29](https://github.com/StanleyLl0yd/FootClubSim/issues/29), [M1 exit #3](https://github.com/StanleyLl0yd/FootClubSim/issues/3) or any playable release complete from this partial implementation.

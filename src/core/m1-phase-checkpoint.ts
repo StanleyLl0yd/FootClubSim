@@ -1,12 +1,11 @@
-import type { M1ControlledState, M1RecordedCommand } from './m1-control.js';
-import { M1_CLOCK_MAX_EVENTS, M1_CLOCK_STEP_SECONDS } from './m1-clock.js';
+import { startM1ControlledMatch, type M1ControlledState, type M1RecordedCommand } from './m1-control.js';
+import { M1_CLOCK_MAX_EVENTS, M1_CLOCK_STEP_SECONDS, type M1PrematchInput } from './m1-clock.js';
 import type { MatchLedgerReport } from './match-contracts.js';
 import {
   M1_ACTION_DRAW_COUNT_PER_PHASE, M1_ACTION_ENGINE_VERSION,
-  M1_ACTION_EVENT_SCHEMA_VERSION, simulateM1SyntheticPhases,
-  type M1SyntheticEvent,
+  M1_ACTION_EVENT_SCHEMA_VERSION, deriveM1SyntheticLedger,
+  extendTrustedM1PhaseWindow, type M1PhaseWindow, type M1SyntheticEvent,
 } from './m1-phases.js';
-import { SeededRng } from './rng.js';
 
 /**
  * P2 replay-verified snapshots: bounded recomputation from trusted prematch
@@ -71,13 +70,26 @@ function commandWithoutSequence(command: M1RecordedCommand): Record<string, unkn
   };
 }
 
-/**
- * Build a canonical checkpoint at an exact 300s boundary.
- *
- * For this initial implementation all up-to-date phase outputs are regenerated
- * from the start (at most 18 phases), then truncated. This prevents undetected
- * divergence but is deliberately NOT a performance-optimized true RNG resume.
- */
+function checkpointFromWindow(
+  prematch: unknown, window: M1PhaseWindow, phaseCount: number,
+): M1PhaseCheckpointResult {
+  const completed = phaseCount === M1_CLOCK_MAX_EVENTS;
+  const report = completed ? deriveM1SyntheticLedger(prematch, window.events) : null;
+  if (report !== null && !report.ok) return { ok: false, error: 'INVALID_SOURCE' };
+  return { ok: true, checkpoint: {
+    engineVersion: M1_ACTION_ENGINE_VERSION,
+    schemaVersion: M1_ACTION_EVENT_SCHEMA_VERSION,
+    completedPhases: phaseCount,
+    rngSeed: (prematch as M1PrematchInput).rngSeed,
+    rngState: window.rngState,
+    rngDraws: window.rngDraws,
+    controlled: window.controlled,
+    events: window.events,
+    report: report === null ? null : report.report,
+  } };
+}
+
+/** Build only the requested 0..18 phases; do not simulate unseen future shots. */
 export function createM1PhaseCheckpoint(
   prematch: unknown, policy: unknown, completedPhases: unknown, commands: unknown = [],
 ): M1PhaseCheckpointResult {
@@ -90,40 +102,20 @@ export function createM1PhaseCheckpoint(
   }
   const phaseCount = completedPhases as number;
   const time = phaseCount * M1_CLOCK_STEP_SECONDS;
-  // No future orders may silently influence the saved snapshot.
   for (const command of commands) {
     if (!record(command) || !Number.isInteger(command.elapsedSeconds) ||
         (command.elapsedSeconds as number) >= time) {
       return { ok: false, error: 'INVALID_SCHEDULE' };
     }
   }
-  const full = simulateM1SyntheticPhases(prematch, policy, commands);
-  if (!full.ok) return { ok: false, error: 'INVALID_SOURCE' };
-  const rng = new SeededRng(full.rngSeed);
-  const draws = phaseCount * M1_ACTION_DRAW_COUNT_PER_PHASE;
-  for (let i = 0; i < draws; i++) rng.nextUint32();
-  const completed = phaseCount === M1_CLOCK_MAX_EVENTS;
-  const clock = full.controlled.clock;
-  const events = full.events.filter(event =>
-    event.type !== 'full-time' ? event.elapsedSeconds < time : completed);
-  const checkpoint: M1PhaseCheckpoint = {
-    engineVersion: M1_ACTION_ENGINE_VERSION,
-    schemaVersion: M1_ACTION_EVENT_SCHEMA_VERSION,
-    completedPhases: phaseCount, rngSeed: full.rngSeed,
-    rngState: rng.snapshot(), rngDraws: draws,
-    controlled: {
-      ...full.controlled,
-      clock: {
-        ...clock,
-        elapsedSeconds: time,
-        status: completed ? 'full-time' : 'running',
-        events: clock.events.slice(0, phaseCount).map(event => ({ ...event })),
-      },
-    },
-    events: events.map(event => ({ ...event })),
-    report: completed ? full.report : null,
-  };
-  return { ok: true, checkpoint };
+  const start = startM1ControlledMatch(prematch, policy);
+  if (!start.ok || !record(prematch)) return { ok: false, error: 'INVALID_SOURCE' };
+  const window = extendTrustedM1PhaseWindow(prematch as unknown as M1PrematchInput, {
+    controlled: start.state, events: [],
+    rngState: (prematch as unknown as M1PrematchInput).rngSeed, rngDraws: 0,
+  }, commands, phaseCount);
+  if (!window.ok) return { ok: false, error: 'INVALID_SOURCE' };
+  return checkpointFromWindow(prematch, window.window, phaseCount);
 }
 
 /**
@@ -174,7 +166,14 @@ export function resumeM1PhaseCheckpoint(
       return { ok: false, error: 'BACKDATED_COMMAND' };
     }
   }
-  return createM1PhaseCheckpoint(
-    prematch, policy, nextCompletedPhases, [...priorCommands, ...newCommands],
-  );
+  // Previous history has been fully checked against trusted prematch and policy.
+  // Generate only the missing phases with the verified xorshift32 continuation.
+  const next = extendTrustedM1PhaseWindow(prematch as M1PrematchInput, {
+    controlled: regenerated.checkpoint.controlled,
+    events: regenerated.checkpoint.events,
+    rngState: regenerated.checkpoint.rngState,
+    rngDraws: regenerated.checkpoint.rngDraws,
+  }, newCommands, nextCompletedPhases as number);
+  if (!next.ok) return { ok: false, error: 'INVALID_SOURCE' };
+  return checkpointFromWindow(prematch, next.window, nextCompletedPhases as number);
 }

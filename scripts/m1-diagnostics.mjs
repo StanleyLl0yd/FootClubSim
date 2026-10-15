@@ -4,11 +4,14 @@
  * Examples:
  * npm run diagnose:m1
  * npm run diagnose:m1 -- --count=10000 --first-seed=1
+ * npm run diagnose:m1 -- --count=128 --paired-home-tempo=100
  *
  * A successful exit means the ledger is internally coherent. It is NOT an
  * independently benchmarked or calibrated football simulation.
  */
-import { runM1SyntheticDiagnostics } from '../dist/core/m1-diagnostics.js';
+import {
+  runM1SyntheticDiagnostics, runM1PairedTacticalDiagnostics,
+} from '../dist/core/m1-diagnostics.js';
 import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
 import {
   MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION,
@@ -28,12 +31,13 @@ function numericArg(flag, fallback) {
 }
 async function main() {
   for (const arg of process.argv.slice(2)) {
-    if (!/^--(?:count|first-seed)=[0-9]+$/.test(arg)) {
-      throw Error('Only --count=N and --first-seed=N are supported');
+    if (!/^--(?:count|first-seed|paired-home-tempo)=[0-9]+$/.test(arg)) {
+      throw Error('Only --count=N, --first-seed=N and --paired-home-tempo=N are supported');
     }
   }
   const matchCount = numericArg('count', 128);
   const firstSeed = numericArg('first-seed', 1);
+  const pairedHomeTempo = numericArg('paired-home-tempo', null);
   const catalog = createSyntheticRplScaleCatalog(77);
   const fixture = generateDoubleRoundRobin(catalog.clubs.map(c => c.id))[0].fixtures[0];
   const clubs = new Map(catalog.clubs.map(c => [c.id, c]));
@@ -52,7 +56,13 @@ async function main() {
     home: { assignedActor: { kind: 'player' }, availableStaffIds: [] },
     away: { assignedActor: { kind: 'player' }, availableStaffIds: [] },
   };
-  const result = runM1SyntheticDiagnostics(prematch, authority, { matchCount, firstSeed });
+  const result = pairedHomeTempo === null ?
+    runM1SyntheticDiagnostics(prematch, authority, { matchCount, firstSeed }) :
+    runM1PairedTacticalDiagnostics(
+      prematch,
+      { ...prematch, homeTactics: { ...prematch.homeTactics, tempo: pairedHomeTempo } },
+      authority, { matchCount, firstSeed },
+    );
   if (!result.ok) throw Error('M1 internal diagnostic failed: ' + result.error);
   process.stdout.write(JSON.stringify(result.report, null, 2) + '\n');
 }

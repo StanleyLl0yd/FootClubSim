@@ -149,6 +149,10 @@ The distinct `m1-result-journal` schema establishes a **pure apply-once** step f
 
 `deriveM1SyntheticUnrankedTotals` reads the new journal only after its immutable M0-derived career/fixture/pack binding passes validation. It derives per-club played/won/drawn/lost, goals for/against, goal difference, and a **synthetic-only 3/1/0 experimental point count** from applied finished results. Every match contributes one appearance to both participating teams; total goals for/against cancel exactly, and aggregate points are conserved by arithmetic invariants. It explicitly **does not order or rank teams**, apply official RPL Article 18 tie-breaking, award championships, select relegation clubs or make the M1 career browser-playable. Output order is original synthetic club-catalog order, independently of results. Zero matches returns all clubs with zero stats.
 
+## M1 P3 isolated referee decisions (not yet the shot engine)
+
+The new `m1-referee-decisions` schema v1 is a **separate and explicitly bounded** record of active-player cautions, double-yellow dismissal, straight-red dismissal and medical-confirmed permanent withdrawal, based on [IFAB 2026/27 source constraints](M1_REFEREE_DECISIONS_PROVENANCE.md). Replay from source prematch and exact clock prevents casual manipulation of the current on-field roster. A goalkeeper removal or sub-seven side holds for an explicit external referee ruling and never auto-generates a score. The module does not determine foul timing, medical recovery or cards generated from randomness, and **it does not yet modify v5 shots or M1-P4 results**. That integration requires a fresh event-schema version with verified availability transitions.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

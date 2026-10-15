@@ -158,7 +158,7 @@ test('strict replay rejects mutated commands, instructions, authority, extra fie
     { ...state, instructions: [] },
     { ...state, instructions: [{ ...state.instructions[0], focus: 'defend' }] },
     { ...state, commands: [{ ...state.commands[0], sequence: 2 }] },
-    { ...state, commands: [{ ...state.commands[0], elapsedSeconds: 300 }] },
+    { ...state, commands: [{ ...state.commands[0], elapsedSeconds: 600 }] },
     { ...state, commands: [{ ...state.commands[0], actor: { kind: 'staff', staffId: 'fake' } }] },
     { ...state, controlled: { ...state.controlled,
       tactics: { ...state.controlled.tactics, home: { ...state.controlled.tactics.home, tempo: 100 } } } },

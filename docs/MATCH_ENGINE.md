@@ -169,6 +169,12 @@ The new **action engine version `5` / event schema `6`** consumes `m1-availabili
 
 **Nonclaims:** this is synthetic-only, not an authentic RPL 2026/27 full referee, injury-treatment or physical field model. Referee decisions are externally supplied, not randomly generated, and origin strings are not signatures. v6 has no independently verified checkpoint API yet; historical v3/v4/v5 events and M0 saves must retain their previous interpretations. Future P3/P4 requires goalkeeper/medical-replacement rules, explicit red-card sanctions, real award/penalty/own-goal/assist events and verified career apply-once persistence.
 
+## M1 v6 checkpoints (dedicated schema)
+
+`createM1V6Checkpoint` and `resumeM1V6Checkpoint` are **separate** from the earlier v5 shot/substitution checkpoint protocol. They include the exact original mixed command order, canonical prefix of v6 availability decisions and shot events, original seed and per-phase xorshift32 continuation, source-replayed player tactical state, effective referee-approved XI and full-time-only report. The saved record must exactly reproduce from trusted prematch/role policy/seed before any forward-only additions are accepted. Identical seeds and commands yield identical end state whether simulated all at once or reconstructed from checkpoints.
+
+This initial v6 checkpoint intentionally recomputes a full 18-phase fixture before truncating its prefix, so it is **not** yet an optimized incremental live simulation and cannot generate future real-time referee decisions without a trusted adapter. It is also not a cryptographic authority token, a M0 save migration, or a signed source-of-truth. Any official goalkeeper/under-seven ruling and 2026/27 IFAB procedural exceptions still require separate versioned work.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

@@ -113,6 +113,10 @@ The pure `applyM1MatchResultBatch` API now validates **1..16 sequential fixture 
 
 Output deliberately identifies itself as `SYNTHETIC_V5_OPEN_PLAY_ONLY`. It **does not** fabricate own goals, penalty shoot-outs, cards, injuries, disciplinary bans, actual stoppage time, RPL minute notation or any unimplemented competition events, and it does not migrate original M0 saves or write to browser storage. Future P3 event-schema integration and P4 transaction persistence remain blockers. **P4 #30 remains OPEN.**
 
+## M1 P5 deterministic tamper and property campaign (2026-10-15)
+
+Additional `m1-invariant-campaign.test.mjs` exercises v5 event normalization, stage/outcome/xG conservation, finite and precisely reproducible PRNG consumption, legal named-substitute availability and source immutability across fixed seed cohorts. Repeated malformed-event payloads and replayed referee decisions are required to fail closed on invalid identity, event ordering, timestamps, double entry, provenance and extra keys. It is **internal property/regression coverage**, not source-licensed football calibration or M1/P5 exit acceptance. See [calibration protocol](M1_CALIBRATION_PROTOCOL.md).
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

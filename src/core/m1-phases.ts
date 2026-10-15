@@ -4,7 +4,7 @@ import {
 } from './m1-control.js';
 import { M1_CLOCK_MAX_EVENTS, M1_CLOCK_STEP_SECONDS, type M1PrematchInput } from './m1-clock.js';
 import type { MatchLedgerReport, ShotOutcome } from './match-contracts.js';
-import type { Player, Catalog, MatchLineup } from './model.js';
+import type { Player, MatchLineup } from './model.js';
 import { SeededRng, RNG_VERSION } from './rng.js';
 import type { TacticalPlan } from './tactics.js';
 import { isStableId } from './identifiers.js';
@@ -180,32 +180,110 @@ function shotOutcome(xgMilli: number, player: Player, draw: number): ShotOutcome
 }
 
 /**
- * Bounded initial P2 SYNTHETIC phase model, with exactly five seeded draws
- * per phase regardless of whether an attack occurs. No rules/realism claim.
+ * Internal trusted continuation window: constructed after strict prematch
+ * admission, or from a fully replay-verified M1PhaseCheckpoint. This shape
+ * alone does NOT authenticate storage or a user's actor/club authority.
  */
-export function simulateM1SyntheticPhases(
-  prematch: unknown, policy: unknown, plannedCommands: unknown = [],
-): M1SyntheticRun {
-  const start = startM1ControlledMatch(prematch, policy);
-  if (!start.ok || !isRecord(prematch)) return { ok: false, error: 'INVALID_PREMATCH' };
-  if (!Array.isArray(plannedCommands) || plannedCommands.length > 64) {
+export interface M1PhaseWindow {
+  readonly controlled: M1ControlledState;
+  readonly events: readonly M1SyntheticEvent[];
+  readonly rngState: number;
+  readonly rngDraws: number;
+}
+export type M1PhaseWindowResult =
+  | Readonly<{ ok: true; window: M1PhaseWindow }>
+  | M1SyntheticFailure;
+
+function phaseContext(input: M1PrematchInput) {
+  const players = new Map(input.catalog.players.map(p => [p.id, p]));
+  return {
+    input, players,
+    homePassing: avg(input.homeLineup, players, 'shortPassing'),
+    awayPassing: avg(input.awayLineup, players, 'shortPassing'),
+    homeDecisions: avg(input.homeLineup, players, 'decisions'),
+    awayDecisions: avg(input.awayLineup, players, 'decisions'),
+    homeMarking: avg(input.homeLineup, players, 'marking'),
+    awayMarking: avg(input.awayLineup, players, 'marking'),
+  };
+}
+
+/** One canonical synthetic phase; consumes exactly five xorshift32 draws. */
+function makePhaseShot(
+  context: ReturnType<typeof phaseContext>, state: M1ControlledState,
+  rng: SeededRng, sequence: number,
+): M1SyntheticShot | null {
+  const { input, players, homePassing, awayPassing, homeDecisions, awayDecisions,
+    homeMarking, awayMarking } = context;
+  const phase = state.clock.elapsedSeconds / M1_CLOCK_STEP_SECONDS;
+  const draws = [
+    rng.nextFloat(), rng.nextFloat(), rng.nextFloat(), rng.nextFloat(), rng.nextFloat(),
+  ];
+  const homeTactics: TacticalPlan = state.tactics.home;
+  const awayTactics: TacticalPlan = state.tactics.away;
+  const homePossession = clamp(
+    0.535 + (homePassing - awayPassing) / 500 +
+    (homeDecisions - awayDecisions) / 900 +
+    (homeTactics.mentality - awayTactics.mentality) * 0.017,
+    0.27, 0.73,
+  );
+  const home = draws[0]! < homePossession;
+  const attack = home ? homeTactics : awayTactics;
+  const lineup = home ? input.homeLineup : input.awayLineup;
+  const teamId = home ? input.fixture.homeClubId : input.fixture.awayClubId;
+  const offense = home ? homePassing : awayPassing;
+  const defending = home ? awayMarking : homeMarking;
+  const chance = clamp(
+    0.40 + (attack.tempo - 50) * 0.003 +
+    (attack.passingRisk - 50) * 0.001 +
+    attack.mentality * 0.028 +
+    (offense - defending) / 400 + (home ? 0.025 : 0),
+    0.08, 0.75,
+  );
+  if (draws[1]! >= chance) return null;
+  const player = chooseShooter(lineup.starters, players, draws[2]!);
+  const opposition = home ? input.awayLineup : input.homeLineup;
+  const reflexes = goalkeeperReflexes(opposition.starters, players);
+  const xgMilli = Math.round(clamp(
+    75 + (player.attributes.finishing - 50) * 2 +
+    (player.attributes.composure - 50) * 1.2 -
+    (reflexes - 50) * 0.9 + draws[3]! * 240,
+    20, 600,
+  ));
+  return {
+    schemaVersion: M1_ACTION_EVENT_SCHEMA_VERSION,
+    id: 'm1-action-shot-' + (phase + 1), sequence,
+    elapsedSeconds: (phase + 1) * M1_CLOCK_STEP_SECONDS - 1,
+    type: 'shot', teamId, playerId: player.id, xgMilli,
+    outcome: shotOutcome(xgMilli, player, draws[4]!),
+  };
+}
+
+/**
+ * Continue ONLY from an already trusted/replay-verified window.
+ * This routine never replays finished phases: it creates exactly the missing
+ * RNG draws/events. Callers accepting serialized state MUST independently
+ * replay-verify it first (see resumeM1PhaseCheckpoint).
+ */
+export function extendTrustedM1PhaseWindow(
+  input: M1PrematchInput, previous: M1PhaseWindow,
+  plannedCommands: readonly unknown[], targetPhases: number,
+): M1PhaseWindowResult {
+  const completed = previous.controlled.clock.elapsedSeconds / M1_CLOCK_STEP_SECONDS;
+  if (!Number.isInteger(completed) || completed < 0 ||
+      completed > M1_CLOCK_MAX_EVENTS || !Number.isInteger(targetPhases) ||
+      targetPhases < completed || targetPhases > M1_CLOCK_MAX_EVENTS ||
+      !Number.isInteger(previous.rngState) || previous.rngState < 1 ||
+      previous.rngState > 0xffffffff ||
+      previous.rngDraws !== completed * M1_ACTION_DRAW_COUNT_PER_PHASE ||
+      !Array.isArray(plannedCommands) || plannedCommands.length > 64) {
     return { ok: false, error: 'INVALID_SCHEDULE' };
   }
-  const input = prematch as unknown as M1PrematchInput;
-  const catalog: Catalog = input.catalog;
-  const players = new Map(catalog.players.map(p => [p.id, p]));
-  const rng = new SeededRng(input.rngSeed);
-  let state = start.state;
-  const events: M1SyntheticEvent[] = [];
+  const rng = new SeededRng(previous.rngState);
+  const context = phaseContext(input);
+  let state = previous.controlled;
+  const events: M1SyntheticEvent[] = [...previous.events];
   let index = 0;
-  const homePassing = avg(input.homeLineup, players, 'shortPassing');
-  const awayPassing = avg(input.awayLineup, players, 'shortPassing');
-  const homeDecisions = avg(input.homeLineup, players, 'decisions');
-  const awayDecisions = avg(input.awayLineup, players, 'decisions');
-  const homeMarking = avg(input.homeLineup, players, 'marking');
-  const awayMarking = avg(input.awayLineup, players, 'marking');
-
-  for (let phase = 0; phase < M1_CLOCK_MAX_EVENTS; phase++) {
+  for (let phase = completed; phase < targetPhases; phase++) {
     const now = state.clock.elapsedSeconds;
     while (index < plannedCommands.length) {
       const command: unknown = plannedCommands[index];
@@ -221,66 +299,47 @@ export function simulateM1SyntheticPhases(
       state = admitted.state;
       index++;
     }
-    const draws = [
-      rng.nextFloat(), rng.nextFloat(), rng.nextFloat(), rng.nextFloat(), rng.nextFloat(),
-    ];
-    const homeTactics: TacticalPlan = state.tactics.home;
-    const awayTactics: TacticalPlan = state.tactics.away;
-    const homePossession = clamp(
-      0.535 + (homePassing - awayPassing) / 500 +
-      (homeDecisions - awayDecisions) / 900 +
-      (homeTactics.mentality - awayTactics.mentality) * 0.017,
-      0.27, 0.73,
-    );
-    const home = draws[0]! < homePossession;
-    const attack = home ? homeTactics : awayTactics;
-    const lineup = home ? input.homeLineup : input.awayLineup;
-    const teamId = home ? input.fixture.homeClubId : input.fixture.awayClubId;
-    const offense = home ? homePassing : awayPassing;
-    const defending = home ? awayMarking : homeMarking;
-    const chance = clamp(
-      0.40 + (attack.tempo - 50) * 0.003 +
-      (attack.passingRisk - 50) * 0.001 +
-      attack.mentality * 0.028 +
-      (offense - defending) / 400 + (home ? 0.025 : 0),
-      0.08, 0.75,
-    );
-    if (draws[1]! < chance) {
-      const player = chooseShooter(lineup.starters, players, draws[2]!);
-      const opposition = home ? input.awayLineup : input.homeLineup;
-      const reflexes = goalkeeperReflexes(opposition.starters, players);
-      const xgMilli = Math.round(clamp(
-        75 + (player.attributes.finishing - 50) * 2 +
-        (player.attributes.composure - 50) * 1.2 -
-        (reflexes - 50) * 0.9 + draws[3]! * 240,
-        20, 600,
-      ));
-      events.push({
-        schemaVersion: M1_ACTION_EVENT_SCHEMA_VERSION,
-        id: 'm1-action-shot-' + (phase + 1), sequence: events.length + 1,
-        elapsedSeconds: (phase + 1) * M1_CLOCK_STEP_SECONDS - 1,
-        type: 'shot', teamId, playerId: player.id, xgMilli,
-        outcome: shotOutcome(xgMilli, player, draws[4]!),
-      });
-    }
+    const shot = makePhaseShot(context, state, rng, events.length + 1);
+    if (shot !== null) events.push(shot);
     const advanced = advanceM1ControlledMatch(state);
     if (!advanced.ok) return { ok: false, error: 'INTERNAL_TRANSITION' };
     state = advanced.state;
   }
   if (index !== plannedCommands.length) return { ok: false, error: 'INVALID_SCHEDULE' };
-  events.push({
-    schemaVersion: M1_ACTION_EVENT_SCHEMA_VERSION,
-    id: 'm1-action-full-time', sequence: events.length + 1,
-    elapsedSeconds: M1_CLOCK_MAX_EVENTS * M1_CLOCK_STEP_SECONDS, type: 'full-time',
-  });
-  const replay = deriveM1SyntheticLedger(prematch, events);
+  if (targetPhases === M1_CLOCK_MAX_EVENTS && completed < M1_CLOCK_MAX_EVENTS) {
+    events.push({
+      schemaVersion: M1_ACTION_EVENT_SCHEMA_VERSION,
+      id: 'm1-action-full-time', sequence: events.length + 1,
+      elapsedSeconds: M1_CLOCK_MAX_EVENTS * M1_CLOCK_STEP_SECONDS, type: 'full-time',
+    });
+  }
+  return { ok: true, window: {
+    controlled: state, events, rngState: rng.snapshot(),
+    rngDraws: targetPhases * M1_ACTION_DRAW_COUNT_PER_PHASE,
+  } };
+}
+
+/** Full synthetic auto-run uses exactly the same engine as true continuation. */
+export function simulateM1SyntheticPhases(
+  prematch: unknown, policy: unknown, plannedCommands: unknown = [],
+): M1SyntheticRun {
+  const start = startM1ControlledMatch(prematch, policy);
+  if (!start.ok || !isRecord(prematch)) return { ok: false, error: 'INVALID_PREMATCH' };
+  const input = prematch as unknown as M1PrematchInput;
+  const extended = extendTrustedM1PhaseWindow(input, {
+    controlled: start.state, events: [],
+    rngState: input.rngSeed, rngDraws: 0,
+  }, plannedCommands as readonly unknown[], M1_CLOCK_MAX_EVENTS);
+  if (!extended.ok) return extended;
+  const replay = deriveM1SyntheticLedger(prematch, extended.window.events);
   if (!replay.ok) return { ok: false, error: 'INVALID_LEDGER' };
   return {
     ok: true, engineVersion: M1_ACTION_ENGINE_VERSION,
     schemaVersion: M1_ACTION_EVENT_SCHEMA_VERSION,
     rngAlgorithmVersion: RNG_VERSION, rngSeed: input.rngSeed,
-    rngState: rng.snapshot(),
-    rngDraws: M1_CLOCK_MAX_EVENTS * M1_ACTION_DRAW_COUNT_PER_PHASE,
-    controlled: state, events, report: replay.report,
+    rngState: extended.window.rngState,
+    rngDraws: extended.window.rngDraws,
+    controlled: extended.window.controlled,
+    events: extended.window.events, report: replay.report,
   };
 }

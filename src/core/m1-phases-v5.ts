@@ -205,6 +205,87 @@ function shotOutcome(xgMilli: number, player: Player, draw: number): ShotOutcome
 }
 
 
+/** One validated-source *synthetic* phase. Exactly 5 RNG draws even without a shot.
+ * Call with already admitted, immutable active XI and trusted tactical state.
+ * No historical v5 probability or event interpretation is changed.
+ */
+export function computeM1V5PhaseShot(
+  input: M1PrematchInput, state: M1PlayerControlState,
+  players: ReadonlyMap<string, Player>,
+  active: Readonly<{ home: readonly string[]; away: readonly string[] }>,
+  phase: number, rng: SeededRng, sequence: number,
+): M1V5Shot | null {
+    // No skipped PRNG draws: five per phase for either tactical/roster state.
+    const possession = rng.nextFloat();
+    const chanceDraw = rng.nextFloat();
+    const playerDraw = rng.nextFloat();
+    const qualityDraw = rng.nextFloat();
+    const outcomeDraw = rng.nextFloat();
+    const homeIds = active.home, awayIds = active.away;
+    const homePass = avg(homeIds, players, 'shortPassing');
+    const awayPass = avg(awayIds, players, 'shortPassing');
+    const homeDec = avg(homeIds, players, 'decisions');
+    const awayDec = avg(awayIds, players, 'decisions');
+    const homeMark = avg(homeIds, players, 'marking');
+    const awayMark = avg(awayIds, players, 'marking');
+    const homeTactics = state.controlled.tactics.home;
+    const awayTactics = state.controlled.tactics.away;
+    const homePossession = clamp(
+      0.535 + (homePass - awayPass) / 500 + (homeDec - awayDec) / 900 +
+      (homeTactics.mentality - awayTactics.mentality) * 0.017, 0.27, 0.73,
+    );
+    const homeTeam = possession < homePossession;
+    const attack = homeTeam ? homeTactics : awayTactics;
+    const activeIds = homeTeam ? homeIds : awayIds;
+    const teamId = homeTeam ? input.fixture.homeClubId : input.fixture.awayClubId;
+    const offense = homeTeam ? homePass : awayPass;
+    const defense = homeTeam ? awayMark : homeMark;
+    const attackFocus = state.instructions.filter(x =>
+      x.teamId === teamId && activeIds.includes(x.playerId) && x.focus === 'attack').length;
+    const defenseFocus = state.instructions.filter(x =>
+      x.teamId === teamId && activeIds.includes(x.playerId) && x.focus === 'defend').length;
+    const chance = clamp(
+      0.40 + (attack.tempo - 50) * 0.003 +
+      (attack.passingRisk - 50) * 0.001 +
+      attack.mentality * 0.028 +
+      (offense - defense) / 400 + (homeTeam ? 0.025 : 0) +
+      (attackFocus - defenseFocus) * 0.012 - phase * 0.002,
+      0.08, 0.75,
+    );
+    if (chanceDraw < chance) {
+      const player = chooseShooter(activeIds, players, state, playerDraw);
+      const focus = focusFor(state, player.id);
+      const otherIds = homeTeam ? awayIds : homeIds;
+      const keeper = players.get(otherIds.find(
+        id => players.get(id)!.primaryPosition === 'GK',
+      )!)!;
+      const zoneIndex = Math.min(2, Math.floor(qualityDraw * 3));
+      const zone: M1V5Zone = zoneIndex === 0 ? 'left' :
+        zoneIndex === 1 ? 'center' : 'right';
+      const quality = qualityDraw * 3 - zoneIndex;
+      const fatigue = fatigueMilli(phase, player, attack.pressing);
+      const zoneBonus = zone === 'center' ? 18 : -8;
+      const focusBonus = focus === 'attack' ? 22 : focus === 'defend' ? -18 : 0;
+      const xgMilli = Math.round(clamp(
+        (74 + (player.attributes.finishing - 50) * 2 +
+          (player.attributes.composure - 50) * 1.2 -
+          (keeper.attributes.reflexes - 50) * 0.9 +
+          quality * 220 + zoneBonus + focusBonus) * fatigue / 1000,
+        20, 600,
+      ));
+      return {
+        schemaVersion: M1_V5_EVENT_SCHEMA_VERSION,
+        id: 'm1-v5-shot-' + (phase + 1),
+        sequence,
+        elapsedSeconds: (phase + 1) * M1_CLOCK_STEP_SECONDS - 1,
+        type: 'shot', teamId, playerId: player.id, zone, focus,
+        fatigueMilli: fatigue, xgMilli,
+        outcome: shotOutcome(xgMilli, player, outcomeDraw),
+      };
+    }
+    return null;
+}
+
 /**
  * End-to-end v5 prototype. A substitution becomes a ledger event and changes
  * subsequent possession, skill averages, weighted shooters and goalkeeper.
@@ -282,74 +363,12 @@ export function simulateM1V5Phases(
       cursor++;
     }
 
-    // No skipped PRNG draws: five per phase for either tactical/roster state.
-    const possession = rng.nextFloat();
-    const chanceDraw = rng.nextFloat();
-    const playerDraw = rng.nextFloat();
-    const qualityDraw = rng.nextFloat();
-    const outcomeDraw = rng.nextFloat();
-    const homeIds = roster.teams.home.active, awayIds = roster.teams.away.active;
-    const homePass = avg(homeIds, players, 'shortPassing');
-    const awayPass = avg(awayIds, players, 'shortPassing');
-    const homeDec = avg(homeIds, players, 'decisions');
-    const awayDec = avg(awayIds, players, 'decisions');
-    const homeMark = avg(homeIds, players, 'marking');
-    const awayMark = avg(awayIds, players, 'marking');
-    const homeTactics = state.controlled.tactics.home;
-    const awayTactics = state.controlled.tactics.away;
-    const homePossession = clamp(
-      0.535 + (homePass - awayPass) / 500 + (homeDec - awayDec) / 900 +
-      (homeTactics.mentality - awayTactics.mentality) * 0.017, 0.27, 0.73,
+    const shot = computeM1V5PhaseShot(
+      input, state, players,
+      { home: roster.teams.home.active, away: roster.teams.away.active },
+      phase, rng, events.length + 1,
     );
-    const homeTeam = possession < homePossession;
-    const attack = homeTeam ? homeTactics : awayTactics;
-    const activeIds = homeTeam ? homeIds : awayIds;
-    const teamId = homeTeam ? input.fixture.homeClubId : input.fixture.awayClubId;
-    const offense = homeTeam ? homePass : awayPass;
-    const defense = homeTeam ? awayMark : homeMark;
-    const attackFocus = state.instructions.filter(x =>
-      x.teamId === teamId && activeIds.includes(x.playerId) && x.focus === 'attack').length;
-    const defenseFocus = state.instructions.filter(x =>
-      x.teamId === teamId && activeIds.includes(x.playerId) && x.focus === 'defend').length;
-    const chance = clamp(
-      0.40 + (attack.tempo - 50) * 0.003 +
-      (attack.passingRisk - 50) * 0.001 +
-      attack.mentality * 0.028 +
-      (offense - defense) / 400 + (homeTeam ? 0.025 : 0) +
-      (attackFocus - defenseFocus) * 0.012 - phase * 0.002,
-      0.08, 0.75,
-    );
-    if (chanceDraw < chance) {
-      const player = chooseShooter(activeIds, players, state, playerDraw);
-      const focus = focusFor(state, player.id);
-      const otherIds = homeTeam ? awayIds : homeIds;
-      const keeper = players.get(otherIds.find(
-        id => players.get(id)!.primaryPosition === 'GK',
-      )!)!;
-      const zoneIndex = Math.min(2, Math.floor(qualityDraw * 3));
-      const zone: M1V5Zone = zoneIndex === 0 ? 'left' :
-        zoneIndex === 1 ? 'center' : 'right';
-      const quality = qualityDraw * 3 - zoneIndex;
-      const fatigue = fatigueMilli(phase, player, attack.pressing);
-      const zoneBonus = zone === 'center' ? 18 : -8;
-      const focusBonus = focus === 'attack' ? 22 : focus === 'defend' ? -18 : 0;
-      const xgMilli = Math.round(clamp(
-        (74 + (player.attributes.finishing - 50) * 2 +
-          (player.attributes.composure - 50) * 1.2 -
-          (keeper.attributes.reflexes - 50) * 0.9 +
-          quality * 220 + zoneBonus + focusBonus) * fatigue / 1000,
-        20, 600,
-      ));
-      events.push({
-        schemaVersion: M1_V5_EVENT_SCHEMA_VERSION,
-        id: 'm1-v5-shot-' + (phase + 1),
-        sequence: events.length + 1,
-        elapsedSeconds: (phase + 1) * M1_CLOCK_STEP_SECONDS - 1,
-        type: 'shot', teamId, playerId: player.id, zone, focus,
-        fatigueMilli: fatigue, xgMilli,
-        outcome: shotOutcome(xgMilli, player, outcomeDraw),
-      });
-    }
+    if (shot !== null) events.push(shot);
     const after = advanceM1PlayerControl(input, policy, state);
     const afterRoster = advanceM1SubstitutionMatch(input, policy, roster);
     if (!after.ok || !afterRoster.ok) return { ok: false, error: 'INVALID_TRANSITION' };

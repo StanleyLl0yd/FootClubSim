@@ -1,7 +1,7 @@
 import { isStableId } from './identifiers.js';
 import type { CareerActor } from './command-contracts.js';
 import {
-  advanceM1Clock, startM1Clock, type M1ClockState, type M1PrematchInput,
+  advanceM1Clock, startM1Clock, type M1ClockState,
   M1_CLOCK_END_SECONDS, M1_CLOCK_SCHEMA_VERSION, M1_CLOCK_STEP_SECONDS,
   M1_ENGINE_VERSION,
 } from './m1-clock.js';

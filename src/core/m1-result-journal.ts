@@ -174,6 +174,16 @@ function readJournal(candidate: unknown, original: InitialCareerSave):
   };
 }
 
+/** Validate a saved journal against the unchanged trusted source before deriving views. */
+export function validateM1MatchResultJournal(
+  initialCareer: unknown, journalCandidate: unknown,
+): M1MatchJournalResult {
+  const original = trustedInitial(initialCareer);
+  if (!original) return fail('INVALID_INITIAL_CAREER');
+  const validated = readJournal(journalCandidate, original);
+  return validated ? { ok: true, journal: validated } : fail('INVALID_JOURNAL');
+}
+
 /** Initialize a distinct M1 prototype journal without migrating M0 bytes. */
 export function startM1MatchResultJournal(initialCareer: unknown): M1MatchJournalResult {
   const original = trustedInitial(initialCareer);

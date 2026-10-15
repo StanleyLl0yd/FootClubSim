@@ -145,6 +145,10 @@ The distinct `m1-result-journal` schema establishes a **pure apply-once** step f
 
 `applyM1MatchResultBatch` stages up to 16 already-versioned final match report commands in memory. Each requires an independently replayable v5 event result and sequential expected journal revisions; no partial state leaks from a failed third or later game. Equal input and commands yield identical results. The method returns **a new journal object only**, and does not write to disk, IndexedDB or the M0 initial-career save. A future true persistence adapter must atomically compare-and-swap the old career revision when committing the *final batch state*. Do not mark P4 or league season persistence PASS from this preliminary invariant.
 
+## M1 P4 limited unranked season totals
+
+`deriveM1SyntheticUnrankedTotals` reads the new journal only after its immutable M0-derived career/fixture/pack binding passes validation. It derives per-club played/won/drawn/lost, goals for/against, goal difference, and a **synthetic-only 3/1/0 experimental point count** from applied finished results. Every match contributes one appearance to both participating teams; total goals for/against cancel exactly, and aggregate points are conserved by arithmetic invariants. It explicitly **does not order or rank teams**, apply official RPL Article 18 tie-breaking, award championships, select relegation clubs or make the M1 career browser-playable. Output order is original synthetic club-catalog order, independently of results. Zero matches returns all clubs with zero stats.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

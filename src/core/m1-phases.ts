@@ -126,7 +126,8 @@ export function deriveM1SyntheticLedger(prematch: unknown, events: unknown): M1S
       value.teamId === fixture.awayClubId ? away : null;
     const eligible = value.teamId === fixture.homeClubId ? homeActive :
       value.teamId === fixture.awayClubId ? awayActive : null;
-    if (!stats || !eligible?.has(value.playerId) || goalkeeper.get(value.playerId) === 'GK') {
+    if (!isStableId(value.playerId) || !stats || !eligible?.has(value.playerId) ||
+        goalkeeper.get(value.playerId) === 'GK') {
       return { ok: false, error: 'INVALID_LEDGER' };
     }
     lastPhase = phase;

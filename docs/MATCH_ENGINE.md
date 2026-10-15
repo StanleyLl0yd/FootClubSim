@@ -91,6 +91,12 @@ Each regular shot is recorded once in a versioned v3 action ledger **before fina
 
 Full official RPL substitution/card/injury/penalty/own-goal events, authentic roster rules, abandonment exceptions and legal real-player data require later primary-source/rights reviews and explicit new schemas. No performance or 10,000-seed realism acceptance is claimed by this P2 increment.
 
+## M1 P2 checkpoint regeneration instead of unverified state continuation
+
+`createM1PhaseCheckpoint` and `resumeM1PhaseCheckpoint` in `src/core/m1-phase-checkpoint.ts` produce/consume a **synthetic action checkpoint** with completed-phase count, v3 ledger prefix, P1 tactical command history and clock state, number of PRNG draws and resulting continuation integer. Every checkpoint is **independently rederived from authenticated canonical prematch/policy inputs and original seed**, in a bounded 18-phase replay. Resume first compares complete own-key shape/value history to the regenerated checkpoint, then refuses backdated orders before the saved second. Later commands affect only later phases, without changing old events or draw counts. No browser, network, wall time or uncontrolled random source is used.
+
+This initial interface intentionally **replays from the start on each resume**; it is reproducible but not an optimized incremental match engine. A future verified true RNG resume may use its stored continuation state only with separate equivalent replay/bit-identity tests and explicit protocol review. No cryptographic provenance is implied by structural comparison; the source snapshot, actor assignments and saved record must be trusted by the future M2 persistence/authority boundary. The results remain synthetic, uncalibrated and do not include legal substitutions or other real competition rules.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

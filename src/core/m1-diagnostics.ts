@@ -111,6 +111,13 @@ class SampleMean {
   }
 }
 
+function validPlan(options: M1DiagnosticOptions): boolean {
+  return Boolean(options && Number.isInteger(options.firstSeed) &&
+    Number.isInteger(options.matchCount) && options.firstSeed >= 1 &&
+    options.matchCount >= 1 && options.matchCount <= MAX_DIAGNOSTIC_MATCHES &&
+    options.firstSeed + options.matchCount - 1 <= 0xffffffff);
+}
+
 /**
  * Deterministic, memory-bounded internal cohort. A green result indicates
  * finite arithmetic and event/report consistency, NOT empirical realism.
@@ -120,13 +127,7 @@ class SampleMean {
 export function runM1SyntheticDiagnostics(
   prematch: M1PrematchInput, policy: unknown, options: M1DiagnosticOptions,
 ): M1DiagnosticResult {
-  if (!options || !Number.isInteger(options.firstSeed) ||
-      !Number.isInteger(options.matchCount) ||
-      options.firstSeed < 1 || options.matchCount < 1 ||
-      options.matchCount > MAX_DIAGNOSTIC_MATCHES ||
-      options.firstSeed + options.matchCount - 1 > 0xffffffff) {
-    return { ok: false, error: 'INVALID_PLAN' };
-  }
+  if (!validPlan(options)) return { ok: false, error: 'INVALID_PLAN' };
   const goalsMean = new SampleMean(), shotsMean = new SampleMean();
   const targetMean = new SampleMean(), xgMean = new SampleMean();
   const buckets = Array.from({ length: 10 }, () => ({
@@ -205,6 +206,96 @@ export function runM1SyntheticDiagnostics(
     totalShots, totalGoals,
     brierScoreForShotGoal: totalShots ? brierTotal / totalShots : null,
     qualityBuckets,
+    referenceStatus: 'NO_LICENSED_EXTERNAL_REFERENCE',
+  } };
+}
+
+
+export interface M1PairedTacticalReport {
+  readonly schemaVersion: typeof M1_DIAGNOSTICS_SCHEMA_VERSION;
+  readonly status: 'SYNTHETIC_PAIRED_SENSITIVITY_NOT_CALIBRATED';
+  readonly actionEngineVersion: typeof M1_ACTION_ENGINE_VERSION;
+  readonly rngVersion: typeof RNG_VERSION;
+  readonly fixtureId: string;
+  readonly sourcePackId: string;
+  readonly firstSeed: number;
+  readonly lastSeed: number;
+  readonly matchCount: number;
+  readonly baselineHomeTempo: number;
+  readonly variantHomeTempo: number;
+  /** Per-seed variant minus baseline, same input/seed in each pair. */
+  readonly deltaHomeShots: M1Mean;
+  readonly deltaHomeGoals: M1Mean;
+  readonly deltaHomeXMilli: M1Mean;
+  readonly deltaAwayShots: M1Mean;
+  readonly deltaTotalGoals: M1Mean;
+  readonly homeShotDirection: Readonly<{
+    increased: M1Rate;
+    tied: M1Rate;
+    decreased: M1Rate;
+  }>;
+  readonly referenceStatus: 'NO_LICENSED_EXTERNAL_REFERENCE';
+}
+export type M1PairedTacticalResult =
+  | Readonly<{ ok: true; report: M1PairedTacticalReport }>
+  | Readonly<{ ok: false; error: 'INVALID_PLAN' | 'MATCH_FAILED' }>;
+
+/**
+ * Paired-seed synthetic sensitivity study. Only tactical plans may differ.
+ * No benchmark, no causal inference about real matches, no tuned thresholds.
+ */
+export function runM1PairedTacticalDiagnostics(
+  baseline: M1PrematchInput, variant: M1PrematchInput,
+  policy: unknown, options: M1DiagnosticOptions,
+): M1PairedTacticalResult {
+  if (!validPlan(options)) return { ok: false, error: 'INVALID_PLAN' };
+  const fixedKeys = [
+    'schemaVersion', 'engineVersion', 'rulesPackId', 'rulesPackVersion',
+    'fixture', 'catalog', 'homeLineup', 'awayLineup', 'rosterRules', 'rngAlgorithmVersion',
+  ] as const;
+  if (!baseline || !variant || fixedKeys.some(key =>
+    JSON.stringify(baseline[key]) !== JSON.stringify(variant[key]))) {
+    return { ok: false, error: 'INVALID_PLAN' };
+  }
+  const homeShots = new SampleMean(), homeGoals = new SampleMean();
+  const homeXMilli = new SampleMean(), awayShots = new SampleMean();
+  const totalGoals = new SampleMean();
+  let increased = 0, tied = 0, decreased = 0;
+  for (let i = 0; i < options.matchCount; i++) {
+    const rngSeed = options.firstSeed + i;
+    const original = simulateM1SyntheticPhases({ ...baseline, rngSeed }, policy);
+    const perturbed = simulateM1SyntheticPhases({ ...variant, rngSeed }, policy);
+    if (!original.ok || !perturbed.ok) return { ok: false, error: 'MATCH_FAILED' };
+    const deltaShots = perturbed.report.home.shots - original.report.home.shots;
+    homeShots.add(deltaShots);
+    homeGoals.add(perturbed.report.home.goals - original.report.home.goals);
+    homeXMilli.add(perturbed.report.home.xgMilli - original.report.home.xgMilli);
+    awayShots.add(perturbed.report.away.shots - original.report.away.shots);
+    totalGoals.add(
+      perturbed.report.home.goals + perturbed.report.away.goals -
+      original.report.home.goals - original.report.away.goals,
+    );
+    increased += Number(deltaShots > 0);
+    tied += Number(deltaShots === 0);
+    decreased += Number(deltaShots < 0);
+  }
+  return { ok: true, report: {
+    schemaVersion: M1_DIAGNOSTICS_SCHEMA_VERSION,
+    status: 'SYNTHETIC_PAIRED_SENSITIVITY_NOT_CALIBRATED',
+    actionEngineVersion: M1_ACTION_ENGINE_VERSION, rngVersion: RNG_VERSION,
+    fixtureId: baseline.fixture.id, sourcePackId: baseline.catalog.packId,
+    firstSeed: options.firstSeed, lastSeed: options.firstSeed + options.matchCount - 1,
+    matchCount: options.matchCount,
+    baselineHomeTempo: baseline.homeTactics.tempo,
+    variantHomeTempo: variant.homeTactics.tempo,
+    deltaHomeShots: homeShots.result(), deltaHomeGoals: homeGoals.result(),
+    deltaHomeXMilli: homeXMilli.result(), deltaAwayShots: awayShots.result(),
+    deltaTotalGoals: totalGoals.result(),
+    homeShotDirection: {
+      increased: rate(increased, options.matchCount),
+      tied: rate(tied, options.matchCount),
+      decreased: rate(decreased, options.matchCount),
+    },
     referenceStatus: 'NO_LICENSED_EXTERNAL_REFERENCE',
   } };
 }

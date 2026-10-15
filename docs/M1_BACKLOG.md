@@ -83,6 +83,12 @@ This is **not a fully functioning substitution in the v3/v4 match simulation**: 
 
 **Still incomplete:** 300-second engine clocks do not generate actual referee stoppages; v5 currently accepts a **trusted external assertion** of a referee-authorized stoppage but the caller's claim is **not independently proven by this API**. The UI, persisted v5 checkpoints, later instruction changes to substituted-in players, injuries, dismissals, concussion substitutions, own goals, penalties and IFAB 10-second departure/entry are not implemented. Do **not** silently treat v4/v3 journal readers as compatible with v5 or claim complete M1-P3 legal acceptance. Source matrix: [M1_NORMAL_SUBSTITUTION_PROVENANCE.md](M1_NORMAL_SUBSTITUTION_PROVENANCE.md). M1-P3 #29 remains OPEN.
 
+## M1 P3 v5 replay-verified action checkpoints (2026-10-15)
+
+`src/core/m1-v5-checkpoint.ts` introduces an independently versioned **schema-5 snapshot** that preserves actual substitution event prefixes together with the changed active XI, active/bench/removed players, remaining normal replacement opportunities, authorized player/team commands, seeded RNG draw count and v5 shot outcomes. Every paused state can be reconstructed from the canonical **trusted original prematch, policy, seed and accepted ordered commands**, and resume rejects altered saved events, active XI, substitutions, authority or RNG before allowing only future virtual-time decisions. Tests cover all 19 phase boundaries, seed-identical automatic/paused results and rejected backdated or post-match replacements.
+
+This is **bounded full replay of a maximum 18-phase synthetic match**, not yet optimized direct PRNG continuation from v5 snapshots or evidence of cryptographic storage trust. An untrusted actor cannot supply its own authority policy; the future career repository must bind it to the real player/staff account. No referee whistle generator, concussion/exit protocol, card/injury interactions or persistent 2026/27 RPL season completion is implemented. M1 P3 remains OPEN.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

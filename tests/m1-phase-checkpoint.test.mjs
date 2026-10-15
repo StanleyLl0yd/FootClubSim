@@ -65,7 +65,8 @@ test('all 19 inclusive checkpoints are reproducible and properly bounded', () =>
     const rng = new SeededRng(42);
     for (let j = 0; j < phase * 5; j++) rng.nextFloat();
     assert.equal(a.rngState, rng.snapshot());
-    assert.equal(a.report, null === null ? (phase === 18 ? a.report : null) : null);
+    if (phase < 18) assert.equal(a.report, null);
+    else assert.deepEqual(a.report, full.report);
   }
   const final = good(createM1PhaseCheckpoint(prematch, policy, 18));
   assert.deepEqual(final.events, full.events);

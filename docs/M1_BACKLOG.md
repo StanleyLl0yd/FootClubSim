@@ -103,6 +103,10 @@ The pure `applyM1MatchResultBatch` API now validates **1..16 sequential fixture 
 
 `src/core/m1-standings.ts` adds a **read-only, explicitly NOT officially ranked** per-club statistical projection from previously validated P4 match-journal entries. It first validates the saved journal and unchanged M0 pack/career identity, then accumulates appearances, won/drawn/lost, goals for/against, goal difference and **provisional 3/1/0 synthetic points**, with arithmetic conservation tests and no mutation of the source journal. The output deliberately retains **original source club order** and `UNRANKED_SYNTHETIC_NOT_OFFICIAL_RPL` status. Real RPL 2026/27 standings ranking, current/final head-to-head tie conditions, discipline and exceptional match statuses require the official Article 18 decision tree and completed P3/P4 event sources. This feature is not a ranking, league champion selector, M0 save migration, or playable league table.
 
+## M1 P3 source-limited cards, red cards and confirmed permanent withdrawal (2026-10-15)
+
+`src/core/m1-referee-decisions.ts` adds an **isolated v1 referee decision journal** under IFAB 2026/27 Law 3/12. It replay-checks source ID/fixture/team/active participant, first and second cautions, direct send-off and **explicit permanent medical withdrawal**. An unavailable player is removed only from this separate state, not from legacy v5 action/roster. No automatic permanent injury detection, no VAR or competition-specific bans. A missing goalkeeper or fewer than seven players produces an unresolved **ruling-required hold** rather than automatic continuation or invented forfeit. Origin strings are not cryptographic proof and must be verified by an external trusted referee/medical boundary. [Sources and gaps](M1_REFEREE_DECISIONS_PROVENANCE.md). **P3 and M1 remain OPEN.**
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

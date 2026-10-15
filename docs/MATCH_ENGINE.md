@@ -18,6 +18,14 @@ A single `advanceM1Clock` call moves the virtual clock five minutes and appends 
 
 This is a **P1 partial checkpoint**, not P1/P2 completion: no command scheduling, player activity engine, possession decisions, chances or tactical dynamics yet. Adding actual action events or new participant semantics requires explicit engine/event schema review and regression vectors. Future pauses, staff-authorized in-match commands and fast-forward will share this pure stepping boundary; command authorization is not implemented by this early clock alone. M1 remains OPEN.
 
+## M1 P1 control protocol, first tactical commands
+
+The separate `src/core/m1-control.ts` control wrapper keeps a serializable authority snapshot for each club (human player by default when explicitly assigned; otherwise a specific available staff ID) and a bounded, strictly ordered list of admitted `set-tactics` commands. Each command has its own **schema v1**, distinct from the M1 clock event schema v2 and historical M0 report ledger. A command must match the fixture and team, current virtual-time checkpoint and exactly the appointed actor, with an entirely validated tactical plan. There is no implicit assignment to staff and no authority for a different available staff member. Unknown, duplicate, out-of-order, overly numerous and post-full-time commands are typed failures; failure returns no updated match state.
+
+For replay the control validator recomputes the latest plans from the original saved tactics and *all admitted commands*. This prevents accidentally accepting a state whose logged history disagrees with its current tactics. This is **not cryptographic authentication**: the authority snapshot must be supplied by a trusted career repository, and a fully forged but self-consistent stored object needs authenticated external provenance in M2. It is also not an official RPL substitutions policy.
+
+`advanceM1ControlledMatch` applies only previously admitted plans to future steps; `finishM1ControlledMatch` uses precisely the same step loop. A submitted plan does not rewrite earlier clock events or alter the M0 ledger. This P1 contract has **no physical football actions or tactical effect on shot probabilities yet**: it records inputs and deterministic order for P2; all draws remain zero until the action generator is separately versioned. The current 0-0 report has no realism meaning. Follow test cases in `tests/m1-control.test.mjs`.
+
 ## Contract
 
 Input: frozen pre-match player/team snapshots, validated lineups and tactics, versioned competition rules, engine version, explicit PRNG algorithm/version and seed.

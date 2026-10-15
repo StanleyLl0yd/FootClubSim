@@ -135,6 +135,12 @@ This is still a limited prototype: no actual referee stoppage generator or signe
 
 **Recomputation is deliberate.** Unlike the earlier optimized v3 trusted continuation, the initial v5 checkpoint uses bounded whole-match replay for correctness; it does not yet optimize stepping from the v5 RNG snapshot directly. Version-3/4 checkpoint input is strictly incompatible with version-5; future improvements require bit-equivalent seed/replay tests and independent authenticated saved-career authority. There is still no independently generated referee stoppage, real medically valid concussion override or rule-complete football engine.
 
+## M1 P4 atomic match result proposal (not browser persistence)
+
+The distinct `m1-result-journal` schema establishes a **pure apply-once** step from validated M0 synthetic career source to a separate M1 match journal. A proposed version-1 `applyM1MatchResult` command must identify the exact career and future expected revision and a fixture from the unchanged generated synthetic 16-club schedule. It independently replays version-5 match events from the canonical trusted prematch/policy/PRNG/command schedule and requires the whole externally presented match result to match that replay; no score is trusted merely because it is submitted as a number. A successful transition appends immutable fixture results and increments the revision by one. Duplicate command IDs, replayed fixtures, stale revisions, forged results, unrecognized pack IDs and invalid fixtures fail without partial mutation.
+
+**Important:** the module returns a new object only. A future persistence adapter must issue an atomic compare-and-swap of career ID plus revision, or concurrent writers could race despite pure validation. This step neither edits the historical M0 snapshot nor stores a revised playable season; no claim of M1/P4 acceptance, cryptographic authentication or real RPL standings/scorers/injury accounting follows from its present limited report.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

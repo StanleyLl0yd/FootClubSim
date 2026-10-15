@@ -89,6 +89,12 @@ This is **not a fully functioning substitution in the v3/v4 match simulation**: 
 
 This is **bounded full replay of a maximum 18-phase synthetic match**, not yet optimized direct PRNG continuation from v5 snapshots or evidence of cryptographic storage trust. An untrusted actor cannot supply its own authority policy; the future career repository must bind it to the real player/staff account. No referee whistle generator, concussion/exit protocol, card/injury interactions or persistent 2026/27 RPL season completion is implemented. M1 P3 remains OPEN.
 
+## M1 P4 pure match-commit proposal (2026-10-15)
+
+`src/core/m1-result-journal.ts` introduces an **independent new journal schema v1** (not an implicit migration of the frozen M0 `InitialCareerSave` schema v1/revision 0). From a trusted, separately validated original M0 synthetic catalog/selected club it creates a separate headless M1 result journal. A proposed `applyM1MatchResult` operation checks command ID, career ID, expected numeric revision, approved synthetic schedule fixture (not arbitrary match identity), exact catalog+pack identity, non-duplicate fixture/command and a **fully recomputed** v5 authoritative match from the pinned original prematch/policy/seed/scheduled orders. A caller-supplied result must match that replay byte-for-byte in its structured values, including all goals, shots, substitutions and final RNG state. Only then a new journal revision/fixture record is returned, without modifying the old source, browser storage or earlier records. Repeating a fixture or command fails explicitly; a stale revision fails without partial changes. Tests include naturally derived 0-0, multi-fixture serial batch, corrupted result and retry/mismatched pack cases.
+
+This is a **pure domain transaction proposal**: the future storage layer still must atomically compare-and-swap career ID+revision; independently forged persisted old journal history is not cryptographically authenticated by the local validator. **Not yet P4-complete:** own goals/card totals/scorers, injuries, actual condition deltas, abandoned/incomplete games, performance/rating reports, integrated league table and browser career persistence remain blocked on future versioned legal P3 events and trusted M2 data. Do not conflate this M1 journal with M0 initial-save bytes or claim release compatibility.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

@@ -121,6 +121,14 @@ The isolated `m1-substitutions` state machine uses version-1 `substitute-normal`
 
 This P3 validator **does not yet change the active players used by M1 v3/v4 shot calculations**: combining availability, fixture clock and action ledger requires a new explicitly versioned action protocol. Concussion overrides, 2026/27 referee ten-second protocol, medical/registration eligibility, dismissals/injuries and actual stoppage generation remain unimplemented; they are not silently counted as ordinary replacements or described as fully validated competition gameplay. P3 and M1 remain OPEN.
 
+## M1 P3 experimental substitution-aware action schema v5
+
+`m1-phases-v5` is a **new** versioned action engine (`4`, event schema `5`) that bridges the source-pinned normal-substitution team state to the existing synthetic chance model without modifying prior M0/v3/v4 ledgers. Team, individual and substitution commands share a virtual checkpoint queue and unique command-ID namespace. Admitted `substitute-normal` orders produce v5 `substitution` events at the exact permitted checkpoint before future shots; the new XI determines possession attributes, eligible shooters and goalkeeper reflexes in following phases. Every five-minute phase consumes exactly five seeded random numbers, whether or not any shot occurs. Mixed command order is stable and all accepted normal substitutes consume **no extra stochastic draws**.
+
+The independent v5 ledger reader reconstructs the **authorized, timed active XI**, rejecting shots by players no longer present, premature bench shooters, forged order IDs, inconsistent clock times, malformed xG/outcomes and unauthorized/illegal substitution events. It derives the final goals/shots/on-target/xG only from accepted events. This structural validation does **not** establish that shots came from the declared RNG seed; the integrated generator must supply a trusted seed and accepted command plan. A v5 action checkpoint/restart protocol remains to be added; v4 checkpoints may not be repurposed.
+
+This is still a limited prototype: no actual referee stoppage generator or signed source of whistles; `stoppage:'referee-authorized'` is an assertion from an external trusted controller, not proof the simulation physically stopped. Concussion, exit timing, injuries, cards and medically authorized exceptional substitutions are future work. Current foreigner caps come from a synthetic match-input contract, not from an imported RPL registration. See [official-source limits](M1_NORMAL_SUBSTITUTION_PROVENANCE.md); P3 #29 and M1 #3 stay OPEN.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

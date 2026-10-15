@@ -163,6 +163,12 @@ The new `m1-scorer-report` entrypoint derives an **independent v1 report** only 
 
 The combined **availability state has not yet been integrated into the event-generating v5 action engine**. Doing so requires an explicitly new action schema, since accepting red-card events in old v5 would silently change replay. Medical replacement, player role reassignment after a goalkeeper exit, independent referee stoppage authentication and full competition exceptions remain deliberately unimplemented.
 
+## M1 experimental v6 match actions: source-replayed referee availability
+
+The new **action engine version `5` / event schema `6`** consumes `m1-availability` decisions and commands at the current virtual 300-second boundary. It shares the exact extracted legacy v5 five-draw phase evaluator, preserving the old v5 result under identical prematch/seed and no referee decisions. When scheduled refereeing causes a dismissal or permanent medical withdrawal, the next phase uses the **actual smaller effective XI**, not the previously fixed starter list. Each v6 referee/normal-substitution event embeds its own replay-verifiable availability decision and effect. An independent v6 ledger replays the availability chronology and rejects inactive shooters, illegal event order, invalid fields or forged effect records before deriving score/shots/xG. No independent final score sampling. A missing goalkeeper or team below seven requires an external ruling before any later phase; no 0-3 shortcut.
+
+**Nonclaims:** this is synthetic-only, not an authentic RPL 2026/27 full referee, injury-treatment or physical field model. Referee decisions are externally supplied, not randomly generated, and origin strings are not signatures. v6 has no independently verified checkpoint API yet; historical v3/v4/v5 events and M0 saves must retain their previous interpretations. Future P3/P4 requires goalkeeper/medical-replacement rules, explicit red-card sanctions, real award/penalty/own-goal/assist events and verified career apply-once persistence.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

@@ -105,6 +105,12 @@ The new `m1-player-control` module retains existing `M1_CONTROL_SCHEMA_VERSION=1
 
 The commands record an intention for future P2 but **do not affect existing action engine version `2` / event schema `3`**. An explicit separately versioned action generator is required to apply these player-specific decisions to game outcomes and document realistic bounds. Do not infer individual tactical effects or authentic personnel rights from an accepted command alone.
 
+## M1 P2 isolated action engine v4
+
+The experimental `m1-phases-v4` engine introduces independent engine `3` and ledger schema `4`, leaving prior M0 shot/full-time v1, P1 clock v2, M1 action v3 and their seeded replay semantics untouched. The v4 shot carries a validated outfield participant, left/center/right synthetic attacking zone, effective `balanced/attack/defend` player focus, deterministic `fatigueMilli` (700..1000), xG in thousandths assigned **before** shot outcome, and one of the four shot outcomes. Version-4 arithmetic is derived only from a monotonic version-4 ledger, with shared historical v3 goal/shot/xG counting after strict v4 structural checks. It does not claim that the v3 reader accepts v4 or that structural event validation proves a specific original RNG trace.
+
+At every 300-second virtual boundary the engine admits valid player and team orders through the same trusted-source policy, then draws exactly five seeded random values for possession, chance, shooter, pre-outcome quality/zone and outcome. Position/finishing weights, assigned player focus, tempo/mentality/passingRisk, pressing/stamina/elapsed fatigue and modest zone adjustments affect selected synthetic shots. Both event sequence and final PRNG state are repeatable. These coefficients have **no rights-reviewed real-world football calibration**. No v4 pause/resume action checkpoint yet: P1 individual-command replay is supported separately, but version-3 shot checkpoints cannot be mixed with v4 history. Actual persistent fatigue, substitutions, disciplinary/injury/rules events and source-verified 2026/27 sporting rules require subsequent M1/M2 work.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

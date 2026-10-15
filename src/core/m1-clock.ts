@@ -95,7 +95,7 @@ export function startM1Clock(input: unknown): M1ClockStart {
     ...input,
     engineVersion: M0_ENGINE_VERSION,
     events: [{ id: 'm1-preflight-end', sequence: 1, elapsedSeconds: 5400, type: 'full-time' }],
-  } as MatchLedgerInput);
+  } as unknown as MatchLedgerInput);
   if (!preflight.ok) return { ok: false, errors: preflight.errors };
   const fixture = input.fixture as MatchLedgerInput['fixture'];
   const seed = input.rngSeed as number;

@@ -135,6 +135,12 @@ A separate action-engine version `'5'` and event-schema version `6` now exist in
 
 **Cost/limitations:** every v6 resume recomputes the bounded synthetic match from kickoff for verification, *including unplayed future phases* as a reference computation; this is a correctness-first API, **not** optimized direct v6 RNG continuation, cryptographic save signing, browser persistence or a full IFAB injury/referee implementation. A genuine goalkeeper/under-seven ruling **does not** produce a complete playable checkpoint through this API yet; instead simulation rejects it, rather than inventing a result. Previous v5 checkpoints and M0 saves retain their original semantics. P3 and M1 exit remain OPEN.
 
+## M1 P4 read-only v6 disciplinary and appearance report (2026-10-15)
+
+`src/core/m1-v6-appearance-report.ts` adds a **versioned v1 read-only player/club projection** from the already accepted v6 canonical event stream. First, the public entrypoint regenerates the full match from **trusted prematch, original random seed, player/staff appointment and the exact mixed action chronology**, then requires structural equality with the supplied final result. Only then are v6 availability events used to record field entrance/exit and precise played seconds, starter/bench status, caution counts, second-yellow/straight-red dismissal and confirmed permanent medical departure. All scorers reference an actual synthetic open-play shot ID; per-player goals/shots/on-target/xG sum to the validated v6 score, and each club's on-field playing seconds account for dismissal/medical depletion without inventing an extra replacement. Multi-seed, misconduct, substitute, injury, forged-result and input-isolation tests cover this read-only view.
+
+**Not implemented:** a card does not yet create a future league suspension, disciplinary fine or points deduction; special incident/abandonment results, penalty goals, own goals, assists, time added, medical recovery and actual persistence CAS are not inferred. The report status explicitly says `SYNTHETIC_V6_EVENTS_ONLY_NO_DISCIPLINARY_SANCTIONS`. M0 save shape and old P4 scorer-report v1 stay unchanged. P4 #30 and M1 exit #3 remain OPEN.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

@@ -83,6 +83,14 @@ or prove a statistically realistic football model.**
 
 Version and store the PRNG algorithm, seed and continuation state. Same frozen inputs and same engine/rules versions must give identical event order and results. Randomness must be consumed in a stable explicit sequence. Never claim reproducibility across changed engine versions unless a compatibility/replay layer verifies it.
 
+## M1 P2 preliminary synthetic events, not calibrated real football
+
+`src/core/m1-phases.ts` implements an **experimental and explicitly new** action generator: engine version `2`, action event schema `3`. It uses the validated synthetic pre-match snapshot, fixed 18-phase clock and accepted P1 staff-authorized tactical-command schedule. Each five-minute phase consumes five seeded RNG draws in fixed order (**home/away possession, chance, shooter, xG quality, outcome**) whether or not there is a chance. Separate action RNG continuation and exact draw count are recorded; clock-only PRNG state remains unchanged, preserving its legacy contract. Probability inputs include each side's synthetic attributes, position/role, home advantage, tactical sliders and opposing goalkeeper. Probabilities are bounded but **not calibrated** and do not reproduce real RPL disciplinary/statistical laws.
+
+Each regular shot is recorded once in a versioned v3 action ledger **before final reporting**, with xG drawn from its dedicated random input prior to the outcome draw; a strict independent read-only derivation validates chronology, active outfield shooter, identity, xG, event count and schema and produces the full-time goals/shots/on-target/xG totals. No standalone final score is generated. This does not alter or migrate the historical M0 v1 `deriveMatchLedger` event meaning. Run reproducibility and sensitivity tests with fixed paired seeds rather than fitting arbitrary match results. A single action stream is currently generated end-to-end, not yet an interactive mid-match phase-snapshot API. The previous M1 clock/commands are still separately resumable and deterministic, but the action probability generator requires its own versioned continuation contract in later PRs.
+
+Full official RPL substitution/card/injury/penalty/own-goal events, authentic roster rules, abandonment exceptions and legal real-player data require later primary-source/rights reviews and explicit new schemas. No performance or 10,000-seed realism acceptance is claimed by this P2 increment.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

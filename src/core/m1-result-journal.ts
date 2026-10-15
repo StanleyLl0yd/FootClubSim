@@ -71,7 +71,7 @@ export type M1MatchJournalError =
   | 'INVALID_INITIAL_CAREER' | 'INVALID_JOURNAL' | 'INVALID_APPLY_COMMAND'
   | 'WRONG_CAREER' | 'STALE_REVISION' | 'DUPLICATE_COMMAND'
   | 'DUPLICATE_FIXTURE' | 'UNKNOWN_FIXTURE' | 'UNTRUSTED_PACK'
-  | 'INVALID_MATCH_RESULT' | 'REVISION_LIMIT';
+  | 'INVALID_MATCH_RESULT' | 'REVISION_LIMIT' | 'INVALID_BATCH';
 export type M1MatchJournalResult =
   | Readonly<{ ok: true; journal: M1MatchResultJournal }>
   | Readonly<{ ok: false; error: M1MatchJournalError }>;
@@ -246,4 +246,24 @@ export function applyM1MatchResult(
     ...current, revision: current.revision + 1,
     results: [...current.results, result],
   } };
+}
+
+/**
+ * Multi-fixture proposal: either every command validates in order or the
+ * caller receives an error and NO intermediate journal. The original input
+ * is never mutated. Persist only the final successful CAS revision.
+ */
+export function applyM1MatchResultBatch(
+  initialCareer: unknown, journalCandidate: unknown, requests: unknown,
+): M1MatchJournalResult {
+  if (!Array.isArray(requests) || requests.length < 1 || requests.length > 16) {
+    return fail('INVALID_BATCH');
+  }
+  let staged: unknown = journalCandidate;
+  for (const request of requests) {
+    const next = applyM1MatchResult(initialCareer, staged, request);
+    if (!next.ok) return next;
+    staged = next.journal;
+  }
+  return { ok: true, journal: staged as M1MatchResultJournal };
 }

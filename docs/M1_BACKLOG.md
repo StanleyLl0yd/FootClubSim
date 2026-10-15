@@ -71,6 +71,12 @@ The first independently versioned v4 action checkpoint API in `src/core/m1-v4-ch
 
 **Efficiency limitation:** unlike the existing optimized v3 trusted continuation, v4 checkpoints currently recompute the bounded 18-phase fixture to create a canonical prefix. This is a correctness-first replay validator, **not** a final optimized v4 PRNG continuation or a cryptographic save authentication layer. Existing v3 checkpoints must never be passed off as v4, and actual M2 career input provenance remains separately required. P2 remains OPEN until stateful field modeling, official match rule transitions, verified fatigue/stamina changes and the full M1 acceptance campaign.
 
+## M1 P3: source-pinned normal substitution subset (2026-10-15)
+
+A first **partial** P3 module `src/core/m1-substitutions.ts` now checks a strictly versioned **normal-only** substitution transition. It uses the actual **2026/27 RPL Article 8.8** limits (**5 normal replacements**, **3 distinct gameplay stoppage opportunities**, no opportunity consumed by a **half-time** replacement) and the IFAB 2026/27 requirement for referee-authorized stoppage. The standalone validator handles approved delegated staff, currently active outfield/GK slots, named unused bench participants, non-return of removed players, exactly one goalkeeper after each replacement, competition-provided foreigner cap, duplicate IDs, ordinary half-time timing and denial of unsupported concussion/kickoff exceptions. Its entire history is replay-verified from trusted prematch and appointment, and invalid requests cannot corrupt the active lineup.
+
+This is **not a fully functioning substitution in the v3/v4 match simulation**: no new action/availability event version, referee whistle/stoppage generation, 10-second exit procedure, head-injury override or persistence update is present yet. The test suite checks the accepted legal subset but does not claim legal completion of RPL/IFAB 2026/27. Frozen evidence and blockers: [M1_NORMAL_SUBSTITUTION_PROVENANCE.md](M1_NORMAL_SUBSTITUTION_PROVENANCE.md). P3 #29 remains OPEN.
+
 ## M1 definition of done
 
 - A pure, deterministic event-driven 11v11 match engine that consumes synthetic players, fixtures, lineups, tactical plans, rules version and explicit seed.

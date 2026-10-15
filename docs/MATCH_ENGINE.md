@@ -129,6 +129,12 @@ The independent v5 ledger reader reconstructs the **authorized, timed active XI*
 
 This is still a limited prototype: no actual referee stoppage generator or signed source of whistles; `stoppage:'referee-authorized'` is an assertion from an external trusted controller, not proof the simulation physically stopped. Concussion, exit timing, injuries, cards and medically authorized exceptional substitutions are future work. Current foreigner caps come from a synthetic match-input contract, not from an imported RPL registration. See [official-source limits](M1_NORMAL_SUBSTITUTION_PROVENANCE.md); P3 #29 and M1 #3 stay OPEN.
 
+## M1 P3 v5 checkpoint replay for player availability
+
+`createM1V5Checkpoint` and `resumeM1V5Checkpoint` support independently typed action engine `4`/schema `5` snapshots. The checkpoint contains the original v5 shot-and-substitution prefix, exact active/bench/removed XI after each normal substitution, original authorized substitution commands, individual focus and team tactic histories, 0..18 virtual phase clock, seed/continuation state and end-only score. The public resume reconstructs the full prior 18-phase synthetic run from the trusted original seed/policy and checks every own key and array item before it allows commands only at or after the saved phase boundary. A staff replacement must still pass normal §8.8 actor/lineup/window rules; a removed player cannot become an eligible shooter after a stored checkpoint.
+
+**Recomputation is deliberate.** Unlike the earlier optimized v3 trusted continuation, the initial v5 checkpoint uses bounded whole-match replay for correctness; it does not yet optimize stepping from the v5 RNG snapshot directly. Version-3/4 checkpoint input is strictly incompatible with version-5; future improvements require bit-equivalent seed/replay tests and independent authenticated saved-career authority. There is still no independently generated referee stoppage, real medically valid concussion override or rule-complete football engine.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

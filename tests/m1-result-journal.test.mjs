@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  applyM1MatchResult, M1_APPLY_COMMAND_SCHEMA_VERSION,
+  applyM1MatchResult, applyM1MatchResultBatch, M1_APPLY_COMMAND_SCHEMA_VERSION,
   M1_RESULT_JOURNAL_SCHEMA_VERSION, startM1MatchResultJournal,
 } from '../dist/core/m1-result-journal.js';
 import { simulateM1V5Phases } from '../dist/core/m1-phases-v5.js';
@@ -209,4 +209,65 @@ test('invalid initial M0 snapshot is never implicitly upgraded or overwritten', 
     'INVALID_INITIAL_CAREER');
   refuse(applyM1MatchResult({ ...career, saveSchemaVersion: 2 }, saved,
     request(fixtures[0], 0)), 'INVALID_INITIAL_CAREER');
+});
+
+test('atomic three-fixture batch equals validated serial application', () => {
+  const before = zero();
+  const batch = [
+    request(fixtures[0], 0, 'batch-a', 100),
+    request(fixtures[1], 1, 'batch-b', 101),
+    request(fixtures[2], 2, 'batch-c', 102),
+  ];
+  const applied = good(applyM1MatchResultBatch(career, before, batch));
+  let sequential = before;
+  for (const one of batch) sequential = good(applyM1MatchResult(career, sequential, one));
+  assert.deepEqual(applied, sequential);
+  assert.equal(applied.revision, 3);
+  assert.equal(before.revision, 0);
+  assert.deepEqual(before.results, []);
+  assert.equal(new Set(applied.results.map(e => e.fixtureId)).size, 3);
+});
+
+test('atomic batch refuses a late failure without exposing intermediate writes', () => {
+  const before = zero();
+  const source = JSON.stringify(before);
+  const first = request(fixtures[0], 0, 'first-batch', 42);
+  const forged = request(fixtures[1], 1, 'second-batch', 43);
+  const rejected = { ...forged, result: { ...forged.result,
+    report: { ...forged.result.report,
+      home: { ...forged.result.report.home, goals: 18 },
+    },
+  } };
+  refuse(applyM1MatchResultBatch(career, before, [first, rejected]),
+    'INVALID_MATCH_RESULT');
+  assert.equal(JSON.stringify(before), source);
+  refuse(applyM1MatchResultBatch(career, before, [first, {
+    ...forged, expectedRevision: 0,
+  }]), 'STALE_REVISION');
+  assert.equal(JSON.stringify(before), source);
+});
+
+test('atomic batch prevents repeated fixture IDs and command IDs within same submission', () => {
+  const before = zero();
+  const first = request(fixtures[0], 0, 'same-command', 42);
+  refuse(applyM1MatchResultBatch(career, before, [
+    first,
+    request(fixtures[1], 1, 'same-command', 43),
+  ]), 'DUPLICATE_COMMAND');
+  refuse(applyM1MatchResultBatch(career, before, [
+    first,
+    request(fixtures[0], 1, 'new-command', 43),
+  ]), 'DUPLICATE_FIXTURE');
+  assert.equal(before.revision, 0);
+});
+
+test('atomic batch is bounded and cannot silently accept empty or oversized runs', () => {
+  for (const requestGroup of [null, {}, [], Array(17).fill(null)]) {
+    refuse(applyM1MatchResultBatch(career, zero(), requestGroup), 'INVALID_BATCH');
+  }
+  const original = zero();
+  const one = good(applyM1MatchResultBatch(career, original,
+    [request(fixtures[0], 0)]));
+  assert.equal(one.revision, 1);
+  assert.equal(original.revision, 0);
 });

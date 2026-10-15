@@ -99,6 +99,12 @@ Full official RPL substitution/card/injury/penalty/own-goal events, authentic ro
 
 The internal `extendTrustedM1PhaseWindow` accepts only already validated in-memory or replay-verified state; calling it directly with untrusted JSON is outside its contract. The external `resumeM1PhaseCheckpoint` enforces that boundary. Action engine version `2`, event schema `3` and all five-draw RNG vectors are preserved. Independent-seed replay tests compare whole match events, scores, xG and final xorshift32 state.
 
+## M1 P1 independent individual-instruction admission contract
+
+The new `m1-player-control` module retains existing `M1_CONTROL_SCHEMA_VERSION=1` team tactics and adds its own versioned `set-player-focus` commands (individual command version `1`). Accepts `balanced`, `attack`, `defend` for **registered active outfield starters**, not substitutes or goalkeepers, at 300-second virtual checkpoints only. The explicitly appointed tactical actor must match team delegation. Mixed team and individual commands have independent streams but cannot reuse command IDs; current per-player instructions are canonical, ordered by stable IDs, and full history is replay-verified from the **trusted prematch plus policy** at every application/advance. The module is headless, deterministic and always rejects unverified or tampered continuation.
+
+The commands record an intention for future P2 but **do not affect existing action engine version `2` / event schema `3`**. An explicit separately versioned action generator is required to apply these player-specific decisions to game outcomes and document realistic bounds. Do not infer individual tactical effects or authentic personnel rights from an accepted command alone.
+
 ## M1 testing and calibration
 
 Use synthetic clubs. Test 0-0, mismatches, late winning goals, red cards, injuries, penalties, own goals, no bench, substituted scorer, invalid roster, overtime, and multi-fixture batches. Validate ledger and score consistency, deterministic save/load, bounded numbers, match completion and single-apply semantics.

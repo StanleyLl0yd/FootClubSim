@@ -13,6 +13,10 @@
 
 Wikipedia article prose, third-party photographs, official crests, external compiled rosters, commercial player ratings and any release-specific material require a separate compatible rights evaluation. Wikipedia references do **not** prove complete registration as of 2026-10-14. Rights and effective competition-rule checks for the first playable 16-club personnel pack remain [M2 work #91](https://github.com/StanleyLl0yd/FootClubSim/issues/91), plus the executable-rules subset of [#15](https://github.com/StanleyLl0yd/FootClubSim/issues/15). Dependency notice review and release branding/legal assessment are also outstanding.
 
+## Owner acceptance of M0-only rights inventory (2026-10-15)
+
+The owner explicitly accepted this **risk review and the original-only M0 shipping boundary** as the M0 foundation requirement under [ADR-0010](adr/0010-m0-final-acceptance.md). This **does not grant legal/trademark/data/publicity rights** and does not resolve the identified real-world «Изумруд» football name collision. The first playable M2 distribution remains blocked on formal [#87](https://github.com/StanleyLl0yd/FootClubSim/issues/87) branding and [#15](https://github.com/StanleyLl0yd/FootClubSim/issues/15)/[#91](https://github.com/StanleyLl0yd/FootClubSim/issues/91) rights and roster review. No unlicensed third-party source pack or original club image is permitted to leak into runtime.
+
 ## Early approved-name collision review
 
 The [separate 16-name preliminary screening](M0_PARODY_BRAND_SCREENING.md) documents a specific **name overlap** for the owner's approved «Изумруд» identity: both a historical «Изумруд» football-club designation and a 2026 youth-team «ФК Изумруд» appear in public sources. The 15 other names remain **unassessed for formal trademark/legal clearance**; narrow search results are not evidence of uniqueness. This is an **elevated risk-review lead**, not a finding of infringement or a proposal to rename an approved club. Full territory/class searches, badge/trade-dress comparisons and owner release sign-off remain OPEN. No gameplay or assets changed.

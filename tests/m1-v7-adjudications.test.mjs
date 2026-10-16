@@ -88,6 +88,7 @@ test('v7 is isolated: no decisions preserve all v6 events, RNG and open-play sco
       assert.equal(v7.report[side].openPlayGoals, v6.report[side].goals);
       assert.equal(v7.report[side].penaltiesTaken, 0);
       assert.equal(v7.report[side].ownGoalsFor, 0);
+      assert.equal(v7.report[side].xgCoverage, 'open-play-only');
     }
     assert.ok(verifyM1V7Result(input, policy, [], [], v7));
   }
@@ -100,8 +101,10 @@ test('scored, saved and missed penalties change only adjudicated counts', () => 
   assert.equal(v7.report.home.goals, v7.base.report.home.goals + 1);
   assert.equal(v7.report.home.penaltiesTaken, 3);
   assert.equal(v7.report.home.penaltyGoals, 1);
-  assert.equal(v7.report.home.shots, v7.base.report.home.shots);
+  assert.equal(v7.report.home.shots, v7.base.report.home.shots + 3);
+  assert.equal(v7.report.home.shotsOnTarget, v7.base.report.home.shotsOnTarget + 2);
   assert.equal(v7.report.home.xgMilli, v7.base.report.home.xgMilli);
+  assert.equal(v7.report.home.xgCoverage, 'open-play-only');
   assert.equal(v7.base.rngDraws, 90);
   assert.equal(v7.events.filter(e => e.type === 'adjudication').length, 3);
   assert.ok(verifyM1V7Result(prematch, policy, [], decisions, v7));

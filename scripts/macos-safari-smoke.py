@@ -32,6 +32,28 @@ def request(url: str, method: str = "GET", payload: dict | None = None, timeout:
     return json.loads(body) if body else None
 
 
+def is_retryable_safari_session_error(status: int, detail: str) -> bool:
+    """Retry only the macOS runner's transient failure to launch Safari itself.
+
+    Never retry failed navigation, assertion, or other WebDriver/session errors.
+    """
+    if status != 500:
+        return False
+    try:
+        response = json.loads(detail)
+    except (TypeError, ValueError):
+        return False
+    value = response.get("value") if isinstance(response, dict) else None
+    if not isinstance(value, dict):
+        return False
+    message = value.get("message")
+    return (
+        value.get("error") == "session not created"
+        and isinstance(message, str)
+        and "session timed out while connecting to a Safari instance" in message
+    )
+
+
 def wd(session: str, path: str, payload: dict | None = None):
     response = request(f"{DRIVER}/session/{session}/{path}", "POST", payload or {})
     if not isinstance(response, dict) or not isinstance(response.get("value"), (dict, str, int, float, type(None))):
@@ -240,6 +262,7 @@ def main():
                     raise RuntimeError("Vite preview unavailable")
                 time.sleep(0.4)
 
+            startup_timeout_retries = 0
             while time.monotonic() < deadline:
                 try:
                     result = request(
@@ -253,9 +276,21 @@ def main():
                         break
                     raise RuntimeError(f"Safari session refused: {value!r}")
                 except urllib.error.HTTPError as error:
+                    detail = error.read().decode("utf-8", errors="replace")
+                    if (
+                        startup_timeout_retries < 1
+                        and time.monotonic() + 2 < deadline
+                        and is_retryable_safari_session_error(error.code, detail)
+                    ):
+                        startup_timeout_retries += 1
+                        print(
+                            "SafariDriver timed out launching Safari; retrying session once",
+                            file=sys.stderr,
+                        )
+                        time.sleep(2)
+                        continue
                     raise RuntimeError(
-                        "SafariDriver refused session: " +
-                        error.read().decode("utf-8", errors="replace")[:3000]
+                        "SafariDriver refused session: " + detail[:3000]
                     ) from error
                 except urllib.error.URLError:
                     if driver.poll() is not None:

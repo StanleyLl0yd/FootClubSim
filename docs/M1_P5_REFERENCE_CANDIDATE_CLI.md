@@ -33,6 +33,12 @@ for missing goals. Counts, home/draw/away/scoreless/both-scored Wilson
 95% intervals and total goals sample-mean/normal-approximation interval
 are reported from observed results only. A single match has null mean
 interval; metrics not included in this dataset are not fabricated.
+The report also includes observed home/away goal totals and **finished-only**
+club-coverage ranges (different clubs, games per club, home/away appearances)
+plus repeated directed home-away pairings with different match IDs. These
+are anomaly/completeness-review signals, **not** validation of a complete
+league schedule, club identities or a known double round robin. Scheduled,
+live and cancelled rows are excluded from these coverage ranges.
 
 Reports intentionally contain no source player/team names, fixture rows,
 raw events or local path. They always state

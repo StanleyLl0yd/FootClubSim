@@ -38,6 +38,14 @@ test('bounded, anonymized completed season outcomes and uncertainty', () => {
   assert.equal(r.outcomes.scoreless.numerator, 1);
   assert.equal(r.outcomes.bothScored.numerator, 2);
   assert.equal(r.goalsPerMatch.total, 7);
+  assert.deepEqual(r.goalTotals, { home: 3, away: 4, total: 7 });
+  assert.deepEqual(r.coverage, {
+    observedClubCount: 6,
+    finishedAppearancesPerClub: { min: 1, max: 1 },
+    finishedHomeMatchesPerClub: { min: 0, max: 1 },
+    finishedAwayMatchesPerClub: { min: 0, max: 1 },
+    repeatedHomeAwayFixtures: 0,
+  });
   assert.equal(r.goalsPerMatch.mean, 7 / 3);
   for (const x of Object.values(r.outcomes)) {
     assert.equal(x.denominator, 3);
@@ -57,6 +65,24 @@ test('quoted cells and UTF-8 BOM do not alter numeric reports', () => {
   const multi = rows.map(x => x.startsWith('1,') ?
     x.replace('"A, Moscow"', '"A ""quoted"",\nMoscow"') : x);
   assert.equal(inspect(multi).finishedMatches, 3);
+});
+
+test('coverage reports incomplete and repeated directed fixtures without leaking IDs', () => {
+  const original = rows[0];
+  const repeat = original.replace('1,235,', '8,235,');
+  const reverse = original.replace('1,235,', '9,235,')
+    .replace(',10,20,2,1,', ',20,10,1,2,');
+  const r = inspect([original, repeat, reverse]);
+  assert.equal(r.finishedMatches, 3);
+  assert.deepEqual(r.coverage, {
+    observedClubCount: 2,
+    finishedAppearancesPerClub: { min: 3, max: 3 },
+    finishedHomeMatchesPerClub: { min: 1, max: 2 },
+    finishedAwayMatchesPerClub: { min: 1, max: 2 },
+    repeatedHomeAwayFixtures: 1,
+  });
+  assert.equal(r.isCompleteSeason, 'NOT_ESTABLISHED');
+  assert.equal(JSON.stringify(r).includes('A, Moscow'), false);
 });
 
 test('single fixture yields null, never invented uncertainty', () => {
@@ -79,6 +105,7 @@ test('rejects falsified hash, bad seasons, unknown league, duplicate records and
   assert.throws(() => inspect([rows[0].replace(',10,20,', ',10,10,')]), /team identifiers/);
   assert.throws(() => inspect([rows[0].replace(',2,1,', ',-1,1,')]), /home_goals/);
   assert.throws(() => inspect([rows[0].replace('2024/2025', 'unknown')]), /row season/);
+  assert.throws(() => inspect([rows[0].replace('2024/2025', '2024/2027')]), /row season/);
 });
 
 test('rejects malformed CSV, duplicate/missing headers, and oversized cells', () => {

@@ -7,6 +7,7 @@ on:
       - 'scripts/chromium-e2e.mjs'
       - 'scripts/macos-safari-smoke.py'
       - 'examples/m1-v7-cas-smoke.html'
+      - 'examples/m1-v8-cas-smoke.html'
       - 'scripts/m1-v7-cdp-smoke.mjs'
       - 'index.html'
       - 'examples/m1-v7-cas-smoke.html'
@@ -131,6 +132,9 @@ jobs:
           fi
           node scripts/m1-v7-cdp-smoke.mjs "$browser" \
             http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html
+          node scripts/m1-v7-cdp-smoke.mjs "$browser" \
+            http://127.0.0.1:5173/examples/m1-v8-cas-smoke.html M1_V8_BROWSER_CAS
+          echo 'Real Chromium persisted v8 special-goal and medical dossier over navigation'
           echo 'Real Chromium persisted v7, survived reload and serialized competing CAS writes'
 
 
@@ -208,6 +212,9 @@ jobs:
               node scripts/m1-v7-cdp-smoke.mjs "$executable" 'http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html'
               if ($LASTEXITCODE -ne 0) { throw "$browserName native v7 CAS smoke failed with code $LASTEXITCODE" }
               Write-Host "PASS: native Windows $browserName v7 IndexedDB reload and competing CAS writes"
+              node scripts/m1-v7-cdp-smoke.mjs "$executable" 'http://127.0.0.1:5173/examples/m1-v8-cas-smoke.html' 'M1_V8_BROWSER_CAS'
+              if ($LASTEXITCODE -ne 0) { throw "$browserName native v8 CAS smoke failed with code $LASTEXITCODE" }
+              Write-Host "PASS: native Windows $browserName v8 medical/goal dossier survived reload and CAS conflict"
             } finally {
               Stop-Process -Id $casServer.Id -Force -ErrorAction SilentlyContinue
             }

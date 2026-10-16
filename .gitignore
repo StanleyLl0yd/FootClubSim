@@ -152,3 +152,6 @@ vite.config.ts.timestamp-*
 # Python verification outputs
 __pycache__/
 *.py[cod]
+
+# Unapproved third-party reference snapshots must stay outside public history
+data/reference-private/

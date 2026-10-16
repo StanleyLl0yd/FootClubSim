@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runM1V8PairedMedicalDiagnostics }
   from '../dist/core/m1-v8-medical-diagnostics.js';
+import { simulateM1V8MedicalPhases }
+  from '../dist/core/m1-v8-medical-phases.js';
 import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
 import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
   from '../dist/core/match-contracts.js';
@@ -106,4 +108,28 @@ test('diagnostics do not mutate prematch or asserted medical action sources', ()
   assert.equal(result.ok, true);
   assert.deepEqual(prematch, before);
   assert.deepEqual(actions, saved);
+});
+
+test('medical event insertion alone is not reported as a changed shot ledger', () => {
+  const short = medical();
+  short[1] = { ...short[1], elapsedSeconds: 300 };
+  let unchangedSeed = null;
+  const facts = events => events.filter(e => e.type === 'shot')
+    .map(({ sequence, ...shot }) => shot);
+  for (let seed = 1; seed <= 128; seed++) {
+    const input = { ...prematch, rngSeed: seed };
+    const normal = simulateM1V8MedicalPhases(input, policy, [], [], []);
+    const variant = simulateM1V8MedicalPhases(input, policy, [], [], short);
+    assert.equal(normal.ok, true);
+    assert.equal(variant.ok, true);
+    if (JSON.stringify(facts(normal.events)) === JSON.stringify(facts(variant.events))) {
+      unchangedSeed = seed;
+      break;
+    }
+  }
+  assert.notEqual(unchangedSeed, null, 'a no-shot-treatment phase exists');
+  const result = run({ firstSeed: unchangedSeed, matchCount: 1 }, short);
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.report.shotLedgerChanged.count, 0);
+  assert.equal(result.report.changedScoreline.count, 0);
 });

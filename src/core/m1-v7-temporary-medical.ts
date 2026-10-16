@@ -69,7 +69,9 @@ const fail = (error: M1V7TemporaryMedicalError,
   medicalError ? { ok: false, error, medicalError } : { ok: false, error };
 const sortIds = (items: Iterable<string>): string[] => [...items].sort();
 
-function parse(raw: unknown): M1V7TemporaryMedicalAction | null {
+/** Shared strict validator for versioned treatment actions; no source authentication. */
+export function readM1V7TemporaryMedicalAction(raw: unknown):
+  M1V7TemporaryMedicalAction | null {
   if (!record(raw) ||
       !exact(raw, raw.kind === 'treatment-exit' ? EXIT :
         raw.kind === 'treatment-return' ? RETURN : []) ||
@@ -115,7 +117,7 @@ export function replayM1V7TemporaryMedicalPresence(
   const actions: M1V7TemporaryMedicalAction[] = [];
   let last = -1;
   for (const raw of medicalActions) {
-    const action = parse(raw);
+    const action = readM1V7TemporaryMedicalAction(raw);
     if (!action) return fail('INVALID_ACTIONS');
     if (existing.has(action.id)) return fail('DUPLICATE_ID');
     if (action.elapsedSeconds <= last) return fail('INVALID_ACTIONS');

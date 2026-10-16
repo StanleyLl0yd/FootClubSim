@@ -2,24 +2,6 @@ name: Browser smoke
 
 on:
   pull_request:
-    paths:
-      - 'src/**'
-      - 'scripts/chromium-e2e.mjs'
-      - 'scripts/macos-safari-smoke.py'
-      - 'examples/m1-v7-cas-smoke.html'
-      - 'examples/m1-v8-cas-smoke.html'
-      - 'scripts/m1-v7-cdp-smoke.mjs'
-      - 'index.html'
-      - 'examples/m1-v7-cas-smoke.html'
-      - 'scripts/m1-v7-cdp-smoke.mjs'
-      - 'vite.config.ts'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'tsconfig*.json'
-      - '.github/workflows/browser-smoke.yml'
-      # Exit-acceptance edits must be verified against all supported browsers.
-      - 'docs/M0_ACCEPTANCE.md'
-      - 'docs/*AUDIT*.md'
   push:
     branches: [main]
     paths:

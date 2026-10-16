@@ -274,4 +274,11 @@ test('four-item batch preserves sequential verified journal and all-or-nothing r
   ]), 'INVALID_MATCH_RESULT');
   assert.equal(original.revision, 0);
   assert.equal(original.results.length, 0);
+  const poisoned = { ...batched, results: [
+    { ...batched.results[0], rngState: batched.results[0].rngState ^ 1 },
+    ...batched.results.slice(1),
+  ] };
+  failed(applyM1V8MatchResultBatch(career, poisoned, [
+    request(fixtures[4], 4, 'after-poisoned-history', 55, false),
+  ]), 'INVALID_JOURNAL');
 });

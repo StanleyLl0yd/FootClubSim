@@ -106,8 +106,7 @@ test('a missing appearance is not proof of an unused-bench clean record', () => 
 });
 test('earlier fixture plus valid future ruling stays consistent', () => {
   const journal = completed();
-  const later = source(nextFixture);
-  const out = check(journal, [ban(playing, [nextFixture.id])], later);
+  const out = check(journal, [ban(playing, [nextFixture.id])]);
   assert.equal(out.ok, true, JSON.stringify(out));
   assert.equal(out.review.examinedCompletedFixtures, 1);
   assert.equal(out.review.rulingCount, 1);

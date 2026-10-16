@@ -69,7 +69,18 @@ export function deriveM1VerifiedV8GoalAttribution(
   if (!replay.ok || !sameCanonicalValue(replay, candidate)) {
     return { ok: false, error: 'INVALID_MATCH_SOURCE' };
   }
-  const input = prematch as M1PrematchInput;
+  return projectM1V8GoalAttributionFromVerifiedReplay(
+    prematch as M1PrematchInput, replay,
+  );
+}
+
+/**
+ * Internal projection: callers must first source-replay and compare the entire
+ * candidate. The standalone public entrypoint above always does so.
+ */
+export function projectM1V8GoalAttributionFromVerifiedReplay(
+  input: M1PrematchInput, replay: M1V8Result,
+): M1V8AttributionResult {
   const ids = { home: input.fixture.homeClubId, away: input.fixture.awayClubId };
   const active = {
     home: new Set(input.homeLineup.starters),

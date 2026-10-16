@@ -1,10 +1,11 @@
 import { sameCanonicalValue } from './canonical-value.js';
 import { generateDoubleRoundRobin, type Fixture } from './fixtures.js';
 import { isStableId } from './identifiers.js';
+import type { M1PrematchInput } from './m1-clock.js';
 import { startM1MatchResultJournal } from './m1-result-journal.js';
 import { M1_V8_ENGINE_VERSION, M1_V8_EVENT_SCHEMA_VERSION,
   simulateM1V8MedicalPhases } from './m1-v8-medical-phases.js';
-import { deriveM1VerifiedV8MatchDossier, type M1V8MatchDossier }
+import { projectM1V8MatchDossierFromVerifiedReplay, type M1V8MatchDossier }
   from './m1-v8-match-dossier.js';
 import type { Catalog } from './model.js';
 import type { InitialCareerSave } from './save.js';
@@ -133,9 +134,10 @@ function buildItem(
   );
   if (!match.ok || (assertedResult !== undefined &&
       !sameCanonicalValue(match, assertedResult))) return null;
-  const attributed = deriveM1VerifiedV8MatchDossier(
-    prematch, source.policy, source.plannedCommands,
-    source.trustedDecisions, source.medicalActions, match,
+  // This exact source has just been fully simulated and any asserted result
+  // compared; the internal dossier projection must not simulate it again.
+  const attributed = projectM1V8MatchDossierFromVerifiedReplay(
+    prematch as unknown as M1PrematchInput, match,
   );
   if (!attributed.ok) return null;
   return {

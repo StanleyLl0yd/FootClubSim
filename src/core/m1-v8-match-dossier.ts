@@ -1,14 +1,14 @@
 import { sameCanonicalValue } from './canonical-value.js';
 import type { M1PrematchInput } from './m1-clock.js';
-import { deriveM1VerifiedV8GoalAttribution,
+import { projectM1V8GoalAttributionFromVerifiedReplay,
   M1_V8_GOAL_ATTRIBUTION_SCHEMA_VERSION,
   type M1V8GoalAttribution, type M1V8PlayerStats }
   from './m1-v8-goal-attribution.js';
-import { deriveM1VerifiedV8PhasePresence,
+import { projectM1V8PhasePresenceFromVerifiedReplay,
   M1_V8_PHASE_PRESENCE_SCHEMA_VERSION, type M1V8PhasePlayer }
   from './m1-v8-phase-presence.js';
 import { M1_V8_ENGINE_VERSION, M1_V8_EVENT_SCHEMA_VERSION,
-  type M1V8Result } from './m1-v8-medical-phases.js';
+  simulateM1V8MedicalPhases, type M1V8Result } from './m1-v8-medical-phases.js';
 
 /** Read-only composite v8 match dossier; not a legally final match sheet. */
 export const M1_V8_MATCH_DOSSIER_SCHEMA_VERSION = 1 as const;
@@ -57,7 +57,7 @@ type Mutable = { -readonly [K in keyof M1V8DossierPlayer]: M1V8DossierPlayer[K] 
 const invariant = { ok: false, error: 'INTERNAL_INVARIANT' } as const;
 
 /**
- * Compose two independently verified projections from the SAME fully
+ * Compose two independently calculated projections from ONE already
  * replay-matched v8 candidate. Never trust a claimed score, scorer,
  * lineup, bench or discipline row without its exact source inputs.
  * The legal provenance and completeness of referee facts are external.
@@ -66,17 +66,30 @@ export function deriveM1VerifiedV8MatchDossier(
   prematch: unknown, policy: unknown, commands: unknown,
   decisions: unknown, medical: unknown, candidate: unknown,
 ): M1V8DossierResult {
-  const attributed = deriveM1VerifiedV8GoalAttribution(
-    prematch, policy, commands, decisions, medical, candidate,
+  const replay = simulateM1V8MedicalPhases(
+    prematch, policy, commands, decisions, medical,
   );
-  const physical = deriveM1VerifiedV8PhasePresence(
-    prematch, policy, commands, decisions, medical, candidate,
+  if (!replay.ok || !sameCanonicalValue(replay, candidate)) {
+    return { ok: false, error: 'INVALID_MATCH_SOURCE' };
+  }
+  return projectM1V8MatchDossierFromVerifiedReplay(
+    prematch as M1PrematchInput, replay,
   );
+}
+
+/**
+ * Internal projection: the caller must already have verified this exact replay.
+ * Never use this entrypoint to admit untrusted results or stored journals.
+ */
+export function projectM1V8MatchDossierFromVerifiedReplay(
+  input: M1PrematchInput, replay: M1V8Result,
+): M1V8DossierResult {
+  const attributed = projectM1V8GoalAttributionFromVerifiedReplay(input, replay);
+  const physical = projectM1V8PhasePresenceFromVerifiedReplay(input, replay);
   if (!attributed.ok || !physical.ok) {
     return { ok: false, error: 'INVALID_MATCH_SOURCE' };
   }
-  const input = prematch as M1PrematchInput;
-  const match = candidate as M1V8Result;
+  const match = replay;
   const byPresence = new Map(physical.report.players.map(p => [p.playerId, p]));
   const rows = new Map<string, Mutable>();
   const namedHome = [...input.homeLineup.starters, ...input.homeLineup.bench];

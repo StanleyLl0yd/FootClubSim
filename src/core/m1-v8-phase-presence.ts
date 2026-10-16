@@ -65,7 +65,18 @@ export function deriveM1VerifiedV8PhasePresence(
   if (!replay.ok || !sameCanonicalValue(replay, candidate)) {
     return { ok: false, error: 'INVALID_MATCH_SOURCE' };
   }
-  const input = prematch as M1PrematchInput;
+  return projectM1V8PhasePresenceFromVerifiedReplay(
+    prematch as M1PrematchInput, replay,
+  );
+}
+
+/**
+ * Internal projection: valid only after the source's complete replay has
+ * been compared by its caller. Public derived reports verify independently.
+ */
+export function projectM1V8PhasePresenceFromVerifiedReplay(
+  input: M1PrematchInput, replay: M1V8Result,
+): M1V8PhasePresenceResult {
   const clubs = { home: input.fixture.homeClubId, away: input.fixture.awayClubId };
   const active = {
     home: new Set(input.homeLineup.starters),

@@ -37,10 +37,13 @@ function must(result, context) {
   return result;
 }
 function main() {
-  if (process.argv.slice(2).some(a =>
+  const progressArgs = process.argv.slice(2).filter(a => a === '--progress');
+  if (progressArgs.length > 1 || process.argv.slice(2).some(a =>
+    a !== '--progress' &&
     !/^--(?:fixture-count|first-seed|batch-size)=[0-9]{1,10}$/.test(a))) {
-    throw Error('Allowed arguments: --fixture-count=N --first-seed=N --batch-size=N');
+    throw Error('Allowed arguments: --fixture-count=N --first-seed=N --batch-size=N --progress');
   }
+  const progress = progressArgs.length === 1;
   const count = arg('fixture-count', 8, 240);
   const batchSize = arg('batch-size', 1, 16);
   const firstSeed = arg('first-seed', 1, 0xffffffff);
@@ -123,6 +126,12 @@ function main() {
       applyMs += elapsed;
       pending = [];
       assert.equal(journal.revision, i + 1);
+      if (progress) process.stderr.write(JSON.stringify({
+        status: 'SYNTHETIC_V8_PROGRESS_NOT_A_GATE',
+        completedFixtures: i + 1, incrementalBatchApplyMs: elapsed,
+        elapsedMs: performance.now() - start,
+        journalBytes: Buffer.byteLength(JSON.stringify(journal), 'utf8'),
+      }) + '\n');
       if ((i + 1) === count || ((i + 1) & i) === 0) {
         checkpoints.push({
           fixtures: i + 1, applyMs: elapsed,

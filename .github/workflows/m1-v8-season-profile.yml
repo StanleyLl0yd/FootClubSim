@@ -6,7 +6,11 @@ on:
       - '.github/workflows/m1-v8-season-profile.yml'
       - 'scripts/m1-v8-career-benchmark.mjs'
       - 'src/core/m1-v8-result-journal.ts'
+      - 'src/core/m1-v8-goal-attribution.ts'
+      - 'src/core/m1-v8-phase-presence.ts'
+      - 'src/core/m1-v8-match-dossier.ts'
       - 'tests/m1-v8-result-journal.test.mjs'
+      - 'tests/m1-v8-match-dossier.test.mjs'
   workflow_dispatch:
 
 permissions: {}
@@ -33,4 +37,4 @@ jobs:
       - name: Build independent M1 core
         run: npm run build:core
       - name: Full synthetic season, bounded 16-match atomic batches
-        run: node scripts/m1-v8-career-benchmark.mjs --fixture-count=240 --first-seed=1 --batch-size=16
+        run: node scripts/m1-v8-career-benchmark.mjs --fixture-count=240 --first-seed=1 --batch-size=16 --progress

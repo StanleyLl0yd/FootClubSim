@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import { deriveM1VerifiedV8MatchDossier, verifyM1V8MatchDossier }
   from '../dist/core/m1-v8-match-dossier.js';
 import { simulateM1V8MedicalPhases } from '../dist/core/m1-v8-medical-phases.js';
+import { deriveM1VerifiedV8GoalAttribution }
+  from '../dist/core/m1-v8-goal-attribution.js';
+import { deriveM1VerifiedV8PhasePresence }
+  from '../dist/core/m1-v8-phase-presence.js';
 import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
 import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
   from '../dist/core/match-contracts.js';
@@ -179,4 +183,36 @@ test('projection does not change pre-match or input source history', () => {
   examine(prematch, [], medical, decisions);
   assert.deepEqual(prematch, input);
   assert.deepEqual(medical, originalMedical);
+});
+
+test('shared verified replay equals two independently verified public projections', () => {
+  for (const seed of [1, 42, 777]) {
+    const input = { ...prematch, rngSeed: seed };
+    const { match, dossier } = examine(input, [], [exit, back], decisions);
+    const goals = deriveM1VerifiedV8GoalAttribution(
+      input, policy, [], decisions, [exit, back], match);
+    const presence = deriveM1VerifiedV8PhasePresence(
+      input, policy, [], decisions, [exit, back], match);
+    assert.equal(goals.ok, true);
+    assert.equal(presence.ok, true);
+    assert.deepEqual(dossier.goalAttributions, goals.report.goals);
+    assert.deepEqual(dossier.match, goals.report.match);
+    for (const row of dossier.players) {
+      const {
+        benchNamed, registeredPhaseSeconds, physicalPhaseSeconds,
+        temporarilyAbsentPhaseSeconds, yellowCards, dismissal,
+        permanentlyMedicallyWithdrawn, ...goalFields
+      } = row;
+      assert.equal(typeof benchNamed, 'boolean');
+      assert.ok(yellowCards >= 0 && dismissal === null);
+      assert.equal(permanentlyMedicallyWithdrawn, false);
+      assert.deepEqual(goalFields, goals.report.players.find(p =>
+        p.playerId === row.playerId));
+      assert.deepEqual({
+        teamId: row.teamId, playerId: row.playerId, started: row.started,
+        registeredPhaseSeconds, physicalPhaseSeconds,
+        temporarilyAbsentPhaseSeconds,
+      }, presence.report.players.find(p => p.playerId === row.playerId));
+    }
+  }
 });

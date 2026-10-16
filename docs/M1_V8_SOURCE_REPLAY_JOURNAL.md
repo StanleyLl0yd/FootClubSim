@@ -75,9 +75,10 @@ remain unverified.
 The dedicated path-scoped `M1 v8 season workload` CI workflow uses
 the existing bounded CLI with `--fixture-count=240 --batch-size=16`,
 seed 1 and the original synthetic 16-club calendar. It is limited to
-20 minutes on a pinned Node 24 / Ubuntu runner, and logs full final
-replay, season-statistics verification, journal size, memory and time
-measurements. A completed run establishes only those measurements on
+20 minutes on a pinned Node 24 / Ubuntu runner, and logs bounded
+16-fixture progress to stderr plus full final replay, season-statistics
+verification, journal size, memory and time measurements. The optional
+CLI `--progress` flag never changes the final JSON stdout report. A completed run establishes only those measurements on
 that runner; timeout, quota-like journal-size rejection or other
 failure must be reported rather than silently omitted. No measured
 result or production latency threshold is presumed here.

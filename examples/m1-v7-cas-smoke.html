@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v7 IndexedDB CAS smoke</title></head>
+<body>
+  <h1>M1 v7 IndexedDB smoke (development test only)</h1>
+  <pre id="status">M1_V7_BROWSER_CAS_RUNNING</pre>
+  <script type="module">
+    import { createSyntheticRplScaleCatalog, defaultSyntheticLineup }
+      from '../dist/core/synthetic.js';
+    import { createInitialCareer } from '../dist/core/save.js';
+    import { saveNewInitialCareer, loadInitialCareer }
+      from '../dist/browser/initial-career-store.js';
+    import { createM1V7PersistedJournal, loadM1V7PersistedJournal,
+      commitM1V7PersistedBatch } from '../dist/browser/m1-v7-journal-store.js';
+    import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
+    import { simulateM1V7Phases } from '../dist/core/m1-v7-adjudications.js';
+    import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
+      from '../dist/core/match-contracts.js';
+    import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
+    import { defaultTacticalPlan } from '../dist/core/tactics.js';
+    import { RNG_VERSION } from '../dist/core/rng.js';
+
+    const status = document.getElementById('status');
+    const check = (condition, message) => {
+      if (!condition) throw new Error(message);
+    };
+    const catalog = createSyntheticRplScaleCatalog(71);
+    const career = createInitialCareer(catalog, catalog.clubs[0].id, 19, 'm1-v7-native-cas');
+    const fixtures = generateDoubleRoundRobin(catalog.clubs.map(club => club.id))
+      .flatMap(round => round.fixtures);
+    const clubs = new Map(catalog.clubs.map(club => [club.id, club]));
+    const policy = {
+      home: { assignedActor: { kind: 'player' }, availableStaffIds: [] },
+      away: { assignedActor: { kind: 'player' }, availableStaffIds: [] },
+    };
+    function command(fixture, expectedRevision, commandId, seed) {
+      const prematch = {
+        schemaVersion: MATCH_LEDGER_VERSION, engineVersion: M1_ENGINE_VERSION,
+        rulesPackId: M0_RULES_PACK_ID, rulesPackVersion: M0_RULES_PACK_VERSION,
+        fixture, catalog,
+        homeLineup: defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+        awayLineup: defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+        homeTactics: defaultTacticalPlan(fixture.homeClubId),
+        awayTactics: defaultTacticalPlan(fixture.awayClubId),
+        rosterRules: { starterCount: 11, maxBench: 12, maxForeignersOnField: 7 },
+        rngAlgorithmVersion: RNG_VERSION, rngSeed: seed,
+      };
+      const result = simulateM1V7Phases(prematch, policy, [], []);
+      check(result.ok, 'source match did not simulate');
+      return { schemaVersion: 3, commandId, careerId: career.careerId,
+        expectedRevision, prematch, policy,
+        plannedCommands: [], trustedDecisions: [], result };
+    }
+    async function failCode(promise, code) {
+      try { await promise; }
+      catch (error) {
+        check(error?.code === code, 'expected ' + code + ', got ' + String(error));
+        return;
+      }
+      throw new Error('expected failure ' + code);
+    }
+    async function run() {
+      const stage = new URL(location.href).searchParams.get('stage');
+      if (stage === null) {
+        await saveNewInitialCareer(career);
+        const initial = await createM1V7PersistedJournal(career.careerId);
+        check(initial.revision === 0, 'initial CAS revision is not zero');
+        const committed = await commitM1V7PersistedBatch(career.careerId, 0,
+          [command(fixtures[0], 0, 'native-first', 19)]);
+        check(committed.revision === 1, 'first match commit not applied');
+        const url = new URL(location.href);
+        url.searchParams.set('stage', 'verify');
+        location.replace(url.href); // real navigation; no same-page in-memory result accepted
+        return;
+      }
+      check(stage === 'verify', 'invalid stage');
+      const original = await loadInitialCareer(career.careerId);
+      check(original.selectedClubId === career.selectedClubId, 'M0 source changed');
+      const recovered = await loadM1V7PersistedJournal(career.careerId);
+      check(recovered.revision === 1 && recovered.results.length === 1,
+        'revision one was not durable over actual page reload');
+      check(recovered.results[0].commandId === 'native-first', 'first committed row absent');
+      await failCode(createM1V7PersistedJournal(career.careerId), 'ALREADY_EXISTS');
+      await failCode(commitM1V7PersistedBatch(career.careerId, 0,
+        [command(fixtures[1], 0, 'stale', 20)]), 'STALE_REVISION');
+      const results = await Promise.allSettled([
+        commitM1V7PersistedBatch(career.careerId, 1,
+          [command(fixtures[1], 1, 'native-writer-a', 20)]),
+        commitM1V7PersistedBatch(career.careerId, 1,
+          [command(fixtures[2], 1, 'native-writer-b', 21)]),
+      ]);
+      check(results.filter(item => item.status === 'fulfilled').length === 1,
+        'concurrent writers both won or both failed');
+      const loser = results.find(item => item.status === 'rejected');
+      check(loser.reason?.code === 'STALE_REVISION', 'loser was not a stale CAS');
+      const journal = await loadM1V7PersistedJournal(career.careerId);
+      check(journal.revision === 2 && journal.results.length === 2,
+        'concurrent writers lost or duplicated a commit');
+      check(journal.results[0].commandId === 'native-first',
+        'concurrency overwrote previously committed data');
+      status.textContent = 'M1_V7_BROWSER_CAS_PASS';
+    }
+    run().catch(error => {
+      status.textContent = 'M1_V7_BROWSER_CAS_FAIL: ' + String(error?.stack ?? error);
+    });
+  </script>
+</body>
+</html>

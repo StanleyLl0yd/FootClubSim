@@ -50,3 +50,19 @@ The engine still lacks verified automatic referee interruptions, medical
 off-field XI integration, accepted fixture resumption, independent statistical
 calibration and two full M1 repository audits. P3 #29, P4 #30, P5 #31 and M1
 exit #3 remain OPEN, with M2 blocked pending separate owner acceptance.
+
+## Native Chromium integration check
+
+The optional development-only fixture `examples/m1-v7-cas-smoke.html` is
+served through Vite **dev** with separately compiled core modules, not bundled
+into the M0 shipping app. The Chromium CI job now opens it with an isolated
+browser profile and real IndexedDB transactions. It creates and commits a
+v7 result, navigates to the same origin with a new page evaluation, reloads
+the stored M0 source and v7 revision, rejects stale and duplicate writes,
+then races two revision-1 writers. Precisely one must commit revision 2.
+CI asserts an explicit `M1_V7_BROWSER_CAS_PASS` marker.
+
+This is a **real Chromium smoke** but not proof of a full browser process
+restart, Safari support for this new journal, storage eviction, OS-level crash
+consistency, actual quota pressure, referee authenticity or M2 playable
+browser career acceptance. Mock-IDB fault tests remain separate.

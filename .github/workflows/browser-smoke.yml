@@ -7,6 +7,8 @@ on:
       - 'scripts/chromium-e2e.mjs'
       - 'scripts/macos-safari-smoke.py'
       - 'index.html'
+      - 'examples/m1-v7-cas-smoke.html'
+      - 'scripts/m1-v7-cdp-smoke.mjs'
       - 'vite.config.ts'
       - 'package.json'
       - 'package-lock.json'
@@ -92,6 +94,43 @@ jobs:
           grep -Fq 'Календарь' /tmp/footclubsim-dom.html
           grep -Fq 'Сохранения' /tmp/footclubsim-dom.html
           echo 'React M0 shell rendered in Chromium'
+
+      - name: Build M1 isolated domain modules for native IndexedDB smoke
+        run: npm run build:core
+      - name: Exercise v7 CAS in native Chromium with real page reload
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vite --host 127.0.0.1 --port 5173 --strictPort >/tmp/footclubsim-m1-cas-dev.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat /tmp/footclubsim-m1-cas-dev.log
+            exit 1
+          fi
+          browser=""
+          for executable in google-chrome google-chrome-stable chromium chromium-browser; do
+            if command -v "$executable" >/dev/null 2>&1; then
+              browser="$executable"
+              break
+            fi
+          done
+          if [ -z "$browser" ]; then
+            echo 'No Chromium executable on runner'
+            exit 1
+          fi
+          node scripts/m1-v7-cdp-smoke.mjs "$browser" \
+            http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html
+          echo 'Real Chromium persisted v7, survived reload and serialized competing CAS writes'
+
 
   chromium-windows:
     name: Built app renders in Windows ${{ matrix.browser }}

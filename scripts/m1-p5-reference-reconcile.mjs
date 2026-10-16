@@ -88,7 +88,7 @@ export function reconcileRplPublishedAggregates(candidate, published) {
     try { url = new URL(statement.url); } catch { throw Error('Invalid publisher URL'); }
     if (url.protocol !== 'https:' || !url.hostname ||
         url.username || url.password || urls.has(url.href)) {
-      throw Error('Publisher URLs must be distinct public HTTPS pages');
+      throw Error('Publisher URLs must be distinct HTTPS pages');
     }
     urls.add(url.href);
   }

@@ -1,4 +1,5 @@
 import { sameCanonicalValue } from './canonical-value.js';
+import { isPlainJsonTree } from './plain-json-tree.js';
 import { M1_CLOCK_MAX_EVENTS, M1_CLOCK_STEP_SECONDS } from './m1-clock.js';
 import { M1_V6_DRAWS_PER_PHASE } from './m1-phases-v6.js';
 import { M1_V8_ENGINE_VERSION, M1_V8_EVENT_SCHEMA_VERSION,
@@ -84,6 +85,11 @@ export function createM1V8PhaseCheckpoint(
       (completedPhases as number) > M1_CLOCK_MAX_EVENTS) {
     return fail('INVALID_PHASE');
   }
+  // Refuse malformed serializable action history before reading any getter
+  // or running the headless evaluator; JSON.stringify is not validation.
+  if (!isPlainJsonTree(plannedCommands) ||
+      !isPlainJsonTree(trustedDecisions) ||
+      !isPlainJsonTree(medicalActions)) return fail('INVALID_SCHEDULE');
   const phase = completedPhases as number;
   const cutoff = phase * M1_CLOCK_STEP_SECONDS;
   if (!historical(plannedCommands, cutoff, false) ||
@@ -155,7 +161,8 @@ export function resumeM1V8PhaseCheckpoint(
   nextCompletedPhases: unknown, newCommands: unknown = [],
   newDecisions: unknown = [], newMedicalActions: unknown = [],
 ): M1V8CheckpointResult {
-  if (!record(previous) || !exact(previous, KEYS) ||
+  if (!isPlainJsonTree(previous) || !record(previous) ||
+      !exact(previous, KEYS) ||
       previous.schemaVersion !== M1_V8_CHECKPOINT_SCHEMA_VERSION ||
       previous.engineVersion !== M1_V8_ENGINE_VERSION ||
       previous.eventSchemaVersion !== M1_V8_EVENT_SCHEMA_VERSION ||
@@ -181,6 +188,8 @@ export function resumeM1V8PhaseCheckpoint(
     return newCommands.length || newDecisions.length || newMedicalActions.length ?
       fail('MATCH_FINISHED') : { ok: true, checkpoint: verified.checkpoint };
   }
+  if (!isPlainJsonTree(newCommands) || !isPlainJsonTree(newDecisions) ||
+      !isPlainJsonTree(newMedicalActions)) return fail('INVALID_SCHEDULE');
   const cutoff = oldPhase * M1_CLOCK_STEP_SECONDS;
   const checks = [after(newCommands, cutoff), after(newDecisions, cutoff),
     after(newMedicalActions, cutoff)];

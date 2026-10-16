@@ -66,3 +66,19 @@ This is a **real Chromium smoke** but not proof of a full browser process
 restart, Safari support for this new journal, storage eviction, OS-level crash
 consistency, actual quota pressure, referee authenticity or M2 playable
 browser career acceptance. Mock-IDB fault tests remain separate.
+
+## Native Safari and Windows CAS browser matrix
+
+The dedicated v7 CAS fixture is also executed in the **actual Safari browser
+via macOS SafariDriver** and in **native Windows Chrome and Edge via CDP**.
+Each browser uses its own isolated local Vite dev origin and runs the same
+scenario: create journal and first result, navigate to a new page evaluation,
+recover the stored revision and M0 career, reject duplicate/stale operations,
+and race two writers for exactly one successful revision-2 commit. The
+corresponding browser job fails unless the fixture reports
+`M1_V7_BROWSER_CAS_PASS`. The shipping M0 application is unchanged.
+
+This verifies browser-engine interoperability of these operations only
+after each named CI job succeeds; neither a runner configuration nor a
+passing mocked test is evidence of real quota pressure, browser eviction,
+browser-process termination, OS crashes or authenticated refereeing.

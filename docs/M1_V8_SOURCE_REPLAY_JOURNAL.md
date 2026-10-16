@@ -49,3 +49,23 @@ The journal does not introduce legal exhaustion/fatigue modeling
 or officially finalized league points. It is **not** a production
 career, and M1 #27/#29/#30/#31/#3 remain OPEN. M2 is blocked pending
 separate owner acceptance and complete M1 exit verification.
+
+## Bounded source-replay batch efficiency (2026-10-16)
+
+The pure schema-4 batch API validates and source-replays the *untrusted prior
+journal once* before running its 1..16 new commands synchronously against the
+internal JSON-copied result. Every appended fixture still undergoes its own
+strict source, actual deterministic match and dossier verification. Public
+single-apply and persisted IndexedDB commits continue to source-replay their
+untrusted stored journal on entry. A failed middle command returns no partly
+committed next journal; the caller's original record is unchanged. Tests
+compare a four-fixture batch with sequential validated commits and reject a
+forged third result. This is a bounded complexity optimization, NOT permission
+to trust new browser data or skip external CAS/fixture-source verification.
+
+Initial 8-fixture **single-apply** Linux CI diagnostic from PR #215
+([workflow](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/38901794763/job/116975573222))
+measured 7.12 seconds cumulatively in domain apply and 1.52 seconds for
+final replay validation. These are machine-specific observations; the full
+240-game lifetime, browser latency, real quota and approved performance budget
+remain unverified.

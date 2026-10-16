@@ -55,6 +55,8 @@ export interface M1V7TeamReport {
   readonly shots: number;
   readonly shotsOnTarget: number;
   readonly xgMilli: number;
+  /** Current xG sum includes only synthetic open-play shots, not penalties. */
+  readonly xgCoverage: 'open-play-only';
 }
 export interface M1V7Report {
   readonly fixtureId: string;
@@ -98,6 +100,7 @@ function teamReport(source: MatchLedgerReport['home']): MutableTeamReport {
   return {
     ...source, openPlayGoals: source.goals,
     penaltiesTaken: 0, penaltyGoals: 0, ownGoalsFor: 0,
+    xgCoverage: 'open-play-only',
   };
 }
 
@@ -166,6 +169,8 @@ export function simulateM1V7Phases(
     const team = totals[side];
     if (decision.kind === 'penalty-kick') {
       team.penaltiesTaken++;
+      team.shots++;
+      if (decision.outcome !== 'missed') team.shotsOnTarget++;
       if (decision.outcome === 'scored') {
         team.goals++;
         team.penaltyGoals++;

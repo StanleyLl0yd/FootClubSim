@@ -23,10 +23,12 @@ committing a next journal.
 
 The minimal in-memory IndexedDB model exercises error/abort branches,
 concurrent-writer serialization, quota rollback and separate database
-names. **A real-browser cross-platform v8 smoke remains required**
-before considering this feature interoperable in Safari/Windows and
-under real storage constraints. The previous v7 Chromium/Safari/
-Windows evidence applies only to **v7**, not automatically to v8.
+names. **PR #212 (2026-10-16), exact-head 6/6 and exact-main 7/7 PASS**, also
+verified v8 IndexedDB survival after actual page navigation, source-replayed
+medical/penalty/own-goal data and competing CAS writers on native Linux
+Chromium, macOS Safari and Windows Chrome/Edge. All older v7 browser checks
+continue to pass. This proves those explicit interoperability scenarios,
+not arbitrary real storage exhaustion, eviction or OS crash durability.
 
 **Crucial limitations:** input medical, referee and staff claims have
 no authenticated origin. Even a durable local IndexedDB record is not

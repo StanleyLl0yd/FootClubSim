@@ -115,7 +115,7 @@ test('v7 result mutation corpus rejects forgery without tampering source inputs'
         commands, decisions, altered), false);
     }
     assert.equal(verifyM1V7Result(prematch, policy,
-      [...commands].reverse(), decisions, match), true);
+      [{ ...commands[0], id: 'forged-referee' }], decisions, match), false);
     assert.equal(verifyM1V7Result(prematch, policy,
       commands, [], match), false);
     assert.equal(JSON.stringify(match), original);

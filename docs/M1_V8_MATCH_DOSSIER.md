@@ -55,6 +55,7 @@ must never be used as a public persisted-journal admission boundary.
 The journal executes one full canonical simulation per old/new fixture,
 compares all retained claims against the replay-derived dossier, and
 uses the internal dossier projection only *after* that replay has succeeded.
-The public dossier independently replays and compares untrusted candidates. The 16-entry batch and independent
-projection equivalence regressions remain required; no source origin
+The public dossier independently replays and compares untrusted
+candidates. The 16-entry batch and independent projection equivalence
+regressions remain required; no source origin
 has gained authentication and no old schema has been migrated.

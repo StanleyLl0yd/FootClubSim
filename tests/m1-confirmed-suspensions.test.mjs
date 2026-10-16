@@ -118,3 +118,14 @@ test('gate never mutates the validated prematch or external ruling snapshot', ()
   assert.deepEqual(orders, before);
   assert.deepEqual(prematch, input);
 });
+
+test('odd-sized synthetic calendar fails closed with a typed error', () => {
+  const third = catalog.clubs.find(c =>
+    c.id !== fixture.homeClubId && c.id !== fixture.awayClubId);
+  assert.ok(third);
+  const truncated = {
+    ...prematch, catalog: { ...catalog, clubs: [homeClub, awayClub, third] },
+  };
+  assert.deepEqual(admitM1ConfirmedSuspensions(truncated, []),
+    { ok: false, error: 'INVALID_PREMATCH' });
+});

@@ -210,13 +210,14 @@ export function validateM1V8MatchJournal(
  * Pure all-or-nothing domain transition. No IndexedDB write, auto-migration,
  * league-points award, unproven sanction or authoritative match result.
  */
-export function applyM1V8MatchResult(
-  initial: unknown, journalCandidate: unknown, candidate: unknown,
+/**
+ * Internal batch step. 'current' comes only from one successful source replay
+ * or from a preceding step in this same synchronous batch. It is never an
+ * externally supplied journal. Every new match is still independently replayed.
+ */
+function applyCheckedM1V8MatchResult(
+  original: InitialCareerSave, current: M1V8MatchJournal, candidate: unknown,
 ): M1V8JournalResult {
-  const original = trusted(initial);
-  if (!original) return fail('INVALID_INITIAL_CAREER');
-  const current = readJournal(journalCandidate, original);
-  if (!current) return fail('INVALID_JOURNAL');
   if (!rec(candidate) || !exact(candidate, APPLY_KEYS) ||
       candidate.schemaVersion !== M1_V8_APPLY_SCHEMA_VERSION ||
       !isStableId(candidate.commandId) || !isStableId(candidate.careerId) ||
@@ -257,16 +258,35 @@ export function applyM1V8MatchResult(
     results: [...current.results, item],
   } };
 }
+
+/**
+ * Public single apply: always replay-validate an untrusted prior journal.
+ * This API's observable validation/error order is intentionally unchanged.
+ */
+export function applyM1V8MatchResult(
+  initial: unknown, journalCandidate: unknown, candidate: unknown,
+): M1V8JournalResult {
+  const original = trusted(initial);
+  if (!original) return fail('INVALID_INITIAL_CAREER');
+  const current = readJournal(journalCandidate, original);
+  if (!current) return fail('INVALID_JOURNAL');
+  return applyCheckedM1V8MatchResult(original, current, candidate);
+}
 export function applyM1V8MatchResultBatch(
   initial: unknown, journal: unknown, requests: unknown,
 ): M1V8JournalResult {
   if (!Array.isArray(requests) || requests.length < 1 ||
       requests.length > MAX_BATCH) return fail('INVALID_BATCH');
-  let current: unknown = journal;
+  const original = trusted(initial);
+  if (!original) return fail('INVALID_INITIAL_CAREER');
+  // Replay an externally supplied journal ONCE. No untrusted code receives
+  // the internal deep JSON copy while the bounded synchronous batch runs.
+  let current = readJournal(journal, original);
+  if (!current) return fail('INVALID_JOURNAL');
   for (const request of requests) {
-    const next = applyM1V8MatchResult(initial, current, request);
+    const next = applyCheckedM1V8MatchResult(original, current, request);
     if (!next.ok) return next;
     current = next.journal;
   }
-  return { ok: true, journal: current as M1V8MatchJournal };
+  return { ok: true, journal: current };
 }

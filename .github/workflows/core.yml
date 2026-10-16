@@ -38,6 +38,8 @@ jobs:
         run: node scripts/m1-v8-medical-diagnostics.mjs --count=32 --first-seed=1
       - name: M1 v8 bounded career journal workload smoke (8 fixtures, NOT gate)
         run: node scripts/m1-v8-career-benchmark.mjs --fixture-count=8 --first-seed=1
+      - name: M1 v8 source-replayed atomic batch profile (8 fixtures, NOT gate)
+        run: node scripts/m1-v8-career-benchmark.mjs --fixture-count=8 --first-seed=1 --batch-size=8
       - name: Assert independent core and browser outputs coexist
         run: |
           test -s dist/core/save.js

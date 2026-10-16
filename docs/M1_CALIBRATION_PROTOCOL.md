@@ -106,3 +106,11 @@ latency/memory acceptance threshold is yet approved. Medical and special-goal
 samples are explicitly artificial unverified claims. The JSON carries
 `SYNTHETIC_V8_WORKLOAD_ONLY_NOT_A_PERFORMANCE_GATE` and must not be cited as
 real-match calibration, genuine quota testing or accepted release performance.
+
+The same probe also accepts `--batch-size=N` (1..16, default 1). With
+`--batch-size=8`, the 8 fixtures form one strict all-or-nothing validated
+domain batch; full-source replay still runs at the transaction boundary and
+every incoming fixture is individually verified. The Core CI records both
+single-apply and 8-item batch measurements, without an acceptance threshold.
+These are different transaction patterns, not a speed claim for identical
+browser persistence behavior.

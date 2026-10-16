@@ -253,3 +253,32 @@ test('JSON compatibility is required for retained match sources', () => {
   failed(applyM1V8MatchResult(career, empty(),
     { ...req, policy: cyclic }), 'INVALID_APPLY_COMMAND');
 });
+
+test('four-item batch preserves sequential verified journal and all-or-nothing rejection', () => {
+  const commands = fixtures.slice(0, 4).map((fixture, index) =>
+    request(fixture, index, 'batch-' + index, 42 + index, index % 2 === 0));
+  const original = empty();
+  let sequential = original;
+  for (const command of commands) {
+    sequential = success(applyM1V8MatchResult(career, sequential, command));
+  }
+  const batched = success(applyM1V8MatchResultBatch(career, original, commands));
+  assert.deepEqual(batched, sequential);
+  assert.equal(batched.revision, 4);
+  assert.equal(batched.results.length, 4);
+  const forged = { ...commands[2], result: {
+    ...commands[2].result, rngState: commands[2].result.rngState ^ 1,
+  } };
+  failed(applyM1V8MatchResultBatch(career, original, [
+    commands[0], commands[1], forged, commands[3],
+  ]), 'INVALID_MATCH_RESULT');
+  assert.equal(original.revision, 0);
+  assert.equal(original.results.length, 0);
+  const poisoned = { ...batched, results: [
+    { ...batched.results[0], rngState: batched.results[0].rngState ^ 1 },
+    ...batched.results.slice(1),
+  ] };
+  failed(applyM1V8MatchResultBatch(career, poisoned, [
+    request(fixtures[4], 4, 'after-poisoned-history', 55, false),
+  ]), 'INVALID_JOURNAL');
+});

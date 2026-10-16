@@ -1,4 +1,5 @@
 import { sameCanonicalValue } from './canonical-value.js';
+import { isPlainJsonTree } from './plain-json-tree.js';
 import { generateDoubleRoundRobin, type Fixture } from './fixtures.js';
 import { isStableId } from './identifiers.js';
 import type { M1PrematchInput } from './m1-clock.js';
@@ -81,41 +82,9 @@ const exact = (v: Record<string, unknown>, keys: readonly string[]): boolean =>
 const int = (v: unknown, min: number, max: number): v is number =>
   Number.isSafeInteger(v) && (v as number) >= min && (v as number) <= max;
 
-/**
- * Before invoking JSON.stringify, reject accessors (including toJSON),
- * non-JSON prototypes, non-enumerable/symbol fields, holes, cycles and
- * repeated object aliases. JSON serialization otherwise invokes getters
- * and silently drops metadata that affects source-trust decisions.
- */
-function plainJsonTree(value: unknown, seen: WeakSet<object>): boolean {
-  if (value === null || typeof value === 'string' ||
-      typeof value === 'boolean') return true;
-  if (typeof value === 'number') return Number.isFinite(value);
-  if (typeof value !== 'object' || seen.has(value)) return false;
-  seen.add(value);
-  const prototype: unknown = Object.getPrototypeOf(value);
-  if (Array.isArray(value)) {
-    if (prototype !== Array.prototype ||
-        Reflect.ownKeys(value).length !== value.length + 1) return false;
-    for (let i = 0; i < value.length; i++) {
-      const property = Object.getOwnPropertyDescriptor(value, i);
-      if (!property?.enumerable || !Object.hasOwn(property, 'value') ||
-          !plainJsonTree(property.value, seen)) return false;
-    }
-    return true;
-  }
-  if (prototype !== Object.prototype && prototype !== null) return false;
-  for (const key of Reflect.ownKeys(value)) {
-    if (typeof key !== 'string') return false;
-    const property = Object.getOwnPropertyDescriptor(value, key);
-    if (!property?.enumerable || !Object.hasOwn(property, 'value') ||
-        !plainJsonTree(property.value, seen)) return false;
-  }
-  return true;
-}
 function strictJsonCopy<T>(value: unknown, limit: number): T | null {
   try {
-    if (!plainJsonTree(value, new WeakSet<object>())) return null;
+    if (!isPlainJsonTree(value)) return null;
     const json = JSON.stringify(value);
     if (typeof json !== 'string' || json.length > limit) return null;
     const copy: unknown = JSON.parse(json);

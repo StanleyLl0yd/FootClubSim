@@ -14,7 +14,7 @@ import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
 import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
 import { RNG_VERSION } from '../dist/core/rng.js';
 import { defaultTacticalPlan } from '../dist/core/tactics.js';
-import { simulateM1V8Phases } from '../dist/core/m1-v8-medical-phases.js';
+import { simulateM1V8MedicalPhases } from '../dist/core/m1-v8-medical-phases.js';
 
 // Minimal asynchronous IndexedDB model: transactions on the same DB serialize,
 // writes are staged and committed only on transaction completion.
@@ -143,7 +143,7 @@ function matchRequest(fixture, revision, commandId, seed = 19) {
     rosterRules: { starterCount: 11, maxBench: 12, maxForeignersOnField: 7 },
     rngAlgorithmVersion: RNG_VERSION, rngSeed: seed,
   };
-  const result = simulateM1V8Phases(prematch, policy, [], []);
+  const result = simulateM1V8MedicalPhases(prematch, policy, [], []);
   assert.equal(result.ok, true);
   return {
     schemaVersion: 4, commandId, careerId: career.careerId,

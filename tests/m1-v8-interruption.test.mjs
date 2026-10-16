@@ -113,10 +113,13 @@ test('future medical actions, retrospective commands and unobserved restarts fai
 });
 
 test('cutoff restricted to completed virtual phases before full time', () => {
-  for (const t of [undefined, 0, -300, 1, 301, 5399, 5400, 5700, NaN, Infinity]) {
+  for (const t of [0, -300, 1, 301, 5399, 5400, 5700, NaN, Infinity]) {
     assert.deepEqual(take([], [], [], t),
       { ok: false, error: 'INVALID_INTERRUPTION' });
   }
+  assert.deepEqual(snapshotM1V8InterruptedMatch(
+    prematch, policy, [], [], [], undefined),
+  { ok: false, error: 'INVALID_INTERRUPTION' });
   const earliest = good(take([], [], [], 300));
   assert.equal(earliest.events.some(e => e.elapsedSeconds >= 300), false);
 });

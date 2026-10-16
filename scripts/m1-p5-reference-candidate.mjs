@@ -153,7 +153,14 @@ export function analyzeRplCsvCandidate(csv, season, expectedHash) {
     squaredDiff += delta * (goals - goalsMean);
   }
   if (!count) throw Error('No completed matches for requested season');
-  const ranges = values => ({ min: Math.min(...values), max: Math.max(...values) });
+  function ranges(values) {
+    let min = Infinity, max = -Infinity;
+    for (const n of values) {
+      if (n < min) min = n;
+      if (n > max) max = n;
+    }
+    return { min, max };
+  }
   const appearances = [...clubAppearances.values()];
   const stdDev = count < 2 ? null : Math.sqrt(squaredDiff / (count - 1));
   const margin = stdDev === null ? null : Z95 * stdDev / Math.sqrt(count);

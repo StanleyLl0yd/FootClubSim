@@ -282,3 +282,25 @@ test('four-item batch preserves sequential verified journal and all-or-nothing r
     request(fixtures[4], 4, 'after-poisoned-history', 55, false),
   ]), 'INVALID_JOURNAL');
 });
+
+test('sixteen-fixture batch matches two verified commits and never trusts a poisoned prefix', () => {
+  const commands = fixtures.slice(0, 16).map((fixture, index) =>
+    request(fixture, index, 'sixteen-' + index, index + 17, index % 4 === 0));
+  const first = success(applyM1V8MatchResultBatch(
+    career, empty(), commands.slice(0, 8)));
+  const second = success(applyM1V8MatchResultBatch(
+    career, first, commands.slice(8)));
+  const whole = success(applyM1V8MatchResultBatch(career, empty(), commands));
+  assert.deepEqual(whole, second);
+  assert.deepEqual(success(validateM1V8MatchJournal(career, whole)), whole);
+  const corrupt = structuredClone(first);
+  corrupt.results[3].dossier.match.home.goals++;
+  failed(applyM1V8MatchResultBatch(career, corrupt, commands.slice(8)),
+    'INVALID_JOURNAL');
+  const tamperedCommand = structuredClone(commands[15]);
+  tamperedCommand.result.rngState ^= 1;
+  failed(applyM1V8MatchResultBatch(career, empty(), [
+    ...commands.slice(0, 15), tamperedCommand,
+  ]), 'INVALID_MATCH_RESULT');
+  assert.equal(first.revision, 8);
+});

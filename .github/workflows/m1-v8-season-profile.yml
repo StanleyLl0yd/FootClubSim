@@ -1,0 +1,36 @@
+name: M1 v8 season workload
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/m1-v8-season-profile.yml'
+      - 'scripts/m1-v8-career-benchmark.mjs'
+      - 'src/core/m1-v8-result-journal.ts'
+      - 'tests/m1-v8-result-journal.test.mjs'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  complete-season:
+    name: Full 240-fixture source-replay workload (not acceptance)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install exactly locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build independent M1 core
+        run: npm run build:core
+      - name: Full synthetic season, bounded 16-match atomic batches
+        run: node scripts/m1-v8-career-benchmark.mjs --fixture-count=240 --first-seed=1 --batch-size=16

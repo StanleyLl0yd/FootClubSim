@@ -105,7 +105,6 @@ function validAppearance(raw: unknown, fixture: Fixture,
       !int(raw.playedSeconds, 0, 5400) ||
       raw.enteredAtSeconds + raw.playedSeconds !== raw.leftAtSeconds ||
       (raw.started && raw.enteredAtSeconds !== 0) ||
-      (!raw.started && raw.enteredAtSeconds === 0) ||
       !int(raw.yellowCards, 0, 2) ||
       !['none', 'second-yellow', 'straight-red'].includes(raw.dismissal as string) ||
       (raw.dismissal === 'second-yellow' && raw.yellowCards !== 2) ||

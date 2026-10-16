@@ -4,19 +4,6 @@ on:
   pull_request:
   push:
     branches: [main]
-    paths:
-      - 'src/**'
-      - 'scripts/chromium-e2e.mjs'
-      - 'scripts/macos-safari-smoke.py'
-      - 'index.html'
-      - 'vite.config.ts'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'tsconfig*.json'
-      - '.github/workflows/browser-smoke.yml'
-      # Exit-acceptance edits must be verified against all supported browsers.
-      - 'docs/M0_ACCEPTANCE.md'
-      - 'docs/*AUDIT*.md'
   workflow_dispatch:
 
 permissions: {}

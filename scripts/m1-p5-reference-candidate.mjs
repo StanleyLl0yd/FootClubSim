@@ -81,8 +81,8 @@ function wilson(success, count) {
   const half = Z95 * Math.sqrt((p * (1 - p) + z2 / (4 * count)) / count) /
     denominator;
   return { numerator: success, denominator: count, rate: p,
-    wilson95: { lower: Math.max(0, center - half),
-      upper: Math.min(1, center + half) } };
+    wilson95: { lower: Math.min(p, Math.max(0, center - half)),
+      upper: Math.max(p, Math.min(1, center + half)) } };
 }
 
 export function analyzeRplCsvCandidate(csv, season, expectedHash) {

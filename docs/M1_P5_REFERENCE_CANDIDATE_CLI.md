@@ -126,3 +126,16 @@ download, CSV schema changes or discrepant aggregate counts must be
 investigated, not "fixed" by deleting checks. A successful workflow
 does not clear upstream licensing, source completeness, source
 independence, held-out calibration, M1 #31 or the M1 exit #3 audit.
+
+## Fixed-seed parser regression corpus
+
+`tests/m1-p5-reference-candidate-property.test.mjs`
+independently recomputes club appearance ranges, duplicate directed
+pairings, win/draw/loss categories and goals for 128 synthetic seeded
+valid CSV cohorts. It then checks 96 deterministic malformed CSV
+variants **with recomputed valid SHA-256 hashes** to ensure structural
+validation does not accidentally rely on hash mismatches alone. Row
+order, quoted ignored text and LF/CRLF input invariance are covered
+without leaking venue fields into reports. These are finite parser
+property/regression checks, **not** unbounded fuzzing, observed real
+RPL matches, performance acceptance or statistical calibration.

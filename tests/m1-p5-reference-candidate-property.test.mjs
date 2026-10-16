@@ -101,6 +101,18 @@ test('128 independently seeded valid CSV cohorts conserve all observed counts', 
   }
 });
 
+test('Wilson confidence bounds include observed zero and all-success proportions', () => {
+  const single = inspect([header,
+    '1,235,2024/2025,finished,10,20,2,1',
+  ].join('\n') + '\n');
+  assert.equal(single.outcomes.awayWin.rate, 0);
+  assert.equal(single.outcomes.awayWin.wilson95.lower, 0);
+  assert.equal(single.outcomes.homeWin.rate, 1);
+  assert.equal(single.outcomes.homeWin.wilson95.upper, 1);
+  assert.ok(single.outcomes.homeWin.wilson95.lower <= 1);
+  assert.ok(single.outcomes.awayWin.wilson95.upper >= 0);
+});
+
 test('96 pinned valid-hash but invalid-content variants fail closed', () => {
   const row = '1,235,2024/2025,finished,10,20,2,1';
   const corrupt = [

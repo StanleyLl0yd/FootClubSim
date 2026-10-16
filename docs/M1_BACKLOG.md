@@ -177,3 +177,6 @@ New isolated `M1_V7_JOURNAL_SCHEMA_VERSION=3` commits independently replay-verif
 
 ## M1 P3 IFAB 2026/27 off-field medical return admission (2026-10-16)
 Added a standalone source-pinned ordinary outfield-player re-entry gate: one **running-clock minute after restart**, explicit referee permission, touchline when the ball is in play, and a bounded half-time exception. Special treatment cases, authentic referee authority, actual off-field XI integration and stoppage generator remain **unimplemented**. [M1_MEDICAL_RETURN_2026_27.md](M1_MEDICAL_RETURN_2026_27.md). P3/P4/exit stay open.
+
+## M1 P5 v7 synthetic cohort diagnostics, not calibration (2026-10-16)
+Added 1..10,000-seed reproducible v7 engineering diagnostics: match outcomes/95% uncertainty, open-play-only xG and separated exogenous confirmed penalty/own-goal accounting. The executable manual CLI records actual runtime metadata; smoke tests cover determinism, paired forced-penalty arithmetic and invalid seed plans. Independent licensed reference, true generated officiating/injuries and full calibrated P5 remain outstanding. See [M1_CALIBRATION_PROTOCOL.md](M1_CALIBRATION_PROTOCOL.md). Do not close #31 or M1 exit.

@@ -30,3 +30,15 @@ The official `latest` URLs are mutable. Record and revalidate the 2026/27 editio
 True referee/VAR decision state machine and stoppages; validated offence/penalty-award generation; detailed Law 14 encroachment, keeper offences, accidental second touches and retakes; temporary medical off-field procedure, reinstatements and concussion exceptions; cross-match suspensions; season-wide scoring attribution; v7 trusted career CAS/journal, abandoned matches and stat-calibrated auto generation. New v7 scores are intentionally **not** passed to the v6 journal validator, whose `goals <= shotsOnTarget` invariant is incompatible with goals scored without normal open-play shots.
 
 P3 #29, P4 #30, P5 #31 and M1 exit #3 stay open. M2 requires independent owner acceptance.
+
+## Verified player attribution projection
+
+`src/core/m1-v7-appearance-report.ts` adds a read-only projection after **full v7 replay verification** plus independent verified v6 appearance reconstruction. Player appearances remain based on the same real substitution/removal chronology.
+
+- Successful penalties count as taker goals, penalty goals, attempts, shots and shots on target; saved kicks count as attempts, shots and shots on target; missed kicks count as attempts and shots.
+- Own goals remain attached to the **defending player** as `ownGoals`, not miscredited as a scorer from the benefiting club.
+- `goals[]` retains chronological goal attribution: `open-play` and `penalty` entries have a `scorerId`; `own-goal` entries have a `defenderId`. Attribution IDs preserve v7 event identity and are verified against aggregate team totals.
+- Existing v6 caution, dismissal, medical-withdrawal and played-time summaries are embedded unmodified. The report does not impose disciplinary sanctions or create a career persistence transaction.
+- Player/team xG still covers **open play only**; the independent penalty-xG model is not implemented. No fabricated player ratings or scorer identities.
+
+The reporter rejects a candidate with a changed score, events or mismatched trusted decisions. This is **not** authorization of the source authority itself or M1 P4 closure.

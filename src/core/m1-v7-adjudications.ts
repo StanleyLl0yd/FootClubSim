@@ -93,7 +93,8 @@ function readDecision(value: unknown): M1V7Decision | null {
       !['scored', 'saved', 'missed'].includes(value.outcome as string)) return null;
   return value as unknown as M1V7Decision;
 }
-function teamReport(source: MatchLedgerReport['home']): M1V7TeamReport {
+type MutableTeamReport = { -readonly [K in keyof M1V7TeamReport]: M1V7TeamReport[K] };
+function teamReport(source: MatchLedgerReport['home']): MutableTeamReport {
   return {
     ...source, openPlayGoals: source.goals,
     penaltiesTaken: 0, penaltyGoals: 0, ownGoalsFor: 0,

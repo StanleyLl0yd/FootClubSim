@@ -12,7 +12,7 @@ import { M1_V6_DRAWS_PER_PHASE, type M1V6AvailabilityEvent }
   from './m1-phases-v6.js';
 import { M1_V7_EVENT_SCHEMA_VERSION, simulateM1V7Phases,
   type M1V7Decision, type M1V7TeamReport } from './m1-v7-adjudications.js';
-import { M1_V7_TEMPORARY_MEDICAL_SCHEMA_VERSION,
+import { readM1V7TemporaryMedicalAction,
   type M1V7TemporaryMedicalAction } from './m1-v7-temporary-medical.js';
 import { SeededRng, RNG_VERSION } from './rng.js';
 
@@ -55,11 +55,6 @@ export type M1V8Error = 'INVALID_MATCH_SOURCE' | 'INVALID_MEDICAL_SCHEDULE' |
   'COMMAND_FOR_ABSENT_PLAYER' | 'REFEREE_RULING_REQUIRED' | 'INVALID_TRANSITION';
 export type M1V8Run = M1V8Result | Readonly<{ ok: false; error: M1V8Error;
   medicalError?: M1MedicalReturnError }>;
-const EXIT_KEYS = ['schemaVersion', 'id', 'fixtureId', 'teamId', 'playerId',
-  'elapsedSeconds', 'kind', 'reason', 'restartAtRunningSeconds'] as const;
-const RETURN_KEYS = ['schemaVersion', 'id', 'fixtureId', 'teamId', 'playerId',
-  'elapsedSeconds', 'kind', 'returnContext', 'ballInPlay', 'entryBoundary',
-  'refereeSignalId'] as const;
 const record = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 const fail = (error: M1V8Error, medicalError?: M1MedicalReturnError): M1V8Run =>
@@ -70,31 +65,6 @@ const blank = (): M1V7TeamReport => ({
   ownGoalsFor: 0, shots: 0, shotsOnTarget: 0, xgMilli: 0, xgCoverage: 'open-play-only',
 });
 type MutableStats = { -readonly [K in keyof M1V7TeamReport]: M1V7TeamReport[K] };
-
-function readMedical(raw: unknown): M1V7TemporaryMedicalAction | null {
-  if (!record(raw) || !['treatment-exit', 'treatment-return'].includes(raw.kind as string)) {
-    return null;
-  }
-  const keys = raw.kind === 'treatment-exit' ? EXIT_KEYS : RETURN_KEYS;
-  if (Object.keys(raw).length !== keys.length || keys.some(key => !Object.hasOwn(raw, key)) ||
-      raw.schemaVersion !== M1_V7_TEMPORARY_MEDICAL_SCHEMA_VERSION ||
-      !isStableId(raw.id) || !isStableId(raw.fixtureId) ||
-      !isStableId(raw.teamId) || !isStableId(raw.playerId) ||
-      !Number.isSafeInteger(raw.elapsedSeconds) ||
-      (raw.elapsedSeconds as number) < 0 || (raw.elapsedSeconds as number) >= 5400 ||
-      (raw.elapsedSeconds as number) % M1_CLOCK_STEP_SECONDS !== 0) return null;
-  if (raw.kind === 'treatment-exit') {
-    if (!['injury-stopped-play', 'medical-staff-entered',
-      'requested-on-field-attention'].includes(raw.reason as string) ||
-      !Number.isSafeInteger(raw.restartAtRunningSeconds) ||
-      (raw.restartAtRunningSeconds as number) < (raw.elapsedSeconds as number) ||
-      (raw.restartAtRunningSeconds as number) >= 5400) return null;
-  } else if (!['running-clock', 'half-time'].includes(raw.returnContext as string) ||
-      typeof raw.ballInPlay !== 'boolean' ||
-      !['touchline', 'goal-line'].includes(raw.entryBoundary as string) ||
-      !isStableId(raw.refereeSignalId)) return null;
-  return raw as unknown as M1V7TemporaryMedicalAction;
-}
 
 function scoreShot(stats: MutableStats, shot: M1V5Shot): void {
   stats.shots++;
@@ -151,7 +121,7 @@ export function simulateM1V8MedicalPhases(
   const medical: M1V7TemporaryMedicalAction[] = [];
   let previous = -1;
   for (const raw of medicalActions) {
-    const action = readMedical(raw);
+    const action = readM1V7TemporaryMedicalAction(raw);
     if (!action || action.fixtureId !== input.fixture.id ||
         (action.teamId !== input.fixture.homeClubId &&
           action.teamId !== input.fixture.awayClubId) ||

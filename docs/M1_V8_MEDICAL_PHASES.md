@@ -39,3 +39,11 @@ prototype without an independently licensed football calibration baseline.
 
 Issues #29, #30, #31 and M1 exit #3 remain open. M2 requires separate
 approval.
+
+## Shared medical action validation
+
+The v8 replay now calls the exact strict version-1 treatment-action parser
+used by the v7 presence validator. This eliminates duplicate field/clock/
+referee-signal validation and helps prevent rule drift between versions.
+The change does not authenticate incoming medical facts, revise existing
+v6/v7 events or alter existing save formats.

@@ -90,3 +90,19 @@ CI tests use small fixed cohorts to check replay determinism, version/source met
 The v7-only `tests/m1-v7-invariant-campaign.test.mjs` runs 28 fixed seeds, including 32-bit boundary values, with one deliberately verified straight-red decision, one exogenous successful penalty and one exogenous own goal. It compares full deterministic replay, exactly 90 inherited PRNG draws, scorer/defender attribution, red-card eligibility, chronology, score conservation and unchanged source inputs. A separate mutation matrix attempts invalid versions, forged RNG state, altered goals/shots-on-target, removed/reordered events, unexpected event fields, changed referee evidence, malformed/sparse arrays and duplicate/colliding/out-of-order adjudications. Invalid cases are required to fail closed.
 
 The deliberate referee incidents are a **test fixture**, not generated football incidents or calibrated card/penalty rates. This is a bounded regression and attack-input campaign only; it is not unbounded fuzzing, an independently licensed sporting comparison or a full performance/memory acceptance gate. M1-P5 and milestone exit remain OPEN.
+
+## M1 P5 bounded v8 journal workload probe (2026-10-16)
+
+Run `npm run diagnose:m1:v8:career -- --fixture-count=8 --first-seed=1` for a
+small source-replayed journal test, or use `--fixture-count=240` for the entire
+synthetic 16-club double-round-robin calendar. The dedicated CLI records
+actual simulation, incremental single-apply replay/CAS-domain cost, final
+full-history source verification, season-statistics derivation, serialized
+journal bytes, RSS after execution and power-of-two intermediate samples.
+The Core CI uses just **8 fixtures**, not a claimed 240-game completion.
+The benchmark executes pure-domain transactions, not native IndexedDB or
+real browser storage. Measured timings vary by machine and CI run and no
+latency/memory acceptance threshold is yet approved. Medical and special-goal
+samples are explicitly artificial unverified claims. The JSON carries
+`SYNTHETIC_V8_WORKLOAD_ONLY_NOT_A_PERFORMANCE_GATE` and must not be cited as
+real-match calibration, genuine quota testing or accepted release performance.

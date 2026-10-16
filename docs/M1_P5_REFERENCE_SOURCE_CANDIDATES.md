@@ -78,3 +78,11 @@ until provenance and redistribution rights are independently cleared.
 **Scope boundary:** Wikipedia remains the principal *roster/personnel
 research* source for M2; this note does not alter it, certify RFU
 registrations, or authorize any M2 dataset or implementation.
+
+## Hash-pinned candidate inspection (2026-10-17)
+
+The local-only [RPL CSV reference candidate inspector](M1_P5_REFERENCE_CANDIDATE_CLI.md)
+validates manually acquired snapshots by SHA-256, CSV schema, league/season,
+fixture identity/status and bounded normal-time goals. It reports only
+anonymized descriptive distributions with uncertainty, never imports raw
+provider data and **does not** authorize redistribution, calibration or M1 exit.

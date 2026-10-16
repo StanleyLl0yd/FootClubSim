@@ -8,7 +8,9 @@ import { loadInitialCareer } from './initial-career-store.js';
 /**
  * An isolated v8-only browser persistence prototype. The immutable M0 initial career
  * is read from its existing add-only store, never upgraded or rewritten here.
- * Atomicity is provided by ONE IndexedDB readwrite transaction per CAS.\n * Domain validation replays every accepted v8 source entry synchronously.\n * This is correctness-first and may block the browser main thread.
+ * Atomicity is provided by ONE IndexedDB readwrite transaction per CAS.
+ * Domain validation replays every accepted v8 source entry synchronously.
+ * This is correctness-first and may block the browser main thread.
  * This is local crash/concurrency safety, NOT authenticated referee authority.
  */
 const DATABASE = 'footclubsim-m1-v8';

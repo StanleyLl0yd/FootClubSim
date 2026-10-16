@@ -168,3 +168,6 @@ A separate v7 contract now admits only *externally confirmed* penalty outcomes (
 
 ## M1 P3 confirmed intermatch bans, limited admission gate (2026-10-16)
 Read-only `admitM1ConfirmedSuspensions` checks exact externally authenticated fixture-specific orders against the verified M1 starting XI and bench, rejecting suspended participants and invalid or overlapping orders. It **does not derive suspensions from cards, establish authority, verify feed freshness or amend career saves**. See [M1_CONFIRMED_SUSPENSIONS.md](M1_CONFIRMED_SUSPENSIONS.md). P3/P4 and M1 exit remain open.
+
+## M1 P4 v7 journal, partial domain commit proposal (2026-10-16)
+New isolated `M1_V7_JOURNAL_SCHEMA_VERSION=3` commits independently replay-verified penalties, own goals, player appearances and all other verified v7 statistics. Structural saved-summary validation reconciles players with score/discipline without the old v6 `goals <= shotsOnTarget` assumption; batch is all-or-nothing in memory. No persistent trusted CAS, authenticated referee adapter, injury carryover or interrupted match lifecycle is implied. [M1_V7_RESULT_JOURNAL.md](M1_V7_RESULT_JOURNAL.md). P3/P4/P5/exit remain open.

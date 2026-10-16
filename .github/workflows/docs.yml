@@ -25,3 +25,15 @@ jobs:
         run: python3 scripts/check_docs.py
       - name: Audit tracked repository files and record metrics
         run: python3 scripts/repo_audit.py
+      - name: Parse manual GitHub ruleset administration script (never execute it in CI)
+        shell: pwsh
+        run: |
+          $errors = $null
+          $tokens = $null
+          $file = Join-Path $env:GITHUB_WORKSPACE 'scripts/configure-github-rules.ps1'
+          [void][System.Management.Automation.Language.Parser]::ParseFile($file, [ref]$tokens, [ref]$errors)
+          if ($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_.ToString() }
+            exit 1
+          }
+          Write-Host 'PowerShell operator script parses successfully; no administrative actions executed'

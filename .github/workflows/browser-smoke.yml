@@ -8,6 +8,7 @@ on:
       - 'scripts/macos-safari-smoke.py'
       - 'index.html'
       - 'examples/m1-v7-cas-smoke.html'
+      - 'scripts/m1-v7-cdp-smoke.mjs'
       - 'vite.config.ts'
       - 'package.json'
       - 'package-lock.json'
@@ -126,17 +127,10 @@ jobs:
             echo 'No Chromium executable on runner'
             exit 1
           fi
-          timeout 90 "$browser" --headless --no-sandbox --disable-gpu \
-            --disable-dev-shm-usage --disable-extensions \
-            --user-data-dir="$(mktemp -d)" --virtual-time-budget=20000 \
-            --dump-dom http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html \
-            >/tmp/footclubsim-m1-cas.html 2>/tmp/footclubsim-m1-cas-browser.log
-          if ! grep -Fq 'M1_V7_BROWSER_CAS_PASS' /tmp/footclubsim-m1-cas.html; then
-            cat /tmp/footclubsim-m1-cas.html
-            cat /tmp/footclubsim-m1-cas-browser.log
-            exit 1
-          fi
+          node scripts/m1-v7-cdp-smoke.mjs "$browser" \
+            http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html
           echo 'Real Chromium persisted v7, survived reload and serialized competing CAS writes'
+
 
   chromium-windows:
     name: Built app renders in Windows ${{ matrix.browser }}

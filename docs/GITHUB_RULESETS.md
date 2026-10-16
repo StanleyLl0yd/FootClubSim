@@ -35,3 +35,16 @@ That script deliberately waits for passing checks on the exact current
 `main` revision before changing rules. Changes to these rules require
 repository administrator authorization and an explicit verification that
 they are enforced, rather than merely present.
+
+## Enforcement smoke-test procedure
+
+For an ordinary, non-draft PR targeting `main`, query GitHub checks for the
+current head SHA and confirm all nine required jobs have succeeded before a
+squash merge. A test merge attempted while these checks are still pending
+must be denied by GitHub. The PR's `mergeable_state` is useful for monitoring,
+but can lag behind completed checks; it is not proof by itself of either an
+enforced rejection or a successful merge.
+
+Verify that the resulting squash commit is signed, `main` remains protected,
+the merged feature branch is auto-deleted, and all nine exact-main CI checks
+pass. Do not disable protections, bypass CodeQL or force-push for this test.

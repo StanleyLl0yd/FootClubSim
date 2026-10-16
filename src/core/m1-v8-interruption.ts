@@ -1,4 +1,5 @@
 import { sameCanonicalValue } from './canonical-value.js';
+import { isPlainJsonTree } from './plain-json-tree.js';
 import { M1_CLOCK_END_SECONDS, M1_CLOCK_STEP_SECONDS } from './m1-clock.js';
 import { M1_V6_DRAWS_PER_PHASE } from './m1-phases-v6.js';
 import { M1_V8_ENGINE_VERSION, M1_V8_EVENT_SCHEMA_VERSION,
@@ -68,6 +69,11 @@ export function snapshotM1V8InterruptedMatch(
       (interruptedAtSeconds as number) % M1_CLOCK_STEP_SECONDS !== 0) {
     return fail('INVALID_INTERRUPTION');
   }
+  // Validate serializable source streams before inspecting elapsedSeconds:
+  // invoking getters on an untrusted referee/medical action is forbidden.
+  if (!isPlainJsonTree(commands) ||
+      !isPlainJsonTree(trustedDecisions) ||
+      !isPlainJsonTree(medicalActions)) return fail('FUTURE_ACTION');
   const cutoff = interruptedAtSeconds as number;
   if (!historicalOnly(commands, cutoff, false) ||
       !historicalOnly(trustedDecisions, cutoff, false) ||
@@ -126,5 +132,6 @@ export function verifyM1V8InterruptedMatch(
     prematch, policy, commands, trustedDecisions, medicalActions,
     interruptedAtSeconds,
   );
-  return replay.ok && sameCanonicalValue(replay.prefix, candidate);
+  return replay.ok && isPlainJsonTree(candidate) &&
+    sameCanonicalValue(replay.prefix, candidate);
 }

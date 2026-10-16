@@ -1,11 +1,17 @@
 """Bounded recovery classification for native SafariDriver session startup failures."""
+import importlib.util
 import json
 import unittest
 from pathlib import Path
-from sys import path
 
-path.insert(0, str(Path(__file__).resolve().parents[1]))
-from macos_safari_smoke import is_retryable_safari_session_error  # noqa: E402
+# The operational script has a hyphenated filename and cannot be imported
+# with ordinary Python module syntax.
+script = Path(__file__).resolve().parents[1] / "macos-safari-smoke.py"
+spec = importlib.util.spec_from_file_location("footclubsim_macos_safari_smoke", script)
+assert spec is not None and spec.loader is not None
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+is_retryable_safari_session_error = module.is_retryable_safari_session_error
 
 
 def session_error(error: str, message: str) -> str:

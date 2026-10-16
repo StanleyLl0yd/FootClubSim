@@ -15,7 +15,7 @@
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test && npm run build:web",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "format:check": "node scripts/check-source-format.mjs",
-    "diagnose:m1:v8": "npm run build:core && node scripts/m1-v8-medical-diagnostics.mjs",
+    "diagnose:m1:v8": "npm run build:core && node scripts/m1-v8-medical-diagnostics.mjs",\n    "diagnose:m1:v8:mirror": "npm run build:core && node scripts/m1-v8-mirrored-diagnostics.mjs",
     "diagnose:m1:v8:career": "npm run build:core && node scripts/m1-v8-career-benchmark.mjs"
   },
   "devDependencies": {

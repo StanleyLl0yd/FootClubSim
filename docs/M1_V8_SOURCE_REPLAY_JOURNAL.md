@@ -39,10 +39,11 @@ server, competition registration, match abandonment, KDK appeal,
 independent license/provenance, or historical journal integrity.
 An attacker able to replace both the journal AND the supposedly
 trusted career/source claims may construct a self-consistent false
-history. This schema-4 journal has **no IndexedDB persistence**,
-browser concurrency guarantee, crash atomicity, cryptographic MAC
-or remote authenticity channel. Those remain explicit admission
-and storage integration gates before production use.
+history. A separate, experimental v8 IndexedDB revision-CAS prototype
+now exists (see [M1_V8_INDEXEDDB_CAS.md](M1_V8_INDEXEDDB_CAS.md));
+native Chromium/Safari/Windows tests cover specific navigation and concurrent
+writer cases only. Genuine quota/eviction, OS-crash durability, authenticated
+sources, cryptographic MAC and production backup recovery remain unverified.
 
 The journal does not introduce legal exhaustion/fatigue modeling
 or officially finalized league points. It is **not** a production

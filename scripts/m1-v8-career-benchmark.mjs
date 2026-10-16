@@ -14,7 +14,8 @@ import { defaultTacticalPlan } from '../dist/core/tactics.js';
 import { simulateM1V8MedicalPhases }
   from '../dist/core/m1-v8-medical-phases.js';
 import {
-  startM1V8MatchJournal, applyM1V8MatchResult, validateM1V8MatchJournal,
+  startM1V8MatchJournal, applyM1V8MatchResult,
+  applyM1V8MatchResultBatch, validateM1V8MatchJournal,
 } from '../dist/core/m1-v8-result-journal.js';
 import { deriveM1VerifiedV8SeasonStats }
   from '../dist/core/m1-v8-season-statistics.js';
@@ -37,10 +38,11 @@ function must(result, context) {
 }
 function main() {
   if (process.argv.slice(2).some(a =>
-    !/^--(?:fixture-count|first-seed)=[0-9]{1,10}$/.test(a))) {
-    throw Error('Allowed arguments: --fixture-count=N --first-seed=N');
+    !/^--(?:fixture-count|first-seed|batch-size)=[0-9]{1,10}$/.test(a))) {
+    throw Error('Allowed arguments: --fixture-count=N --first-seed=N --batch-size=N');
   }
   const count = arg('fixture-count', 8, 240);
+  const batchSize = arg('batch-size', 1, 16);
   const firstSeed = arg('first-seed', 1, 0xffffffff);
   if (firstSeed + count - 1 > 0xffffffff) {
     throw Error('Seed range overflows xorshift32');
@@ -61,6 +63,7 @@ function main() {
   const start = performance.now();
   let simulationMs = 0, applyMs = 0;
   const checkpoints = [];
+  let pending = [];
   for (let i = 0; i < count; i++) {
     const fixture = fixtures[i];
     const homeLineup = defaultSyntheticLineup(clubs.get(fixture.homeClubId));
@@ -109,17 +112,23 @@ function main() {
       prematch: input, policy, plannedCommands: [],
       trustedDecisions, medicalActions, result,
     };
-    const applyStart = performance.now();
-    journal = must(applyM1V8MatchResult(career, journal, command),
-      'apply fixture ' + (i + 1)).journal;
-    const elapsed = performance.now() - applyStart;
-    applyMs += elapsed;
-    assert.equal(journal.revision, i + 1);
-    if ((i + 1) === count || ((i + 1) & i) === 0) {
-      checkpoints.push({
-        fixtures: i + 1, applyMs: elapsed,
-        encodedJournalBytes: Buffer.byteLength(JSON.stringify(journal), 'utf8'),
-      });
+    pending.push(command);
+    if (pending.length === batchSize || i === count - 1) {
+      const applyStart = performance.now();
+      const proposal = batchSize === 1 ?
+        applyM1V8MatchResult(career, journal, pending[0]) :
+        applyM1V8MatchResultBatch(career, journal, pending);
+      journal = must(proposal, 'apply through fixture ' + (i + 1)).journal;
+      const elapsed = performance.now() - applyStart;
+      applyMs += elapsed;
+      pending = [];
+      assert.equal(journal.revision, i + 1);
+      if ((i + 1) === count || ((i + 1) & i) === 0) {
+        checkpoints.push({
+          fixtures: i + 1, applyMs: elapsed,
+          encodedJournalBytes: Buffer.byteLength(JSON.stringify(journal), 'utf8'),
+        });
+      }
     }
   }
   const verificationStart = performance.now();
@@ -138,6 +147,7 @@ function main() {
     status: 'SYNTHETIC_V8_WORKLOAD_ONLY_NOT_A_PERFORMANCE_GATE',
     source: { catalogSeed: 77, firstSeed, fixtureCount: count,
       journalSchema: 4, engineVersion: '7', eventSchema: 8,
+      batchSize, transactionMode: batchSize === 1 ? 'single' : 'atomic-batch',
       claimAuthentication: false },
     measurements: { totalMs, simulationMs, incrementalApplyMs: applyMs,
       finalReplayValidationMs: verificationMs,

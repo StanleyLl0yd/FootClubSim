@@ -101,13 +101,19 @@ export function analyzeRplCsvCandidate(csv, season, expectedHash) {
   const exclusions = { otherSeason: 0, scheduled: 0, live: 0, cancelled: 0 };
   let count = 0, homeWin = 0, awayWin = 0, draw = 0, nilNil = 0;
   let goalsTotal = 0, squaredDiff = 0, goalsMean = 0, bothScored = 0;
+  let homeGoals = 0, awayGoals = 0, repeatedHomeAwayFixtures = 0;
+  const clubAppearances = new Map(), directedFixtures = new Set();
   for (const record of records) {
     const get = name => record[col[name]];
     if (get('league_id') !== '235') throw Error('CSV contains non-RPL league ID');
     const id = get('match_id');
     if (!id || seen.has(id)) throw Error('Missing or duplicate match ID');
     seen.add(id);
-    if (!/^\d{4}\/\d{4}$/.test(get('season'))) throw Error('Invalid row season');
+    const rowSeason = get('season');
+    if (!/^\d{4}\/\d{4}$/.test(rowSeason) ||
+        Number(rowSeason.slice(5)) !== Number(rowSeason.slice(0, 4)) + 1) {
+      throw Error('Invalid row season');
+    }
     const status = get('status');
     if (!STATUSES.has(status)) throw Error('Unknown fixture status');
     if (get('season') !== season) { exclusions.otherSeason++; continue; }
@@ -124,6 +130,16 @@ export function analyzeRplCsvCandidate(csv, season, expectedHash) {
       return Number(value);
     }
     const h = goal('home_goals'), a = goal('away_goals');
+    const fixtureKey = `${homeId.length}:${homeId}${awayId}`;
+    if (directedFixtures.has(fixtureKey)) repeatedHomeAwayFixtures++;
+    directedFixtures.add(fixtureKey);
+    for (const [id, side] of [[homeId, 'home'], [awayId, 'away']]) {
+      const appearances = clubAppearances.get(id) ?? { home: 0, away: 0 };
+      appearances[side]++;
+      clubAppearances.set(id, appearances);
+    }
+    homeGoals += h;
+    awayGoals += a;
     count++;
     if (h > a) homeWin++;
     else if (h === a) draw++;
@@ -137,6 +153,8 @@ export function analyzeRplCsvCandidate(csv, season, expectedHash) {
     squaredDiff += delta * (goals - goalsMean);
   }
   if (!count) throw Error('No completed matches for requested season');
+  const ranges = values => ({ min: Math.min(...values), max: Math.max(...values) });
+  const appearances = [...clubAppearances.values()];
   const stdDev = count < 2 ? null : Math.sqrt(squaredDiff / (count - 1));
   const margin = stdDev === null ? null : Z95 * stdDev / Math.sqrt(count);
   return {
@@ -148,6 +166,14 @@ export function analyzeRplCsvCandidate(csv, season, expectedHash) {
       sha256: actualHash, bytes: bytes.length },
     leagueId: 235, season, csvRows: records.length,
     finishedMatches: count, exclusions,
+    coverage: {
+      observedClubCount: clubAppearances.size,
+      finishedAppearancesPerClub: ranges(appearances.map(x => x.home + x.away)),
+      finishedHomeMatchesPerClub: ranges(appearances.map(x => x.home)),
+      finishedAwayMatchesPerClub: ranges(appearances.map(x => x.away)),
+      repeatedHomeAwayFixtures,
+    },
+    goalTotals: { home: homeGoals, away: awayGoals, total: goalsTotal },
     outcomes: { homeWin: wilson(homeWin, count), draw: wilson(draw, count),
       awayWin: wilson(awayWin, count), scoreless: wilson(nilNil, count),
       bothScored: wilson(bothScored, count) },

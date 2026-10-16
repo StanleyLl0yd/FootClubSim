@@ -59,3 +59,43 @@ The tool is deliberately not wired into CI as a live external download.
 
 Related: [reference candidate and legal screening](M1_P5_REFERENCE_SOURCE_CANDIDATES.md),
 [calibration protocol](M1_CALIBRATION_PROTOCOL.md), [issue #31](https://github.com/StanleyLl0yd/FootClubSim/issues/31).
+
+## Offline published-aggregate cross-check (research only)
+
+Two publishers display concordant historical RPL **2024/25** result summaries:
+[Чемпионат](https://www.championat.ru/football/_russiapl/tournament/5980/)
+and [Sportbox](https://news.sportbox.ru/Vidy_sporta/Futbol/Russia/premier_league/stats/turnir_22151).
+Observed counts as checked on 2026-10-17: 240 finished matches, 103
+home wins, 65 draws, 72 away wins, 20 scoreless draws, 364 home
+goals, 284 away goals and 648 goals total. The 16-club season is also
+identified by the published team listing. These are **factual published
+summary claims only**. The sites' feed independence, source rights and
+license chain have **not** been established; counts have not been
+corroborated against a complete independent match-by-match primary archive.
+
+The source-labelled numerical summary is recorded in
+[data/rpl-2024-25-published-aggregate-research.json](../data/rpl-2024-25-published-aggregate-research.json).
+It contains no source fixture rows, player identities or third-party
+images. Never use it to tune synthetic probabilities or turn a simulated
+coincidence into approval. The reference dataset has not been
+approved for production benchmarking.
+
+After a real raw CSV file has been privately acquired, first use the
+hash-pinned candidate CLI above and store its anonymized JSON report
+outside version control. Then run:
+
+```bash
+node scripts/m1-p5-reference-reconcile.mjs \
+  --candidate=/path/to/private-candidate-report.json \
+  --published=data/rpl-2024-25-published-aggregate-research.json
+```
+
+The offline reconciliation checks nine integer counts, internal
+arithmetic and source metadata. It reports precise disagreements or a
+descriptive numerical match, always with explicit
+`benchmarkApproved: false`, `sourceRightsReviewed: false` and
+`seasonCompletenessEstablished: false`. Even an exact match
+cannot establish verified provider rights, record completeness,
+cross-publisher independence, referee/card/injury/shot realism, or any
+pre-registered statistical acceptance range. Neither comparison result
+is a CI realism gate or M1 exit approval.

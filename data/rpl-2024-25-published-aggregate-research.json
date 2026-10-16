@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "kind": "UNAPPROVED_PUBLISHED_AGGREGATE_CROSSCHECK",
+  "leagueId": 235,
+  "season": "2024/2025",
+  "retrievedOn": "2026-10-17",
+  "rightsStatus": "NOT_REVIEWED",
+  "sourceIndependence": "NOT_ESTABLISHED",
+  "sources": [
+    {
+      "publisher": "Чемпионат",
+      "url": "https://www.championat.ru/football/_russiapl/tournament/5980/"
+    },
+    {
+      "publisher": "Sportbox",
+      "url": "https://news.sportbox.ru/Vidy_sporta/Futbol/Russia/premier_league/stats/turnir_22151"
+    }
+  ],
+  "observed": {
+    "finishedMatches": 240,
+    "homeWins": 103,
+    "draws": 65,
+    "awayWins": 72,
+    "scoreless": 20,
+    "homeGoals": 364,
+    "awayGoals": 284,
+    "totalGoals": 648,
+    "observedClubCount": 16
+  }
+}

@@ -165,3 +165,6 @@ The first M1 implementation should introduce only the minimal tested state trans
 
 ## M1 P3 v7 verified special-goal adjudication subset (2026-10-16)
 A separate v7 contract now admits only *externally confirmed* penalty outcomes (scored/saved/missed) and own goals, with ordered referee-checkpoint decisions, active-player/team checks, strict schema/replay verification and separately counted scoring. The embedded v6 match and its RNG remain unchanged; it is not a penalty foul generator, officiating/authentication service, or a v6 journal migration. Full provenance, tests and outstanding law-specific exceptions: [M1_V7_CONFIRMED_GOALS.md](M1_V7_CONFIRMED_GOALS.md). **P3/P4/P5 and M1 exit remain open.**
+
+## M1 P3 confirmed intermatch bans, limited admission gate (2026-10-16)
+Read-only `admitM1ConfirmedSuspensions` checks exact externally authenticated fixture-specific orders against the verified M1 starting XI and bench, rejecting suspended participants and invalid or overlapping orders. It **does not derive suspensions from cards, establish authority, verify feed freshness or amend career saves**. See [M1_CONFIRMED_SUSPENSIONS.md](M1_CONFIRMED_SUSPENSIONS.md). P3/P4 and M1 exit remain open.

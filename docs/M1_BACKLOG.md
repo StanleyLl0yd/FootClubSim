@@ -171,3 +171,6 @@ Read-only `admitM1ConfirmedSuspensions` checks exact externally authenticated fi
 
 ## M1 P4 v7 journal, partial domain commit proposal (2026-10-16)
 New isolated `M1_V7_JOURNAL_SCHEMA_VERSION=3` commits independently replay-verified penalties, own goals, player appearances and all other verified v7 statistics. Structural saved-summary validation reconciles players with score/discipline without the old v6 `goals <= shotsOnTarget` assumption; batch is all-or-nothing in memory. No persistent trusted CAS, authenticated referee adapter, injury carryover or interrupted match lifecycle is implied. [M1_V7_RESULT_JOURNAL.md](M1_V7_RESULT_JOURNAL.md). P3/P4/P5/exit remain open.
+
+## M1 P4 interruption prefix snapshot, provisional only (2026-10-16)
+`M1_V7_INTERRUPTION_SCHEMA_VERSION=1` enables deterministic, replay-verified *already played* v7 prefix snapshots at legal checkpoints. It excludes future actions, future PRNG, full-time result and league points. This is **not yet actual RFU-authorized abandonment or resumption**, nor a persistent career CAS. [M1_V7_INTERRUPTION.md](M1_V7_INTERRUPTION.md). All P3/P4/P5/exit issues remain open.

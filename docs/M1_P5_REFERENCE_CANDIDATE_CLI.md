@@ -99,3 +99,30 @@ cannot establish verified provider rights, record completeness,
 cross-publisher independence, referee/card/injury/shot realism, or any
 pre-registered statistical acceptance range. Neither comparison result
 is a CI realism gate or M1 exit approval.
+
+## Optional GitHub Actions source probe (manual only)
+
+For an environment where this ChatGPT session cannot download the source
+CSV, a single **manual** GitHub Actions workflow is available:
+[Actions: M1 P5 RPL snapshot research](../.github/workflows/m1-p5-rpl-source-research.yml).
+In GitHub, select **Actions**, select that workflow and choose **Run workflow**
+on the protected `main` branch. It has **no** push, pull-request,
+cron or automatic dependency on the real provider and does not run during
+ordinary CI.
+
+The workflow runs with read-only repository permission, a fixed HTTPS URL
+and 2024/25 season, a bounded private runner temp directory and a
+60-second download limit. It computes the **actual downloaded-byte**
+SHA-256 and outputs only that digest, byte count, UTC observation time,
+anonymized candidate statistics and the unapproved published-total
+comparison to the workflow's job summary. It does **not** upload or
+commit CSV bytes, team/player names, raw fixture rows, replay sources,
+or any source file artifact. The private temp directory is deleted
+when the step exits. No GitHub token is passed to the HTTP request.
+
+The hash is obtained **after** downloading the mutable provider file,
+so it is NOT a previously trusted immutable source pin. Failure to
+download, CSV schema changes or discrepant aggregate counts must be
+investigated, not "fixed" by deleting checks. A successful workflow
+does not clear upstream licensing, source completeness, source
+independence, held-out calibration, M1 #31 or the M1 exit #3 audit.

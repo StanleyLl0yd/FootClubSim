@@ -148,8 +148,10 @@ function buildItem(
     source, dossier: attributed.dossier,
   };
 }
-function readJournal(candidate: unknown, original: InitialCareerSave):
-  M1V8MatchJournal | null {
+function readJournal(
+  candidate: unknown, original: InitialCareerSave,
+  fixtures: ReadonlyMap<string, Fixture>,
+): M1V8MatchJournal | null {
   const raw = strictJsonCopy<Record<string, unknown>>(
     candidate, MAX_JOURNAL_BYTES,
   );
@@ -161,7 +163,6 @@ function readJournal(candidate: unknown, original: InitialCareerSave):
       raw.basePackVersion !== original.basePackVersion ||
       !int(raw.revision, 0, MAX_FIXTURES) ||
       !Array.isArray(raw.results) || raw.results.length !== raw.revision) return null;
-  const fixtures = fixtureMap(original.catalog);
   const usedCommands = new Set<string>(), usedFixtures = new Set<string>();
   const results: M1V8AppliedFixture[] = [];
   for (const row of raw.results) {
@@ -171,7 +172,8 @@ function readJournal(candidate: unknown, original: InitialCareerSave):
         !rec(row.source) || !exact(row.source, SOURCE_KEYS)) return null;
     const fixture = fixtures.get(row.fixtureId);
     if (!fixture ||
-        !strictJsonCopy(row, MAX_ITEM_BYTES) ||
+        // The outer strict JSON clone already checked this entire row.
+        JSON.stringify(row).length > MAX_ITEM_BYTES ||
         !sameCanonicalValue(row,
           buildItem(original, fixture, row.commandId, row.source as unknown as M1V8JournalSource))) {
       return null;
@@ -203,7 +205,7 @@ export function validateM1V8MatchJournal(
 ): M1V8JournalResult {
   const original = trusted(initial);
   if (!original) return fail('INVALID_INITIAL_CAREER');
-  const current = readJournal(candidate, original);
+  const current = readJournal(candidate, original, fixtureMap(original.catalog));
   return current ? { ok: true, journal: current } : fail('INVALID_JOURNAL');
 }
 /**
@@ -217,6 +219,7 @@ export function validateM1V8MatchJournal(
  */
 function applyCheckedM1V8MatchResult(
   original: InitialCareerSave, current: M1V8MatchJournal, candidate: unknown,
+  fixtures: ReadonlyMap<string, Fixture>,
 ): M1V8JournalResult {
   if (!rec(candidate) || !exact(candidate, APPLY_KEYS) ||
       candidate.schemaVersion !== M1_V8_APPLY_SCHEMA_VERSION ||
@@ -240,7 +243,7 @@ function applyCheckedM1V8MatchResult(
   }
   if (candidate.expectedRevision !== current.revision) return fail('STALE_REVISION');
   if (current.revision >= MAX_FIXTURES) return fail('REVISION_LIMIT');
-  const fixture = fixtureMap(original.catalog).get(claimedFixture.id);
+  const fixture = fixtures.get(claimedFixture.id);
   if (!fixture || !sameCanonicalValue(fixture, claimedFixture)) {
     return fail('UNKNOWN_FIXTURE');
   }
@@ -268,9 +271,10 @@ export function applyM1V8MatchResult(
 ): M1V8JournalResult {
   const original = trusted(initial);
   if (!original) return fail('INVALID_INITIAL_CAREER');
-  const current = readJournal(journalCandidate, original);
+  const fixtures = fixtureMap(original.catalog);
+  const current = readJournal(journalCandidate, original, fixtures);
   if (!current) return fail('INVALID_JOURNAL');
-  return applyCheckedM1V8MatchResult(original, current, candidate);
+  return applyCheckedM1V8MatchResult(original, current, candidate, fixtures);
 }
 export function applyM1V8MatchResultBatch(
   initial: unknown, journal: unknown, requests: unknown,
@@ -281,10 +285,11 @@ export function applyM1V8MatchResultBatch(
   if (!original) return fail('INVALID_INITIAL_CAREER');
   // Replay an externally supplied journal ONCE. No untrusted code receives
   // the internal deep JSON copy while the bounded synchronous batch runs.
-  let current = readJournal(journal, original);
+  const fixtures = fixtureMap(original.catalog);
+  let current = readJournal(journal, original, fixtures);
   if (!current) return fail('INVALID_JOURNAL');
   for (const request of requests) {
-    const next = applyCheckedM1V8MatchResult(original, current, request);
+    const next = applyCheckedM1V8MatchResult(original, current, request, fixtures);
     if (!next.ok) return next;
     current = next.journal;
   }

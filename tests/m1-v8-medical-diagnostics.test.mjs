@@ -72,8 +72,10 @@ test('medical/no-medical paired seeds produce reproducible counterfactual interv
   for (const item of [report.shotLedgerChanged, report.changedScoreline]) {
     assert.equal(item.denominator, 24);
     assert.equal(item.rate, item.count / 24);
-    assert.ok(item.wilson95.lower <= item.rate);
-    assert.ok(item.wilson95.upper >= item.rate);
+    // Wilson endpoint arithmetic can differ from exact 0/1 rates by
+    // machine epsilon when every paired seed has the same outcome.
+    assert.ok(item.wilson95.lower - 1e-12 <= item.rate);
+    assert.ok(item.wilson95.upper + 1e-12 >= item.rate);
   }
 });
 

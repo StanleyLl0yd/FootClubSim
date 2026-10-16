@@ -136,8 +136,8 @@ function validAttribution(raw: unknown, fixture: Fixture, catalog: Catalog): boo
     away: [] as Record<string, unknown>[] };
   for (const appearance of raw.appearances) {
     if (!validAppearance(appearance, fixture, registered) ||
-        players.has(appearance.playerId)) return false;
-    players.set(appearance.playerId, appearance);
+        players.has(appearance.playerId as string)) return false;
+    players.set(appearance.playerId as string, appearance);
     const side = appearance.teamId === fixture.homeClubId ? 'home' : 'away';
     grouped[side].push(appearance);
   }
@@ -298,15 +298,16 @@ export function applyM1V7MatchResult(
   if (current.results.some(item => item.commandId === candidate.commandId)) {
     return fail('DUPLICATE_COMMAND');
   }
-  if (!rec(candidate.prematch.fixture) || !isStableId(candidate.prematch.fixture.id)) {
+  const prematch = candidate.prematch as Record<string, unknown>;
+  if (!rec(prematch.fixture) || !isStableId(prematch.fixture.id)) {
     return fail('INVALID_APPLY_COMMAND');
   }
-  if (current.results.some(item => item.fixtureId === candidate.prematch.fixture.id)) {
+  const claimed = prematch.fixture;
+  if (current.results.some(item => item.fixtureId === claimed.id)) {
     return fail('DUPLICATE_FIXTURE');
   }
   if (candidate.expectedRevision !== current.revision) return fail('STALE_REVISION');
   if (current.revision >= 240) return fail('REVISION_LIMIT');
-  const claimed = candidate.prematch.fixture as Record<string, unknown>;
   const fixture = fixtureMap(original.catalog).get(claimed.id as string);
   if (!fixture || !sameCanonicalValue(fixture, claimed)) return fail('UNKNOWN_FIXTURE');
   if (!sameCanonicalValue(original.catalog, candidate.prematch.catalog)) {

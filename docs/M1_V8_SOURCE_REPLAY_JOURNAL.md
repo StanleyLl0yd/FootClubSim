@@ -69,3 +69,34 @@ measured 7.12 seconds cumulatively in domain apply and 1.52 seconds for
 final replay validation. These are machine-specific observations; the full
 240-game lifetime, browser latency, real quota and approved performance budget
 remain unverified.
+
+## Full-season workload probe and replay cost (2026-10-16)
+
+The dedicated path-scoped `M1 v8 season workload` CI workflow uses
+the existing bounded CLI with `--fixture-count=240 --batch-size=16`,
+seed 1 and the original synthetic 16-club calendar. It is limited to
+20 minutes on a pinned Node 24 / Ubuntu runner, and logs full final
+replay, season-statistics verification, journal size, memory and time
+measurements. A completed run establishes only those measurements on
+that runner; timeout, quota-like journal-size rejection or other
+failure must be reported rather than silently omitted. No measured
+result or production latency threshold is presumed here.
+
+Within each public v8 journal admission, the generated approved
+fixture lookup is now shared across the old-history replay and every
+new batch entry instead of regenerated for each fixture. The initial
+bounded strict JSON round trip also makes a second deep JSON round
+trip for each prior fixture unnecessary; its individual 160,000-character
+limit remains enforced. Every old fixture is still independently
+source-replayed and reconciled with the complete derived dossier,
+and every new fixture is still individually simulated, asserted and
+size-limited. Verified 16-entry batches, poisoned prior records and
+late forged results have explicit regression tests.
+
+The cost of replaying the full untrusted prior journal remains
+proportional to its length on every separate CAS transaction.
+Thus 240 one-by-one applications can cost much more than 15 batches
+of 16; neither application style may skip source verification.
+The workflow is **not** a measured cross-browser responsiveness,
+IndexedDB quota/eviction, fatigue/condition, authenticated-ruling,
+calibration or release-acceptance gate. M1 P3/P4/P5 and exit remain open.

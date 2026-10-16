@@ -137,11 +137,45 @@ def assert_restored_club(session: str):
 
 
 def exercise_journal_cas(session: str, schema: int):
-    """Real Safari IndexedDB: validate schema v7/v8 after reload and concurrent CAS."""
+    """Verify the requested fixture, not a stale page from the previous Safari run."""
     if schema not in (7, 8):
         raise ValueError("Unsupported native CAS fixture")
     url = f"http://127.0.0.1:5173/examples/m1-v{schema}-cas-smoke.html"
-    with open(f"/tmp/footclubsim-m1-v{schema}-safari.log", "w", encoding="utf-8") as log:
+    expected_path = f"/examples/m1-v{schema}-cas-smoke.html"
+    wd(session, "url", {"url": url})
+    deadline = time.monotonic() + 90
+    navigation_deadline = time.monotonic() + 12
+    last = None
+    while time.monotonic() < deadline:
+        # SafariDriver can return before the new document has finished loading.
+        # The previous schema's status must never be attributed to this fixture.
+        last = run_script(session, """
+            return {path: location.pathname,
+                    status: document.querySelector('#status')?.textContent ?? ''};
+        """)
+        if not isinstance(last, dict):
+            raise AssertionError(f"Safari v{schema} returned invalid page state: {last!r}")
+        if last.get("path") != expected_path:
+            if time.monotonic() > navigation_deadline:
+                raise AssertionError(
+                    f"Safari v{schema} navigation never reached {expected_path}: {last!r}"
+                )
+            time.sleep(0.4)
+            continue
+        status = last.get("status")
+        if status == f"M1_V{schema}_BROWSER_CAS_PASS":
+            print(f"PASS: real Safari v{schema} CAS survived navigation and serialized writers")
+            return
+        if isinstance(status, str) and status.startswith("M1_") and "_BROWSER_CAS_FAIL" in status:
+            raise AssertionError(f"Safari v{schema} fixture failed: {last!r}")
+        time.sleep(0.4)
+    raise AssertionError(f"Safari v{schema} CAS timed out, last page state: {last!r}")
+
+
+def exercise_journal_cas_pair(session: str):
+    """Keep one Vite process serving both fixtures to avoid port-reuse navigation races."""
+    log_path = "/tmp/footclubsim-m1-safari-cas.log"
+    with open(log_path, "w", encoding="utf-8") as log:
         server = subprocess.Popen(
             ["node", "node_modules/vite/bin/vite.js", "--host", "127.0.0.1",
              "--port", "5173", "--strictPort"],
@@ -149,32 +183,28 @@ def exercise_journal_cas(session: str, schema: int):
         )
         try:
             deadline = time.monotonic() + TIMEOUT
-            while time.monotonic() < deadline:
-                try:
-                    with urllib.request.urlopen(url, timeout=2) as response:
-                        if response.status == 200:
-                            break
-                except (OSError, urllib.error.URLError):
-                    pass
-                if server.poll() is not None:
-                    raise RuntimeError(f"Safari v{schema} Vite dev server exited")
-                time.sleep(0.4)
-            else:
-                raise RuntimeError(f"Safari v{schema} Vite dev server unavailable")
-            wd(session, "url", {"url": url})
-            deadline = time.monotonic() + 90
-            last = ""
-            while time.monotonic() < deadline:
-                last = run_script(
-                    session, "return document.querySelector('#status')?.textContent ?? ''"
-                )
-                if last == f"M1_V{schema}_BROWSER_CAS_PASS":
-                    print(f"PASS: real Safari v{schema} CAS survived navigation and serialized writers")
-                    return
-                if isinstance(last, str) and last.startswith(f"M1_V{schema}_BROWSER_CAS_FAIL"):
-                    raise AssertionError(last)
-                time.sleep(0.4)
-            raise AssertionError(f"Safari v{schema} CAS timed out, last status: {last!r}")
+            for schema in (7, 8):
+                url = f"http://127.0.0.1:5173/examples/m1-v{schema}-cas-smoke.html"
+                while time.monotonic() < deadline:
+                    try:
+                        with urllib.request.urlopen(url, timeout=2) as response:
+                            if response.status == 200:
+                                break
+                    except (OSError, urllib.error.URLError):
+                        pass
+                    if server.poll() is not None:
+                        raise RuntimeError("Safari CAS Vite dev server exited")
+                    time.sleep(0.4)
+                else:
+                    raise RuntimeError(f"Safari v{schema} Vite dev server unavailable")
+            for schema in (7, 8):
+                exercise_journal_cas(session, schema)
+        except Exception:
+            log.flush()
+            print(f"---- {log_path} ----", file=sys.stderr)
+            print(Path(log_path).read_text(
+                encoding="utf-8", errors="replace")[-8000:], file=sys.stderr)
+            raise
         finally:
             server.terminate()
             try:
@@ -320,8 +350,7 @@ def main():
             if not run_script(session, "return Boolean(document.querySelector('.career-info'))"):
                 raise AssertionError("Active career disappeared after storage API failure")
             print("PASS: Safari initial career survives reload and unavailable storage")
-            exercise_journal_cas(session, 7)
-            exercise_journal_cas(session, 8)
+            exercise_journal_cas_pair(session)
         except Exception:
             preview_log.flush()
             driver_log.flush()

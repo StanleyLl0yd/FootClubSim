@@ -41,10 +41,10 @@ export type M1V8DisciplineContinuityResult =
   | Readonly<{ ok: false; error: 'INVALID_JOURNAL' | 'INTERNAL_INVARIANT' }>;
 
 const invariant = { ok: false, error: 'INTERNAL_INVARIANT' } as const;
-const chron = (a: { round: number; fixtureId: string; playerId: string },
-  b: { round: number; fixtureId: string; playerId: string }): number =>
+const chron = (a: { round: number; fixtureId: string; playerId?: string },
+  b: { round: number; fixtureId: string; playerId?: string }): number =>
   a.round - b.round || a.fixtureId.localeCompare(b.fixtureId) ||
-  a.playerId.localeCompare(b.playerId);
+  (a.playerId ?? '').localeCompare(b.playerId ?? '');
 const identity = (clubId: string, playerId: string): string =>
   clubId + '\u0000' + playerId;
 

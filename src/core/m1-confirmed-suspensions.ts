@@ -61,6 +61,8 @@ export function admitM1ConfirmedSuspensions(
   const started = startM1Clock(prematch);
   if (!started.ok) return fail('INVALID_PREMATCH');
   const input = prematch as M1PrematchInput;
+  const count = input.catalog.clubs.length;
+  if (count < 2 || count > 64 || count % 2 !== 0) return fail('INVALID_PREMATCH');
   const fixtures = fixturesFor(input);
   const fixture = fixtures.get(input.fixture.id);
   if (!fixture || !matchingFixture(input.fixture, fixture)) return fail('WRONG_FIXTURE');

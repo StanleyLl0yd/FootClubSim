@@ -162,3 +162,6 @@ The first M1 implementation should introduce only the minimal tested state trans
 ## Owner-approved in-match interaction contract (2026-10-14)
 
 [ADR-0007](adr/0007-match-tactics-multicurrency.md) requires a single deterministic seeded engine for fully automatic and interactive fixtures, with versioned pause/checkpoint and legally validated mid-match substitutions, formation/tactical and individual-player instructions. Scope this as future M1 **engine interfaces and deterministic negative tests**; the actual M2 UI and 2026/27 RPL executable rules remain later-stage gates. Owner approval of architecture does **not** authorize coding M1 before M0 is fully closed and explicit approval to start M1 is received.
+
+## M1 P3 v7 verified special-goal adjudication subset (2026-10-16)
+A separate v7 contract now admits only *externally confirmed* penalty outcomes (scored/saved/missed) and own goals, with ordered referee-checkpoint decisions, active-player/team checks, strict schema/replay verification and separately counted scoring. The embedded v6 match and its RNG remain unchanged; it is not a penalty foul generator, officiating/authentication service, or a v6 journal migration. Full provenance, tests and outstanding law-specific exceptions: [M1_V7_CONFIRMED_GOALS.md](M1_V7_CONFIRMED_GOALS.md). **P3/P4/P5 and M1 exit remain open.**

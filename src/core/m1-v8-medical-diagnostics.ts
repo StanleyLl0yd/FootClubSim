@@ -113,8 +113,12 @@ export function runM1V8PairedMedicalDiagnostics(
       a.home.shots - a.away.shots);
     means.openPlayXg.add((b.home.xgMilli + b.away.xgMilli -
       a.home.xgMilli - a.away.xgMilli) / 1000);
-    const aShots = normal.events.filter(e => e.type === 'shot');
-    const bShots = medical.events.filter(e => e.type === 'shot');
+    // Treatment events shift envelope sequence numbers. Only compare the
+    // actual phase shot facts, not unrelated medical stream positions.
+    const aShots = normal.events.filter(e => e.type === 'shot')
+      .map(({ sequence, ...shot }) => shot);
+    const bShots = medical.events.filter(e => e.type === 'shot')
+      .map(({ sequence, ...shot }) => shot);
     changedShots += Number(!sameCanonicalValue(aShots, bShots));
     changedScores += Number(a.home.goals !== b.home.goals ||
       a.away.goals !== b.away.goals);

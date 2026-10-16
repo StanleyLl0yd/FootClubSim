@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v8 IndexedDB CAS smoke</title></head>
+<body>
+  <h1>M1 v8 IndexedDB smoke (development test only)</h1>
+  <pre id="status">M1_V8_BROWSER_CAS_RUNNING</pre>
+  <script type="module">
+    import { createSyntheticRplScaleCatalog, defaultSyntheticLineup }
+      from '../dist/core/synthetic.js';
+    import { createInitialCareer } from '../dist/core/save.js';
+    import { saveNewInitialCareer, loadInitialCareer }
+      from '../dist/browser/initial-career-store.js';
+    import { createM1V8PersistedJournal, loadM1V8PersistedJournal,
+      commitM1V8PersistedBatch } from '../dist/browser/m1-v8-journal-store.js';
+    import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
+    import { simulateM1V8MedicalPhases } from '../dist/core/m1-v8-medical-phases.js';
+    import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
+      from '../dist/core/match-contracts.js';
+    import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
+    import { defaultTacticalPlan } from '../dist/core/tactics.js';
+    import { RNG_VERSION } from '../dist/core/rng.js';
+
+    const status = document.getElementById('status');
+    const check = (condition, message) => {
+      if (!condition) throw new Error(message);
+    };
+    const catalog = createSyntheticRplScaleCatalog(71);
+    const career = createInitialCareer(catalog, catalog.clubs[0].id, 19, 'm1-v8-native-cas');
+    const fixtures = generateDoubleRoundRobin(catalog.clubs.map(club => club.id))
+      .flatMap(round => round.fixtures);
+    const clubs = new Map(catalog.clubs.map(club => [club.id, club]));
+    const policy = {
+      home: { assignedActor: { kind: 'player' }, availableStaffIds: [] },
+      away: { assignedActor: { kind: 'player' }, availableStaffIds: [] },
+    };
+    function command(fixture, expectedRevision, commandId, seed, withMedical = false) {
+      const prematch = {
+        schemaVersion: MATCH_LEDGER_VERSION, engineVersion: M1_ENGINE_VERSION,
+        rulesPackId: M0_RULES_PACK_ID, rulesPackVersion: M0_RULES_PACK_VERSION,
+        fixture, catalog,
+        homeLineup: defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+        awayLineup: defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+        homeTactics: defaultTacticalPlan(fixture.homeClubId),
+        awayTactics: defaultTacticalPlan(fixture.awayClubId),
+        rosterRules: { starterCount: 11, maxBench: 12, maxForeignersOnField: 7 },
+        rngAlgorithmVersion: RNG_VERSION, rngSeed: seed,
+      };
+      const homeOut = prematch.homeLineup.starters.find(id =>
+        catalog.players.find(p => p.id === id).primaryPosition !== 'GK');
+      const awayOut = prematch.awayLineup.starters.find(id =>
+        catalog.players.find(p => p.id === id).primaryPosition !== 'GK');
+      const medicalActions = withMedical ? [
+        { schemaVersion: 1, id: 'native-med-exit', fixtureId: fixture.id,
+          teamId: fixture.homeClubId, playerId: homeOut, elapsedSeconds: 0,
+          kind: 'treatment-exit', reason: 'medical-staff-entered',
+          restartAtRunningSeconds: 15 },
+        { schemaVersion: 1, id: 'native-med-return', fixtureId: fixture.id,
+          teamId: fixture.homeClubId, playerId: homeOut, elapsedSeconds: 300,
+          kind: 'treatment-return', returnContext: 'running-clock',
+          ballInPlay: true, entryBoundary: 'touchline',
+          refereeSignalId: 'native-synthetic-referee-claim' },
+      ] : [];
+      const trustedDecisions = withMedical ? [
+        { schemaVersion: 1, decisionId: 'native-pen', fixtureId: fixture.id,
+          elapsedSeconds: 600, teamId: fixture.homeClubId, playerId: homeOut,
+          kind: 'penalty-kick', outcome: 'scored' },
+        { schemaVersion: 1, decisionId: 'native-own', fixtureId: fixture.id,
+          elapsedSeconds: 900, teamId: fixture.homeClubId, playerId: awayOut,
+          kind: 'own-goal' },
+      ] : [];
+      const result = simulateM1V8MedicalPhases(
+        prematch, policy, [], trustedDecisions, medicalActions);
+      check(result.ok, 'v8 source match did not simulate');
+      return { schemaVersion: 4, commandId, careerId: career.careerId,
+        expectedRevision, prematch, policy,
+        plannedCommands: [], trustedDecisions, medicalActions, result };
+    }
+    async function failCode(promise, code) {
+      try { await promise; }
+      catch (error) {
+        check(error?.code === code, 'expected ' + code + ', got ' + String(error));
+        return;
+      }
+      throw new Error('expected failure ' + code);
+    }
+    async function run() {
+      const stage = new URL(location.href).searchParams.get('stage');
+      if (stage === null) {
+        await saveNewInitialCareer(career);
+        const initial = await createM1V8PersistedJournal(career.careerId);
+        check(initial.revision === 0, 'initial CAS revision is not zero');
+        const committed = await commitM1V8PersistedBatch(career.careerId, 0,
+          [command(fixtures[0], 0, 'native-first', 19, true)]);
+        check(committed.revision === 1, 'first match commit not applied');
+        const url = new URL(location.href);
+        url.searchParams.set('stage', 'verify');
+        location.replace(url.href); // real navigation; no same-page in-memory result accepted
+        return;
+      }
+      check(stage === 'verify', 'invalid stage');
+      const original = await loadInitialCareer(career.careerId);
+      check(original.selectedClubId === career.selectedClubId, 'M0 source changed');
+      const recovered = await loadM1V8PersistedJournal(career.careerId);
+      check(recovered.revision === 1 && recovered.results.length === 1,
+        'revision one was not durable over actual page reload');
+      check(recovered.results[0].commandId === 'native-first', 'first committed row absent');
+      check(recovered.results[0].source.medicalActions.length === 2,
+        'medical source lost after browser reload');
+      check(recovered.results[0].dossier.match.home.penaltyGoals === 1 &&
+        recovered.results[0].dossier.match.home.ownGoalsFor === 1,
+        'v8 medical/penalty/own-goal dossier was not recovered');
+      await failCode(createM1V8PersistedJournal(career.careerId), 'ALREADY_EXISTS');
+      await failCode(commitM1V8PersistedBatch(career.careerId, 0,
+        [command(fixtures[1], 0, 'stale', 20)]), 'STALE_REVISION');
+      const results = await Promise.allSettled([
+        commitM1V8PersistedBatch(career.careerId, 1,
+          [command(fixtures[1], 1, 'native-writer-a', 20)]),
+        commitM1V8PersistedBatch(career.careerId, 1,
+          [command(fixtures[2], 1, 'native-writer-b', 21)]),
+      ]);
+      check(results.filter(item => item.status === 'fulfilled').length === 1,
+        'concurrent writers both won or both failed');
+      const loser = results.find(item => item.status === 'rejected');
+      check(loser.reason?.code === 'STALE_REVISION', 'loser was not a stale CAS');
+      const journal = await loadM1V8PersistedJournal(career.careerId);
+      check(journal.revision === 2 && journal.results.length === 2,
+        'concurrent writers lost or duplicated a commit');
+      check(journal.results[0].commandId === 'native-first',
+        'concurrency overwrote previously committed data');
+      status.textContent = 'M1_V8_BROWSER_CAS_PASS';
+    }
+    run().catch(error => {
+      status.textContent = 'M1_V8_BROWSER_CAS_FAIL: ' + String(error?.stack ?? error);
+    });
+  </script>
+</body>
+</html>

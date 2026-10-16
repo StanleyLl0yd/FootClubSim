@@ -1,0 +1,13 @@
+# M1 P3: IFAB 2026/27 medical off-field return gate (limited)
+
+**2026-10-16. Research-backed admission validator, not full injury gameplay.**
+
+Primary sources reviewed: [IFAB Law 5, 2026/27 referee and injuries](https://theifab.com/laws/latest/the-referee/), [IFAB Off-field treatment and assessment protocol, 2026/27](https://theifab.com/laws/latest/off-field-treatment-and-assessment-protocol/) and [2026/27 law changes](https://theifab.com/law-changes/latest/). The edition label **2026/27** is required: `latest` URLs can later move to another edition.
+
+The protocol requires a non-exempt assessed outfield player who triggered an injury-related stop or medical assessment to leave and remain off until **one running-clock minute after play restarts**, with referee permission to return. A player entering while the ball is in play must return via the touchline; out of play permits other boundary lines. If the half ends before 60 live seconds, the player may return from the start of the next half. IFAB separately lists exceptions for keeper injuries, certain collisions, severe injuries, disciplined opponent fouls and an injured designated penalty taker. The *applicability* and complete contextual verification of these cases are separate.
+
+`src/core/m1-medical-return.ts` defines a standalone schema-1 **ordinary outfield-player return admission check**, requiring a validated M1 prematch, named **initial starting outfield** participant, recognized medical stop reason, distinct off-field and running-clock restart times, elapsed 60 live seconds (or a tightly bounded first-half exception), and a referee signal ID. Wrong boundary, early entry, invalid chronology, goalkeeper exception and bench player without independently verified substitution history are rejected with typed errors.
+
+**Security / incompleteness:** a plausible signal ID, timestamps and source JSON are **not referee authentication**. This module does not track which players are temporarily on or off the pitch inside v7 shots, does not prove a match restart took place, and does not supply actual stoppage handling, substituted-in outfield participation, blood/serious-injury/head-injury/penalty-taker exceptions, extra-time periods, substitution of the absent player or return from a physical assessment. It cannot turn a player permanently withdrawn under the existing v6 `injury-withdrawal` command back into an active participant. These two concepts must not be conflated or silently integrated.
+
+Use only after an independently trusted match-controller confirms a genuine ordinary injury/assessment and actual restart times. Do **not** use it as an official authorization to restore someone on the pitch in current v7 gameplay. Full P3 #29 and M1 exit #3 remain open.

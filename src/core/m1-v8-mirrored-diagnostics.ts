@@ -1,4 +1,5 @@
 import { sameCanonicalValue } from './canonical-value.js';
+import { generateDoubleRoundRobin } from './fixtures.js';
 import type { M1Mean } from './m1-diagnostics.js';
 import type { M1PrematchInput } from './m1-clock.js';
 import { M1_V8_ENGINE_VERSION, M1_V8_EVENT_SCHEMA_VERSION,
@@ -73,7 +74,11 @@ class SampleMean {
 const rec = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
-/** Reverse the actual participating clubs AND their unchanged lineups/tactics. */
+/**
+ * Verify actual generated synthetic two-leg fixtures AND identical source
+ * rules. Changing the roster cap or a fixture round would otherwise look
+ * like a venue-only paired experiment, invalidating its interpretation.
+ */
 function paired(first: unknown, reverse: unknown): boolean {
   if (!rec(first) || !rec(reverse) ||
       !rec(first.fixture) || !rec(reverse.fixture) ||
@@ -82,11 +87,29 @@ function paired(first: unknown, reverse: unknown): boolean {
       first.fixture.awayClubId !== reverse.fixture.homeClubId ||
       first.fixture.id === reverse.fixture.id ||
       !sameCanonicalValue(first.catalog, reverse.catalog) ||
+      !sameCanonicalValue(first.rosterRules, reverse.rosterRules) ||
+      first.schemaVersion !== reverse.schemaVersion ||
+      first.engineVersion !== reverse.engineVersion ||
+      first.rulesPackId !== reverse.rulesPackId ||
+      first.rulesPackVersion !== reverse.rulesPackVersion ||
+      first.rngAlgorithmVersion !== reverse.rngAlgorithmVersion ||
       !sameCanonicalValue(first.homeLineup, reverse.awayLineup) ||
       !sameCanonicalValue(first.awayLineup, reverse.homeLineup) ||
       !sameCanonicalValue(first.homeTactics, reverse.awayTactics) ||
-      !sameCanonicalValue(first.awayTactics, reverse.homeTactics)) return false;
-  return true;
+      !sameCanonicalValue(first.awayTactics, reverse.homeTactics) ||
+      !rec(first.catalog) || !Array.isArray(first.catalog.clubs) ||
+      !first.catalog.clubs.every(c => rec(c) && typeof c.id === 'string')) {
+    return false;
+  }
+  try {
+    const calendar = generateDoubleRoundRobin(
+      first.catalog.clubs.map(c => c.id as string),
+    ).flatMap(round => round.fixtures);
+    return calendar.some(f => sameCanonicalValue(f, first.fixture)) &&
+      calendar.some(f => sameCanonicalValue(f, reverse.fixture));
+  } catch {
+    return false;
+  }
 }
 
 /** One synthetic fixed-team two-leg pair per seed, no expected winner. */

@@ -39,3 +39,16 @@ separately recorded runner/time/source metadata.
 
 This supplements M1 P5 [#31](https://github.com/StanleyLl0yd/FootClubSim/issues/31)
 without closing it, changing M0 or authorizing M2.
+
+## Pair-integrity validation
+
+Both fixtures must exactly match the generated original synthetic
+double-round-robin schedule (including IDs and round numbers).
+The team roster caps, rules-pack/version, match schema, engine, PRNG
+algorithm, original catalog, XI/bench and tactical plans must be equal
+under home/away reversal. A seed is intentionally supplied by the
+diagnostic and overridden equally in both legs.
+
+This prevents a malformed or differently regulated second fixture from
+being labeled a controlled home/away comparison. It does not establish
+an empirical home advantage, official 2026/27 calendar or M1 calibration.

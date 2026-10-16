@@ -6,6 +6,8 @@ on:
       - 'src/**'
       - 'scripts/chromium-e2e.mjs'
       - 'scripts/macos-safari-smoke.py'
+      - 'examples/m1-v7-cas-smoke.html'
+      - 'scripts/m1-v7-cdp-smoke.mjs'
       - 'index.html'
       - 'examples/m1-v7-cas-smoke.html'
       - 'scripts/m1-v7-cdp-smoke.mjs'
@@ -133,7 +135,7 @@ jobs:
 
 
   chromium-windows:
-    name: Built app renders in Windows ${{ matrix.browser }}
+    name: Windows ${{ matrix.browser }} app and native v7 CAS
     runs-on: windows-2025
     strategy:
       fail-fast: false
@@ -155,6 +157,8 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build static app
         run: npm run build:web
+      - name: Build isolated M1 modules for real Windows CAS
+        run: npm run build:core
       - name: Verify real Windows browser save/reload and restore
         shell: pwsh
         run: |
@@ -190,12 +194,29 @@ jobs:
             node scripts/chromium-e2e.mjs "$executable" 'http://127.0.0.1:4173/' "$privateFlag"
             if ($LASTEXITCODE -ne 0) { throw "$browserName private-session smoke failed with code $LASTEXITCODE" }
             Write-Host "React M0 shell rendered, saved and restored in Windows $browserName and private-mode smoke passed"
+            $casServer = Start-Process -FilePath 'node' -ArgumentList @('node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','5173','--strictPort') -PassThru -NoNewWindow -RedirectStandardOutput "$env:RUNNER_TEMP/footclubsim-v7-dev-out.log" -RedirectStandardError "$env:RUNNER_TEMP/footclubsim-v7-dev-err.log"
+            try {
+              $ready = $false
+              foreach ($attempt in 1..40) {
+                try {
+                  $response = Invoke-WebRequest -Uri 'http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html' -TimeoutSec 2
+                  if ($response.StatusCode -eq 200) { $ready = $true; break }
+                } catch {}
+                Start-Sleep -Seconds 1
+              }
+              if (-not $ready) { throw 'Vite v7 CAS test server did not start' }
+              node scripts/m1-v7-cdp-smoke.mjs "$executable" 'http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html'
+              if ($LASTEXITCODE -ne 0) { throw "$browserName native v7 CAS smoke failed with code $LASTEXITCODE" }
+              Write-Host "PASS: native Windows $browserName v7 IndexedDB reload and competing CAS writes"
+            } finally {
+              Stop-Process -Id $casServer.Id -Force -ErrorAction SilentlyContinue
+            }
           } finally {
             Stop-Process -Id $preview.Id -Force -ErrorAction SilentlyContinue
           }
 
   safari-macos:
-    name: Safari renders, saves and restores initial career
+    name: Safari M0 restore and native v7 IndexedDB CAS
     runs-on: macos-15
     permissions:
       contents: read
@@ -213,6 +234,8 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build production shell
         run: npm run build:web
+      - name: Build isolated M1 modules for native Safari CAS
+        run: npm run build:core
       - name: Enable local Safari WebDriver
         run: sudo /usr/bin/safaridriver --enable
       - name: Verify Safari render and IndexedDB restore

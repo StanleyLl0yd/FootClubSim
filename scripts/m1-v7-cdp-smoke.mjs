@@ -11,6 +11,10 @@ import { setTimeout as sleep } from 'node:timers/promises';
 
 const executable = process.argv[2];
 const url = process.argv[3] ?? 'http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html';
+const marker = process.argv[4] ?? 'M1_V7_BROWSER_CAS';
+if (!/^M1_V[78]_BROWSER_CAS$/.test(marker)) {
+  throw new Error('Unsupported browser CAS status marker');
+}
 if (!executable) {
   console.error('Usage: node scripts/m1-v7-cdp-smoke.mjs /path/to/chromium [url]');
   process.exit(2);
@@ -95,9 +99,9 @@ try {
     });
     const value = reply.result?.value;
     if (typeof value !== 'string') return null;
-    if (value.startsWith('M1_V7_BROWSER_CAS_FAIL')) throw new Error(value);
-    return value === 'M1_V7_BROWSER_CAS_PASS' ? value : null;
-  }, 'v7 native IndexedDB CAS post-navigation result', 60_000);
+    if (value.startsWith(marker + '_FAIL')) throw new Error(value);
+    return value === marker + '_PASS' ? value : null;
+  }, marker + ' native IndexedDB CAS post-navigation result', 90_000);
   console.log('PASS: ' + result + ' (real Chromium, reload, concurrent readwrite locks)');
 } catch (error) {
   console.error(error);

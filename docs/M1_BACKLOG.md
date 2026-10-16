@@ -174,3 +174,6 @@ New isolated `M1_V7_JOURNAL_SCHEMA_VERSION=3` commits independently replay-verif
 
 ## M1 P4 interruption prefix snapshot, provisional only (2026-10-16)
 `M1_V7_INTERRUPTION_SCHEMA_VERSION=1` enables deterministic, replay-verified *already played* v7 prefix snapshots at legal checkpoints. It excludes future actions, future PRNG, full-time result and league points. This is **not yet actual RFU-authorized abandonment or resumption**, nor a persistent career CAS. [M1_V7_INTERRUPTION.md](M1_V7_INTERRUPTION.md). All P3/P4/P5/exit issues remain open.
+
+## M1 P3 IFAB 2026/27 off-field medical return admission (2026-10-16)
+Added a standalone source-pinned ordinary outfield-player re-entry gate: one **running-clock minute after restart**, explicit referee permission, touchline when the ball is in play, and a bounded half-time exception. Special treatment cases, authentic referee authority, actual off-field XI integration and stoppage generator remain **unimplemented**. [M1_MEDICAL_RETURN_2026_27.md](M1_MEDICAL_RETURN_2026_27.md). P3/P4/exit stay open.

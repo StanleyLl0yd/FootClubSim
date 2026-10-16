@@ -132,3 +132,47 @@ test('an unreturned medical exit preserves physical absence without inventing a 
   assert.deepEqual(report.onFieldAtFullTime, simulation.onFieldAtFullTime);
   assert.equal(report.onFieldAtFullTime.home.includes(homeOut), false);
 });
+
+test('accepted substitutions and disciplinary removals change eligible scoring rows', () => {
+  const secondOut = home.starters.filter(id => positions.get(id) !== 'GK')[1];
+  const thirdOut = home.starters.filter(id => positions.get(id) !== 'GK')[2];
+  const benchPlayer = home.bench.find(id => positions.get(id) !== 'GK');
+  const commands = [
+    { schemaVersion: 1, id: 'yellow', fixtureId: fixture.id,
+      teamId: fixture.homeClubId, playerId: homeOut, elapsedSeconds: 0,
+      kind: 'caution', origin: 'trusted-referee' },
+    { schemaVersion: 1, commandId: 'bench', fixtureId: fixture.id,
+      teamId: fixture.homeClubId, elapsedSeconds: 300,
+      actor: { kind: 'player' }, kind: 'substitute-normal',
+      outPlayerId: secondOut, inPlayerId: benchPlayer,
+      stoppage: 'referee-authorized' },
+    { schemaVersion: 1, id: 'red', fixtureId: fixture.id,
+      teamId: fixture.homeClubId, playerId: benchPlayer, elapsedSeconds: 600,
+      kind: 'direct-red', origin: 'trusted-referee' },
+    { schemaVersion: 1, id: 'injury', fixtureId: fixture.id,
+      teamId: fixture.homeClubId, playerId: thirdOut, elapsedSeconds: 900,
+      kind: 'injury-withdrawal', origin: 'trusted-medical' },
+  ];
+  const simulation = simulateM1V8MedicalPhases(prematch, policy, commands, [], []);
+  assert.equal(simulation.ok, true, JSON.stringify(simulation).slice(0, 180));
+  const result = deriveM1VerifiedV8GoalAttribution(
+    prematch, policy, commands, [], [], simulation);
+  assert.equal(result.ok, true, JSON.stringify(result).slice(0, 180));
+  const substitute = result.report.players.find(p => p.playerId === benchPlayer);
+  assert.equal(substitute.started, false);
+  assert.equal(result.report.players.length, 23);
+  assert.equal(result.report.onFieldAtFullTime.home.length, 9);
+  assert.equal(result.report.onFieldAtFullTime.home.includes(benchPlayer), false);
+  assert.equal(result.report.onFieldAtFullTime.home.includes(secondOut), false);
+  assert.equal(result.report.onFieldAtFullTime.home.includes(thirdOut), false);
+  assert.deepEqual(result.report.match, simulation.report);
+});
+
+test('attribution is a pure projection and cannot rewrite any source input', () => {
+  const original = structuredClone(prematch);
+  const actions = [structuredClone(exit), structuredClone(back)];
+  const previous = structuredClone(actions);
+  examine(prematch, [], actions);
+  assert.deepEqual(prematch, original);
+  assert.deepEqual(actions, previous);
+});

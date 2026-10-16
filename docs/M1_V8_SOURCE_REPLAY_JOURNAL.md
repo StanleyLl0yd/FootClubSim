@@ -101,3 +101,20 @@ of 16; neither application style may skip source verification.
 The workflow is **not** a measured cross-browser responsiveness,
 IndexedDB quota/eviction, fatigue/condition, authenticated-ruling,
 calibration or release-acceptance gate. M1 P3/P4/P5 and exit remain open.
+
+## Strict source JSON preflight
+
+Before the schema-4 v8 journal serializes candidate in-process values,
+it now checks ordinary JSON tree semantics recursively. Plain objects
+and arrays with finite JSON scalars are accepted; getters/setters,
+`toJSON` methods, hidden/symbol properties, sparse arrays, exotic
+object prototypes, cycles and shared object aliases are rejected as
+untrusted provenance, before any user-defined getter/serializer can
+be invoked by `JSON.stringify`.
+
+This hardens **in-process object admission**, not cryptographic source
+authentication or a defense against arbitrary executable JavaScript
+and hostile Proxy traps in the same trusted process. Ordinary JSON
+parses, existing stored schema-4 values and all M0/v3-v7 contracts
+remain unchanged. New adversarial regression tests verify no getter
+execution and fail-closed validation of malformed candidate journals.

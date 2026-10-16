@@ -66,6 +66,11 @@ Test `xG=0..1` per shot, `0 <= goals <= shots` for regular goals (with distinct 
 
 ## Baseline sources and rights gate
 
+The [2026-10-16 candidate-source/rights inventory](M1_P5_REFERENCE_SOURCE_CANDIDATES.md)
+screens possible licensed Russian match results without importing data
+or approving any external benchmark. Provider license claims and
+upstream provenance still require independent verification.
+
 - Official RFU/RPL regulations verify **competition rules**, not empirical distributions. [Verified RPL regulations](RPL_2026_27_RULES.md) are not a license to bundle match reports.
 - Aggregate match statistics may come from licensed providers or primary reports only after review of collection, extraction, redistribution and use rights per [DATA_SOURCES.md](DATA_SOURCES.md).
 - Transfermarkt scraping or copying third-party football-manager ratings is prohibited without permission.

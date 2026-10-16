@@ -115,10 +115,12 @@ export function runM1V8PairedMedicalDiagnostics(
       a.home.xgMilli - a.away.xgMilli) / 1000);
     // Treatment events shift envelope sequence numbers. Only compare the
     // actual phase shot facts, not unrelated medical stream positions.
-    const aShots = normal.events.filter(e => e.type === 'shot')
-      .map(({ sequence, ...shot }) => shot);
-    const bShots = medical.events.filter(e => e.type === 'shot')
-      .map(({ sequence, ...shot }) => shot);
+    const shotFacts = (events: typeof normal.events) => events
+      .filter(e => e.type === 'shot')
+      .map(e => Object.fromEntries(Object.entries(e)
+        .filter(([key]) => key !== 'sequence')));
+    const aShots = shotFacts(normal.events);
+    const bShots = shotFacts(medical.events);
     changedShots += Number(!sameCanonicalValue(aShots, bShots));
     changedScores += Number(a.home.goals !== b.home.goals ||
       a.away.goals !== b.away.goals);

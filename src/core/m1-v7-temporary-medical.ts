@@ -154,11 +154,11 @@ export function replayM1V7TemporaryMedicalPresence(
   }
   for (let phase = 0; phase < M1_CLOCK_MAX_EVENTS; phase++) {
     const second = phase * M1_CLOCK_STEP_SECONDS;
-    while (v7.events[index]?.type === 'v6-event' &&
-      v7.events[index]?.elapsedSeconds === second &&
-      v7.events[index]?.type === 'v6-event' &&
-      v7.events[index]?.source.type === 'availability') {
-      const rejected = applyAvailability(v7.events[index]!);
+    while (true) {
+      const pending = v7.events[index];
+      if (!pending || pending.type !== 'v6-event' ||
+          pending.elapsedSeconds !== second || pending.source.type !== 'availability') break;
+      const rejected = applyAvailability(pending);
       if (rejected) return fail(rejected);
       index++;
     }
@@ -207,9 +207,10 @@ export function replayM1V7TemporaryMedicalPresence(
       index++;
     }
   }
+  const ending = v7.events[index];
   if (medicalIndex !== actions.length || index !== v7.events.length - 1 ||
-      v7.events[index]?.type !== 'v6-event' ||
-      v7.events[index]?.source.type !== 'full-time') return fail('INVALID_MATCH_SOURCE');
+      !ending || ending.type !== 'v6-event' ||
+      ending.source.type !== 'full-time') return fail('INVALID_MATCH_SOURCE');
   return { ok: true, replay: {
     schemaVersion: M1_V7_TEMPORARY_MEDICAL_SCHEMA_VERSION,
     v7EventSchemaVersion: M1_V7_EVENT_SCHEMA_VERSION,

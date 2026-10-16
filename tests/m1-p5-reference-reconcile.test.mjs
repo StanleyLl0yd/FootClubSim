@@ -68,6 +68,11 @@ test('rejects forged candidate metadata and impossible report arithmetic', () =>
     c => { c.goalTotals.home = 999; },
     c => { c.outcomes.draw.numerator = 100; },
     c => { c.coverage.observedClubCount = 100; },
+    c => { c.outcomes.homeWin.denominator = 999; },
+    c => { c.outcomes.homeWin.rate = 0.999; },
+    c => { c.outcomes.bothScored.numerator = 999; },
+    c => { c.goalsPerMatch.total = 99; },
+    c => { c.goalsPerMatch.mean = 99; },
   ]) {
     const c = candidate();
     mutate(c);

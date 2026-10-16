@@ -180,3 +180,8 @@ Added a standalone source-pinned ordinary outfield-player re-entry gate: one **r
 
 ## M1 P5 v7 synthetic cohort diagnostics, not calibration (2026-10-16)
 Added 1..10,000-seed reproducible v7 engineering diagnostics: match outcomes/95% uncertainty, open-play-only xG and separated exogenous confirmed penalty/own-goal accounting. The executable manual CLI records actual runtime metadata; smoke tests cover determinism, paired forced-penalty arithmetic and invalid seed plans. Independent licensed reference, true generated officiating/injuries and full calibrated P5 remain outstanding. See [M1_CALIBRATION_PROTOCOL.md](M1_CALIBRATION_PROTOCOL.md). Do not close #31 or M1 exit.
+
+
+## M1 P4 v7 isolated IndexedDB CAS prototype (2026-10-16)
+
+`src/browser/m1-v7-journal-store.ts` provides a separate versioned v7-only browser-local IndexedDB journal with add-only initialization, verified non-synthesizing reads and atomic read/validate/revision-CAS/single-write batch commits. It loads the immutable M0 career as its original source and does not mutate M0 storage, v5/v6 journals or previous schemas. Transaction success is acknowledged only on `complete`; late domain failure, duplicate, stale revision and quota abort do not partially commit. Synthetic concurrency/fault tests cover these invariants. **Not a trusted referee authority or proof of native-browser crash durability**: user-controlled inputs and origin script remain tamperable, and real Safari/quota/eviction/backup scenarios are unverified. See [M1_V7_ATOMIC_CAS.md](M1_V7_ATOMIC_CAS.md) and [M2 gate #155](https://github.com/StanleyLl0yd/FootClubSim/issues/155). P3 #29, P4 #30, P5 #31 and M1 exit #3 stay open.

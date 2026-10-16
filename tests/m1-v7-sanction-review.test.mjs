@@ -46,9 +46,6 @@ assert.equal(raw.ok, true);
 const empty = raw.journal;
 const playing = prematch.homeLineup.starters[0];
 const bench = prematch.homeLineup.bench[0];
-const reserve = clubs.get(fixture.homeClubId).registeredPlayerIds.find(id =>
-  ![...prematch.homeLineup.starters, ...prematch.homeLineup.bench].includes(id));
-assert.ok(reserve);
 assert.ok(nextFixture);
 const ban = (playerId, ids, rulingId = 'confirmed-ruling') => ({
   schemaVersion: 1, rulingId, kind: 'match-suspension',
@@ -101,10 +98,10 @@ test('verified prior appearance cannot be silently overwritten by retroactive or
 });
 test('a missing appearance is not proof of an unused-bench clean record', () => {
   const journal = completed();
-  const outcome = check(journal, [ban(reserve, [fixture.id])]);
+  const outcome = check(journal, [ban(bench, [fixture.id])]);
   assert.deepEqual(outcome, {
     ok: false, error: 'HISTORICAL_MATCH_SHEET_REQUIRED',
-    affectedFixtureIds: [fixture.id], affectedPlayerIds: [reserve],
+    affectedFixtureIds: [fixture.id], affectedPlayerIds: [bench],
   });
 });
 test('earlier fixture plus valid future ruling stays consistent', () => {

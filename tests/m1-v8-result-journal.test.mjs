@@ -254,6 +254,62 @@ test('JSON compatibility is required for retained match sources', () => {
     { ...req, policy: cyclic }), 'INVALID_APPLY_COMMAND');
 });
 
+test('a v8 replay source never invokes attacker-defined accessors or toJSON', () => {
+  const command = request(fixtures[0], 0);
+  let invocations = 0;
+  const accessorPolicy = { ...policy };
+  Object.defineProperty(accessorPolicy, 'injected', {
+    enumerable: true, get() { invocations++; return 'hidden-source'; },
+  });
+  failed(applyM1V8MatchResult(career, empty(),
+    { ...command, policy: accessorPolicy }), 'INVALID_APPLY_COMMAND');
+  assert.equal(invocations, 0);
+  const serializerPolicy = {
+    ...policy,
+    toJSON() { invocations++; return policy; },
+  };
+  failed(applyM1V8MatchResult(career, empty(),
+    { ...command, policy: serializerPolicy }), 'INVALID_APPLY_COMMAND');
+  assert.equal(invocations, 0);
+});
+
+test('hidden, symbolic and aliased JSON fields cannot disappear in v8 replay', () => {
+  const journal = success(applyM1V8MatchResult(career, empty(),
+    request(fixtures[0], 0)));
+  const before = structuredClone(journal);
+  const hidden = structuredClone(journal);
+  Object.defineProperty(hidden, 'unrecorded', {
+    value: 'covert', enumerable: false,
+  });
+  failed(validateM1V8MatchJournal(career, hidden), 'INVALID_JOURNAL');
+  const symbolic = structuredClone(journal);
+  symbolic[Symbol('unrecorded')] = 'covert';
+  failed(validateM1V8MatchJournal(career, symbolic), 'INVALID_JOURNAL');
+  const getter = structuredClone(journal);
+  let calls = 0;
+  Object.defineProperty(getter, 'surprise', {
+    enumerable: true, get() { calls++; return 1; },
+  });
+  failed(validateM1V8MatchJournal(career, getter), 'INVALID_JOURNAL');
+  assert.equal(calls, 0);
+  const aliased = structuredClone(journal);
+  aliased.results[0].source.trustedDecisions =
+    aliased.results[0].source.medicalActions;
+  failed(validateM1V8MatchJournal(career, aliased), 'INVALID_JOURNAL');
+  assert.deepEqual(journal, before);
+});
+
+test('exotic objects cannot masquerade as plain v8 journal JSON', () => {
+  const command = request(fixtures[0], 0);
+  failed(applyM1V8MatchResult(career, empty(), {
+    ...command, policy: { ...policy, metadata: new Map() },
+  }), 'INVALID_APPLY_COMMAND');
+  const modified = structuredClone(command);
+  Object.setPrototypeOf(modified.policy, new Map());
+  failed(applyM1V8MatchResult(career, empty(), modified),
+    'INVALID_APPLY_COMMAND');
+});
+
 test('four-item batch preserves sequential verified journal and all-or-nothing rejection', () => {
   const commands = fixtures.slice(0, 4).map((fixture, index) =>
     request(fixture, index, 'batch-' + index, 42 + index, index % 2 === 0));

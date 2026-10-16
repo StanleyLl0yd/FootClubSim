@@ -43,6 +43,20 @@ function observedCandidateCounts(candidate) {
     observedClubCount: coverage.observedClubCount,
   };
   for (const name of METRICS) boundedCount(result[name], 'candidate ' + name);
+  for (const name of ['homeWin', 'draw', 'awayWin', 'scoreless', 'bothScored']) {
+    const metric = object(outcomes[name], 'candidate ' + name);
+    const numerator = boundedCount(metric.numerator, name + ' numerator');
+    if (metric.denominator !== result.finishedMatches ||
+        numerator > result.finishedMatches ||
+        metric.rate !== numerator / result.finishedMatches) {
+      throw Error('Inconsistent candidate outcome denominator or rate');
+    }
+  }
+  const goalMean = object(candidate.goalsPerMatch, 'candidate goals per match');
+  if (goalMean.total !== result.totalGoals ||
+      goalMean.mean !== result.totalGoals / result.finishedMatches) {
+    throw Error('Inconsistent candidate goal mean or total');
+  }
   if (result.homeWins + result.draws + result.awayWins !== result.finishedMatches ||
       result.homeGoals + result.awayGoals !== result.totalGoals ||
       result.scoreless > result.draws ||

@@ -1,0 +1,79 @@
+name: M1 P5 RPL snapshot research (manual only)
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: m1-p5-rpl-snapshot-research
+  cancel-in-progress: false
+
+jobs:
+  source-observation:
+    name: Private runner fetch and anonymized observation (not approval)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout pinned repository source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Fetch mutable source privately and compare only anonymized aggregates
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          url='https://footbolno.ru/data/league/235-matches.csv'
+          curl --fail --location --silent --show-error \
+            --proto '=https' --proto-redir '=https' \
+            --connect-timeout 10 --max-time 60 --max-filesize 16777216 \
+            --output "$work/rpl.csv" "$url"
+          bytes="$(wc -c < "$work/rpl.csv")"
+          test "$bytes" -gt 0
+          test "$bytes" -le 16777216
+          hash="$(sha256sum "$work/rpl.csv" | cut -d' ' -f1)"
+          {
+            echo '## Unapproved research-only 2024/25 RPL observation'
+            echo
+            echo 'Source: https://footbolno.ru/data/league/235-matches.csv'
+            echo
+            echo "Retrieval UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo
+            echo "Downloaded bytes: $bytes"
+            echo
+            echo "Exact downloaded SHA-256: $hash"
+            echo
+            echo 'The hash is measured on this run, NOT a previously approved source pin.'
+            echo 'Upstream rights, match completeness, raw primary records and realism remain unverified.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          node scripts/m1-p5-reference-candidate.mjs \
+            --file="$work/rpl.csv" --season=2024/2025 --sha256="$hash" \
+            > "$work/candidate-report.json"
+          node scripts/m1-p5-reference-reconcile.mjs \
+            --candidate="$work/candidate-report.json" \
+            --published=data/rpl-2024-25-published-aggregate-research.json \
+            > "$work/aggregate-comparison.json"
+          {
+            echo
+            echo '### Anonymized source observations (NOT CALIBRATED)'
+            echo
+            echo '~~~json'
+            cat "$work/candidate-report.json"
+            echo '~~~'
+            echo
+            echo '### Public aggregate cross-check (NOT APPROVED)'
+            echo
+            echo '~~~json'
+            cat "$work/aggregate-comparison.json"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"

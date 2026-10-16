@@ -55,10 +55,11 @@ test('confirmed suspension denies both XI and named bench, not just starters', (
 });
 
 test('future suspension of registered unselected player is returned for lineup UI', () => {
-  const named = new Set([...home.starters, ...home.bench]);
-  const reserve = homeClub.registeredPlayerIds.find(id => !named.has(id));
-  assert.ok(reserve);
-  const result = check([ruling('future', reserve)]);
+  const reserve = home.bench.at(-1);
+  const shortened = { ...prematch, homeLineup: {
+    ...home, bench: home.bench.slice(0, -1),
+  } };
+  const result = admitM1ConfirmedSuspensions(shortened, [ruling('future', reserve)]);
   assert.equal(result.ok, true);
   assert.deepEqual(result.blockedHomePlayers, [reserve]);
 });

@@ -123,7 +123,9 @@ function buildItem(
       !Array.isArray(source.plannedCommands) ||
       !Array.isArray(source.trustedDecisions) ||
       !Array.isArray(source.medicalActions)) return null;
-  const prematch = { ...source.prematch, catalog: original.catalog };
+  const prematch: Record<string, unknown> = {
+    ...source.prematch, catalog: original.catalog,
+  };
   if (!sameCanonicalValue(fixture, prematch.fixture)) return null;
   const match = simulateM1V8MedicalPhases(
     prematch, source.policy, source.plannedCommands,
@@ -228,16 +230,17 @@ export function applyM1V8MatchResult(
     return fail('DUPLICATE_COMMAND');
   }
   const prematch = candidate.prematch;
-  if (!rec(prematch.fixture) || !isStableId(prematch.fixture.id)) {
+  const claimedFixture = prematch.fixture;
+  if (!rec(claimedFixture) || !isStableId(claimedFixture.id)) {
     return fail('INVALID_APPLY_COMMAND');
   }
-  if (current.results.some(item => item.fixtureId === prematch.fixture.id)) {
+  if (current.results.some(item => item.fixtureId === claimedFixture.id)) {
     return fail('DUPLICATE_FIXTURE');
   }
   if (candidate.expectedRevision !== current.revision) return fail('STALE_REVISION');
   if (current.revision >= MAX_FIXTURES) return fail('REVISION_LIMIT');
-  const fixture = fixtureMap(original.catalog).get(prematch.fixture.id);
-  if (!fixture || !sameCanonicalValue(fixture, prematch.fixture)) {
+  const fixture = fixtureMap(original.catalog).get(claimedFixture.id);
+  if (!fixture || !sameCanonicalValue(fixture, claimedFixture)) {
     return fail('UNKNOWN_FIXTURE');
   }
   if (!sameCanonicalValue(original.catalog, prematch.catalog)) {

@@ -28,3 +28,10 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Audit all runtime and development dependencies
         run: npm audit --audit-level=high
+      # Only PRs have a meaningful base/head dependency diff. This reuses the
+      # existing mandatory status context instead of adding an optional check.
+      - name: Reject newly introduced high-severity vulnerable dependencies
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high

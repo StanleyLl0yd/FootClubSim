@@ -34,6 +34,8 @@ jobs:
         run: node scripts/m1-diagnostics.mjs --count=64 --first-seed=1 --paired-home-tempo=100
       - name: M1 v7 deterministic cohort smoke (32 seeds, NOT calibration)
         run: node scripts/m1-v7-diagnostics.mjs --count=32 --first-seed=1
+      - name: M1 v8 paired medical counterfactual smoke (32 seeds, NOT calibration)
+        run: node scripts/m1-v8-medical-diagnostics.mjs --count=32 --first-seed=1
       - name: Assert independent core and browser outputs coexist
         run: |
           test -s dist/core/save.js

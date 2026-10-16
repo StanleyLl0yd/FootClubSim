@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Local, hash-pinned inspection only. No network, benchmark approval or calibration. */
 import { createHash } from 'node:crypto';
-import { open, stat } from 'node:fs/promises';
+import { open } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
 const MAX_BYTES = 16 * 1024 * 1024;
@@ -165,13 +165,15 @@ async function main(args) {
   }
   const file = args[0].slice('--file='.length);
   if (!file) throw Error('Empty CSV path');
-  const info = await stat(file);
-  if (!info.isFile() || info.size < 1 || info.size > MAX_BYTES) {
-    throw Error('Invalid CSV file size');
-  }
   const handle = await open(file, 'r');
   let bytes;
-  try { bytes = await handle.readFile(); } finally { await handle.close(); }
+  try {
+    const info = await handle.stat();
+    if (!info.isFile() || info.size < 1 || info.size > MAX_BYTES) {
+      throw Error('Invalid CSV file size');
+    }
+    bytes = await handle.readFile();
+  } finally { await handle.close(); }
   if (bytes.length > MAX_BYTES) throw Error('CSV too large');
   const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
   const report = analyzeRplCsvCandidate(decoder.decode(bytes),

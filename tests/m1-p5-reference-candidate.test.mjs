@@ -28,6 +28,19 @@ test('bounded, anonymized completed season outcomes and uncertainty', () => {
   assert.equal(r.status, 'UNAPPROVED_EXTERNAL_REFERENCE_CANDIDATE_NOT_CALIBRATED');
   assert.equal(r.rightsStatus, 'UPSTREAM_RIGHTS_NOT_VERIFIED');
   assert.equal(r.isCompleteSeason, 'NOT_ESTABLISHED');
+  assert.deepEqual(r.scheduleShape, {
+    status: 'STRUCTURAL_ONLY_NOT_INDEPENDENTLY_VERIFIED',
+    expectedFormat: '16_CLUB_30_ROUND_DOUBLE_ROUND_ROBIN',
+    selectedSeasonUnfinished: 3,
+    checks: {
+      expectedFinishedMatches: false,
+      expectedClubs: false,
+      fifteenHomeAndAwayPerClub: false,
+      uniqueDirectedFixtures: true,
+      noUnfinishedSelectedSeasonRows: false,
+    },
+    consistentWithExpectedPattern: false,
+  });
   assert.equal(r.finishedMatches, 3);
   assert.deepEqual(r.exclusions, {
     otherSeason: 1, scheduled: 1, live: 1, cancelled: 1,
@@ -162,4 +175,54 @@ test('CLI accepts only a pinned local file and rejects unauthorized options', ()
       assert.equal(bad.stdout, '');
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('240 directed pairings satisfy only the double-round-robin structural prerequisite', () => {
+  const clubs = Array.from({ length: 16 }, (_, i) => String(100 + i));
+  const fixtures = [];
+  for (const home of clubs) {
+    for (const away of clubs) {
+      if (home === away) continue;
+      fixtures.push([
+        fixtures.length + 1, 235, '2024/2025', 'finished', home, away,
+        fixtures.length % 4, fixtures.length % 3, '"private, venue"',
+      ].join(','));
+    }
+  }
+  assert.equal(fixtures.length, 240);
+  const good = inspect(fixtures);
+  assert.equal(good.scheduleShape.consistentWithExpectedPattern, true);
+  assert.deepEqual(good.scheduleShape.checks, {
+    expectedFinishedMatches: true,
+    expectedClubs: true,
+    fifteenHomeAndAwayPerClub: true,
+    uniqueDirectedFixtures: true,
+    noUnfinishedSelectedSeasonRows: true,
+  });
+  assert.equal(good.coverage.repeatedHomeAwayFixtures, 0);
+  assert.deepEqual(good.coverage.finishedAppearancesPerClub, { min: 30, max: 30 });
+  assert.deepEqual(good.coverage.finishedHomeMatchesPerClub, { min: 15, max: 15 });
+  assert.deepEqual(good.coverage.finishedAwayMatchesPerClub, { min: 15, max: 15 });
+  assert.equal(good.isCompleteSeason, 'NOT_ESTABLISHED');
+  assert.equal(JSON.stringify(good).includes('private, venue'), false);
+
+  const missing = inspect(fixtures.slice(1));
+  assert.equal(missing.scheduleShape.checks.expectedFinishedMatches, false);
+  assert.equal(missing.scheduleShape.consistentWithExpectedPattern, false);
+
+  // Same 240 completed rows and 16 clubs, but one directed fixture repeats.
+  const duplicatePair = [...fixtures];
+  duplicatePair[1] = duplicatePair[0].replace(/^1,/, '2,');
+  const repeated = inspect(duplicatePair);
+  assert.equal(repeated.finishedMatches, 240);
+  assert.equal(repeated.coverage.repeatedHomeAwayFixtures, 1);
+  assert.equal(repeated.scheduleShape.checks.uniqueDirectedFixtures, false);
+  assert.equal(repeated.scheduleShape.consistentWithExpectedPattern, false);
+
+  // Even a full finished grid cannot silently disregard pending rows.
+  const extra = inspect([...fixtures, '241,235,2024/2025,scheduled,100,101,,,X']);
+  assert.equal(extra.scheduleShape.selectedSeasonUnfinished, 1);
+  assert.equal(extra.scheduleShape.checks.noUnfinishedSelectedSeasonRows, false);
+  assert.equal(extra.scheduleShape.consistentWithExpectedPattern, false);
+  assert.equal(extra.isCompleteSeason, 'NOT_ESTABLISHED');
 });

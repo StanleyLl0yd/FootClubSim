@@ -86,3 +86,12 @@ validates manually acquired snapshots by SHA-256, CSV schema, league/season,
 fixture identity/status and bounded normal-time goals. It reports only
 anonymized descriptive distributions with uncertainty, never imports raw
 provider data and **does not** authorize redistribution, calibration or M1 exit.
+
+## Cross-provider 2025/26 discrepancy resolved at one match (2026-10-17)
+
+The previously noted **609 vs 610 goals** provider conflict has now been
+[localized to a single Rusfootball 3:0 vs officially corroborated 2:0
+Zenit-Akhmat entry](M1_P5_2025_26_GOAL_DISCREPANCY.md).
+The RPL-hosted next-round bulletin and Akhmat club match record both give
+**2:0**. This explains the one-goal mismatch but does **not** establish
+full-season fixture-by-fixture completeness, reuse rights or calibration.

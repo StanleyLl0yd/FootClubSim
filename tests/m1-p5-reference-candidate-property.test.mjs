@@ -98,6 +98,10 @@ test('128 independently seeded valid CSV cohorts conserve all observed counts', 
     assert.equal(actual.status,
       'UNAPPROVED_EXTERNAL_REFERENCE_CANDIDATE_NOT_CALIBRATED');
     assert.equal(actual.isCompleteSeason, 'NOT_ESTABLISHED');
+    assert.equal(actual.scheduleShape.status,
+      'STRUCTURAL_ONLY_NOT_INDEPENDENTLY_VERIFIED');
+    assert.equal(actual.scheduleShape.consistentWithExpectedPattern, false);
+    assert.equal(actual.scheduleShape.checks.expectedFinishedMatches, false);
   }
 });
 

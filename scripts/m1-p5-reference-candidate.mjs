@@ -162,6 +162,19 @@ export function analyzeRplCsvCandidate(csv, season, expectedHash) {
     return { min, max };
   }
   const appearances = [...clubAppearances.values()];
+  // Necessary fixture-grid shape checks only, not source or rights verification.
+  // 240 distinct directed fixtures among 16 clubs with 15 home/away games
+  // per club cover every directed club pairing exactly once.
+  const selectedSeasonUnfinished = exclusions.scheduled + exclusions.live +
+    exclusions.cancelled;
+  const shapeChecks = {
+    expectedFinishedMatches: count === 240,
+    expectedClubs: clubAppearances.size === 16,
+    fifteenHomeAndAwayPerClub: appearances.every(x => x.home === 15 &&
+      x.away === 15),
+    uniqueDirectedFixtures: repeatedHomeAwayFixtures === 0,
+    noUnfinishedSelectedSeasonRows: selectedSeasonUnfinished === 0,
+  };
   const stdDev = count < 2 ? null : Math.sqrt(squaredDiff / (count - 1));
   const margin = stdDev === null ? null : Z95 * stdDev / Math.sqrt(count);
   return {
@@ -179,6 +192,13 @@ export function analyzeRplCsvCandidate(csv, season, expectedHash) {
       finishedHomeMatchesPerClub: ranges(appearances.map(x => x.home)),
       finishedAwayMatchesPerClub: ranges(appearances.map(x => x.away)),
       repeatedHomeAwayFixtures,
+    },
+    scheduleShape: {
+      status: 'STRUCTURAL_ONLY_NOT_INDEPENDENTLY_VERIFIED',
+      expectedFormat: '16_CLUB_30_ROUND_DOUBLE_ROUND_ROBIN',
+      selectedSeasonUnfinished,
+      checks: shapeChecks,
+      consistentWithExpectedPattern: Object.values(shapeChecks).every(Boolean),
     },
     goalTotals: { home: homeGoals, away: awayGoals, total: goalsTotal },
     outcomes: { homeWin: wilson(homeWin, count), draw: wilson(draw, count),

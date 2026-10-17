@@ -37,7 +37,17 @@ The report also includes observed home/away goal totals and **finished-only**
 club-coverage ranges (different clubs, games per club, home/away appearances)
 plus repeated directed home-away pairings with different match IDs. These
 are anomaly/completeness-review signals, **not** validation of a complete
-league schedule, club identities or a known double round robin. Scheduled,
+league schedule, club identities or a known double round robin. A separate
+`scheduleShape` section tests the **necessary** 16-club/240-finished-match
+double-round-robin structure: 15 finished home and 15 away games per observed
+club, no repeated directed pairings, and no unfinished rows in the selected
+season. Each condition is reported independently; the combined
+`consistentWithExpectedPattern` is true only when all pass. A positive
+structural pattern is **not** proof that recorded goals, identities or match
+dates are authentic, that a snapshot contains all real fixtures, or that
+publisher licenses and independent archives have been verified. Therefore
+`isCompleteSeason` stays `NOT_ESTABLISHED` even when all structural
+checks succeed. Scheduled,
 live and cancelled rows are excluded from these coverage ranges.
 
 Reports intentionally contain no source player/team names, fixture rows,

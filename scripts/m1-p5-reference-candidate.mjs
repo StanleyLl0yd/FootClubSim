@@ -74,7 +74,7 @@ function parseCsv(text) {
   return { header, records };
 }
 
-function wilson(success, count) {
+export function wilson(success, count) {
   const p = success / count, z2 = Z95 ** 2;
   const denominator = 1 + z2 / count;
   const center = (p + z2 / (2 * count)) / denominator;

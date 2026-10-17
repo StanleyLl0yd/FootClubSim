@@ -80,6 +80,61 @@ test('rejects forged candidate metadata and impossible report arithmetic', () =>
   }
 });
 
+test('mutated candidate diagnostics cannot claim a matched published source', () => {
+  const changes = [
+    c => { c.source.bytes = 0; },
+    c => { c.source.bytes = 20000000; },
+    c => { c.source.attributionUrl = 'https://example.com'; },
+    c => { c.season = '2024/2027'; },
+    c => { c.csvRows += 1; },
+    c => { c.exclusions.otherSeason += 1; },
+    c => { c.exclusions.extra = 0; },
+    c => { c.coverage.repeatedHomeAwayFixtures = 3; },
+    c => { c.coverage.finishedHomeMatchesPerClub.min = 4; },
+    c => { c.coverage.finishedHomeMatchesPerClub.max = 0; },
+    c => { c.coverage.finishedAppearancesPerClub.max = 3; },
+    c => { c.scheduleShape.checks.expectedFinishedMatches = true; },
+    c => { c.scheduleShape.checks.uniqueDirectedFixtures = false; },
+    c => { c.scheduleShape.consistentWithExpectedPattern = true; },
+    c => { c.scheduleShape.selectedSeasonUnfinished = 1; },
+    c => { c.scheduleShape.status = 'VERIFIED'; },
+    c => { c.outcomes.homeWin.wilson95.lower = 0; },
+    c => { c.outcomes.draw.wilson95.upper = 1; },
+    c => { c.outcomes.scoreless.wilson95.lower = -1; },
+    c => { c.goalsPerMatch.sampleStdDev = 200; },
+    c => { c.goalsPerMatch.normalMean95.upper += 1; },
+    c => { c.outcomes.bothScored.numerator = 3;
+      c.outcomes.bothScored.rate = 1;
+      c.outcomes.bothScored.wilson95 = {
+        lower: 0.4385029682449545, upper: 1,
+      }; },
+    c => { c.outcomes.homeWin.extra = 'unverified'; },
+  ];
+  for (const [index, mutate] of changes.entries()) {
+    const c = candidate();
+    mutate(c);
+    assert.throws(() => reconcileRplPublishedAggregates(c, published()),
+      undefined, 'report mutation ' + index);
+  }
+});
+
+test('single-match candidate retains null standard deviation and CI', () => {
+  const single = [
+    'match_id,league_id,season,status,home_id,away_id,home_goals,away_goals',
+    '1,235,2024/2025,finished,10,20,2,1',
+  ].join('\n') + '\n';
+  const c = analyzeRplCsvCandidate(single, '2024/2025',
+    createHash('sha256').update(single).digest('hex'));
+  const ref = published();
+  ref.observed = {
+    finishedMatches: 1, homeWins: 1, draws: 0, awayWins: 0,
+    scoreless: 0, homeGoals: 2, awayGoals: 1, totalGoals: 3,
+    observedClubCount: 2,
+  };
+  assert.equal(reconcileRplPublishedAggregates(c, ref).status,
+    'MATCHING_AGGREGATES_NOT_CALIBRATED');
+});
+
 test('rejects forged published provenance, unsafe URLs and impossible totals', () => {
   for (const mutate of [
     p => { p.rightsStatus = 'APPROVED'; },

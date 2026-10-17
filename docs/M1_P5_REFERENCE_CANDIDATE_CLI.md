@@ -101,8 +101,16 @@ node scripts/m1-p5-reference-reconcile.mjs \
 ```
 
 The offline reconciliation checks nine integer counts, internal
-arithmetic and source metadata. It reports precise disagreements or a
-descriptive numerical match, always with explicit
+arithmetic and source metadata. It additionally rejects internally
+contradictory candidate JSON: CSV byte/row limits, excluded-row arithmetic,
+observed club coverage ranges, structural 240-fixture flags, deterministic
+95% Wilson interval arithmetic and consistency of reported mean-goal
+uncertainty. This catches altered or incomplete **post-parse reports**
+before a descriptive `MATCHING_AGGREGATES_NOT_CALIBRATED` result is emitted.
+It cannot recompute the underlying rows or authenticate a SHA-256 merely
+by reading a self-reported digest: the raw provider CSV and independently
+captured hash still require separate verification. The comparator reports
+precise disagreements or a descriptive numerical match, always with explicit
 `benchmarkApproved: false`, `sourceRightsReviewed: false` and
 `seasonCompletenessEstablished: false`. Even an exact match
 cannot establish verified provider rights, record completeness,

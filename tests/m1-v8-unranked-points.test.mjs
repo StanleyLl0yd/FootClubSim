@@ -24,6 +24,7 @@ const initial = createInitialCareer(
 const fixtures = generateDoubleRoundRobin(catalog.clubs.map(c => c.id))
   .flatMap(round => round.fixtures);
 const clubs = new Map(catalog.clubs.map(c => [c.id, c]));
+const positions = new Map(catalog.players.map(p => [p.id, p.primaryPosition]));
 const policy = {
   home: { assignedActor: { kind: 'player' }, availableStaffIds: [] },
   away: { assignedActor: { kind: 'player' }, availableStaffIds: [] },
@@ -43,12 +44,14 @@ function request(fixture, revision, seed, special = false) {
     rosterRules: { starterCount: 11, maxBench: 12, maxForeignersOnField: 7 },
     rngAlgorithmVersion: RNG_VERSION, rngSeed: seed,
   };
+  const taker = homeLineup.starters.find(id => positions.get(id) !== 'GK');
+  const defender = awayLineup.starters.find(id => positions.get(id) !== 'GK');
   const decisions = special ? [
     { schemaVersion: 1, decisionId: 'explicit-penalty', fixtureId: fixture.id,
-      teamId: fixture.homeClubId, playerId: homeLineup.starters[1],
+      teamId: fixture.homeClubId, playerId: taker,
       elapsedSeconds: 600, kind: 'penalty-kick', outcome: 'scored' },
     { schemaVersion: 1, decisionId: 'explicit-own-goal', fixtureId: fixture.id,
-      teamId: fixture.homeClubId, playerId: awayLineup.starters[1],
+      teamId: fixture.homeClubId, playerId: defender,
       elapsedSeconds: 900, kind: 'own-goal' },
   ] : [];
   const result = simulateM1V8MedicalPhases(prematch, policy, [], decisions, []);

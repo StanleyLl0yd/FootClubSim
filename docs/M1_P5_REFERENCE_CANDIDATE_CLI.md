@@ -109,8 +109,8 @@ uncertainty. This catches altered or incomplete **post-parse reports**
 before a descriptive `MATCHING_AGGREGATES_NOT_CALIBRATED` result is emitted.
 It cannot recompute the underlying rows or authenticate a SHA-256 merely
 by reading a self-reported digest: the raw provider CSV and independently
-captured hash still require separate verification. It reports precise disagreements or a
-descriptive numerical match, always with explicit
+captured hash still require separate verification. The comparator reports
+precise disagreements or a descriptive numerical match, always with explicit
 `benchmarkApproved: false`, `sourceRightsReviewed: false` and
 `seasonCompletenessEstablished: false`. Even an exact match
 cannot establish verified provider rights, record completeness,

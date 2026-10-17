@@ -192,13 +192,23 @@ test('v8 simultaneous medical actions still reject conflicts and ordering defect
   const exit = departure(homeOut, 'simultaneous-exit');
   const repeated = { ...exit, id: 'second-exit' };
   assert.deepEqual(run([exit, repeated]), {
-    ok: false, error: 'ALREADY_ABSENT',
+    ok: false, error: 'INVALID_MEDICAL_SCHEDULE',
   });
   assert.deepEqual(run([exit, { ...exit }]), {
+    ok: false, error: 'INVALID_MEDICAL_SCHEDULE',
+  });
+  assert.deepEqual(run([exit, { ...returning(homeOut),
+    elapsedSeconds: 0 }]), {
+    ok: false, error: 'INVALID_MEDICAL_SCHEDULE',
+  });
+  assert.deepEqual(run([exit, { ...repeated, elapsedSeconds: 300,
+    restartAtRunningSeconds: 315 }]), {
+    ok: false, error: 'ALREADY_ABSENT',
+  });
+  assert.deepEqual(run([exit, { ...departure(awayOut, exit.id),
+    teamId: fixture.awayClubId }]), {
     ok: false, error: 'DUPLICATE_ID',
   });
-  assert.equal(run([exit, { ...returning(homeOut),
-    elapsedSeconds: 0 }]).error, 'MEDICAL_RETURN_REJECTED');
   assert.deepEqual(run([returning(homeOut), exit]), {
     ok: false, error: 'INVALID_MEDICAL_SCHEDULE',
   });

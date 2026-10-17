@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import { simulateM1V8MedicalPhases, verifyM1V8MedicalResult }
   from '../dist/core/m1-v8-medical-phases.js';
 import { simulateM1V7Phases } from '../dist/core/m1-v7-adjudications.js';
+import { replayM1V7TemporaryMedicalPresence }
+  from '../dist/core/m1-v7-temporary-medical.js';
+import { deriveM1VerifiedV8PhasePresence }
+  from '../dist/core/m1-v8-phase-presence.js';
 import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
 import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
   from '../dist/core/match-contracts.js';
@@ -132,4 +136,74 @@ test('v8 cannot accept forged deterministic reports or source actions', () => {
   assert.equal(verifyM1V8MedicalResult(prematch, policy, [], [], medical,
     { ...result, events: [...result.events].reverse() }), false);
   assert.equal(verifyM1V8MedicalResult(prematch, policy, [], [], [], result), false);
+});
+
+test('v8 accepts two independent departures and returns at the same checkpoints', () => {
+  const homeExit = departure(homeOut, 'home-simultaneous-exit');
+  const awayExit = {
+    ...departure(awayOut, 'away-simultaneous-exit'),
+    teamId: fixture.awayClubId,
+  };
+  const homeReturn = { ...returning(homeOut), id: 'home-simultaneous-return' };
+  const awayReturn = {
+    ...returning(awayOut), id: 'away-simultaneous-return',
+    teamId: fixture.awayClubId,
+  };
+  const actions = [homeExit, awayExit, homeReturn, awayReturn];
+  const pending = run([homeExit, awayExit]);
+  assert.equal(pending.ok, true, JSON.stringify(pending));
+  assert.deepEqual(pending.offFieldAtFullTime, [homeOut, awayOut].sort());
+  assert.equal(pending.onFieldAtFullTime.home.length, 10);
+  assert.equal(pending.onFieldAtFullTime.away.length, 10);
+  const restored = run(actions);
+  assert.equal(restored.ok, true, JSON.stringify(restored));
+  assert.deepEqual(restored.offFieldAtFullTime, []);
+  assert.equal(restored.onFieldAtFullTime.home.length, 11);
+  assert.equal(restored.onFieldAtFullTime.away.length, 11);
+  assert.deepEqual(restored.events.filter(e => e.type === 'medical')
+    .map(e => e.action.id), actions.map(a => a.id));
+  assert.equal(restored.rngDraws, 90);
+  assert.equal(verifyM1V8MedicalResult(prematch, policy, [], [], actions,
+    restored), true);
+
+  const presence = deriveM1VerifiedV8PhasePresence(
+    prematch, policy, [], [], actions, restored);
+  assert.equal(presence.ok, true, JSON.stringify(presence));
+  for (const playerId of [homeOut, awayOut]) {
+    const row = presence.report.players.find(p => p.playerId === playerId);
+    assert.equal(row.registeredPhaseSeconds, 5400);
+    assert.equal(row.physicalPhaseSeconds, 5100);
+    assert.equal(row.temporarilyAbsentPhaseSeconds, 300);
+  }
+
+  const reordered = run([awayExit, homeExit, awayReturn, homeReturn]);
+  assert.equal(reordered.ok, true, JSON.stringify(reordered));
+  assert.deepEqual(reordered.report, restored.report);
+  assert.equal(reordered.rngState, restored.rngState);
+  assert.equal(reordered.rngDraws, restored.rngDraws);
+  // v7 previously rejected equal elapsed seconds and retains that contract.
+  assert.deepEqual(replayM1V7TemporaryMedicalPresence(
+    prematch, policy, [], [], actions), {
+    ok: false, error: 'INVALID_ACTIONS',
+  });
+});
+
+test('v8 simultaneous medical actions still reject conflicts and ordering defects', () => {
+  const exit = departure(homeOut, 'simultaneous-exit');
+  const repeated = { ...exit, id: 'second-exit' };
+  assert.deepEqual(run([exit, repeated]), {
+    ok: false, error: 'ALREADY_ABSENT',
+  });
+  assert.deepEqual(run([exit, { ...exit }]), {
+    ok: false, error: 'DUPLICATE_ID',
+  });
+  assert.equal(run([exit, { ...returning(homeOut),
+    elapsedSeconds: 0 }]).error, 'MEDICAL_RETURN_REJECTED');
+  assert.deepEqual(run([returning(homeOut), exit]), {
+    ok: false, error: 'INVALID_MEDICAL_SCHEDULE',
+  });
+  assert.deepEqual(run([exit, { ...departure(awayOut, 'wrong-club'),
+    teamId: fixture.homeClubId }]), {
+    ok: false, error: 'NOT_ON_FIELD',
+  });
 });

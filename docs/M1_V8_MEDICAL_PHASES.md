@@ -25,11 +25,20 @@ off-field injured player and related exceptions fails closed.
 phase checkpoints. Actual medical stoppage, ball-in-play intervals,
 one-minute running time after an independently confirmed restart, referee
 permission and physical substitution procedure require an authenticated
-referee controller; raw local JSON/IDs do not prove them. This subset
-supports at most one medical action at each checkpoint and only ordinary
-outfield **initial starters**. No independently sourced KDK rulings,
-concussion/keeper exceptions, minute-level matches, do-overs, resumption,
-true quota recovery, live gameplay or persistent v8 CAS are included.
+referee controller; raw local JSON/IDs do not prove them. The v8-only
+medical schedule supports **multiple independent actions at the same
+300-second checkpoint**, processed in recorded source order before that
+phase's shot. Each player's exit/return chronology and referee signal
+requirements remain independently checked; wrong team, duplicate IDs,
+double exit, early return and decreasing timestamps still fail closed.
+Previously accepted v8 results replay identically, while the older v7
+medical replay deliberately retains its strictly increasing timestamp
+contract. Actions remain restricted to ordinary outfield **initial
+starters**. No independently sourced KDK rulings, concussion/keeper
+exceptions, minute-level matches, do-overs, referee-authenticated resumption,
+true quota recovery or live gameplay are included. An isolated v8
+[IndexedDB CAS prototype](M1_V8_INDEXEDDB_CAS.md) exists, but is not
+production persistence acceptance.
 
 A valid prior v7 match source is prevalidated for commands and referee
 adjudications, but its previously simulated *open-play* shots are deliberately

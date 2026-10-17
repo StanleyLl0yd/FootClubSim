@@ -41,3 +41,11 @@ continuous physical playing time. No real match calibration or
 season realism approval is claimed. Old M0/v3-v7 saved careers
 remain untouched and M1 P3/P4/P5/exit are still open. M2 is
 not authorized.
+
+## Separate conventional points research preview
+
+A new, standalone [v8 unranked points preview](M1_V8_UNRANKED_POINTS.md)
+replays the same source-verified schema-4 journal and computes
+**unofficial 3/1/0 arithmetic** without mutating this season-statistics
+report or committing points to the career. It is neither an official
+RPL league table nor a change to the no-standings status of this file.

@@ -120,12 +120,19 @@ export function simulateM1V8MedicalPhases(
   decisions.forEach(decision => seen.add(decision.decisionId));
   const medical: M1V7TemporaryMedicalAction[] = [];
   let previous = -1;
+  const touchedAtCheckpoint = new Set<string>();
   for (const raw of medicalActions) {
     const action = readM1V7TemporaryMedicalAction(raw);
     if (!action || action.fixtureId !== input.fixture.id ||
         (action.teamId !== input.fixture.homeClubId &&
           action.teamId !== input.fixture.awayClubId) ||
-        action.elapsedSeconds <= previous) return fail('INVALID_MEDICAL_SCHEDULE');
+        action.elapsedSeconds < previous ||
+        (action.elapsedSeconds === previous &&
+          touchedAtCheckpoint.has(action.playerId))) {
+      return fail('INVALID_MEDICAL_SCHEDULE');
+    }
+    if (action.elapsedSeconds !== previous) touchedAtCheckpoint.clear();
+    touchedAtCheckpoint.add(action.playerId);
     if (seen.has(action.id)) return fail('DUPLICATE_ID');
     seen.add(action.id);
     previous = action.elapsedSeconds;
@@ -180,8 +187,10 @@ export function simulateM1V8MedicalPhases(
       }
       commandIndex++;
     }
-    const medicalAction = medical[medicalIndex];
-    if (medicalAction?.elapsedSeconds === second) {
+    // Different players may have independent treatment actions at one checkpoint.
+    // Preserve source order; previously admitted strictly spaced histories are unchanged.
+    while (medical[medicalIndex]?.elapsedSeconds === second) {
+      const medicalAction = medical[medicalIndex]!;
       const side = medicalAction.teamId === input.fixture.homeClubId ? 'home' : 'away';
       if (!teams[side].includes(medicalAction.playerId)) return fail('NOT_ON_FIELD');
       if (medicalAction.kind === 'treatment-exit') {

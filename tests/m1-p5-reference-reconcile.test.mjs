@@ -121,7 +121,7 @@ test('single-match candidate retains null standard deviation and CI', () => {
   const single = [
     'match_id,league_id,season,status,home_id,away_id,home_goals,away_goals',
     '1,235,2024/2025,finished,10,20,2,1',
-  ].join('\\n') + '\\n';
+  ].join('\n') + '\n';
   const c = analyzeRplCsvCandidate(single, '2024/2025',
     createHash('sha256').update(single).digest('hex'));
   const ref = published();

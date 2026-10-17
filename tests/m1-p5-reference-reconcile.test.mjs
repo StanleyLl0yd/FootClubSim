@@ -92,7 +92,7 @@ test('mutated candidate diagnostics cannot claim a matched published source', ()
     c => { c.coverage.repeatedHomeAwayFixtures = 3; },
     c => { c.coverage.finishedHomeMatchesPerClub.min = 4; },
     c => { c.coverage.finishedHomeMatchesPerClub.max = 0; },
-    c => { c.coverage.finishedAppearancesPerClub.max = 2; },
+    c => { c.coverage.finishedAppearancesPerClub.max = 3; },
     c => { c.scheduleShape.checks.expectedFinishedMatches = true; },
     c => { c.scheduleShape.checks.uniqueDirectedFixtures = false; },
     c => { c.scheduleShape.consistentWithExpectedPattern = true; },
@@ -110,10 +110,11 @@ test('mutated candidate diagnostics cannot claim a matched published source', ()
       }; },
     c => { c.outcomes.homeWin.extra = 'unverified'; },
   ];
-  for (const mutate of changes) {
+  for (const [index, mutate] of changes.entries()) {
     const c = candidate();
     mutate(c);
-    assert.throws(() => reconcileRplPublishedAggregates(c, published()));
+    assert.throws(() => reconcileRplPublishedAggregates(c, published()),
+      undefined, 'report mutation ' + index);
   }
 });
 

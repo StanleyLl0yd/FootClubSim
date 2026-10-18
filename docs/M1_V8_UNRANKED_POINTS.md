@@ -38,3 +38,11 @@ opt-in calculation, not a production standings or M2 feature.
 M1 P3 #29, P4 #30, P5 #31 and exit #3 remain OPEN. Final rules review,
 genuine source authority, full career posting, calibration and two
 repository-wide exit audits are still required. M2 is not authorized.
+
+## Atomic domain proposal integration
+
+A separate [coherent pure career batch preview](M1_V8_COHERENT_CAREER_PREVIEW.md)
+now applies a bounded verified v8 journal batch **all-or-nothing** and checks
+this unranked points preview against match coverage and season goals for the
+same new revision. This is not an official points posting or a persisted
+career acknowledgment; this module's original read-only contract is unchanged.

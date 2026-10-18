@@ -33,6 +33,20 @@ jobs:
           umask 077
           work="$(mktemp -d)"
           trap 'rm -rf "$work"' EXIT
+          # Capture the mutable dataset manifest independently from the CSV.
+          # Its CC BY declaration is a publisher claim, NOT rights clearance.
+          manifest_url='https://footbolno.ru/data/index.json'
+          curl --fail --location --silent --show-error \
+            --proto '=https' --proto-redir '=https' \
+            --connect-timeout 10 --max-time 60 --max-filesize 65536 \
+            --output "$work/index.json" "$manifest_url"
+          manifest_bytes="$(wc -c < "$work/index.json")"
+          test "$manifest_bytes" -gt 1
+          test "$manifest_bytes" -le 65536
+          manifest_hash="$(sha256sum "$work/index.json" | cut -d' ' -f1)"
+          node scripts/m1-p5-source-manifest.mjs \
+            --file="$work/index.json" --sha256="$manifest_hash" \
+            > "$work/manifest-report.json"
           url='https://footbolno.ru/data/league/235-matches.csv'
           curl --fail --location --silent --show-error \
             --proto '=https' --proto-redir '=https' \
@@ -53,6 +67,12 @@ jobs:
             echo
             echo "Exact downloaded SHA-256: $hash"
             echo
+            echo 'Publisher manifest: https://footbolno.ru/data/index.json'
+            echo
+            echo "Manifest bytes: $manifest_bytes"
+            echo
+            echo "Manifest exact downloaded SHA-256: $manifest_hash"
+            echo
             echo 'The hash is measured on this run, NOT a previously approved source pin.'
             echo 'Upstream rights, match completeness, raw primary records and realism remain unverified.'
           } >> "$GITHUB_STEP_SUMMARY"
@@ -64,6 +84,12 @@ jobs:
             --published=data/rpl-2024-25-published-aggregate-research.json \
             > "$work/aggregate-comparison.json"
           {
+            echo
+            echo '### Publisher license declaration (NOT RIGHTS CLEARANCE)'
+            echo
+            echo '~~~json'
+            cat "$work/manifest-report.json"
+            echo '~~~'
             echo
             echo '### Anonymized source observations (NOT CALIBRATED)'
             echo

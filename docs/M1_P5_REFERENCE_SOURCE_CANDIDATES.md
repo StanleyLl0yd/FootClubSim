@@ -95,3 +95,25 @@ Zenit-Akhmat entry](M1_P5_2025_26_GOAL_DISCREPANCY.md).
 The RPL-hosted next-round bulletin and Akhmat club match record both give
 **2:0**. This explains the one-goal mismatch but does **not** establish
 full-season fixture-by-fixture completeness, reuse rights or calibration.
+
+## Publisher manifest declaration observed 2026-10-18
+
+The current public [data index](https://footbolno.ru/data/index.json) explicitly
+advertises `license: "CC BY 4.0"`, links to
+[the CC BY 4.0 terms](https://creativecommons.org/licenses/by/4.0/deed.ru),
+and identifies its mutable league CSV template
+`https://footbolno.ru/data/league/{league_id}-matches.csv`.
+At the time of inspection its **self-reported** `updated` timestamp was
+`2026-10-17T19:06:32+00:00`. These are publisher-controlled statements,
+not an independently verified legal chain or immutable raw snapshot.
+
+A new offline [manifest observer](../scripts/m1-p5-source-manifest.mjs) and
+tests enforce exact locally captured manifest SHA-256, source/license URL
+and mandatory RPL match-schema fields without outputting raw data.
+The existing [manual snapshot workflow](../.github/workflows/m1-p5-rpl-source-research.yml)
+now records both the manifest and CSV hashes; it does not run automatically
+and has **not been dispatched as part of this change**. Actual 2024/25 CSV
+match rows, independent primary results, upstream redistribution
+permissions and benchmark calibration remain **UNVERIFIED**. Do not interpret
+the publisher's CC BY declaration as permission to relicense any material
+it may have received under a different third-party license.

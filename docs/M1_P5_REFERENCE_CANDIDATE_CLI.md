@@ -128,15 +128,29 @@ on the protected `main` branch. It has **no** push, pull-request,
 cron or automatic dependency on the real provider and does not run during
 ordinary CI.
 
-The workflow runs with read-only repository permission, a fixed HTTPS URL
-and 2024/25 season, a bounded private runner temp directory and a
-60-second download limit. It computes the **actual downloaded-byte**
+The workflow runs with read-only repository permission, two fixed HTTPS URLs
+(the publisher manifest and historical RPL CSV) and 2024/25 season, a
+bounded private runner temp directory and 60-second per-download limit.
+The `index.json` manifest is limited to 64 KiB. A separate offline
+hash-pinned `scripts/m1-p5-source-manifest.mjs` validation checks its
+published CC BY 4.0 declaration, license link, update timestamp, source
+address, CSV URL template and minimum eight match fields. These are
+**publisher declarations**, not an upstream sublicense or independent
+rights determination; an unexpected change **fails the manual run**
+instead of silently relabeling candidate data as approved. The precise
+manifest SHA-256 and mutable update claim are recorded independently
+from the match CSV digest. It computes the **actual downloaded-byte**
 SHA-256 and outputs only that digest, byte count, UTC observation time,
 anonymized candidate statistics and the unapproved published-total
 comparison to the workflow's job summary. It does **not** upload or
 commit CSV bytes, team/player names, raw fixture rows, replay sources,
 or any source file artifact. The private temp directory is deleted
 when the step exits. No GitHub token is passed to the HTTP request.
+
+Both manifest and CSV hashes are measured on exactly downloaded bytes; no raw
+source payload, names or full fixture records enter the job summary.
+The manifest source claim remains `PUBLISHER_LICENSE_CLAIM_NOT_UPSTREAM_RIGHTS_REVIEWED`
+with `upstreamRightsVerified: false` and `benchmarkApproved: false`.
 
 The hash is obtained **after** downloading the mutable provider file,
 so it is NOT a previously trusted immutable source pin. Failure to

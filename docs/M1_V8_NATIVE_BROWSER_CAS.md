@@ -33,3 +33,21 @@ Source referee/medical facts remain synthetic caller assertions, not
 authenticated real decisions. No playable M2 career, automatic
 sanctions, condition/fatigue posting or accepted statistical
 calibration. M1 P4 #30 and exit #3 remain OPEN.
+
+## Same-checkpoint physical medical recovery (2026-10-18)
+
+Native browser smoke now commits **two independent v8 results before real
+page navigation**: the existing single ordinary home-side temporary exit
+and return, plus a second match with simultaneous home/away outfield exits
+at the same 300-second checkpoint and returns at the next checkpoint.
+The reloaded, independently source-replayed IndexedDB schema-4 journal
+must retain both results, four ordered medical actions with exact timestamps,
+and their credited penalty/defending-own-goal statistics. Two independent
+concurrent writers then race on the *next* revision; exactly one may commit,
+without overwriting either earlier medical fixture.
+
+This tests serialization/replay of the v8 P3 multi-player medical extension
+in real Linux Chromium, macOS Safari and Windows Chrome/Edge under the
+existing smoke CI. It does **not** test true medical authority, continuous
+clock, arbitrarily low browser quota, abrupt OS crash or M2 gameplay.
+Historical M0/v3-v7 stores and the v8 result-journal schema are unchanged.

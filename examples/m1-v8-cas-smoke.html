@@ -60,6 +60,21 @@
           ballInPlay: true, entryBoundary: 'touchline',
           refereeSignalId: 'native-synthetic-referee-claim' },
       ] : [];
+      if (withMedical === 'simultaneous') {
+        medicalActions.splice(1, 0, {
+          schemaVersion: 1, id: 'native-med-away-exit', fixtureId: fixture.id,
+          teamId: fixture.awayClubId, playerId: awayOut, elapsedSeconds: 0,
+          kind: 'treatment-exit', reason: 'medical-staff-entered',
+          restartAtRunningSeconds: 15,
+        });
+        medicalActions.push({
+          schemaVersion: 1, id: 'native-med-away-return', fixtureId: fixture.id,
+          teamId: fixture.awayClubId, playerId: awayOut, elapsedSeconds: 300,
+          kind: 'treatment-return', returnContext: 'running-clock',
+          ballInPlay: true, entryBoundary: 'touchline',
+          refereeSignalId: 'native-synthetic-away-referee-claim',
+        });
+      }
       const trustedDecisions = withMedical ? [
         { schemaVersion: 1, decisionId: 'native-pen', fixtureId: fixture.id,
           elapsedSeconds: 600, teamId: fixture.homeClubId, playerId: homeOut,
@@ -92,6 +107,10 @@
         const committed = await commitM1V8PersistedBatch(career.careerId, 0,
           [command(fixtures[0], 0, 'native-first', 19, true)]);
         check(committed.revision === 1, 'first match commit not applied');
+        const simultaneous = await commitM1V8PersistedBatch(career.careerId, 1,
+          [command(fixtures[1], 1, 'native-simultaneous', 20, 'simultaneous')]);
+        check(simultaneous.revision === 2,
+          'simultaneous medical match was not committed');
         const url = new URL(location.href);
         url.searchParams.set('stage', 'verify');
         location.replace(url.href); // real navigation; no same-page in-memory result accepted
@@ -101,32 +120,46 @@
       const original = await loadInitialCareer(career.careerId);
       check(original.selectedClubId === career.selectedClubId, 'M0 source changed');
       const recovered = await loadM1V8PersistedJournal(career.careerId);
-      check(recovered.revision === 1 && recovered.results.length === 1,
-        'revision one was not durable over actual page reload');
+      check(recovered.revision === 2 && recovered.results.length === 2,
+        'two v8 fixtures were not durable over actual page reload');
       check(recovered.results[0].commandId === 'native-first', 'first committed row absent');
       check(recovered.results[0].source.medicalActions.length === 2,
         'medical source lost after browser reload');
       check(recovered.results[0].dossier.match.home.penaltyGoals === 1 &&
         recovered.results[0].dossier.match.home.ownGoalsFor === 1,
         'v8 medical/penalty/own-goal dossier was not recovered');
+      const second = recovered.results[1];
+      check(second.commandId === 'native-simultaneous',
+        'second committed fixture lost after browser navigation');
+      check(second.source.medicalActions.length === 4,
+        'independent same-phase medical events were not persisted');
+      check(second.source.medicalActions[0].elapsedSeconds === 0 &&
+        second.source.medicalActions[1].elapsedSeconds === 0 &&
+        second.source.medicalActions[2].elapsedSeconds === 300 &&
+        second.source.medicalActions[3].elapsedSeconds === 300,
+      'same-phase medical chronology was altered after browser recovery');
+      check(second.dossier.match.home.penaltyGoals === 1 &&
+        second.dossier.match.home.ownGoalsFor === 1,
+        'simultaneous treatment changed confirmed special-goal attribution');
       await failCode(createM1V8PersistedJournal(career.careerId), 'ALREADY_EXISTS');
       await failCode(commitM1V8PersistedBatch(career.careerId, 0,
         [command(fixtures[1], 0, 'stale', 20)]), 'STALE_REVISION');
       const results = await Promise.allSettled([
-        commitM1V8PersistedBatch(career.careerId, 1,
-          [command(fixtures[1], 1, 'native-writer-a', 20)]),
-        commitM1V8PersistedBatch(career.careerId, 1,
-          [command(fixtures[2], 1, 'native-writer-b', 21)]),
+        commitM1V8PersistedBatch(career.careerId, 2,
+          [command(fixtures[2], 2, 'native-writer-a', 22)]),
+        commitM1V8PersistedBatch(career.careerId, 2,
+          [command(fixtures[3], 2, 'native-writer-b', 23)]),
       ]);
       check(results.filter(item => item.status === 'fulfilled').length === 1,
         'concurrent writers both won or both failed');
       const loser = results.find(item => item.status === 'rejected');
       check(loser.reason?.code === 'STALE_REVISION', 'loser was not a stale CAS');
       const journal = await loadM1V8PersistedJournal(career.careerId);
-      check(journal.revision === 2 && journal.results.length === 2,
+      check(journal.revision === 3 && journal.results.length === 3,
         'concurrent writers lost or duplicated a commit');
-      check(journal.results[0].commandId === 'native-first',
-        'concurrency overwrote previously committed data');
+      check(journal.results[0].commandId === 'native-first' &&
+        journal.results[1].commandId === 'native-simultaneous',
+        'concurrency overwrote earlier ordinary or simultaneous treatment');
       status.textContent = 'M1_V8_BROWSER_CAS_PASS';
     }
     run().catch(error => {

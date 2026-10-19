@@ -20,6 +20,11 @@ const committed = (req = request()) => ({
     results: Array(req.expectedRevision + req.requests.length).fill({}),
   },
 });
+const compactReceipt = (req = request()) => ({
+  schemaVersion: 1, kind: 'committed-receipt',
+  careerId: req.careerId, jobId: req.jobId,
+  journalRevision: req.expectedRevision + req.requests.length,
+});
 const failed = (code, extra = {}) => ({
   schemaVersion: 1, kind: 'failed',
   careerId: 'worker-career', jobId: 'worker-job', code, ...extra,
@@ -42,6 +47,45 @@ test('valid CAS acknowledgement is bounded to correlated receipt metadata', asyn
   assert.equal(worker.terminated, 1);
   assert.equal(worker.onmessage, null);
   assert.equal(Object.hasOwn(receipt, 'journal'), false);
+});
+
+test('compact Worker receipt avoids returning a journal and keeps v1 legacy compatibility', async () => {
+  const worker = fakeWorker((w, raw) => w.send(compactReceipt(raw)));
+  assert.deepEqual(await runM1V8WorkerCommit(worker, request()), {
+    careerId: 'worker-career', jobId: 'worker-job', journalRevision: 1,
+  });
+  assert.equal(worker.terminated, 1);
+  assert.deepEqual(readM1V8WorkerCommitReply(compactReceipt(), request()), {
+    kind: 'committed',
+    receipt: { careerId: 'worker-career', jobId: 'worker-job', journalRevision: 1 },
+  });
+});
+
+test('compact Worker receipt rejects spoofing, invalid revisions and extra payloads', () => {
+  const original = compactReceipt();
+  const variants = [
+    { ...original, jobId: 'wrong-job' },
+    { ...original, careerId: 'wrong-career' },
+    { ...original, schemaVersion: 2 },
+    { ...original, journalRevision: 0 },
+    { ...original, journalRevision: 2 },
+    { ...original, journalRevision: '1' },
+    { ...original, journalRevision: NaN },
+    { ...original, journal: committed().journal },
+    { ...original, extra: true },
+  ];
+  for (const item of variants) {
+    assert.equal(readM1V8WorkerCommitReply(item, request()), null);
+  }
+  let reads = 0;
+  const accessor = compactReceipt();
+  Object.defineProperty(accessor, 'journalRevision', {
+    get() { reads++; return 1; }, enumerable: true,
+  });
+  assert.equal(readM1V8WorkerCommitReply(accessor, request()), null);
+  assert.equal(reads, 0);
+  const full = { ...request(), expectedRevision: 240 };
+  assert.equal(readM1V8WorkerCommitReply(compactReceipt(full), full), null);
 });
 
 test('stale CAS and invalid domain commands are definitive typed failures', async () => {

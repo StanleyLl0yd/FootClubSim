@@ -18,6 +18,10 @@ const worker = self as unknown as {
 };
 
 worker.addEventListener('message', event => {
+  // DedicatedWorker.postMessage commonly delivers an empty origin. Accept
+  // only that worker-specific sentinel or this worker's exact same origin.
+  // A foreign Window/MessagePort origin must never reach IndexedDB.
+  if (event.origin !== '' && event.origin !== self.location.origin) return;
   const parsed = readM1V8WorkerCommitRequest(event.data);
   if (!parsed.ok) {
     worker.postMessage({

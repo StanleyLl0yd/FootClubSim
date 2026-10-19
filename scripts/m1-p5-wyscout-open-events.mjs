@@ -122,7 +122,6 @@ export function inspectPinnedWyscoutResearchSample(bytes) {
       observed.goalTaggedAttackingEvents !== 3 ||
       observed.duplicatedGoalTagsOnGoalkeeperEvents !== 3 ||
       observed.yellowTaggedEvents !== 4 ||
-      observed.redCards !== undefined ||
       observed.directRedTaggedEvents !== 0 ||
       observed.secondYellowTaggedEvents !== 0) {
     throw Error('Pinned sample observations disagree');

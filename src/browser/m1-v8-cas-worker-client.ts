@@ -121,7 +121,6 @@ export function runM1V8WorkerCommit(
   const request = admitted.request;
   return new Promise((resolve, reject) => {
     let settled = false;
-    let timeout: ReturnType<typeof setTimeout>;
     const finish = (error: M1V8WorkerCommitError | null,
       receipt?: M1V8WorkerCommitReceipt) => {
       if (settled) return;
@@ -135,6 +134,8 @@ export function runM1V8WorkerCommit(
       else if (receipt) resolve(receipt);
       else reject(new M1V8WorkerCommitError('COMMIT_OUTCOME_UNKNOWN'));
     };
+    const timeout = setTimeout(() => finish(
+      new M1V8WorkerCommitError('COMMIT_OUTCOME_UNKNOWN')), timeoutMs);
     worker.onmessage = event => {
       // Dedicated Workers normally use an empty MessageEvent origin.
       if (event.origin !== '' && event.origin !== location.origin) {
@@ -154,8 +155,6 @@ export function runM1V8WorkerCommit(
       new M1V8WorkerCommitError('COMMIT_OUTCOME_UNKNOWN'));
     worker.onmessageerror = () => finish(
       new M1V8WorkerCommitError('COMMIT_OUTCOME_UNKNOWN'));
-    timeout = setTimeout(() => finish(
-      new M1V8WorkerCommitError('COMMIT_OUTCOME_UNKNOWN')), timeoutMs);
     try {
       worker.postMessage(request);
     } catch {

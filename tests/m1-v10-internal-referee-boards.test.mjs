@@ -107,7 +107,7 @@ test('without substitutes the model remains bit-identical to original v8', () =>
 });
 test('malicious getters, cyclic data, untrusted substitutions reject before any referee action', () => {
   let calls = 0;
-  const unsafe = input(645);
+  const unsafe = { ...input(645), fixture: { ...fixture } };
   Object.defineProperty(unsafe.fixture, 'id', {
     enumerable: true, get() { calls++; return fixture.id; },
   });

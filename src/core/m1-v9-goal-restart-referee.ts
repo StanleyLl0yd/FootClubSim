@@ -101,8 +101,9 @@ export function simulateM1V9GoalRestartSubstitutions(
     const second = event.elapsedSeconds + 1;
     // The v8 shot is timestamped as the very end of a 300s phase;
     // a goal at full-time does not guarantee a later kickoff.
+    if (second === M1_CLOCK_END_SECONDS) continue;
     if (second < M1_CLOCK_STEP_SECONDS ||
-        second >= M1_CLOCK_END_SECONDS ||
+        second > M1_CLOCK_END_SECONDS ||
         second % M1_CLOCK_STEP_SECONDS !== 0) {
       return fail('INVALID_ENGINE_TIMING');
     }

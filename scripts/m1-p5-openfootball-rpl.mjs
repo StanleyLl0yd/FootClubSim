@@ -16,7 +16,10 @@ export const OPENFOOTBALL_RPL_2024_25 = Object.freeze({
   license: 'CC0-1.0',
 });
 const MAX_SOURCE_BYTES = 131_072;
-const SEASON_HEADER = '= Russia Premier League 2024/25';
+const SEASON_HEADERS = Object.freeze({
+  '2023/2024': '= Russia Premier League 2023/24',
+  '2024/2025': '= Russia Premier League 2024/25',
+});
 const ROUND = /^\s*▪\s*Matchday\s+(\d+)\s*$/;
 const RESULT = /^\s*(?:(?:[01]?\d|2[0-3]):[0-5]\d\s+)?(.+?)\s{2,}v\s+(.+?)\s{2,}(\d+)-(\d+)(?:\s+\((\d+)-(\d+)\))?\s*$/;
 const METRICS = [
@@ -24,12 +27,14 @@ const METRICS = [
   'homeGoals', 'awayGoals', 'totalGoals', 'observedClubCount',
 ];
 
-export function inspectOpenFootballRpl2024Season(source) {
-  if (typeof source !== 'string' || source.length < 100 ||
+export function inspectOpenFootballRplSeason(source, season) {
+  const header = Object.hasOwn(SEASON_HEADERS, season) ?
+    SEASON_HEADERS[season] : null;
+  if (header === null || typeof source !== 'string' || source.length < 100 ||
       Buffer.byteLength(source, 'utf8') > MAX_SOURCE_BYTES ||
-      !source.startsWith(SEASON_HEADER + '\r\n') &&
-        !source.startsWith(SEASON_HEADER + '\n')) {
-    throw Error('Invalid 2024/25 season header or size');
+      !source.startsWith(header + '\r\n') &&
+        !source.startsWith(header + '\n')) {
+    throw Error('Invalid RPL season header or size');
   }
   const seen = new Set(), teams = new Set();
   const rounds = new Map();
@@ -94,7 +99,12 @@ export function inspectOpenFootballRpl2024Season(source) {
     }
   }
   observed.observedClubCount = teams.size;
-  return { schemaVersion: 1, season: '2024/2025', observed };
+  return { schemaVersion: 1, season, observed };
+}
+
+/** Preserves the original locked 2024/25 inspection interface. */
+export function inspectOpenFootballRpl2024Season(source) {
+  return inspectOpenFootballRplSeason(source, '2024/2025');
 }
 
 /**

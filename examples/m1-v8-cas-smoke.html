@@ -19,6 +19,8 @@
     import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
     import { defaultTacticalPlan } from '../dist/core/tactics.js';
     import { RNG_VERSION } from '../dist/core/rng.js';
+    import { commitM1V8ViaDedicatedWorker }
+      from '../dist/browser/m1-v8-cas-worker-client.js';
 
     const status = document.getElementById('status');
     const check = (condition, message) => {
@@ -99,44 +101,10 @@
       throw new Error('expected failure ' + code);
     }
     async function workerCommit(request, expectedRevision, jobId) {
-      const worker = new Worker(
-        new URL('../dist/browser/m1-v8-cas-worker.js', import.meta.url),
-        { type: 'module' });
-      return new Promise((resolve, reject) => {
-        let settled = false;
-        const finish = (error, journal) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timeout);
-          worker.terminate();
-          if (error) reject(error);
-          else resolve(journal);
-        };
-        const timeout = setTimeout(() =>
-          finish(new Error('native CAS worker timed out')), 60_000);
-        worker.onerror = () => finish(new Error('native CAS worker failed'));
-        worker.onmessage = event => {
-          const reply = event.data;
-          if (reply?.schemaVersion !== 1 || reply?.jobId !== jobId ||
-              reply?.careerId !== career.careerId) {
-            finish(new Error('uncorrelated CAS worker response'));
-            return;
-          }
-          if (reply.kind === 'committed') {
-            finish(null, reply.journal);
-          } else if (reply.kind === 'failed') {
-            const error = new Error('CAS worker: ' + String(reply.code));
-            error.code = reply.code;
-            finish(error);
-          } else {
-            finish(new Error('unknown CAS worker response'));
-          }
-        };
-        worker.postMessage({
-          schemaVersion: 1, kind: 'commit', jobId,
-          careerId: career.careerId, expectedRevision,
-          requests: [request],
-        });
+      return commitM1V8ViaDedicatedWorker({
+        schemaVersion: 1, kind: 'commit', jobId,
+        careerId: career.careerId, expectedRevision,
+        requests: [request],
       });
     }
     async function run() {
@@ -204,9 +172,9 @@
       const workerResult = await workerCommit(
         command(fixtures[4], 3, 'native-worker', 24, true),
         3, 'native-worker-job');
-      check(workerResult.revision === 4 &&
-        workerResult.results[3].commandId === 'native-worker',
-        'isolated worker did not commit the fourth fixture');
+      check(workerResult.journalRevision === 4 &&
+        workerResult.jobId === 'native-worker-job',
+        'isolated worker did not acknowledge the fourth fixture');
       await failCode(workerCommit(
         command(fixtures[5], 3, 'native-worker-stale', 25),
         3, 'native-stale-worker-job'), 'STALE_REVISION');

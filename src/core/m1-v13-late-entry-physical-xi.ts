@@ -241,12 +241,12 @@ export function advanceM1V13LateEntry(
   untrustedSnapshot: unknown, proposedStep: unknown,
 ): M1V13LateResult {
   if (!isPlainJsonTree(untrustedSnapshot) ||
-      !isPlainJsonTree(proposedStep) ||
       !rec(untrustedSnapshot) ||
       !Array.isArray(untrustedSnapshot.appliedActionHistory) ||
       untrustedSnapshot.appliedActionHistory.length >= 32) {
     return bad('INVALID_STATE');
   }
+  if (!isPlainJsonTree(proposedStep)) return bad('INVALID_ACTION');
   const next = actionFrom(proposedStep);
   if (!next) return bad('INVALID_ACTION');
   const source = deriveInitial(prematch, policy, originalProcedure);

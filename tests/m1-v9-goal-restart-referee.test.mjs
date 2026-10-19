@@ -78,8 +78,7 @@ test('seeded v8 goal at phase 1 end provides an internal Law 8 restart candidate
   assert.equal(admissible.acceptedStoppageGroups, 1);
   assert.equal(admissible.restartEvidence[0].goalRunningSeconds, 299);
   assert.equal(admissible.restartEvidence[0].candidateRestartRunningSeconds, 300);
-  assert.equal(admissible.restartEvidence[0].shotEventId, opening.id.replace(
-    'm1-v8-', 'm1-v8-'));
+  assert.equal(admissible.restartEvidence[0].shotEventId, opening.id);
   assert.equal(admissible.wallClockTimingAuthenticated, false);
   assert.equal(admissible.fullLaw8RestartProcedureVerified, false);
   assert.equal(admissible.result.events.some(e =>

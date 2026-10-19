@@ -22,6 +22,20 @@ It does **not** establish upstream rights, match-by-match independent official
 verification, licensed cards/injury/shot/xG references, or calibrated M1.
 Keep P5 OPEN until the remaining acceptance gates are satisfied.
 
+## Pinned adjacent-season training candidate: 2023/24
+
+The same `openfootball/europe` repo provides an immutable 2023/24 archive,
+but **one record is demonstrably wrong**: the September 2023
+Spartak-Sochi home fixture was transposed to Sochi-Spartak, despite an
+RFU/RPL-approved venue swap. The primary
+[RFU calendar](https://www.rfs.ru/tournament/1434/calendar?round_id=18568)
+and [FC Sochi notice](https://pfcsochi.ru/news/2023-2024/rfs-i-rpl-soglasovali-perenos-matchey-mezhdu-sochi-i-spartakom/)
+confirm the correct fixture. The original bytes are immutable and pinned;
+a **one-row, SHA-gated, transient correction** permits an integrity-checked
+2023/24 development season, while 2024/25 is reserved as a prospective
+holdout. Details: [M1_P5_OPENFOOTBALL_2023_24_REPAIR.md](M1_P5_OPENFOOTBALL_2023_24_REPAIR.md).
+No calibration, redistribution or complete source-rights approval follows.
+
 ## 1. Candidate: footbolno.ru open Russian football data
 
 - Publisher page: https://footbolno.ru/otkrytye-dannye

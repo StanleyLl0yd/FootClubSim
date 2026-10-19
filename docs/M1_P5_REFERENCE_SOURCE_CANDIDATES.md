@@ -5,6 +5,16 @@ This is a source/rights screening inventory under #31, not a real-world
 reference pack, an official 2026/27 RPL source or M1 exit evidence.
 External publisher statements are claims to verify, not a legal opinion.
 
+## Owner-approved free-only selection (19 October 2026)
+
+The owner selected **free data sources only** for M1-P5. The
+[decision and rights-boundary matrix](M1_P5_FREE_SOURCES_DECISION.md)
+and [machine-enforced local source policy](../data/m1-p5-free-source-policy.json)
+identify current **research** sources, including independently
+CC BY-published original [DFL seven-match events with xG](https://doi.org/10.6084/m9.figshare.28196177).
+No dataset gains commercial redistribution rights or RPL realism
+calibration status merely by being accessible without charge.
+
 ## 0. New verified-content candidate: openfootball/europe RPL 2024/25
 
 **Discovered and inspected 2026-10-19.** This is not the distinct

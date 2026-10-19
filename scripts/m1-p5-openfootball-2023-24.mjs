@@ -27,8 +27,11 @@ const KNOWN_COUNTS = Object.freeze({
 });
 const SOURCE_LIMIT = 131_072;
 
-/** Do not call without matching the immutable source SHA-256. */
-function repairPinned2023Source(source) {
+/**
+ * Deterministic research-only transform; the accepting entrypoint enforces
+ * the immutable SHA-256 BEFORE calling it. Never publish its derived rows.
+ */
+export function rewriteOneDocumented2023Fixture(source) {
   const pieces = source.split(OLD_ROW);
   const first = source.indexOf('▪ Matchday 8');
   const next = source.indexOf('▪ Matchday 9');
@@ -49,7 +52,7 @@ export function inspectPinned2023RplTrainingCandidate(bytes) {
     throw Error('Pinned RPL 2023/24 source SHA-256 mismatch');
   }
   const original = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  const repaired = repairPinned2023Source(original);
+  const repaired = rewriteOneDocumented2023Fixture(original);
   const report = inspectOpenFootballRplSeason(repaired, '2023/2024');
   for (const [key, count] of Object.entries(KNOWN_COUNTS)) {
     if (report.observed[key] !== count) {

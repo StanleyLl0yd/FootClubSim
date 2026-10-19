@@ -48,12 +48,12 @@ test('source-derived goal at second 299 pauses wall time without advancing runni
   assert.equal(first.rulesId, M1_V11_GOAL_CLOCK_RULES);
   assert.equal(first.status, 'running');
   assert.deepEqual([first.runningSeconds, first.wallSeconds], [0,0]);
-  const stopped = yes(advanceM1V11GoalClock(input(), policy, first));
+  const stopped = yes(advanceM1V11GoalClock(input(), policy, first, 7));
   assert.equal(stopped.status, 'stopped');
   assert.equal(stopped.events[1].kind, 'goal-whistle');
   assert.equal(stopped.events[1].sourceGoalId, openingGoal.id);
   assert.deepEqual([stopped.runningSeconds, stopped.wallSeconds], [299,299]);
-  const resumed = yes(advanceM1V11GoalClock(input(), policy, stopped));
+  const resumed = yes(advanceM1V11GoalClock(input(), policy, stopped, 7));
   assert.equal(resumed.status, 'running');
   assert.equal(resumed.events[2].kind, 'restart-kickoff');
   assert.equal(resumed.events[2].scoringTeamId, openingGoal.teamId);
@@ -65,7 +65,7 @@ test('autoplay is exactly identical to interactive continuation from a JSON roun
   let s = yes(startM1V11GoalClock(input(seed), policy, pause));
   while (s.status !== 'full-time') {
     const plain = JSON.parse(JSON.stringify(s));
-    s = yes(advanceM1V11GoalClock(input(seed), policy, plain));
+    s = yes(advanceM1V11GoalClock(input(seed), policy, plain, pause));
   }
   const auto = full(pause, seed);
   assert.deepEqual(auto, s);
@@ -76,7 +76,7 @@ test('autoplay is exactly identical to interactive continuation from a JSON roun
   assert.equal(auto.wallSeconds, 5400 + 11 * pauses);
   assert.ok(pauses >= 1);
   assert.equal(auto.eventCursor, auto.events.length);
-  const after = yes(advanceM1V11GoalClock(input(seed), policy, auto));
+  const after = yes(advanceM1V11GoalClock(input(seed), policy, auto, pause));
   assert.deepEqual(after, auto);
 });
 
@@ -98,11 +98,11 @@ test('any finite source-only goal whistle maps one-to-one to a validated scored 
 
 test('saved source replay rejects forged whistle, clock, fixture, seed and chronology', () => {
   const first = yes(startM1V11GoalClock(input(), policy, 5));
-  const stop = yes(advanceM1V11GoalClock(input(), policy, first));
+  const stop = yes(advanceM1V11GoalClock(input(), policy, first, 5));
   const alter = update => {
     const c = structuredClone(stop);
     update(c);
-    no(advanceM1V11GoalClock(input(), policy, c), 'INVALID_STATE');
+    no(advanceM1V11GoalClock(input(), policy, c, 5), 'INVALID_STATE');
     assert.equal(stop.events.length, 2);
   };
   for (const edit of [
@@ -119,7 +119,7 @@ test('saved source replay rejects forged whistle, clock, fixture, seed and chron
     x => { x.events.push({...x.events[1]}); },
     x => { x.unknown = true; },
   ]) alter(edit);
-  no(advanceM1V11GoalClock(input(1), policy, stop), 'INVALID_STATE');
+  no(advanceM1V11GoalClock(input(1), policy, stop, 5), 'INVALID_STATE');
 });
 
 test('malicious getters and cyclic snapshots are rejected without evaluation', () => {
@@ -129,11 +129,11 @@ test('malicious getters and cyclic snapshots are rejected without evaluation', (
   Object.defineProperty(attacker.events[0], 'id', {
     enumerable: true, get() { visits++; return 'v11-clock-1'; },
   });
-  no(advanceM1V11GoalClock(input(), policy, attacker), 'INVALID_STATE');
+  no(advanceM1V11GoalClock(input(), policy, attacker, 5), 'INVALID_STATE');
   assert.equal(visits, 0);
   const cycle = structuredClone(first);
   cycle.events[0].cycle = cycle;
-  no(advanceM1V11GoalClock(input(), policy, cycle), 'INVALID_STATE');
+  no(advanceM1V11GoalClock(input(), policy, cycle, 5), 'INVALID_STATE');
   const malicious = { ...input(), fixture: { ...fixture } };
   Object.defineProperty(malicious.fixture, 'id', {
     enumerable: true, get() { visits++; return fixture.id; },

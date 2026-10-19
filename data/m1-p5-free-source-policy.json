@@ -109,6 +109,19 @@
       "limitation": "Published listing does not grant commercial extraction/republication. PDF currently subject to website access challenge; no numeric metric verified."
     },
     {
+      "id": "rfs-official-2023-events",
+      "name": "RFU official RPL 2023/24 disciplinary, penalty, own-goal statistics",
+      "origin": "https://www.rfs.ru/tournament/1434/stats/teams?mobile=no",
+      "rightsEvidence": "https://www.rfs.ru/license",
+      "rightsStatus": "PUBLIC_VIEW_ONLY_NO_DATA_LICENSE",
+      "coverage": "RPL_2023_24",
+      "role": "MANUAL_RIGHTS_REVIEW",
+      "sourceSha256": null,
+      "allowedMetrics": [],
+      "sourceRevision": "RFU tournament 1434, public seasonal stats 2023/24, unpinned revision",
+      "limitation": "Original association has team yellows/reds, penalty attempts/conversions and own goals, but source terms do not grant automatic redistribution or commercial database ingestion."
+    },
+    {
       "id": "footbolno-open-claims",
       "name": "footbolno.ru mutable Russian football source candidate",
       "origin": "https://footbolno.ru/otkrytye-dannye",

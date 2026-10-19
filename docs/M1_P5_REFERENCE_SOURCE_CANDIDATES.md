@@ -46,6 +46,25 @@ a **one-row, SHA-gated, transient correction** permits an integrity-checked
 holdout. Details: [M1_P5_OPENFOOTBALL_2023_24_REPAIR.md](M1_P5_OPENFOOTBALL_2023_24_REPAIR.md).
 No calibration, redistribution or complete source-rights approval follows.
 
+## Official RFU 2023/24 disciplinary and special-goal research (2026-10-19)
+
+Original [RFU tournament 1434 team statistics](https://www.rfs.ru/tournament/1434/stats/teams?mobile=no)
+list team match counts, yellow cards and red cards. Separate official
+[penalty statistics](https://www.rfs.ru/tournament/1434/stats/penalties),
+[own-goal statistics](https://www.rfs.ru/tournament/1434/stats/owngoals)
+and [player sanctions](https://www.rfs.ru/tournament/1434/stats/cards?mobile=no&page=1)
+supply a primary **field-definition reference** for the **2023/24
+development season**, previously unavailable in score-only OpenFootball.
+These links have been recorded in the free-only source registry with
+`MANUAL_RIGHTS_REVIEW`, `PUBLIC_VIEW_ONLY_NO_DATA_LICENSE` and **zero
+allowed calibration metrics**: actual pages are not a licensed downloadable
+RPL benchmark. The [RFU site material-use notice](https://www.rfs.ru/license)
+requires prior written consent for reproduction/redistribution of protected
+materials. Research may cite facts with attribution, but the repo must
+not scrape, mirror, relicense or silently package the underlying tables.
+No complete card/penalty/own-goal totals, snapshot hash, rights authorization
+or calibration PASS are asserted by this addition.
+
 ## 1. Candidate: footbolno.ru open Russian football data
 
 - Publisher page: https://footbolno.ru/otkrytye-dannye

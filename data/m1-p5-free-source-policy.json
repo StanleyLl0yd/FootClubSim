@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "ownerDecision": "FREE_ONLY",
+  "maxPaidDataCostRub": 0,
+  "paywallAllowed": false,
+  "projectLicense": "PROPRIETARY",
+  "intendedMilestone": "M1",
+  "referenceSeparation": {
+    "developmentSeason": "2023/2024",
+    "reservedHoldoutSeason": "2024/2025",
+    "holdoutKnownToResearchers": true
+  },
+  "acceptanceState": "NOT_CALIBRATED",
+  "sources": [
+    {
+      "id": "rpl-results-2023-development",
+      "name": "OpenFootball/europe 2023/24 RPL match results",
+      "origin": "https://github.com/openfootball/europe/blob/63df627f3c87ce71708f016522ea236cf74332c3/russia/2023-24_ru1.txt",
+      "rightsEvidence": "https://github.com/openfootball/europe/blob/63df627f3c87ce71708f016522ea236cf74332c3/LICENSE.md",
+      "rightsStatus": "PUBLISHER_CC0_UPSTREAM_UNVERIFIED",
+      "coverage": "RPL_2023_24",
+      "role": "DEVELOPMENT_SCORES",
+      "sourceSha256": "18512df8829a945f2b543a8ed5e8c3259e216263bc3e2a35c5545421d27b59cc",
+      "allowedMetrics": [
+        "home-away-results",
+        "goals",
+        "scoreless"
+      ],
+      "sourceRevision": "63df627f3c87ce71708f016522ea236cf74332c3",
+      "limitation": "One documented original-data home/away error corrected only after source SHA pin; no shots, xG, cards or injuries."
+    },
+    {
+      "id": "rpl-results-2024-reserved",
+      "name": "OpenFootball/europe 2024/25 RPL match results",
+      "origin": "https://github.com/openfootball/europe/blob/63df627f3c87ce71708f016522ea236cf74332c3/russia/2024-25_ru1.txt",
+      "rightsEvidence": "https://github.com/openfootball/europe/blob/63df627f3c87ce71708f016522ea236cf74332c3/LICENSE.md",
+      "rightsStatus": "PUBLISHER_CC0_UPSTREAM_UNVERIFIED",
+      "coverage": "RPL_2024_25",
+      "role": "RESERVED_SCORE_HOLDOUT",
+      "sourceSha256": "f315f67d49e5f2ed26bb5b2504244f36d37be958b5ccadd1755fb6b71b015dcb",
+      "allowedMetrics": [
+        "home-away-results",
+        "goals",
+        "scoreless"
+      ],
+      "sourceRevision": "63df627f3c87ce71708f016522ea236cf74332c3",
+      "limitation": "Previously inspected in source research, so the holdout is not statistically blinded; never select parameters or thresholds against it."
+    },
+    {
+      "id": "original-pappalardo-events",
+      "name": "Pappalardo & Massucco original soccer match Events",
+      "origin": "https://figshare.com/articles/dataset/Events/7770599",
+      "rightsEvidence": "https://figshare.com/articles/dataset/Events/7770599",
+      "rightsStatus": "ORIGINAL_CC_BY_4_0",
+      "coverage": "NON_RPL_HISTORIC",
+      "role": "CROSS_LEAGUE_EVENTS_RESEARCH",
+      "sourceSha256": null,
+      "allowedMetrics": [
+        "shots",
+        "fouls",
+        "event-tags"
+      ],
+      "sourceRevision": "DOI:10.6084/m9.figshare.7770599",
+      "limitation": "Original CC BY event data, 2017/18 European leagues and international cups; no comparable current RPL frequency, source bytes not pinned."
+    },
+    {
+      "id": "dfl-figshare-7matches",
+      "name": "Bassek et al. DFL-authorized seven-match Bundesliga events and xG",
+      "origin": "https://doi.org/10.6084/m9.figshare.28196177",
+      "rightsEvidence": "https://www.nature.com/articles/s41597-025-04505-y",
+      "rightsStatus": "ORIGINAL_CC_BY_4_0",
+      "coverage": "NON_RPL_HISTORIC",
+      "role": "CROSS_LEAGUE_EVENTS_RESEARCH",
+      "sourceSha256": null,
+      "allowedMetrics": [
+        "shots",
+        "fouls",
+        "xg"
+      ],
+      "sourceRevision": "DOI:10.6084/m9.figshare.28196177",
+      "limitation": "Seven matches only, 2022/23 Bundesliga tiers 1 and 2, not representative of RPL or a sufficient model-calibration cohort; original 2.45 GB not imported."
+    },
+    {
+      "id": "soccermon-original-injuries",
+      "name": "SoccerMon original monitoring dataset",
+      "origin": "https://doi.org/10.5281/zenodo.10033832",
+      "rightsEvidence": "https://www.nature.com/articles/s41597-024-03386-x",
+      "rightsStatus": "PAPER_CC_BY_4_0_DATASET_CLAIM",
+      "coverage": "NON_RPL_HISTORIC",
+      "role": "CROSS_LEAGUE_INJURY_RESEARCH",
+      "sourceSha256": null,
+      "allowedMetrics": [
+        "injury-monitoring"
+      ],
+      "sourceRevision": "DOI:10.5281/zenodo.10033832",
+      "limitation": "Two elite women's teams, self-reported health/training events with possible sensitive records; no comparable men's RPL injury incidence or production ingestion."
+    },
+    {
+      "id": "rpl-published-technical-report",
+      "name": "RPL 2024/25 technical report public listing",
+      "origin": "https://premierliga.ru/about/documents/",
+      "rightsEvidence": "https://premierliga.ru/about/documents/",
+      "rightsStatus": "PUBLIC_VIEW_ONLY_NO_DATA_LICENSE",
+      "coverage": "RPL_2024_25",
+      "role": "MANUAL_RIGHTS_REVIEW",
+      "sourceSha256": null,
+      "allowedMetrics": [],
+      "sourceRevision": "Listed 2025-07-16; PDF bytes not independently pinned",
+      "limitation": "Published listing does not grant commercial extraction/republication. PDF currently subject to website access challenge; no numeric metric verified."
+    },
+    {
+      "id": "footbolno-open-claims",
+      "name": "footbolno.ru mutable Russian football source candidate",
+      "origin": "https://footbolno.ru/otkrytye-dannye",
+      "rightsEvidence": "https://footbolno.ru/otkrytye-dannye",
+      "rightsStatus": "PUBLISHER_CC_BY_UPSTREAM_UNVERIFIED",
+      "coverage": "RPL_MULTI_UNVERIFIED",
+      "role": "MANUAL_RIGHTS_REVIEW",
+      "sourceSha256": null,
+      "allowedMetrics": [],
+      "sourceRevision": "Mutable source without exact accepted source rows",
+      "limitation": "Publisher's CC BY statement does not clear inherited third-party restrictions; no validated event counts or approved snapshot."
+    },
+    {
+      "id": "thirdparty-wyscout-transform",
+      "name": "koenvo transformed Wyscout event JSON",
+      "origin": "https://github.com/koenvo/wyscout-soccer-match-event-dataset",
+      "rightsEvidence": "https://github.com/koenvo/wyscout-soccer-match-event-dataset",
+      "rightsStatus": "DERIVATIVE_RIGHTS_UNVERIFIED",
+      "coverage": "NON_RPL_HISTORIC",
+      "role": "BLOCKED_FROM_CALIBRATION",
+      "sourceSha256": null,
+      "allowedMetrics": [],
+      "sourceRevision": "Third-party transform, repo-wide license not found",
+      "limitation": "Original Figshare license does not independently establish transformed-repository rights or fidelity; only one exact research sample was inspected."
+    },
+    {
+      "id": "statsbomb-research-restricted",
+      "name": "StatsBomb Open Data separate-use-terms candidate",
+      "origin": "https://github.com/statsbomb/open-data",
+      "rightsEvidence": "https://github.com/statsbomb/open-data",
+      "rightsStatus": "RESEARCH_TERMS_NO_COMMERCIAL_CLEARANCE",
+      "coverage": "NON_RPL_HISTORIC",
+      "role": "BLOCKED_FROM_CALIBRATION",
+      "sourceSha256": null,
+      "allowedMetrics": [],
+      "sourceRevision": "Current terms to be independently confirmed before any usage",
+      "limitation": "Free access is not equivalent to commercial rights; do not automatically ingest or ship under proprietary game license."
+    }
+  ]
+}

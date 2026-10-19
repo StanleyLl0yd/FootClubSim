@@ -70,3 +70,21 @@ speedup or a performance acceptance gate. Full-history synchronous replay
 still occurs on the main thread inside the browser transaction. Worker
 isolation, real quota/eviction, source authority, crash recovery and official
 career posting remain unresolved. M1 #30 and exit #3 stay open.
+
+## Historical replay comparison (research only)
+
+Run the existing bounded CLI with `--compare-cas` after `npm run build:core`:
+
+```sh
+node scripts/m1-v8-career-benchmark.mjs --fixture-count=16 --batch-size=8 --first-seed=1 --compare-cas
+```
+
+For each synthetic batch, the probe computes the old path (an explicit
+source-verified read followed by public batch admission, two full history
+replays) and the new revision-bound one-pass path on identical frozen inputs.
+It asserts the entire resulting journals are equal and records separate
+`legacyDoubleReplayApplyMs` and `incrementalApplyMs` totals. Measurements
+are sequential, unrandomized and environment-specific, not native IndexedDB
+performance, an accepted speedup ratio, or a browser responsiveness gate.
+The Core workflow runs a small 16-fixture smoke; full-season replay costs,
+real storage durability and source rights remain unaccepted.

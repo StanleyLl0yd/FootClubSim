@@ -143,9 +143,10 @@ function deriveInitial(prematch: unknown, policy: unknown,
   if (!prospective.ok) return bad('INVALID_BENCH_OR_XI');
   const originalSeed = simulateM1V8MedicalPhases(prematch, policy, [], [], []);
   if (!originalSeed.ok) return bad('INVALID_SOURCE');
+  const restartSecond = procedure.restartRunningSeconds as number;
   if (!originalSeed.events.some(e => e.type === 'shot' &&
       e.outcome === 'goal' &&
-      e.elapsedSeconds === procedure.restartRunningSeconds - 1)) {
+      e.elapsedSeconds === restartSecond - 1)) {
     return bad('NO_ENGINE_GOAL_RESTART');
   }
   const left = side === 'home' ?

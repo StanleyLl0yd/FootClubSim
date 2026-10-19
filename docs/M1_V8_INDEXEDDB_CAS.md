@@ -44,3 +44,27 @@ actual production career are posted.
 M0/v3-v7 saves, approved synthetic/fictional assets and existing
 browser stores remain byte-for-byte untouched. M1 P3 #29, P4 #30,
 P5 #31 and exit #3 remain OPEN. M2 is not authorized.
+
+## Single-pass source replay during a CAS commit (2026-10-19)
+
+Previously the v8 CAS store fully replayed a retrieved journal and then
+passed it to the public batch function, which replayed the same historical
+source a second time inside the readwrite transaction. The new domain API
+`applyM1V8MatchResultBatchAtRevision` accepts an **untrusted** source journal,
+performs the same strict full-history verification **once**, checks the
+confirmed revision, and only then admits the next bounded batch. No caller
+can provide an unchecked "already verified" journal or skip integrity review.
+
+The persisted commit still reads and writes inside **one** IndexedDB readwrite
+transaction; competing tabs cannot overwrite one another. Corrupt stored
+data maps to `CORRUPTED` **before** the stale-revision check, stale writes
+remain `STALE_REVISION`, and bad commands retain their
+`DOMAIN_REJECTED` typed errors. Aborts still roll back without partial
+journal state. The older public pure single/batch APIs are unchanged,
+including their error ordering; the original schema-4 journal is unchanged.
+
+This is a measured-code-path reduction, **not** an independently measured
+speedup or a performance acceptance gate. Full-history synchronous replay
+still occurs on the main thread inside the browser transaction. Worker
+isolation, real quota/eviction, source authority, crash recovery and official
+career posting remain unresolved. M1 #30 and exit #3 stay open.

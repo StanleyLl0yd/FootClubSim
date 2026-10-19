@@ -27,7 +27,7 @@ jobs:
   complete-season:
     name: Full 240-fixture source-replay workload (not acceptance)
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 40
     permissions:
       contents: read
     steps:

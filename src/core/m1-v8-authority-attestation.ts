@@ -125,13 +125,15 @@ export async function verifyM1V8AuthorityAttestation(
     // A strict JSON serialization rejects duplicate keys, ambiguous number
     // spellings, extra whitespace and surrogate normalization differences.
     if (!isPlainJsonTree(signed) || JSON.stringify(signed) !== envelope.payload ||
-        !isRecord(signed) || !exact(signed, SOURCE_KEYS) ||
-        signed.schemaVersion !== M1_V8_AUTHORITY_ATTESTATION_SCHEMA ||
-        signed.purpose !== M1_V8_AUTHORITY_PURPOSE ||
-        !validContext(Object.fromEntries(CONTEXT_KEYS.map(key => [key, signed[key]]))) ||
-        CONTEXT_KEYS.some(key => signed[key] !== trustedContext[key]) ||
-        !validStream(signed.trustedDecisions, MAX_DECISIONS) ||
-        !validStream(signed.medicalActions, MAX_MEDICAL_ACTIONS)) {
+        !isRecord(signed)) return error('INVALID_ENVELOPE');
+    const parsed = signed;
+    if (!exact(parsed, SOURCE_KEYS) ||
+        parsed.schemaVersion !== M1_V8_AUTHORITY_ATTESTATION_SCHEMA ||
+        parsed.purpose !== M1_V8_AUTHORITY_PURPOSE ||
+        !validContext(Object.fromEntries(CONTEXT_KEYS.map(key => [key, parsed[key]]))) ||
+        CONTEXT_KEYS.some(key => parsed[key] !== trustedContext[key]) ||
+        !validStream(parsed.trustedDecisions, MAX_DECISIONS) ||
+        !validStream(parsed.medicalActions, MAX_MEDICAL_ACTIONS)) {
       return error('INVALID_ENVELOPE');
     }
   } catch {

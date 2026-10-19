@@ -74,6 +74,9 @@ export type M1V8JournalError =
 export type M1V8JournalResult =
   | Readonly<{ ok: true; journal: M1V8MatchJournal }>
   | Readonly<{ ok: false; error: M1V8JournalError }>;
+export type M1V8RevisionBoundBatchResult =
+  | M1V8JournalResult
+  | Readonly<{ ok: false; error: 'CAS_REVISION_MISMATCH' }>;
 const fail = (error: M1V8JournalError): M1V8JournalResult => ({ ok: false, error });
 const rec = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -307,19 +310,22 @@ export function applyM1V8MatchResultBatch(
 
 /**
  * Strict untrusted-input CAS admission: replay stored source history once,
- * compare the verified revision, then apply the bounded new batch. No
- * prevalidated journal bypass or externally trusted capability is exposed.
+ * compare the verified revision, then apply the bounded new batch. The
+ * external CAS mismatch is distinct from a stale command inside a batch;
+ * no prevalidated journal bypass or trusted capability is exposed.
  */
 export function applyM1V8MatchResultBatchAtRevision(
   initial: unknown, journal: unknown, expectedRevision: number,
   requests: unknown,
-): M1V8JournalResult {
+): M1V8RevisionBoundBatchResult {
   const original = trusted(initial);
   if (!original) return fail('INVALID_INITIAL_CAREER');
   const fixtures = fixtureMap(original.catalog);
   const current = readJournal(journal, original, fixtures);
   if (!current) return fail('INVALID_JOURNAL');
-  if (current.revision !== expectedRevision) return fail('STALE_REVISION');
+  if (current.revision !== expectedRevision) {
+    return { ok: false, error: 'CAS_REVISION_MISMATCH' };
+  }
   if (!Array.isArray(requests) || requests.length < 1 ||
       requests.length > MAX_BATCH) return fail('INVALID_BATCH');
   return applyVerifiedM1V8MatchResultBatch(original, current, requests, fixtures);

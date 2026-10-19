@@ -57,9 +57,11 @@ can provide an unchecked "already verified" journal or skip integrity review.
 
 The persisted commit still reads and writes inside **one** IndexedDB readwrite
 transaction; competing tabs cannot overwrite one another. Corrupt stored
-data maps to `CORRUPTED` **before** the stale-revision check, stale writes
-remain `STALE_REVISION`, and bad commands retain their
-`DOMAIN_REJECTED` typed errors. Aborts still roll back without partial
+data maps to `CORRUPTED` **before** the stale-revision check. The pure
+helper uses a distinct `CAS_REVISION_MISMATCH` for the external revision
+conflict, which persistence maps to `STALE_REVISION`; a stale command within
+an otherwise current batch still maps to `DOMAIN_REJECTED` with domain error
+`STALE_REVISION`. Aborts still roll back without partial
 journal state. The older public pure single/batch APIs are unchanged,
 including their error ordering; the original schema-4 journal is unchanged.
 

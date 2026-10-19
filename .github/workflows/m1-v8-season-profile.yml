@@ -6,12 +6,20 @@ on:
       - '.github/workflows/m1-v8-season-profile.yml'
       - 'scripts/m1-v8-career-benchmark.mjs'
       - 'src/core/m1-v8-result-journal.ts'
+      - 'src/core/m1-v8-coherent-career-preview.ts'
       - 'src/core/m1-v8-goal-attribution.ts'
       - 'src/core/m1-v8-phase-presence.ts'
       - 'src/core/m1-v8-match-dossier.ts'
       - 'tests/m1-v8-result-journal.test.mjs'
+      - 'tests/m1-v8-coherent-career-preview.test.mjs'
       - 'tests/m1-v8-match-dossier.test.mjs'
   workflow_dispatch:
+    inputs:
+      coherent_preview:
+        description: 'Profile composite batch with all three source-replayed views'
+        required: false
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -37,4 +45,8 @@ jobs:
       - name: Build independent M1 core
         run: npm run build:core
       - name: Full synthetic season, bounded 16-match atomic batches
+        if: ${{ !inputs.coherent_preview }}
         run: node scripts/m1-v8-career-benchmark.mjs --fixture-count=240 --first-seed=1 --batch-size=16 --progress
+      - name: Full synthetic season with coherent preview projections (manual, NOT gate)
+        if: ${{ inputs.coherent_preview }}
+        run: node scripts/m1-v8-career-benchmark.mjs --fixture-count=240 --first-seed=1 --batch-size=16 --coherent-preview --progress

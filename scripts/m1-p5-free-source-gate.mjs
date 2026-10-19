@@ -66,13 +66,14 @@ function strictlyPlainJson(value, visited = new Set(), depth = 0) {
   if (!Array.isArray(value) && !isPlainRecord(value)) return false;
   visited.add(value);
   const descriptors = Object.getOwnPropertyDescriptors(value);
+  const array = Array.isArray(value);
   const result = Reflect.ownKeys(descriptors).every(key => {
+    if (array && key === 'length') return true;
     const item = descriptors[key];
     return typeof key === 'string' &&
       Object.hasOwn(item, 'value') &&
       item.enumerable && strictlyPlainJson(item.value, visited, depth + 1);
-  }) && (Array.isArray(value) ?
-    Object.keys(value).length === value.length : true);
+  }) && (!array || Object.keys(value).length === value.length);
   visited.delete(value);
   return result;
 }

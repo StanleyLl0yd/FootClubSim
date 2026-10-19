@@ -96,7 +96,8 @@ test('forged signer, altered bytes and lost trusted anchor fail closed', async (
   rejected(await verify(envelope, challenge(), trustedDecisions(),
     medicalActions(), other.publicKey), 'INVALID_SIGNATURE');
   rejected(await verify({ ...envelope,
-    payload: envelope.payload.replace('"scored"', '"saved"') }),
+    payload: envelope.payload.replace('"scored"', '"saved"') },
+    challenge(), [{ ...penalty(), outcome: 'saved' }]),
   'INVALID_SIGNATURE');
   rejected(await verify(envelope, challenge(), trustedDecisions(),
     medicalActions(), (await keys).privateKey),

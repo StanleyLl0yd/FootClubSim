@@ -46,3 +46,32 @@ timeout semantics, native measured responsiveness and recovery/backup
 verification. No optimization may turn a two-stage precomputation into an
 unprotected write. The immutable M0 store and every v3-v8 journal format
 remain unchanged. P4 #30, P5 #31 and milestone exit #3 remain OPEN.
+
+## Worker client and commit outcome classification (2026-10-19)
+
+The isolated client `src/browser/m1-v8-cas-worker-client.ts` is now exercised
+by the existing native smoke on Linux Chromium, real Safari and Windows
+Chrome/Edge. It validates the request **before** starting the Worker, bounds
+the wait, checks origin, exact protocol/job/career identity, and accepts
+a successful acknowledgement only with the expected schema-4 journal
+revision and fixture count. It exposes only small receipt metadata rather
+than the multi-megabyte journal clone. This is a commit acknowledgement,
+**not an authoritative sporting-data report**; retained source content still
+requires an independent strict replay before use.
+
+A known, correlated IndexedDB/domain failure (for example
+`STALE_REVISION` or `DOMAIN_REJECTED`) is definitive. A timeout, worker
+crash, message decoding failure, uncorrelated/malformed acknowledgement or
+unclassified worker exception yields `COMMIT_OUTCOME_UNKNOWN`, **never**
+a claim that the write was rolled back. Killing a Worker after a timeout
+can race an IndexedDB transaction that has already committed. The caller
+must inspect the validated persisted journal and distinguish an already
+applied command, no application, a different concurrent writer, or
+unavailable/corrupt storage **before attempting any retry**.
+
+A failure to construct a Worker is reported separately as
+`WORKER_UNAVAILABLE`; malformed requests are `INVALID_REQUEST`.
+Every completed client operation disposes of its Worker and handlers.
+The bounded wait is a safety limit, not a proof of OS power-loss recovery
+or production responsiveness. These additions do not create a career UI,
+alter accepted M0/v3-v8 formats, or close P4 #30 and exit #3.

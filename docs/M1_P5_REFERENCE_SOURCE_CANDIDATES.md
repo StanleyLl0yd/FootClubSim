@@ -5,6 +5,23 @@ This is a source/rights screening inventory under #31, not a real-world
 reference pack, an official 2026/27 RPL source or M1 exit evidence.
 External publisher statements are claims to verify, not a legal opinion.
 
+## 0. New verified-content candidate: openfootball/europe RPL 2024/25
+
+**Discovered and inspected 2026-10-19.** This is not the distinct
+`openfootball/football.json` repository without the Russian file.
+`openfootball/europe` actually contains a 240-fixture 2024/25 RPL text
+archive at a fixed Git commit with a **CC0-1.0 publisher declaration**.
+The exact file SHA-256 and 30-round integrity checks are captured in
+[M1_P5_OPENFOOTBALL_2024_25.md](M1_P5_OPENFOOTBALL_2024_25.md).
+All nine score/outcome aggregates agree with previously recorded external
+publisher aggregates. A bounded offline executable parser and opt-in private
+manual workflow are provided. No raw source is imported into FootClubSim.
+
+This materially reduces the goals/wins/draws empirical baseline blocker.
+It does **not** establish upstream rights, match-by-match independent official
+verification, licensed cards/injury/shot/xG references, or calibrated M1.
+Keep P5 OPEN until the remaining acceptance gates are satisfied.
+
 ## 1. Candidate: footbolno.ru open Russian football data
 
 - Publisher page: https://footbolno.ru/otkrytye-dannye

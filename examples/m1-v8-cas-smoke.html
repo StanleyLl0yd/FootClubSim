@@ -98,6 +98,47 @@
       }
       throw new Error('expected failure ' + code);
     }
+    async function workerCommit(request, expectedRevision, jobId) {
+      const worker = new Worker(
+        new URL('../dist/browser/m1-v8-cas-worker.js', import.meta.url),
+        { type: 'module' });
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        const finish = (error, journal) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          worker.terminate();
+          if (error) reject(error);
+          else resolve(journal);
+        };
+        const timeout = setTimeout(() =>
+          finish(new Error('native CAS worker timed out')), 60_000);
+        worker.onerror = () => finish(new Error('native CAS worker failed'));
+        worker.onmessage = event => {
+          const reply = event.data;
+          if (reply?.schemaVersion !== 1 || reply?.jobId !== jobId ||
+              reply?.careerId !== career.careerId) {
+            finish(new Error('uncorrelated CAS worker response'));
+            return;
+          }
+          if (reply.kind === 'committed') {
+            finish(null, reply.journal);
+          } else if (reply.kind === 'failed') {
+            const error = new Error('CAS worker: ' + String(reply.code));
+            error.code = reply.code;
+            finish(error);
+          } else {
+            finish(new Error('unknown CAS worker response'));
+          }
+        };
+        worker.postMessage({
+          schemaVersion: 1, kind: 'commit', jobId,
+          careerId: career.careerId, expectedRevision,
+          requests: [request],
+        });
+      });
+    }
     async function run() {
       const stage = new URL(location.href).searchParams.get('stage');
       if (stage === null) {
@@ -160,6 +201,19 @@
       check(journal.results[0].commandId === 'native-first' &&
         journal.results[1].commandId === 'native-simultaneous',
         'concurrency overwrote earlier ordinary or simultaneous treatment');
+      const workerResult = await workerCommit(
+        command(fixtures[4], 3, 'native-worker', 24, true),
+        3, 'native-worker-job');
+      check(workerResult.revision === 4 &&
+        workerResult.results[3].commandId === 'native-worker',
+        'isolated worker did not commit the fourth fixture');
+      await failCode(workerCommit(
+        command(fixtures[5], 3, 'native-worker-stale', 25),
+        3, 'native-stale-worker-job'), 'STALE_REVISION');
+      const afterWorker = await loadM1V8PersistedJournal(career.careerId);
+      check(afterWorker.revision === 4 && afterWorker.results.length === 4 &&
+        afterWorker.results[3].commandId === 'native-worker',
+        'worker CAS was not durable or stale writer overwrote it');
       status.textContent = 'M1_V8_BROWSER_CAS_PASS';
     }
     run().catch(error => {

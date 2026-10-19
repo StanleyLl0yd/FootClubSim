@@ -1,0 +1,58 @@
+name: M1 P5 pinned OpenFootball RPL observation (manual only)
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: m1-p5-openfootball-observation
+  cancel-in-progress: false
+
+jobs:
+  snapshot-observation:
+    name: Immutable CC0-claimed source and anonymized aggregate check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout research-only code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Inspect exact immutable source without publishing raw data
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          url='https://raw.githubusercontent.com/openfootball/europe/63df627f3c87ce71708f016522ea236cf74332c3/russia/2024-25_ru1.txt'
+          curl --fail --location --silent --show-error \
+            --proto '=https' --proto-redir '=https' \
+            --connect-timeout 10 --max-time 60 --max-filesize 131072 \
+            --output "$work/source.txt" "$url"
+          test "$(wc -c < "$work/source.txt")" -le 131072
+          node scripts/m1-p5-openfootball-rpl.mjs --file="$work/source.txt" \
+            > "$work/report.json"
+          {
+            echo '## CC0 publisher-declared Russian Premier League 2024/25'
+            echo
+            echo 'Source repository: https://github.com/openfootball/europe'
+            echo 'Source commit: 63df627f3c87ce71708f016522ea236cf74332c3'
+            echo 'License declaration: https://github.com/openfootball/europe/blob/master/LICENSE.md'
+            echo
+            echo 'Raw match file was NOT uploaded as an artifact or checked into the repository.'
+            echo 'Publisher rights declaration does not establish full upstream ownership.'
+            echo 'OpenFootball observations are not approval of xG/cards/injury realism.'
+            echo
+            echo '~~~json'
+            cat "$work/report.json"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"

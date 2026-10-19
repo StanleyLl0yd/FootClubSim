@@ -375,7 +375,7 @@ test('revision-bound batch preserves parity and untrusted-journal rejection orde
   assert.deepEqual(source, before);
 
   failed(applyM1V8MatchResultBatchAtRevision(
-    career, actual, 0, []), 'STALE_REVISION');
+    career, actual, 0, []), 'CAS_REVISION_MISMATCH');
   failed(applyM1V8MatchResultBatchAtRevision(
     career, actual, 2, []), 'INVALID_BATCH');
   const damaged = structuredClone(actual);

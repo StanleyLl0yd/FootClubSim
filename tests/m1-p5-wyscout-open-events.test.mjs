@@ -6,7 +6,7 @@ import { inspectWyscoutEventFacts, inspectPinnedWyscoutResearchSample,
 
 const id = M1_P5_WYSCOUT_RESEARCH_SAMPLE.matchId;
 const event = (eventId, eventName, subEventName, tagIds = []) => ({
-  id: eventId, matchId: id, eventName, subEventName,
+  id: eventId, matchId: id, teamId: 4418, eventName, subEventName,
   matchPeriod: '1H', eventSec: eventId * 2,
   tags: tagIds.map(tagId => ({ id: tagId })),
 });
@@ -22,7 +22,7 @@ const candidate = () => ({
     event(8, 'Foul', 'Violent Foul', [1701]),
     event(9, 'Foul', 'Late card foul', [1703]),
     event(10, 'Free Kick', 'Free kick shot', [1801]),
-  ], teams: {}, players: {},
+  ], teams: {'4418': {name: 'A'}, '11944': {name: 'B'}}, players: {},
 });
 
 test('goal tags on goalkeeper mirrors never double count attacking goals', () => {
@@ -64,6 +64,10 @@ test('identical event IDs, repeated tags, or wrong match cannot be accepted', ()
   const wrong = candidate();
   wrong.events[0].matchId = id + 1;
   assert.throws(() => inspectWyscoutEventFacts(wrong, id),
+    /Invalid or duplicate source event/);
+  const foreign = candidate();
+  foreign.events[0].teamId = 4000;
+  assert.throws(() => inspectWyscoutEventFacts(foreign, id),
     /Invalid or duplicate source event/);
 });
 

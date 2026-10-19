@@ -119,13 +119,16 @@ export function startM1V11GoalClock(
 /** Replay source and full prefix BEFORE advancing an untrusted saved snapshot. */
 export function advanceM1V11GoalClock(
   prematch: unknown, policy: unknown, snapshot: unknown,
+  expectedPauseWallSeconds: unknown,
 ): M1V11GoalClockResult {
+  if (!validPause(expectedPauseWallSeconds)) return bad('INVALID_PAUSE');
   if (!isPlainJsonTree(snapshot) || snapshot === null ||
       typeof snapshot !== 'object' || Array.isArray(snapshot) ||
       !Object.hasOwn(snapshot, 'pauseWallSeconds') ||
       !Object.hasOwn(snapshot, 'eventCursor')) return bad('INVALID_STATE');
   const data = snapshot as Record<string, unknown>;
   if (!validPause(data.pauseWallSeconds) ||
+      data.pauseWallSeconds !== expectedPauseWallSeconds ||
       !Number.isSafeInteger(data.eventCursor) ||
       typeof data.eventCursor !== 'number' ||
       data.eventCursor < 1 || data.eventCursor > MAX_EVENTS) {
@@ -149,7 +152,8 @@ export function runM1V11GoalClock(
   if (!started.ok) return started;
   let current = started.state;
   for (let i = 0; i < MAX_EVENTS && current.status !== 'full-time'; i++) {
-    const next = advanceM1V11GoalClock(prematch, policy, current);
+    const next = advanceM1V11GoalClock(
+      prematch, policy, current, pauseWallSeconds);
     if (!next.ok) return next;
     current = next.state;
   }

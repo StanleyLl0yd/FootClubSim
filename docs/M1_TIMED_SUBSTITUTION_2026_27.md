@@ -38,8 +38,10 @@ The input includes an externally supplied referee-signal ID, but that ID is
 **not a signature** and cannot authenticate itself. The pure function checks
 bounded exact JSON fields, real-time vs running-time domains, fixture/team
 identity, and names on the original match sheet. Multi-player substitutions
-are rejected as `GROUPED_RULING_REQUIRED`: the last board/signal determines
-the group countdown and must be implemented separately. Another current-state
+remain rejected by this schema-1 function as `GROUPED_RULING_REQUIRED`.
+A separate [schema-2 grouped observer](M1_GROUPED_SUBSTITUTION_2026_27.md)
+checks the IFAB last-board/signal deadline; neither module authorizes
+a physical replacement. Another current-state
 validator must confirm the outgoing player really remains on-field, incoming
 bench unused, legal stoppage, normal replacement limits, correct entry and
 the independent authenticated referee signal before changing the active XI.

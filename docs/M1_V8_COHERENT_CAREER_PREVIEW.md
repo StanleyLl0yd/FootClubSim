@@ -45,3 +45,28 @@ The immutable M0 initial career, all older M0/v3-v7 saves and v8 journal
 schema-4 are unchanged. No M2 functionality is authorized. M1-P3 #29,
 M1-P4 #30, M1-P5 #31 and exit #3 remain open pending full integration,
 statistical calibration, and two repository-wide audits.
+
+## Reproducible composite workload probe (not acceptance)
+
+Build the core and run:
+
+```sh
+npm run build:core
+node scripts/m1-v8-career-benchmark.mjs --fixture-count=8 --first-seed=1 --batch-size=8 --coherent-preview
+```
+
+The optional `--coherent-preview` mode exercises the actual composite pure
+batch function rather than journal-only apply. It checks the shared revision
+and completed-fixture count of all three replayed projections at each batch
+boundary. `measurements.incrementalApplyMs` includes both source replay and
+all three independent view validations. Final replay and season projection
+are reported as separate measurements. Without the flag the original journal
+workload runs. Comparing timings is diagnostic, not a claim about browser
+responsiveness or a statistically significant speed difference.
+
+Core CI runs an eight-fixture composite smoke. Full 240-fixture composite
+profiling is optional via manual dispatch of `M1 v8 season workload` with
+`coherent_preview=true`. Actual runs, memory and latency budgets and native
+browser usability must be independently established for performance gates.
+No persistence, authenticated referee evidence, official standings or M1
+acceptance is implied. Issues #30 and #31 remain open.

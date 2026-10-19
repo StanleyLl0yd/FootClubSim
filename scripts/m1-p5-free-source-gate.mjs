@@ -129,8 +129,11 @@ function validateSource(source) {
       throw Error('Misclassified research dataset as current RPL reference');
     }
   } else if (source.allowedMetrics.length !== 0 ||
-      source.sourceSha256 !== null) {
-    throw Error('No metric entitlement for unapproved/blocked sources');
+      source.sourceSha256 !== null ||
+      PUBLISHER_ORIGINAL.has(source.rightsStatus)) {
+    // Pending/manual and blocked sources cannot self-promote to
+    // an original CC BY publication merely by editing metadata.
+    throw Error('No original-license or metric entitlement for unapproved sources');
   }
 }
 

@@ -75,3 +75,39 @@ Every completed client operation disposes of its Worker and handlers.
 The bounded wait is a safety limit, not a proof of OS power-loss recovery
 or production responsiveness. These additions do not create a career UI,
 alter accepted M0/v3-v8 formats, or close P4 #30 and exit #3.
+
+## Replay-verified read-only outcome reconciliation (2026-10-19)
+
+The isolated pure helper `reconcileM1V8UncertainCommit` in
+`src/core/m1-v8-commit-reconciliation.ts` accepts a trusted initial career,
+an **untrusted** observed v8 journal snapshot, a known expected revision and
+the original complete bounded command batch. It strictly replays the entire
+observed journal, regenerates the proposed batch from the verified historical
+prefix, and compares the **complete generated fixture records** rather than
+only command IDs or claimed result totals. It has **no storage writes**,
+automatic retries, migration or official league decisions.
+
+Possible observations are:
+
+- `RECORDED_IDENTICAL`: the verified observed history contains the entire
+  exact requested batch at the original revision, even if later matches exist
+- `UNCHANGED_IN_SNAPSHOT`: current verified history is still at the original
+  revision; this is **not** proof no write ever committed or that an older
+  snapshot was not restored
+- `DIVERGED_IN_SNAPSHOT`: another result or partial overlap occupies the
+  expected revision range; do not overwrite or automatically retry
+- `HISTORY_SHORTER_THAN_EXPECTED`: stored history is shorter than the caller's
+  baseline, so even past successful transactions may be missing
+- Typed failures reject corrupt stored sources or commands which cannot be
+  replay-verified without changing state
+
+On `COMMIT_OUTCOME_UNKNOWN`, callers first obtain a verified persisted
+journal (or explicitly surface a storage read failure) and only then inspect
+one of these statuses. Even `UNCHANGED_IN_SNAPSHOT` cannot license a blind
+retry without additional storage continuity and concurrency evidence.
+This is a synchronous, potentially expensive domain research helper, **not**
+a production main-thread recovery path. A later Worker-backed read/reconcile
+operation must preserve the same trust and revision boundaries.
+
+M1 #30 and exit #3 remain OPEN. No browser save format, real football event
+source, official standing or M2 career feature changes.

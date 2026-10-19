@@ -20,6 +20,8 @@ import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
 import { RNG_VERSION } from '../dist/core/rng.js';
 import { defaultTacticalPlan } from '../dist/core/tactics.js';
 import { createInitialCareer } from '../dist/core/save.js';
+import { reconcileM1V8UncertainCommit }
+  from '../dist/core/m1-v8-commit-reconciliation.js';
 
 const catalog = createSyntheticRplScaleCatalog(77);
 const career = createInitialCareer(
@@ -389,4 +391,69 @@ test('revision-bound batch preserves parity and untrusted-journal rejection orde
   failed(applyM1V8MatchResultBatchAtRevision(
     career, actual, 2, [forged]), 'INVALID_MATCH_RESULT');
   assert.deepEqual(source, before);
+});
+
+test('unknown worker outcome is reconciled by full verified source identity', () => {
+  const origin = empty();
+  const first = request(fixtures[0], 0, 'unknown-reconcile-a', 71, false);
+  const second = request(fixtures[1], 1, 'unknown-reconcile-b', 72, false);
+  const intended = [first, second];
+  const before = structuredClone(origin);
+  const unchanged = reconcileM1V8UncertainCommit(career, origin, 0, intended);
+  assert.deepEqual(unchanged, {
+    ok: true, schemaVersion: 1, status: 'UNCHANGED_IN_SNAPSHOT',
+    journalRevision: 0, expectedRevision: 0, requestedFixtures: 2,
+  });
+
+  const completed = success(applyM1V8MatchResultBatch(career, origin, intended));
+  assert.deepEqual(reconcileM1V8UncertainCommit(career, completed, 0, intended), {
+    ok: true, schemaVersion: 1, status: 'RECORDED_IDENTICAL',
+    journalRevision: 2, expectedRevision: 0, requestedFixtures: 2,
+  });
+
+  const after = success(applyM1V8MatchResultBatch(career, completed, [
+    request(fixtures[2], 2, 'later-unrelated', 73, false),
+  ]));
+  assert.equal(reconcileM1V8UncertainCommit(career, after, 0, intended).status,
+    'RECORDED_IDENTICAL');
+  const partial = success(applyM1V8MatchResultBatch(career, origin, [first]));
+  assert.equal(reconcileM1V8UncertainCommit(career, partial, 0, intended).status,
+    'DIVERGED_IN_SNAPSHOT');
+  const rival = success(applyM1V8MatchResultBatch(career, origin, [
+    request(fixtures[3], 0, 'different-accepted-writer', 74, false),
+  ]));
+  assert.equal(reconcileM1V8UncertainCommit(career, rival, 0, [first]).status,
+    'DIVERGED_IN_SNAPSHOT');
+  assert.deepEqual(origin, before);
+});
+
+test('reconciliation does not trust IDs alone or corrupted/older histories', () => {
+  const origin = empty();
+  const first = request(fixtures[0], 0, 'unknown-identity', 71, false);
+  const completed = success(applyM1V8MatchResultBatch(career, origin, [first]));
+  const wrongPayload = request(fixtures[1], 0, first.commandId, 72, false);
+  const collision = reconcileM1V8UncertainCommit(
+    career, completed, 0, [wrongPayload]);
+  assert.equal(collision.ok, true);
+  assert.equal(collision.status, 'DIVERGED_IN_SNAPSHOT');
+
+  const altered = structuredClone(completed);
+  altered.results[0].rngState ^= 1;
+  assert.deepEqual(reconcileM1V8UncertainCommit(
+    career, altered, 0, [first]), { ok: false, error: 'INVALID_JOURNAL' });
+  const forged = structuredClone(first);
+  forged.result.rngState ^= 1;
+  assert.deepEqual(reconcileM1V8UncertainCommit(
+    career, completed, 0, [forged]), { ok: false, error: 'UNVERIFIABLE_REQUEST' });
+  assert.equal(reconcileM1V8UncertainCommit(
+    career, origin, 1, [first]).status, 'HISTORY_SHORTER_THAN_EXPECTED');
+
+  const cycle = structuredClone(first);
+  cycle.extra = cycle;
+  assert.deepEqual(reconcileM1V8UncertainCommit(
+    career, completed, 0, [cycle]), { ok: false, error: 'INVALID_REQUEST' });
+  assert.deepEqual(reconcileM1V8UncertainCommit(
+    career, completed, 0, []), { ok: false, error: 'INVALID_REQUEST' });
+  assert.deepEqual(reconcileM1V8UncertainCommit(
+    career, completed, -1, [first]), { ok: false, error: 'INVALID_REQUEST' });
 });

@@ -214,6 +214,22 @@
       check(afterWorker.revision === 4 && afterWorker.results.length === 4 &&
         afterWorker.results[3].commandId === 'native-worker',
         'worker CAS was not durable or stale writer overwrote it');
+      const racingWorkers = await Promise.allSettled([
+        workerCommit(command(fixtures[6], 4, 'native-worker-race-a', 26),
+          4, 'native-worker-race-job-a'),
+        workerCommit(command(fixtures[7], 4, 'native-worker-race-b', 27),
+          4, 'native-worker-race-job-b'),
+      ]);
+      check(racingWorkers.filter(item => item.status === 'fulfilled').length === 1,
+        'two dedicated workers both committed or both rejected the same revision');
+      const rejected = racingWorkers.find(item => item.status === 'rejected');
+      check(rejected?.reason?.code === 'STALE_REVISION',
+        'losing worker did not report a stale revision');
+      const afterRace = await loadM1V8PersistedJournal(career.careerId);
+      check(afterRace.revision === 5 && afterRace.results.length === 5 &&
+        ['native-worker-race-a', 'native-worker-race-b']
+          .includes(afterRace.results[4].commandId),
+        'parallel dedicated workers lost or duplicated a CAS write');
       status.textContent = 'M1_V8_BROWSER_CAS_PASS';
     }
     run().catch(error => {

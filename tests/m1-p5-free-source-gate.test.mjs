@@ -170,8 +170,12 @@ test('RFU official 2023/24 events remain metadata-only until rights are reviewed
     x.sources.find(item => item.id === 'rfs-official-2023-events')
       .sourceSha256 = 'a'.repeat(64);
   });
-  mutate(x => {
-    x.sources.find(item => item.id === 'rfs-official-2023-events')
-      .rightsStatus = 'ORIGINAL_CC_BY_4_0';
-  });
+  for (const fakeLicense of [
+    'ORIGINAL_CC_BY_4_0', 'PAPER_CC_BY_4_0_DATASET_CLAIM',
+  ]) {
+    mutate(x => {
+      x.sources.find(item => item.id === 'rfs-official-2023-events')
+        .rightsStatus = fakeLicense;
+    });
+  }
 });

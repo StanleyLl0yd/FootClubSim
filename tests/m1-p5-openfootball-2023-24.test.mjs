@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
 import { inspectOpenFootballRplSeason, inspectOpenFootballRpl2024Season }
   from '../scripts/m1-p5-openfootball-rpl.mjs';
-import { OPENFOOTBALL_RPL_2023_24, inspectPinned2023RplTrainingCandidate }
+import { OPENFOOTBALL_RPL_2023_24, inspectPinned2023RplTrainingCandidate,
+  rewriteOneDocumented2023Fixture }
   from '../scripts/m1-p5-openfootball-2023-24.mjs';
 
 const clubs = Array.from({ length: 16 }, (_, i) =>
@@ -68,4 +69,30 @@ test('1970 data or same-score home/away reversal cannot silently qualify', () =>
   assert.throws(() => inspectOpenFootballRplSeason(
     transcript('2023/24').replace('▪ Matchday 2', '▪ Matchday 1'),
     '2023/2024'), /Invalid or repeated matchday order/);
+});
+
+test('a single documented fixture correction is exact, narrow and nonmutating', () => {
+  const faulty = [
+    '= Russia Premier League 2023/24',
+    '▪ Matchday 8',
+    '  Sat Sep 16 2023',
+    '    19:00  FK Sochi                v Spartak Moskva           0-1 (0-0)',
+    '▪ Matchday 9',
+  ].join('\n');
+  const source = faulty.slice();
+  const expected = faulty.replace(
+    '    19:00  FK Sochi                v Spartak Moskva           0-1 (0-0)',
+    '    19:00  Spartak Moskva           v FK Sochi                1-0 (0-0)');
+  assert.equal(rewriteOneDocumented2023Fixture(faulty), expected);
+  assert.equal(faulty, source);
+  for (const invalid of [
+    faulty.replace('Sat Sep 16', 'Sat Sep 17'),
+    faulty.replace('▪ Matchday 8', '▪ Matchday 7'),
+    faulty.replace('▪ Matchday 9', '▪ Matchday 8'),
+    faulty.replace('0-1 (0-0)', '1-0 (0-0)'),
+    faulty.replace('▪ Matchday 9',
+      '    19:00  FK Sochi                v Spartak Moskva           0-1 (0-0)\n▪ Matchday 9'),
+    '',
+  ]) assert.throws(() => rewriteOneDocumented2023Fixture(invalid),
+    /Single verified matchday-8 correction was not applicable/);
 });

@@ -1,0 +1,53 @@
+name: M1 P5 Wyscout event source research (manual only)
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: m1-p5-wyscout-event-research
+  cancel-in-progress: false
+
+jobs:
+  research-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Pinned dependencies and validator
+        run: |
+          npm ci --ignore-scripts --no-audit
+          npm run build:core
+      - name: Download immutable source in temporary private workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          url='https://raw.githubusercontent.com/koenvo/wyscout-soccer-match-event-dataset/ebc4c54c1093c420a81ce442c69e4186fab33bb4/processed/files/1694390.json'
+          curl --fail --location --silent --show-error \
+            --proto '=https' --proto-redir '=https' \
+            --connect-timeout 10 --max-time 60 --max-filesize 1000000 \
+            --output "$work/input.json" "$url"
+          node scripts/m1-p5-wyscout-open-events.mjs --file="$work/input.json" > "$work/report.json"
+          {
+            echo '## Historical sample only, not a Russian Premier League calibration'
+            echo
+            echo 'Original Figshare data CC BY 4.0: https://figshare.com/articles/dataset/Events/7770599'
+            echo 'Third-party processed sample rights and fidelity NOT cleared.'
+            echo 'Do not redistribute the downloaded file or treat it as RPL statistics.'
+            echo
+            echo '~~~json'
+            cat "$work/report.json"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"

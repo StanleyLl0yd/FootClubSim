@@ -23,7 +23,10 @@ No referee/medical claims become authenticated through Worker isolation.
 `examples/m1-v8-cas-smoke.html` keeps the old two-match real-navigation
 proof and competing main-thread CAS writers, then commits a fourth fixture
 using a dedicated Worker. It checks the worker's job/career response identity,
-persistent revision and rejection of a stale worker retry. The existing
+persistent revision and rejection of a stale worker retry. The extended
+native smoke additionally races two separate Dedicated Workers at the same
+revision; exactly one must commit, the other must report `STALE_REVISION`,
+and the single resulting journal revision must survive reload. The existing
 browser CI runs this exact fixture in Linux Chromium, real macOS Safari,
 Windows Chrome and Windows Edge. `tests/m1-v8-cas-worker-protocol.test.mjs`
 adds malformed-version, unknown-field, oversize, non-JSON, getter, cycle and

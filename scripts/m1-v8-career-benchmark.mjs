@@ -15,7 +15,8 @@ import { simulateM1V8MedicalPhases }
   from '../dist/core/m1-v8-medical-phases.js';
 import {
   startM1V8MatchJournal, applyM1V8MatchResult,
-  applyM1V8MatchResultBatch, validateM1V8MatchJournal,
+  applyM1V8MatchResultBatch, applyM1V8MatchResultBatchAtRevision,
+  validateM1V8MatchJournal,
 } from '../dist/core/m1-v8-result-journal.js';
 import { deriveM1VerifiedV8SeasonStats }
   from '../dist/core/m1-v8-season-statistics.js';
@@ -41,14 +42,18 @@ function must(result, context) {
 function main() {
   const progressArgs = process.argv.slice(2).filter(a => a === '--progress');
   const previewArgs = process.argv.slice(2).filter(a => a === '--coherent-preview');
+  const compareArgs = process.argv.slice(2).filter(a => a === '--compare-cas');
   if (progressArgs.length > 1 || previewArgs.length > 1 ||
+      compareArgs.length > 1 || (previewArgs.length && compareArgs.length) ||
       process.argv.slice(2).some(a =>
         a !== '--progress' && a !== '--coherent-preview' &&
+        a !== '--compare-cas' &&
         !/^--(?:fixture-count|first-seed|batch-size)=[0-9]{1,10}$/.test(a))) {
-    throw Error('Allowed arguments: --fixture-count=N --first-seed=N --batch-size=N --progress --coherent-preview');
+    throw Error('Allowed arguments: --fixture-count=N --first-seed=N --batch-size=N --progress --coherent-preview --compare-cas');
   }
   const progress = progressArgs.length === 1;
   const coherentPreview = previewArgs.length === 1;
+  const compareCas = compareArgs.length === 1;
   const count = arg('fixture-count', 8, 240);
   const batchSize = arg('batch-size', 1, 16);
   const firstSeed = arg('first-seed', 1, 0xffffffff);
@@ -69,7 +74,7 @@ function main() {
   };
   let journal = must(startM1V8MatchJournal(career), 'start').journal;
   const start = performance.now();
-  let simulationMs = 0, applyMs = 0;
+  let simulationMs = 0, applyMs = 0, legacyDoubleReplayMs = 0;
   let lastCoherentPreview = null;
   const checkpoints = [];
   let pending = [];
@@ -123,13 +128,28 @@ function main() {
     };
     pending.push(command);
     if (pending.length === batchSize || i === count - 1) {
-      const applyStart = performance.now();
-      const proposal = coherentPreview ?
-        applyM1V8CoherentCareerPreviewBatch(career, journal, pending) :
-        batchSize === 1 ?
-          applyM1V8MatchResult(career, journal, pending[0]) :
-          applyM1V8MatchResultBatch(career, journal, pending);
-      const elapsed = performance.now() - applyStart;
+      let proposal, elapsed;
+      if (compareCas) {
+        const legacyStart = performance.now();
+        const validated = must(validateM1V8MatchJournal(career, journal),
+          'legacy first replay').journal;
+        const legacy = must(applyM1V8MatchResultBatch(career, validated, pending),
+          'legacy second replay').journal;
+        legacyDoubleReplayMs += performance.now() - legacyStart;
+        const onceStart = performance.now();
+        proposal = applyM1V8MatchResultBatchAtRevision(
+          career, journal, journal.revision, pending);
+        elapsed = performance.now() - onceStart;
+        assert.deepEqual(must(proposal, 'single CAS replay').journal, legacy);
+      } else {
+        const applyStart = performance.now();
+        proposal = coherentPreview ?
+          applyM1V8CoherentCareerPreviewBatch(career, journal, pending) :
+          batchSize === 1 ?
+            applyM1V8MatchResult(career, journal, pending[0]) :
+            applyM1V8MatchResultBatch(career, journal, pending);
+        elapsed = performance.now() - applyStart;
+      }
       journal = must(proposal, 'apply through fixture ' + (i + 1)).journal;
       if (coherentPreview) {
         // This research preview does not post official points or persist data.
@@ -173,12 +193,14 @@ function main() {
     status: 'SYNTHETIC_V8_WORKLOAD_ONLY_NOT_A_PERFORMANCE_GATE',
     source: { catalogSeed: 77, firstSeed, fixtureCount: count,
       journalSchema: 4, engineVersion: '7', eventSchema: 8,
-      batchSize, transactionMode: coherentPreview ? 'coherent-preview-batch' :
+      batchSize, transactionMode: compareCas ? 'revision-bound-cas-comparison' :
+        coherentPreview ? 'coherent-preview-batch' :
         batchSize === 1 ? 'single' : 'atomic-batch',
       claimAuthentication: false },
     measurements: { totalMs, simulationMs, incrementalApplyMs: applyMs,
       finalReplayValidationMs: verificationMs,
       finalSeasonProjectionMs: statisticsMs,
+      ...(compareCas ? { legacyDoubleReplayApplyMs: legacyDoubleReplayMs } : {}),
       ...(coherentPreview ? { finalCoherentPreviewBytes:
         Buffer.byteLength(JSON.stringify(lastCoherentPreview), 'utf8') } : {}),
       journalBytes: Buffer.byteLength(JSON.stringify(journal), 'utf8'),
@@ -188,6 +210,10 @@ function main() {
     limitations: ['synthetic-only',
       ...(coherentPreview ? [
         'incrementalApplyMs includes three independent full-history projection replays',
+      ] : []),
+      ...(compareCas ? [
+        'paired outputs checked but sequential, unrandomized timing is diagnostic only',
+        'compares pure-domain replay paths, not native IndexedDB wall time',
       ] : []),
       'no IndexedDB disk or quota throughput',
       'not a cross-browser or OS-crash durability test',

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   startM1V8MatchJournal, validateM1V8MatchJournal,
   applyM1V8MatchResult, applyM1V8MatchResultBatch,
+  applyM1V8MatchResultBatchAtRevision,
   M1_V8_JOURNAL_SCHEMA_VERSION,
 } from '../dist/core/m1-v8-result-journal.js';
 import { startM1V7MatchJournal } from '../dist/core/m1-v7-result-journal.js';
@@ -359,4 +360,33 @@ test('sixteen-fixture batch matches two verified commits and never trusts a pois
     ...commands.slice(0, 15), tamperedCommand,
   ]), 'INVALID_MATCH_RESULT');
   assert.equal(first.revision, 8);
+});
+
+test('revision-bound batch preserves parity and untrusted-journal rejection order', () => {
+  const first = request(fixtures[0], 0, 'revision-1', 71, false);
+  const second = request(fixtures[1], 1, 'revision-2', 72, false);
+  const source = empty();
+  const before = structuredClone(source);
+  const expected = success(applyM1V8MatchResultBatch(
+    career, source, [first, second]));
+  const actual = success(applyM1V8MatchResultBatchAtRevision(
+    career, source, 0, [first, second]));
+  assert.deepEqual(actual, expected);
+  assert.deepEqual(source, before);
+
+  failed(applyM1V8MatchResultBatchAtRevision(
+    career, actual, 0, []), 'STALE_REVISION');
+  failed(applyM1V8MatchResultBatchAtRevision(
+    career, actual, 2, []), 'INVALID_BATCH');
+  const damaged = structuredClone(actual);
+  damaged.results[0].dossier.match.home.goals += 1;
+  failed(applyM1V8MatchResultBatchAtRevision(
+    career, damaged, 0, []), 'INVALID_JOURNAL');
+  failed(applyM1V8MatchResultBatchAtRevision(
+    career, actual, 2, [first]), 'DUPLICATE_COMMAND');
+  const forged = request(fixtures[2], 2, 'revision-forged', 73, false);
+  forged.result.rngState ^= 1;
+  failed(applyM1V8MatchResultBatchAtRevision(
+    career, actual, 2, [forged]), 'INVALID_MATCH_RESULT');
+  assert.deepEqual(source, before);
 });

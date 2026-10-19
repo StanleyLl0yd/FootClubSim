@@ -1,6 +1,6 @@
 import { sameCanonicalValue } from './canonical-value.js';
 import { isPlainJsonTree } from './plain-json-tree.js';
-import { simulateM1V8MedicalPhases, type M1V8Error } from './m1-v8-medical-phases.js';
+import { simulateM1V8MedicalPhases } from './m1-v8-medical-phases.js';
 import { simulateM1V9GoalRestartSubstitutions }
   from './m1-v9-goal-restart-referee.js';
 

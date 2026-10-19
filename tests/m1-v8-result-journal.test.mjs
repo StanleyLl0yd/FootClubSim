@@ -397,7 +397,8 @@ test('unknown worker outcome is reconciled by full verified source identity', ()
   const origin = empty();
   const first = request(fixtures[0], 0, 'unknown-reconcile-a', 71, false);
   const second = request(fixtures[1], 1, 'unknown-reconcile-b', 72, false);
-  const intended = [first, second];
+  // The strict Worker envelope permits plain JSON, not cross-command aliases.
+  const intended = JSON.parse(JSON.stringify([first, second]));
   const before = structuredClone(origin);
   const unchanged = reconcileM1V8UncertainCommit(career, origin, 0, intended);
   assert.deepEqual(unchanged, {

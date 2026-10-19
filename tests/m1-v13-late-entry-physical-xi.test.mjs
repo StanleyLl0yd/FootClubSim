@@ -143,7 +143,7 @@ test('source replay forbids replacing the locked substitute and forged snapshots
     const forged=structuredClone(valid);mutate(forged);
     fail(apply(forged,step('playing',360)),'INVALID_STATE');
   }
-  const other=procedure();other.inPlayerId=home.bench.find(id=>id!==incoming);
+  const other=procedure();other.inPlayerId=home.bench.find(id=>id!==incoming && positions.get(id)!=='GK');
   fail(apply(valid,step('playing',360),645,other),'INVALID_STATE');
   fail(apply(valid,{kind:'cancel',runningSeconds:360,refereeSignalId:null}),
     'INVALID_ACTION');

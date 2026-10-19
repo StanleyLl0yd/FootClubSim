@@ -27,10 +27,6 @@ type Command = Readonly<{
   stoppage: string;
   kind: 'substitute-normal';
 }>;
-type Dossier = Readonly<{
-  checkpointSeconds: number;
-  evidence: unknown;
-}>;
 export type M1V8TimedSubstitutionExecution =
   | Readonly<{ ok: false; error: Failure }>
   | Readonly<{ ok: false; error: 'MATCH_REJECTED'; matchError: M1V8Error }>

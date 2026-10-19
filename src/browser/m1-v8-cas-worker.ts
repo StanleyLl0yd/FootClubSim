@@ -36,7 +36,8 @@ worker.addEventListener('message', event => {
     .then(journal => {
       worker.postMessage({
         schemaVersion: M1_V8_CAS_WORKER_PROTOCOL_VERSION,
-        kind: 'committed', jobId, careerId, journal,
+        kind: 'committed-receipt', jobId, careerId,
+        journalRevision: journal.revision,
       });
     })
     .catch((error: unknown) => {

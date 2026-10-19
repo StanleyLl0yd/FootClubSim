@@ -53,9 +53,10 @@ type CommitReply =
     domainError?: M1V8JournalError }>;
 
 /**
- * Parse only the acknowledgement metadata, not the potentially multi-MB
- * journal clone on the UI thread. The journal must be read and replayed
- * independently before its content is treated as authoritative.
+ * Parse a compact receipt from current Workers; admit the legacy journal
+ * acknowledgement for compatibility without interpreting its match data.
+ * The journal must be read and replayed independently before its content
+ * is treated as authoritative.
  */
 export function readM1V8WorkerCommitReply(
   raw: unknown, request: M1V8WorkerCommitRequest,
@@ -64,16 +65,28 @@ export function readM1V8WorkerCommitReply(
       ownValue(raw, 'schemaVersion') !== M1_V8_CAS_WORKER_PROTOCOL_VERSION ||
       ownValue(raw, 'jobId') !== request.jobId ||
       ownValue(raw, 'careerId') !== request.careerId) return null;
+  const revision = request.expectedRevision + request.requests.length;
+  if (!Number.isSafeInteger(revision) || revision < 1 || revision > 240) {
+    return null;
+  }
+  if (ownValue(raw, 'kind') === 'committed-receipt') {
+    if (!exact(raw, ['schemaVersion', 'kind', 'jobId', 'careerId',
+      'journalRevision']) || ownValue(raw, 'journalRevision') !== revision) {
+      return null;
+    }
+    return { kind: 'committed', receipt: {
+      jobId: request.jobId, careerId: request.careerId,
+      journalRevision: revision,
+    } };
+  }
   if (ownValue(raw, 'kind') === 'committed') {
     if (!exact(raw, ['schemaVersion', 'kind', 'jobId', 'careerId', 'journal'])) {
       return null;
     }
     const journal = ownValue(raw, 'journal');
     if (!record(journal) || !exact(journal, journalKeys)) return null;
-    const revision = request.expectedRevision + request.requests.length;
     const results = ownValue(journal, 'results');
-    if (!Number.isSafeInteger(revision) || revision > 240 ||
-        ownValue(journal, 'schemaVersion') !== 4 ||
+    if (ownValue(journal, 'schemaVersion') !== 4 ||
         ownValue(journal, 'careerId') !== request.careerId ||
         ownValue(journal, 'revision') !== revision ||
         !Array.isArray(results) || results.length !== revision) return null;

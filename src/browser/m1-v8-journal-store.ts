@@ -171,7 +171,7 @@ export async function commitM1V8PersistedBatch(
         if (proposed.error === 'INVALID_JOURNAL' ||
             proposed.error === 'INVALID_INITIAL_CAREER') {
           abort(fail('CORRUPTED'));
-        } else if (proposed.error === 'STALE_REVISION') {
+        } else if (proposed.error === 'CAS_REVISION_MISMATCH') {
           abort(fail('STALE_REVISION'));
         } else {
           abort(fail('DOMAIN_REJECTED', proposed.error));

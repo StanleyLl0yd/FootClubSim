@@ -54,8 +54,9 @@ type CommitReply =
 
 /**
  * Parse a compact receipt from current Workers; admit the legacy journal
- * acknowledgement for compatibility without interpreting its match data. The journal must be read and replayed
- * independently before its content is treated as authoritative.
+ * acknowledgement for compatibility without interpreting its match data.
+ * The journal must be read and replayed independently before its content
+ * is treated as authoritative.
  */
 export function readM1V8WorkerCommitReply(
   raw: unknown, request: M1V8WorkerCommitRequest,
@@ -85,8 +86,7 @@ export function readM1V8WorkerCommitReply(
     const journal = ownValue(raw, 'journal');
     if (!record(journal) || !exact(journal, journalKeys)) return null;
     const results = ownValue(journal, 'results');
-    if (
-        ownValue(journal, 'schemaVersion') !== 4 ||
+    if (ownValue(journal, 'schemaVersion') !== 4 ||
         ownValue(journal, 'careerId') !== request.careerId ||
         ownValue(journal, 'revision') !== revision ||
         !Array.isArray(results) || results.length !== revision) return null;

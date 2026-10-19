@@ -273,3 +273,25 @@ test('v8 journal lives in a distinct database from historical v7 storage', async
       .get(career.careerId).revision, 1);
   });
 });
+
+test('CAS detects corruption before stale revision and never commits invalid batch', async () => {
+  await withStorage(async mock => {
+    const started = await createM1V8PersistedJournal(career.careerId);
+    await assert.rejects(commitM1V8PersistedBatch(career.careerId, 1, []),
+      { code: 'STALE_REVISION' });
+    await assert.rejects(commitM1V8PersistedBatch(career.careerId, 0, []),
+      { code: 'DOMAIN_REJECTED', domainError: 'INVALID_BATCH' });
+    assert.deepEqual(await loadM1V8PersistedJournal(career.careerId), started);
+    const request = matchRequest(fixtures[0], 0, 'single-replay');
+    const committed = await commitM1V8PersistedBatch(
+      career.careerId, 0, [request]);
+    assert.equal(committed.revision, 1);
+    const entries = mock.entries('footclubsim-m1-v8', 'result-journals');
+    const damaged = structuredClone(committed);
+    damaged.results[0].rngState ^= 1;
+    entries.set(career.careerId, damaged);
+    await assert.rejects(commitM1V8PersistedBatch(career.careerId, 0, []),
+      { code: 'CORRUPTED' });
+    assert.deepEqual(entries.get(career.careerId), damaged);
+  });
+});

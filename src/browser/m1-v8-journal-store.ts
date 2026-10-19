@@ -1,6 +1,6 @@
 import { isStableId } from '../core/identifiers.js';
 import {
-  applyM1V8MatchResultBatch, startM1V8MatchJournal,
+  applyM1V8MatchResultBatchAtRevision, startM1V8MatchJournal,
   validateM1V8MatchJournal, type M1V8JournalError, type M1V8MatchJournal,
 } from '../core/m1-v8-result-journal.js';
 import { loadInitialCareer } from './initial-career-store.js';
@@ -145,7 +145,8 @@ export async function createM1V8PersistedJournal(careerId: string):
 /**
  * A true read-modify-write CAS within a single IDB readwrite transaction.
  * The source career is loaded before opening that transaction. The stored
- * journal is revalidated before any domain proposal is accepted. Independent
+ * journal is source-replayed once before the revision check and domain batch.
+ * Independent
  * tabs targeting the same object store serialize under IDB transaction locks.
  * The final batch is written once; a failed proposal aborts without any put.
  */
@@ -164,15 +165,19 @@ export async function commitM1V8PersistedBatch(
       'QUOTA_EXCEEDED' : 'STORAGE_FAILED'));
     read.onsuccess = () => {
       if (read.result === undefined) { abort(fail('NOT_FOUND')); return; }
-      let current: M1V8MatchJournal;
-      try { current = verified(read.result, initial); }
-      catch { abort(fail('CORRUPTED')); return; }
-      if (current.revision !== expectedRevision) {
-        abort(fail('STALE_REVISION'));
+      const proposed = applyM1V8MatchResultBatchAtRevision(
+        initial, read.result, expectedRevision, requests);
+      if (!proposed.ok) {
+        if (proposed.error === 'INVALID_JOURNAL' ||
+            proposed.error === 'INVALID_INITIAL_CAREER') {
+          abort(fail('CORRUPTED'));
+        } else if (proposed.error === 'CAS_REVISION_MISMATCH') {
+          abort(fail('STALE_REVISION'));
+        } else {
+          abort(fail('DOMAIN_REJECTED', proposed.error));
+        }
         return;
       }
-      const proposed = applyM1V8MatchResultBatch(initial, current, requests);
-      if (!proposed.ok) { abort(fail('DOMAIN_REJECTED', proposed.error)); return; }
       const put = store.put(proposed.journal, careerId);
       put.onerror = () => setRequestError(fail(isQuota(put.error) ?
         'QUOTA_EXCEEDED' : 'STORAGE_FAILED'));

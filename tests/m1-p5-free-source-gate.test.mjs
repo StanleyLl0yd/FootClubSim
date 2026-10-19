@@ -20,7 +20,7 @@ test('owner approved a zero-fee policy, while no calibration or packaging is acc
   assert.equal(M1_P5_FREE_POLICY_VERSION, 1);
   assert.equal(report.mode, 'FREE_ONLY');
   assert.equal(report.maxPaidDataCostRub, 0);
-  assert.equal(report.sourcesScreened, 9);
+  assert.equal(report.sourcesScreened, 10);
   assert.equal(report.provisionalScoreSources, 1);
   assert.equal(report.reservedHoldoutSources, 1);
   assert.equal(report.producedRealRplEventCalibration, false);
@@ -59,6 +59,7 @@ test('original CC BY event research is permitted without permitting its direct R
   for (const id of [
     'soccermon-original-injuries',
     'rpl-published-technical-report',
+    'rfs-official-2023-events',
     'footbolno-open-claims',
     'thirdparty-wyscout-transform',
     'statsbomb-research-restricted',
@@ -144,4 +145,37 @@ test('non-JSON or JavaScript accessor input is rejected without invoking attacke
   const malicious = source();
   malicious.sources[0].allowedMetrics.push(undefined);
   assert.throws(() => inspectM1P5FreeSourcePolicy(malicious));
+});
+
+test('RFU official 2023/24 events remain metadata-only until rights are reviewed', () => {
+  const policy = source();
+  const rfs = policy.sources.find(item => item.id === 'rfs-official-2023-events');
+  assert.equal(rfs.coverage, 'RPL_2023_24');
+  assert.equal(rfs.rightsStatus, 'PUBLIC_VIEW_ONLY_NO_DATA_LICENSE');
+  assert.equal(rfs.sourceSha256, null);
+  assert.deepEqual(rfs.allowedMetrics, []);
+  assert.deepEqual(decideM1P5FreeSourcePurpose(
+    policy, 'rfs-official-2023-events', 'source-metadata-review'),
+    { allowed: true, reason: 'CITATION_METADATA_ONLY_NO_RAW_IMPORT' });
+  for (const purpose of [
+    'provisional-rpl-score-development', 'rpl-event-calibration',
+    'cross-league-mechanics-research', 'production-dataset-import',
+  ]) assert.equal(decideM1P5FreeSourcePurpose(
+    policy, 'rfs-official-2023-events', purpose).allowed, false);
+  mutate(x => {
+    x.sources.find(item => item.id === 'rfs-official-2023-events')
+      .allowedMetrics.push('event-tags');
+  });
+  mutate(x => {
+    x.sources.find(item => item.id === 'rfs-official-2023-events')
+      .sourceSha256 = 'a'.repeat(64);
+  });
+  for (const fakeLicense of [
+    'ORIGINAL_CC_BY_4_0', 'PAPER_CC_BY_4_0_DATASET_CLAIM',
+  ]) {
+    mutate(x => {
+      x.sources.find(item => item.id === 'rfs-official-2023-events')
+        .rightsStatus = fakeLicense;
+    });
+  }
 });

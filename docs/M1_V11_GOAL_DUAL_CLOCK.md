@@ -34,12 +34,16 @@ event-source-replayed **dual clock**:
   substitution window, as the actual final-whistle decision and added
   time are not modelled.
 - Interactive `startM1V11GoalClock` + repeated
-  `advanceM1V11GoalClock` and full automatic
-  `runM1V11GoalClock` share the same replay-verified transition.
-  Every externally supplied saved snapshot is structurally validated,
-  replayed against the actual v8 source and compared exactly before
-  its next step. Forged goal, times, team/fixture, changed seed,
-  duplicates, getters, cycles or impossible state are refused.
+  `advanceM1V11GoalClock(prematch, policy, snapshot, expectedPauseWallSeconds)`
+  and full automatic `runM1V11GoalClock` share the same
+  replay-verified transition. The **expected pause policy must come from
+  the original immutable scenario configuration**, never the untrusted
+  saved snapshot. The validator rejects a changed saved pause even if
+  its fabricated wall-time history would be internally consistent.
+  Every snapshot is structurally validated, replayed against the v8
+  source and compared exactly before its next step. Forged goal, times,
+  team/fixture, changed seed, duplicates, getters, cycles or impossible
+  state are refused.
 - The bounded result includes a precise running second, wall second,
   match-event ID, source goal ID and scoring team, all separated from
   the original v8 report and any existing browser/CAS journal.
@@ -47,7 +51,11 @@ event-source-replayed **dual clock**:
 ### Critical limitations
 
 `pauseWallSeconds` is a caller-chosen **synthetic test parameter**,
-*not* a historically calibrated physical wait. It is **not** accepted
+*not* a historically calibrated physical wait. The caller must retain
+its original value separately from save data. A malicious caller who
+controls **both** the immutable scenario input and its expected policy
+can of course create an entirely different scenario; this pure
+research API does not provide cryptographic source authentication. It is **not** accepted
 as a referee exception, permission to substitute, real-world
 kick-off certification, or evidence of a particular boundary crossing.
 This first dual clock has goal stops only, does not generate fouls,

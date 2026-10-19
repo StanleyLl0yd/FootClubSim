@@ -119,3 +119,16 @@ every incoming fixture is individually verified. The Core CI records both
 single-apply and 8-item batch measurements, without an acceptance threshold.
 These are different transaction patterns, not a speed claim for identical
 browser persistence behavior.
+
+## M1 P4 coherent career replay cost isolation (2026-10-19)
+
+An opt-in `--coherent-preview` flag on the existing v8 career benchmark runs
+strict atomic result batch admission and three independently source-replayed
+read-only projections (fixtures, season statistics, unofficial 3/1/0 points).
+`incrementalApplyMs` includes those projections only in this new mode; the
+default remains journal-only. Both use the same synthetic fixture generator,
+seeds and bounded batches, but the timings are not an accepted threshold or
+paired performance experiment. Core CI covers eight fixtures. The full 240
+fixture manual workflow accepts `coherent_preview=true`; its availability
+is not an executed measurement. Source authentication, IndexedDB durability,
+full-history browser latency and independent calibration remain unresolved.

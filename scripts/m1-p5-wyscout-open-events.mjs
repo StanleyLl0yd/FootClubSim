@@ -21,7 +21,6 @@ export const M1_P5_WYSCOUT_RESEARCH_SAMPLE = Object.freeze({
 });
 const MAX_SAMPLE_BYTES = 1_000_000;
 const RED = 1701, YELLOW = 1702, SECOND_YELLOW = 1703, GOAL = 101;
-const ATTEMPTS = new Set(['Penalty', 'Free kick shot']);
 
 function validEvent(event, expectedMatchId) {
   if (!event || typeof event !== 'object' || Array.isArray(event) ||
@@ -46,15 +45,20 @@ export function inspectWyscoutEventFacts(candidate, expectedMatchId) {
       !Array.isArray(candidate.events) ||
       candidate.events.length < 1 || candidate.events.length > 10_000 ||
       !candidate.teams || typeof candidate.teams !== 'object' ||
-      !candidate.players || typeof candidate.players !== 'object') {
+      Array.isArray(candidate.teams) ||
+      Object.keys(candidate.teams).length !== 2 ||
+      !candidate.players || typeof candidate.players !== 'object' ||
+      Array.isArray(candidate.players)) {
     throw Error('Invalid Wyscout research sample');
   }
+  const registeredTeams = new Set(Object.keys(candidate.teams));
   const seen = new Set();
   let shots = 0, penalties = 0, directFreeKickShots = 0, goalActions = 0,
     duplicateGoalTagsOnGoalkeeperEvents = 0, allGoalTags = 0,
     yellowCards = 0, redCards = 0, secondYellowCards = 0;
   for (const event of candidate.events) {
-    if (!validEvent(event, expectedMatchId) || seen.has(event.id)) {
+    if (!validEvent(event, expectedMatchId) || seen.has(event.id) ||
+        !registeredTeams.has(String(event.teamId))) {
       throw Error('Invalid or duplicate source event');
     }
     seen.add(event.id);

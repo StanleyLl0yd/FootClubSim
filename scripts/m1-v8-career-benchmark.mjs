@@ -19,6 +19,8 @@ import {
 } from '../dist/core/m1-v8-result-journal.js';
 import { deriveM1VerifiedV8SeasonStats }
   from '../dist/core/m1-v8-season-statistics.js';
+import { applyM1V8CoherentCareerPreviewBatch }
+  from '../dist/core/m1-v8-coherent-career-preview.js';
 
 function arg(name, fallback, max) {
   const args = process.argv.slice(2).filter(s => s.startsWith('--' + name + '='));
@@ -38,12 +40,15 @@ function must(result, context) {
 }
 function main() {
   const progressArgs = process.argv.slice(2).filter(a => a === '--progress');
-  if (progressArgs.length > 1 || process.argv.slice(2).some(a =>
-    a !== '--progress' &&
-    !/^--(?:fixture-count|first-seed|batch-size)=[0-9]{1,10}$/.test(a))) {
-    throw Error('Allowed arguments: --fixture-count=N --first-seed=N --batch-size=N --progress');
+  const previewArgs = process.argv.slice(2).filter(a => a === '--coherent-preview');
+  if (progressArgs.length > 1 || previewArgs.length > 1 ||
+      process.argv.slice(2).some(a =>
+        a !== '--progress' && a !== '--coherent-preview' &&
+        !/^--(?:fixture-count|first-seed|batch-size)=[0-9]{1,10}$/.test(a))) {
+    throw Error('Allowed arguments: --fixture-count=N --first-seed=N --batch-size=N --progress --coherent-preview');
   }
   const progress = progressArgs.length === 1;
+  const coherentPreview = previewArgs.length === 1;
   const count = arg('fixture-count', 8, 240);
   const batchSize = arg('batch-size', 1, 16);
   const firstSeed = arg('first-seed', 1, 0xffffffff);
@@ -65,6 +70,7 @@ function main() {
   let journal = must(startM1V8MatchJournal(career), 'start').journal;
   const start = performance.now();
   let simulationMs = 0, applyMs = 0;
+  let lastCoherentPreview = null;
   const checkpoints = [];
   let pending = [];
   for (let i = 0; i < count; i++) {
@@ -118,11 +124,22 @@ function main() {
     pending.push(command);
     if (pending.length === batchSize || i === count - 1) {
       const applyStart = performance.now();
-      const proposal = batchSize === 1 ?
-        applyM1V8MatchResult(career, journal, pending[0]) :
-        applyM1V8MatchResultBatch(career, journal, pending);
-      journal = must(proposal, 'apply through fixture ' + (i + 1)).journal;
+      const proposal = coherentPreview ?
+        applyM1V8CoherentCareerPreviewBatch(career, journal, pending) :
+        batchSize === 1 ?
+          applyM1V8MatchResult(career, journal, pending[0]) :
+          applyM1V8MatchResultBatch(career, journal, pending);
       const elapsed = performance.now() - applyStart;
+      journal = must(proposal, 'apply through fixture ' + (i + 1)).journal;
+      if (coherentPreview) {
+        // This research preview does not post official points or persist data.
+        lastCoherentPreview = proposal.preview;
+        assert.equal(lastCoherentPreview.journalRevision, i + 1);
+        assert.equal(lastCoherentPreview.completedFixtures, i + 1);
+        assert.equal(lastCoherentPreview.fixtureCoverage.completedFixtures, i + 1);
+        assert.equal(lastCoherentPreview.seasonStatistics.completedFixtures, i + 1);
+        assert.equal(lastCoherentPreview.unrankedPoints.completedFixtures, i + 1);
+      }
       applyMs += elapsed;
       pending = [];
       assert.equal(journal.revision, i + 1);
@@ -156,16 +173,23 @@ function main() {
     status: 'SYNTHETIC_V8_WORKLOAD_ONLY_NOT_A_PERFORMANCE_GATE',
     source: { catalogSeed: 77, firstSeed, fixtureCount: count,
       journalSchema: 4, engineVersion: '7', eventSchema: 8,
-      batchSize, transactionMode: batchSize === 1 ? 'single' : 'atomic-batch',
+      batchSize, transactionMode: coherentPreview ? 'coherent-preview-batch' :
+        batchSize === 1 ? 'single' : 'atomic-batch',
       claimAuthentication: false },
     measurements: { totalMs, simulationMs, incrementalApplyMs: applyMs,
       finalReplayValidationMs: verificationMs,
       finalSeasonProjectionMs: statisticsMs,
+      ...(coherentPreview ? { finalCoherentPreviewBytes:
+        Buffer.byteLength(JSON.stringify(lastCoherentPreview), 'utf8') } : {}),
       journalBytes: Buffer.byteLength(JSON.stringify(journal), 'utf8'),
       rssBytesAfter: process.memoryUsage().rss, checkpoints },
     environment: { node: process.version, platform: process.platform,
       arch: process.arch, commitSha: process.env.GITHUB_SHA ?? null },
-    limitations: ['synthetic-only', 'no IndexedDB disk or quota throughput',
+    limitations: ['synthetic-only',
+      ...(coherentPreview ? [
+        'incrementalApplyMs includes three independent full-history projection replays',
+      ] : []),
+      'no IndexedDB disk or quota throughput',
       'not a cross-browser or OS-crash durability test',
       'no real-football calibration or accepted latency thresholds'],
   }, null, 2) + '\n');

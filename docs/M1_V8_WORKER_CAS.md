@@ -20,6 +20,15 @@ sent only after the IndexedDB transaction completes; a stale revision or
 another typed v8 storage/domain error produces a bounded failure response.
 No referee/medical claims become authenticated through Worker isolation.
 
+The current Worker now returns a **constant-size, version-1
+`committed-receipt` acknowledgement** with `journalRevision`, not a structured
+clone of the growing journal. This prevents an unnecessary multi-megabyte
+Worker-to-page message when the caller needs only the transaction result.
+The client accepts the prior strict `committed` journal reply for backwards
+compatibility, but never treats either form as trusted match evidence. Both
+forms require exact job/career correlation and the expected revision.
+The on-disk schema, transactional CAS, and failure classification are unchanged.
+
 `examples/m1-v8-cas-smoke.html` keeps the old two-match real-navigation
 proof and competing main-thread CAS writers, then commits a fourth fixture
 using a dedicated Worker. It checks the worker's job/career response identity,
@@ -53,8 +62,9 @@ The isolated client `src/browser/m1-v8-cas-worker-client.ts` is now exercised
 by the existing native smoke on Linux Chromium, real Safari and Windows
 Chrome/Edge. It validates the request **before** starting the Worker, bounds
 the wait, checks origin, exact protocol/job/career identity, and accepts
-a successful acknowledgement only with the expected schema-4 journal
-revision and fixture count. It exposes only small receipt metadata rather
+a successful acknowledgement only with the expected journal revision and
+batch fixture count (the legacy journal reply additionally checks its schema
+and result-array length). It exposes only small receipt metadata rather
 than the multi-megabyte journal clone. This is a commit acknowledgement,
 **not an authoritative sporting-data report**; retained source content still
 requires an independent strict replay before use.

@@ -1,0 +1,56 @@
+name: M1 P5 pinned RPL 2023-24 correction evidence (manual only)
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: m1-p5-2023-24-evidence-research
+  cancel-in-progress: false
+
+jobs:
+  evidence-observation:
+    name: Private immutable source and one correction, NOT calibration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Reconcile one pinned error without retaining third-party data
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          url='https://raw.githubusercontent.com/openfootball/europe/63df627f3c87ce71708f016522ea236cf74332c3/russia/2023-24_ru1.txt'
+          curl --fail --location --silent --show-error \
+            --proto '=https' --proto-redir '=https' \
+            --connect-timeout 10 --max-time 60 --max-filesize 131072 \
+            --output "$work/original.txt" "$url"
+          test "$(wc -c < "$work/original.txt")" -le 131072
+          node scripts/m1-p5-openfootball-2023-24.mjs --file="$work/original.txt" \
+            > "$work/report.json"
+          {
+            echo '## M1 research-only RPL 2023/24 candidate'
+            echo
+            echo 'Source commit: 63df627f3c87ce71708f016522ea236cf74332c3'
+            echo 'The source remains immutable; the sole in-memory correction is'
+            echo 'supported by the RFU competition calendar and Sochi club notice.'
+            echo 'No raw data were committed, uploaded or published as artifacts.'
+            echo 'Training and held-out seasons are proposed, NOT model tuning.'
+            echo
+            echo '~~~json'
+            cat "$work/report.json"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"

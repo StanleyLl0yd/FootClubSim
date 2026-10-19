@@ -107,10 +107,12 @@ test('well signed but invalid football decision cannot bypass v8 source validati
 
 test('source and context mutations after entering async verification cannot affect replay', async () => {
   const ctx = context(), p = prematch(), decisions = [], medical = [],
-    commands = [];
+    commands = [], teamPolicy = policy();
   const signed = await envelope(ctx, decisions, medical);
-  const pending = simulateM1V8WithSignedSource(p, policy(), commands,
+  const pending = simulateM1V8WithSignedSource(p, teamPolicy, commands,
     decisions, medical, ctx, signed, (await keypair).publicKey);
+  p.rngSeed = 9999;
+  teamPolicy.home.assignedActor.kind = 'untrusted-after-start';
   ctx.challengeId = 'mutated-after-start';
   ctx.expectedRevision = 99;
   medical.push({ forged: true });

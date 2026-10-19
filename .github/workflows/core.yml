@@ -42,6 +42,8 @@ jobs:
         run: node scripts/m1-v8-career-benchmark.mjs --fixture-count=8 --first-seed=1 --batch-size=8
       - name: M1 v8 coherent batch with three independent views (8 fixtures, NOT gate)
         run: node scripts/m1-v8-career-benchmark.mjs --fixture-count=8 --first-seed=1 --batch-size=8 --coherent-preview
+      - name: M1 v8 old double replay vs revision-bound CAS comparison (16 fixtures, NOT gate)
+        run: node scripts/m1-v8-career-benchmark.mjs --fixture-count=16 --first-seed=1 --batch-size=8 --compare-cas
       - name: Assert independent core and browser outputs coexist
         run: |
           test -s dist/core/save.js

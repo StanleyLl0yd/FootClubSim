@@ -23,16 +23,6 @@ const REFEREE_DRAWS_PER_PHASE = 5 as const;
 const MAX_PREMATCH_BYTES = 10_000_000;
 type Side = 'home' | 'away';
 type Sanction = 'caution' | 'direct-red' | 'injury-withdrawal';
-interface RefereeCommand {
-  readonly schemaVersion: 1;
-  readonly id: string;
-  readonly fixtureId: string;
-  readonly teamId: string;
-  readonly playerId: string;
-  readonly elapsedSeconds: number;
-  readonly kind: Sanction;
-  readonly origin: 'trusted-referee' | 'trusted-medical';
-}
 export interface M1V20GeneratedIncident {
   readonly id: string;
   readonly decisionId: string;

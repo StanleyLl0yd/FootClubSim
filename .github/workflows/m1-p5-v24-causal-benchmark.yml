@@ -32,7 +32,7 @@ jobs:
   bounded-observation:
     name: v24 source replay across bounded synthetic fixtures
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     permissions:
       contents: read
     env:
@@ -59,8 +59,8 @@ jobs:
           set -euo pipefail
           umask 077
           start="${SEED_START:-1}"
-          count="${SEED_COUNT:-4}"
-          fixtures="${FIXTURE_COUNT:-3}"
+          count="${SEED_COUNT:-128}"
+          fixtures="${FIXTURE_COUNT:-32}"
           work="$(mktemp -d)"
           trap 'rm -rf "$work"' EXIT
           TIMEFORMAT='observed_elapsed_seconds=%R'

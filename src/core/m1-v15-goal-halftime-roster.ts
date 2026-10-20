@@ -199,7 +199,7 @@ export function simulateM1V15GoalAndHalfTime(
       halfChanges[change.side]++;
     }
     changes.delete(2700);
-    wall+=halfTimeWallSeconds;
+    wall+=halfTimeWallSeconds as number;
     emit('second-half-kickoff',running,wall);
     half=true;return true;
   }

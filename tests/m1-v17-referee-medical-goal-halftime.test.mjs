@@ -179,3 +179,19 @@ test('forged disciplinary replay and getter-backed inputs are rejected', () => {
   bad(run(forged), 'INVALID_SOURCE');
   assert.equal(calls, 0);
 });
+
+test('a generated open-play goal restarts with the conceding team', () => {
+  const result = ok(run());
+  const whistles = new Map(result.events.filter(e => e.kind === 'goal-whistle')
+    .map(e => [e.sourceEventId, e]));
+  const restarts = result.events.filter(e => e.kind === 'restart-kickoff');
+  assert.ok(restarts.length > 0, 'seed must cover an actual open-play goal');
+  for (const restart of restarts) {
+    const goal = whistles.get(restart.sourceEventId);
+    assert.ok(goal);
+    const conceding = goal.teamId === fixture.homeClubId ?
+      fixture.awayClubId : fixture.homeClubId;
+    assert.equal(restart.teamId, conceding);
+    assert.notEqual(restart.teamId, goal.teamId);
+  }
+});

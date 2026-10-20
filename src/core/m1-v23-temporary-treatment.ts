@@ -192,6 +192,10 @@ export function simulateM1V23TemporaryTreatment(
     const playerDraw = rng.nextFloat();
     const severity = rng.nextFloat();
     const injuryTrigger = rng.nextFloat();
+    // Independent, fixed-budget exploratory medical random substream.
+    const treatmentRoll = treatmentRng.nextFloat();
+    const treatmentTeamRoll = treatmentRng.nextFloat();
+    const treatmentPlayerRoll = treatmentRng.nextFloat();
     if (second === 2700) {
       // The one approved coach checkpoint is applied BEFORE all later
       // generated sanctions and shots. v17/v8 still performs full team,
@@ -210,6 +214,7 @@ export function simulateM1V23TemporaryTreatment(
         active[side].add(entering);
         commands.push(action);
       }
+      completeDueReturn(second, phase);
       continue;
     }
     // No events at kickoff or half-time. Never fabricate physical injury
@@ -217,18 +222,27 @@ export function simulateM1V23TemporaryTreatment(
     const injuryIncident = trigger >= FOUL_TRIGGER &&
       injuryTrigger < SUSPECTED_INJURY_TRIGGER;
     if (phase === 0 || second === 2700 ||
-        (trigger >= FOUL_TRIGGER && !injuryIncident)) continue;
+        (trigger >= FOUL_TRIGGER && !injuryIncident)) {
+      completeDueReturn(second, phase);
+      continue;
+    }
     const side: Side = teamDraw < 0.5 ? 'home' : 'away';
     const candidates = [...active[side]].filter(id =>
       players.get(id) !== 'GK').sort();
-    if (candidates.length === 0) continue;
+    if (candidates.length === 0) {
+      completeDueReturn(second, phase);
+      continue;
+    }
     const playerId = candidates[Math.floor(playerDraw * candidates.length)]!;
     const kind: Sanction = injuryIncident ? 'injury-withdrawal' :
       severity < DIRECT_RED_TRIGGER && active[side].size > 7 ?
         'direct-red' : 'caution';
     // No kind of irreversible withdrawal may reduce the team below seven.
     if (active[side].size <= 7 &&
-        (kind !== 'caution' || cautions.has(playerId))) continue;
+        (kind !== 'caution' || cautions.has(playerId))) {
+      completeDueReturn(second, phase);
+      continue;
+    }
     const id = 'm1-v23-ref-' + (phase + 1);
     commands.push({
       schemaVersion: 1, id, fixtureId: input.fixture.id,
@@ -268,15 +282,46 @@ export function simulateM1V23TemporaryTreatment(
         commands.push(action);
         acceptedInPlayCommands++;
       }
+      // A new, medically absent outfielder is selected ONLY at an
+      // internally generated foul stoppage. A 300-second absence suffices
+      // for the narrow IFAB one-minute post-restart test; this is NOT an
+      // observed injury, diagnosis, or real referee instruction.
+      if (pending === null &&
+          treatmentRoll < CONDITIONAL_TREATMENT_TRIGGER &&
+          second !== 2400 && second < 5100) {
+        const treatmentSide: Side =
+          treatmentTeamRoll < 0.5 ? 'home' : 'away';
+        const initialStarters = treatmentSide === 'home' ?
+          input.homeLineup.starters : input.awayLineup.starters;
+        const eligible = [...active[treatmentSide]]
+          .filter(id => players.get(id) !== 'GK' &&
+            initialStarters.includes(id)).sort();
+        if (active[treatmentSide].size > 7 && eligible.length > 0) {
+          const player = eligible[
+            Math.floor(treatmentPlayerRoll * eligible.length)]!;
+          treatment.push({
+            schemaVersion: 1, id: 'm1-v23-exit-' + (phase + 1),
+            fixtureId: input.fixture.id, teamId: clubIds[treatmentSide],
+            playerId: player, elapsedSeconds: second,
+            kind: 'treatment-exit', reason: 'medical-staff-entered',
+            restartAtRunningSeconds: second,
+          });
+          active[treatmentSide].delete(player);
+          pending = { side: treatmentSide, playerId: player,
+            returnAt: second + M1_CLOCK_STEP_SECONDS };
+          treatmentExits++;
+        }
+      }
     }
+    completeDueReturn(second, phase);
   }
   if (acceptedInPlayCommands !== additional.length) {
     return fail('NO_GENERATED_FOUL_STOPPAGE');
   }
   // Source v8 evaluates exactly one match with generated decisions
   // and authenticated-internally stoppage-gated coach substitutions.
-  const match = simulateM1V22RefereeMedicalFoulCoaching(
-    input, policy, commands, [], 0, 900, foulTimes, 20,
+  const match = simulateM1V23RefereeWithTreatment(
+    input, policy, commands, treatment, 0, 900, foulTimes, 20,
   );
   if (!match.ok) return fail('SOURCE_MATCH_REJECTED');
   const decisions = match.events.filter(e =>
@@ -308,11 +353,21 @@ export function simulateM1V23TemporaryTreatment(
     refereeRngSeed: seed, refereeRngState: rng.snapshot(),
     refereeRngDraws: M1_CLOCK_MAX_EVENTS * REFEREE_DRAWS_PER_PHASE,
     generatedIncidents, acceptedHalfTimeCommands: requested.length,
-    acceptedInPlayCommands, match, inGameRefereeGenerated: true,
+    acceptedInPlayCommands,
+    syntheticTreatmentActions: treatment,
+    syntheticTemporaryExitCount: treatmentExits,
+    syntheticTemporaryReturnCount: treatmentReturns,
+    treatmentRngSeed: treatmentSeed,
+    treatmentRngState: treatmentRng.snapshot(),
+    treatmentRngDraws: M1_CLOCK_MAX_EVENTS * TREATMENT_DRAWS_PER_PHASE,
+    match, inGameRefereeGenerated: true,
     externalRefereeAuthorityAuthenticated: false,
     syntheticFoulRatesCalibrated: false,
     specialGoalsGenerated: false,syntheticInjuryWithdrawalsGenerated: true,
     injuryDiagnosisAndRecoverySupported: false,
+    syntheticTemporaryTreatmentSupported: true,
+    externalMedicalAuthorityAuthenticated: false,
+    halfTimeMedicalExceptionSupported: false,
     inPlayCoachingAtGeneratedFoulSupported: true,
     lateEntrySupported: false,
     arbitraryRestartSupported: false,

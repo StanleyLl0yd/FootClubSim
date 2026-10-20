@@ -1,6 +1,7 @@
 import { sameCanonicalValue } from './canonical-value.js';
 import { M1_CLOCK_MAX_EVENTS, M1_CLOCK_STEP_SECONDS,
-  startM1Clock, type M1PrematchInput } from './m1-clock.js';
+  M1_CLOCK_END_SECONDS, startM1Clock, type M1PrematchInput }
+  from './m1-clock.js';
 import { isPlainJsonTree } from './plain-json-tree.js';
 import { SeededRng, RNG_VERSION } from './rng.js';
 import { simulateM1V22RefereeMedicalFoulCoaching,
@@ -35,7 +36,8 @@ export interface M1V22GeneratedIncident {
   readonly sanction: Sanction;
 }
 export type M1V22CoachError = 'INVALID_SOURCE' |
-  'INVALID_HALF_TIME_COMMANDS' | 'SOURCE_MATCH_REJECTED' |
+  'INVALID_HALF_TIME_COMMANDS' | 'INVALID_INPLAY_COMMANDS' |
+  'NO_GENERATED_FOUL_STOPPAGE' | 'SOURCE_MATCH_REJECTED' |
   'REFEREE_REPLAY_MISMATCH';
 export type M1V22CoachRun =
   | Readonly<{ ok: false; error: M1V22CoachError }>
@@ -51,6 +53,7 @@ export type M1V22CoachRun =
     refereeRngDraws: number;
     generatedIncidents: readonly M1V22GeneratedIncident[];
     acceptedHalfTimeCommands: number;
+    acceptedInPlayCommands: number;
     match: Extract<M1V22RefereeRun, { ok: true }>;
     inGameRefereeGenerated: true;
     externalRefereeAuthorityAuthenticated: false;
@@ -58,7 +61,8 @@ export type M1V22CoachRun =
     specialGoalsGenerated: false;
     syntheticInjuryWithdrawalsGenerated: true;
     injuryDiagnosisAndRecoverySupported: false;
-    inPlayCoachingAndLateEntrySupported: false;
+    inPlayCoachingAtGeneratedFoulSupported: true;
+    lateEntrySupported: false;
     arbitraryRestartSupported: false;
   }>;
 const fail = (error: M1V22CoachError):
@@ -74,21 +78,27 @@ const isAction = (v: unknown): v is Record<string, unknown> =>
  */
 export function simulateM1V22FoulStoppageCoaching(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown = [],
+  inPlayCommands: unknown = [],
 ): M1V22CoachRun {
   if (!isPlainJsonTree(prematch) || !isPlainJsonTree(policy) ||
-      !isPlainJsonTree(halfTimeCommands)) {
+      !isPlainJsonTree(halfTimeCommands) ||
+      !isPlainJsonTree(inPlayCommands)) {
     return fail('INVALID_SOURCE');
   }
   let input: M1PrematchInput;
   let requested: unknown;
+  let additional: unknown;
   try {
     const encoded = JSON.stringify(prematch);
     const commandText = JSON.stringify(halfTimeCommands);
-    if (encoded.length > MAX_PREMATCH_BYTES || commandText.length > 1_000_000) {
+    const inPlayText = JSON.stringify(inPlayCommands);
+    if (encoded.length > MAX_PREMATCH_BYTES ||
+        commandText.length > 1_000_000 || inPlayText.length > 1_000_000) {
       return fail('INVALID_SOURCE');
     }
     input = JSON.parse(encoded) as M1PrematchInput;
     requested = JSON.parse(commandText) as unknown;
+    additional = JSON.parse(inPlayText) as unknown;
   } catch {
     return fail('INVALID_SOURCE');
   }
@@ -99,6 +109,25 @@ export function simulateM1V22FoulStoppageCoaching(
         a.kind !== 'substitute-normal' ||
         a.elapsedSeconds !== 2700 || a.stoppage !== 'half-time')) {
     return fail('INVALID_HALF_TIME_COMMANDS');
+  }
+  if (!Array.isArray(additional) || additional.length > 10 ||
+      additional.some(a => !isAction(a) ||
+        a.kind !== 'substitute-normal' ||
+        typeof a.elapsedSeconds !== 'number' ||
+        !Number.isSafeInteger(a.elapsedSeconds) ||
+        a.elapsedSeconds <= 0 ||
+        a.elapsedSeconds >= M1_CLOCK_END_SECONDS ||
+        a.elapsedSeconds === 2700 ||
+        a.elapsedSeconds % M1_CLOCK_STEP_SECONDS !== 0 ||
+        a.stoppage !== 'referee-authorized')) {
+    return fail('INVALID_INPLAY_COMMANDS');
+  }
+  const extraByTime = new Map<number, Record<string, unknown>[]>();
+  for (const a of additional as Record<string, unknown>[]) {
+    const second = a.elapsedSeconds as number;
+    const list = extraByTime.get(second) ?? [];
+    list.push(a);
+    extraByTime.set(second, list);
   }
   const seed = ((gate.state.rngSeed ^ M1_V22_COACH_DOMAIN_SALT) >>> 0)
     || 0x9e3779b9;
@@ -115,6 +144,8 @@ export function simulateM1V22FoulStoppageCoaching(
   const cautions = new Set<string>();
   const commands: unknown[] = [];
   const incidents: Omit<M1V22GeneratedIncident, 'sourceEventId'>[] = [];
+  const foulTimes: number[] = [];
+  let acceptedInPlayCommands = 0;
   for (let phase = 0; phase < M1_CLOCK_MAX_EVENTS; phase++) {
     const second = phase * M1_CLOCK_STEP_SECONDS;
     // Fixed draw budget even if there is no offence or an ineligible team.

@@ -349,7 +349,9 @@ export function simulateM1V17RefereeMedicalGoalAndHalfTime(
     changes.delete(restart);
     wall+=goalPauseWallSeconds;
     if(!advance(restart))return fail('ROSTER_REPLAY_MISMATCH');
-    emit('restart-kickoff',running,wall,event.id,event.teamId);
+    const concedingTeamId=event.teamId===f.homeClubId?
+      f.awayClubId:f.homeClubId;
+    emit('restart-kickoff',running,wall,event.id,concedingTeamId);
   }
   if(!half&&!halfTime())return fail('ROSTER_REPLAY_MISMATCH');
   if(kickoffPending){

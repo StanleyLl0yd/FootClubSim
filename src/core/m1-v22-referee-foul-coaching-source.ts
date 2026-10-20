@@ -219,9 +219,6 @@ export function simulateM1V22RefereeMedicalFoulCoaching(
       generatedFouls.some(e=>!foulTimes.has(e.elapsedSeconds))){
     return fail('UNSUPPORTED_COMMAND');
   }
-  // A goal restart and a synthetic foul may not both be claimed at
-  // exactly the same running second without subsecond source evidence.
-  if([...foulTimes].some(t=>goalRestarts.has(t)))return fail('UNSUPPORTED_COMMAND');
   const foulOffendingTeam=new Map<number,string>(
     generatedFouls.map(e=>[e.elapsedSeconds,e.source.entry.action.teamId]));
   const shots=source.events.filter(e=>e.type==='shot');
@@ -229,6 +226,9 @@ export function simulateM1V22RefereeMedicalFoulCoaching(
     e.type==='shot'&&e.outcome==='goal'&&
     e.elapsedSeconds+1!==2700&&e.elapsedSeconds+1<M1_CLOCK_END_SECONDS)
     .map(e=>e.elapsedSeconds+1));
+  // A goal restart and a synthetic foul may not both be claimed at
+  // exactly the same running second without subsecond source evidence.
+  if([...foulTimes].some(t=>goalRestarts.has(t)))return fail('UNSUPPORTED_COMMAND');
   for(const [time,group] of changes){
     if(time!==2700&&!goalRestarts.has(time)&&!foulTimes.has(time)){
       return fail('MISSING_INTERNAL_STOPPAGE');

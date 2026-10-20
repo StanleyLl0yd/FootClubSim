@@ -103,6 +103,19 @@ test('v8 outcome and RNG are identical with both classes of replacements',()=>{
   assert.equal(verifyM1V15GoalAndHalfTime(
     prematch(),policy,commands,0,900,combined),true);
 });
+test('both teams receive ordered goal boards without wall-clock reversal',()=>{
+  const commands=[command(0,'home'),command(1,'home'),command(0,'away')];
+  const match=ok(run(commands,1,900));
+  assert.deepEqual(match.inPlayOpportunitiesUsed,{home:1,away:1});
+  const boards=match.events.filter(e=>e.kind==='board-signal');
+  assert.equal(boards.length,3);
+  assert.deepEqual(boards.map(e=>e.wallSeconds),[299,299,300]);
+  assert.ok(match.finalOnField.home.includes(next.home[0]));
+  assert.ok(match.finalOnField.away.includes(next.away[0]));
+  for(let i=1;i<match.events.length;i++){
+    assert.ok(match.events[i].wallSeconds>=match.events[i-1].wallSeconds);
+  }
+});
 test('no-goal checkpoint rejected, but half-time is always generated',()=>{
   bad(run([command(0)],1,900,49),'MISSING_INTERNAL_STOPPAGE');
   const intervalOnly=ok(run([command(0,'home',2700)],0,900,49));

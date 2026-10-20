@@ -131,8 +131,13 @@ test('illegal coaching time, spoofed player and duplicate names fail closed', ()
     staffId: 'unavailable' } }]), 'SOURCE_MATCH_REJECTED');
   bad(run(8, [{ ...valid, inPlayerId: 'alien-player' }]),
     'SOURCE_MATCH_REJECTED');
+  const independentDuplicate = structuredClone(valid);
+  independentDuplicate.commandId = 'duplicate-other-id';
+  bad(run(8, [valid, independentDuplicate]), 'INVALID_HALF_TIME_COMMANDS');
+  // Spreading preserves the nested actor reference; strict JSON tree
+  // preflight rejects aliases before the domain-level duplicate guard.
   bad(run(8, [valid, { ...valid, commandId: 'duplicate-other-id' }]),
-    'INVALID_HALF_TIME_COMMANDS');
+    'INVALID_SOURCE');
 });
 
 test('coaching replay tampering, getters and cycles cannot forge accepted XI', () => {

@@ -36,6 +36,7 @@ const claim = (kind, changes = {}) => ({
   schemaVersion: 1, fixtureId: fixture.id,
   teamId: fixture.homeClubId, playerId: ho[0], kind,
   relatedTeamId: null, relatedPlayerId: null, opponentCard: null,
+  physicalOffenceDeclared: false, bothPlayersNeedAttentionDeclared: false,
   severeInjuryDeclared: false, penaltyAwardedDeclared: false,
   penaltyTakerDeclared: false, ...changes,
 });
@@ -57,19 +58,22 @@ test('each narrow Law 5 exception has explicit source-shaped claim facts', () =>
   valid(claim('goalkeeper-injury', {playerId: hk}));
   valid(claim('keeper-outfield-collision', {
     playerId: hk, relatedTeamId: fixture.awayClubId,
-    relatedPlayerId: ao[0],
+    relatedPlayerId: ao[0], bothPlayersNeedAttentionDeclared: true,
   }));
   valid(claim('keeper-outfield-collision', {
     relatedTeamId: fixture.awayClubId, relatedPlayerId: ak,
+    bothPlayersNeedAttentionDeclared: true,
   }));
   valid(claim('same-team-collision', {
     relatedTeamId: fixture.homeClubId, relatedPlayerId: ho[1],
+    bothPlayersNeedAttentionDeclared: true,
   }));
   valid(claim('severe-injury', {severeInjuryDeclared: true}));
   for (const card of ['yellow', 'red']) {
     valid(claim('opponent-cautioned-or-sent-off', {
       relatedTeamId: fixture.awayClubId,
       relatedPlayerId: ao[0], opponentCard: card,
+      physicalOffenceDeclared: true,
     }));
   }
   valid(claim('injured-penalty-taker', {
@@ -84,12 +88,15 @@ test('contradictions cannot turn an ordinary injury into an exception', () => {
   }));
   invalid(claim('keeper-outfield-collision', {
     relatedTeamId: fixture.awayClubId, relatedPlayerId: ao[0],
+    bothPlayersNeedAttentionDeclared: true,
   }));
   invalid(claim('same-team-collision', {
     relatedTeamId: fixture.awayClubId, relatedPlayerId: ao[0],
+    bothPlayersNeedAttentionDeclared: true,
   }));
   invalid(claim('same-team-collision', {
     relatedTeamId: fixture.homeClubId, relatedPlayerId: ho[0],
+    bothPlayersNeedAttentionDeclared: true,
   }), 'UNSUPPORTED_PLAYER_HISTORY');
   invalid(claim('severe-injury'));
   invalid(claim('opponent-cautioned-or-sent-off', {
@@ -97,7 +104,7 @@ test('contradictions cannot turn an ordinary injury into an exception', () => {
   }));
   invalid(claim('opponent-cautioned-or-sent-off', {
     relatedTeamId: fixture.homeClubId, relatedPlayerId: ho[1],
-    opponentCard: 'yellow',
+    opponentCard: 'yellow', physicalOffenceDeclared: true,
   }));
   invalid(claim('injured-penalty-taker', {
     penaltyAwardedDeclared: true,
@@ -107,6 +114,14 @@ test('contradictions cannot turn an ordinary injury into an exception', () => {
   }));
   invalid(claim('severe-injury', {
     severeInjuryDeclared: true, opponentCard: 'yellow',
+  }));
+  invalid(claim('keeper-outfield-collision', {
+    playerId: hk, relatedTeamId: fixture.awayClubId,
+    relatedPlayerId: ao[0],
+  }));
+  invalid(claim('opponent-cautioned-or-sent-off', {
+    relatedTeamId: fixture.awayClubId,
+    relatedPlayerId: ao[0], opponentCard: 'yellow',
   }));
 });
 
@@ -141,6 +156,8 @@ test('strict schema and poison input fail closed, without invoking getters', () 
     {schemaVersion: 2}, {kind: 'concussion'}, {other: 12},
     {relatedTeamId: fixture.awayClubId}, {penaltyTakerDeclared: 'true'},
     {opponentCard: 'pending'}, {severeInjuryDeclared: null},
+    {physicalOffenceDeclared: null},
+    {bothPlayersNeedAttentionDeclared: 'yes'},
   ]) {
     invalid(claim('goalkeeper-injury', {playerId: hk, ...change}),
       'INVALID_CLAIM');

@@ -7,11 +7,14 @@ Run after dependency installation:
 
 ```bash
 npm run diagnose:m1:v24 -- --start=1 --count=24
+npm run diagnose:m1:v24 -- --start=1 --count=24 --fixtures=8
 ```
 
 The command compiles the headless core and executes a **strictly bounded**
-cohort of 1–128 positive 32-bit xorshift seeds from one fixed synthetic
-RPL-scale catalog and fixture. It invokes the **current, single-source**
+cohort of 1–128 positive 32-bit xorshift seeds across the first 1–32
+fixtures of a fixed synthetic RPL-scale catalog's generated league schedule.
+`--fixtures` defaults to 1 for the original single-fixture diagnostic.
+The total is bounded at 4,096 synthetic match attempts (128 × 32). It invokes the **current, single-source**
 v24 physical-exposure derivation, including generated v23 referee,
 synthetic treatment, coach-ready physical XI, and v8 shot outcome.
 
@@ -23,12 +26,17 @@ medical) and absence of any accepted seed. Known fail-closed unsupported
 source cases are counted as rejected **without rewriting them into a
 zero-goal match**.
 
-Machine-readable JSON contains: cohort bounds, accepted/rejected
-counts, typed rejection counts, generated synthetic foul/treatment and
-goal counts, accumulated physical player seconds, and a deterministic
-SHA-256 fingerprint over source-derived per-seed summaries.
+Machine-readable schema-2 JSON contains: seed/fixture cohort bounds,
+per-fixture accepted/rejected counts and stable fixture IDs, combined
+attempt/acceptance/rejection totals, typed rejection counts, generated
+synthetic foul/treatment and goal counts, accumulated physical player
+seconds, and a deterministic
+SHA-256 fingerprint over source-derived (fixture ID, seed) summaries.
 The digest is a **regression fingerprint**, not a referee signature,
 data-license proof or cryptographic authentication of real events.
+Each selected fixture must have at least one accepted seed; otherwise the
+entire run fails closed rather than hiding missing fixture coverage. This
+widens ENGINEERING regression coverage, not football-quality evidence.
 The CLI intentionally produces a single structured stdout object; on
 invalid options it returns nonzero with a stable diagnostic error.
 

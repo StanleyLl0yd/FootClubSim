@@ -64,7 +64,10 @@ jobs:
           work="$(mktemp -d)"
           trap 'rm -rf "$work"' EXIT
           TIMEFORMAT='observed_elapsed_seconds=%R'
-          { time node --max-old-space-size=512             scripts/m1-v24-causal-corpus.mjs             --start="$start" --count="$count" --fixtures="$fixtures"             > "$work/report.json"; } 2> "$work/timing.txt"
+          { time node --max-old-space-size=512 \
+            scripts/m1-v24-causal-corpus.mjs \
+            --start="$start" --count="$count" --fixtures="$fixtures" \
+            > "$work/report.json"; } 2> "$work/timing.txt"
           {
             echo '## v24 synthetic source-replay cohort (NOT real-data calibration)'
             echo

@@ -183,7 +183,7 @@ export function simulateM1V16MedicalGoalAndHalfTime(
     }
   }
   const events:M1V16MedicalEvent[]=[];
-  let running=0,wall=0,half=false;
+  let running=0,wall=0,half=false,kickoffPending=false;
   const opportunities={home:new Set<number>(),away:new Set<number>()};
   const halfChanges={home:0,away:0};
   function emit(kind:Kind,time:number,at:number,
@@ -217,14 +217,19 @@ export function simulateM1V16MedicalGoalAndHalfTime(
     }
     changes.delete(2700);
     wall+=halfTimeWallSeconds as number;
-    emit('second-half-kickoff',running,wall);
-    half=true;return true;
+    // Treatment returns at 2700 must precede the second-half kick-off.
+    // v8 processes all same-checkpoint medical actions before its shot.
+    half=true;kickoffPending=true;return true;
   }
   emit('kickoff',0,0);
   for(const event of source.events){
     if(event.type==='availability'||event.type==='full-time')continue;
     if(!half&&event.elapsedSeconds>=2700&&!halfTime()){
       return fail('ROSTER_REPLAY_MISMATCH');
+    }
+    if(kickoffPending&&event.elapsedSeconds>2700){
+      emit('second-half-kickoff',2700,wall);
+      kickoffPending=false;
     }
     if(!advance(event.elapsedSeconds))return fail('ROSTER_REPLAY_MISMATCH');
     if(event.type==='medical'){
@@ -283,6 +288,10 @@ export function simulateM1V16MedicalGoalAndHalfTime(
     emit('restart-kickoff',running,wall,event.id,event.teamId);
   }
   if(!half&&!halfTime())return fail('ROSTER_REPLAY_MISMATCH');
+  if(kickoffPending){
+    emit('second-half-kickoff',2700,wall);
+    kickoffPending=false;
+  }
   if(changes.size!==0||!advance(M1_CLOCK_END_SECONDS)){
     return fail('ROSTER_REPLAY_MISMATCH');
   }

@@ -132,7 +132,7 @@ export function runCorpus() {
         treatment: result.match.syntheticTemporaryExitCount,
         physical: result.teamPhysicalPlayerSeconds,
       }) + '\n');
-      }
+    }
     if (fixtureAccepted === 0 ||
         fixtureAccepted + fixtureRejected !== count) {
       throw Error('INVALID_FIXTURE_COVERAGE:' + fixture.id);

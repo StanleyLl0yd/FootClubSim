@@ -43,11 +43,11 @@ const record = (kind, teamId, playerId, relatedTeamId = null,
 const evidence = source => {
   for (const incident of source.generatedIncidents) {
     if (incident.sanction === 'injury-withdrawal') continue;
-    const whistle = source.match.events.find(e =>
-      e.kind === 'synthetic-foul-whistle' &&
-      e.sourceEventId === incident.sourceEventId);
     const decision = source.match.events.find(e =>
       e.id === incident.sourceEventId);
+    const whistle = source.match.events.find(e =>
+      e.kind === 'synthetic-foul-whistle' &&
+      e.sourceEventId === decision?.sourceEventId);
     if (!whistle || !decision) continue;
     const side = incident.teamId === fixture.homeClubId ? 'home' : 'away';
     const victimSide = side === 'home' ? 'away' : 'home';
@@ -133,11 +133,11 @@ test('initial XI not present at the exact model whistle cannot be a victim', () 
     if (!source.ok) continue;
     for (const incident of source.generatedIncidents) {
       if (incident.sanction === 'injury-withdrawal') continue;
-      const whistle = source.match.events.find(e =>
-        e.kind === 'synthetic-foul-whistle' &&
-        e.sourceEventId === incident.sourceEventId);
       const decision = source.match.events.find(e =>
         e.id === incident.sourceEventId);
+      const whistle = source.match.events.find(e =>
+        e.kind === 'synthetic-foul-whistle' &&
+        e.sourceEventId === decision?.sourceEventId);
       if (!whistle || !decision) continue;
       const victimSide = incident.teamId === fixture.homeClubId ? 'away' : 'home';
       const victimTeam = victimSide === 'home' ?

@@ -147,7 +147,10 @@ test('invalid asserted origins, duplicates and unavailable participants fail clo
   bad(run([{ ...referee('injury-withdrawal', homeOut[0]),
     origin: 'trusted-referee' }]), 'SOURCE_MATCH_REJECTED');
   const card = referee('direct-red', homeOut[0]);
-  bad(run([card, card]), 'SOURCE_MATCH_REJECTED');
+  // Two separately serialized claims with the same ID reach the domain gate;
+  // the same JS object in two slots fails the strict input-tree preflight.
+  bad(run([card, { ...card }]), 'SOURCE_MATCH_REJECTED');
+  bad(run([card, card]), 'INVALID_SOURCE');
   bad(run([referee('caution', 'alien-player')]), 'SOURCE_MATCH_REJECTED');
   bad(run([referee('direct-red', home.starters.find(id =>
     positions.get(id) === 'GK'))]), 'SOURCE_MATCH_REJECTED');

@@ -147,6 +147,7 @@ export function inspectM1V27NamedSubstituteFoulEvidence(
       !whistle.onField[offenderSide].includes(incident.playerId)) {
     return fail('PLAYER_NOT_PRESENT_AT_WHISTLE');
   }
+  const whistleSequence = whistle.sequence;
   function entry(
     playerId: string, teamId: string, playerSide: Side,
   ): string | null | undefined {
@@ -156,7 +157,7 @@ export function inspectM1V27NamedSubstituteFoulEvidence(
     // Only a source event that actually applied the entering player before
     // this very whistle may admit a named bench member.
     return events.find(e =>
-      e.sequence < whistle.sequence &&
+      e.sequence < whistleSequence &&
       (e.kind === 'half-time-substitution' ||
         e.kind === 'substitution-applied') &&
       e.teamId === teamId &&

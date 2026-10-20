@@ -190,3 +190,28 @@ test('untrusted replay and getter-bearing action are rejected', () => {
   cyclic[0].other = cyclic;
   bad(run([], cyclic), 'INVALID_SOURCE');
 });
+
+test('half-time return precedes second-half kickoff and accepted substitution', () => {
+  const exit = {
+    ...departure(homeOut[2], 'home', 2400, 'half-exit'),
+    restartAtRunningSeconds: 2680,
+  };
+  const back = {
+    ...returning(homeOut[2], 'home', 2700, 'half-return'),
+    returnContext: 'half-time', ballInPlay: false,
+  };
+  const commands = [sub(homeOut[0], homeBench[0])];
+  const current = ok(run(commands, [exit, back]));
+  const kinds = current.events.map(e => e.kind);
+  const whistle = kinds.indexOf('half-time-whistle');
+  const changed = kinds.indexOf('half-time-substitution');
+  const returningAtHalf = kinds.indexOf('treatment-return');
+  const kickoff = kinds.indexOf('second-half-kickoff');
+  assert.ok(whistle >= 0 && changed > whistle);
+  assert.ok(returningAtHalf > changed && returningAtHalf < kickoff);
+  assert.equal(current.events[returningAtHalf].runningSeconds, 2700);
+  assert.equal(current.events[returningAtHalf].onField.home.length, 11);
+  assert.deepEqual(current.offFieldAtFullTime, []);
+  assert.equal(verify(prematch(), policy, commands, [exit, back],
+    0, 900, current), true);
+});

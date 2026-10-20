@@ -83,6 +83,7 @@ export function inspectM1MedicalExceptionClaim(
       !isStableId(raw.playerId) ||
       !kinds.includes(raw.kind as M1MedicalExceptionKind) ||
       !optionalId(raw.relatedTeamId) || !optionalId(raw.relatedPlayerId) ||
+      ((raw.relatedTeamId === null) !== (raw.relatedPlayerId === null)) ||
       ![null, 'yellow', 'red'].includes(raw.opponentCard as string | null) ||
       typeof raw.severeInjuryDeclared !== 'boolean' ||
       typeof raw.penaltyAwardedDeclared !== 'boolean' ||
@@ -109,10 +110,6 @@ export function inspectM1MedicalExceptionClaim(
     [p.id, p.primaryPosition]));
   const keeper = positions.get(claim.playerId) === 'GK';
   const related = hasRelated(claim);
-  if ((claim.relatedTeamId === null) !==
-        (claim.relatedPlayerId === null)) {
-    return fail('EXCEPTION_FACTS_INCONSISTENT');
-  }
   const otherSide = claim.relatedTeamId === clubs.home ? 'home' :
     claim.relatedTeamId === clubs.away ? 'away' : null;
   if (related && (!otherSide ||

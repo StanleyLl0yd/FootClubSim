@@ -148,3 +148,61 @@ test('stale revision, absent result, unknown foul and altered claim fail closed'
     s.incident.id), 'INVALID_REVIEW_SCOPE');
   assert.equal(hits, 0);
 });
+
+test('a journal-recorded halftime substitution independently admits its Law 5 victim', () => {
+  const incoming = home.bench.find(id => catalog.players.find(p =>
+    p.id === id)?.primaryPosition !== 'GK');
+  const outgoing = home.starters.find(id => catalog.players.find(p =>
+    p.id === id)?.primaryPosition !== 'GK');
+  assert.ok(incoming && outgoing);
+  const commands = [{
+    schemaVersion: 1, kind: 'substitute-normal',
+    fixtureId: fixture.id, commandId: 'accepted-v28-halftime-entry',
+    teamId: fixture.homeClubId, elapsedSeconds: 2700,
+    actor: {kind: 'player'}, stoppage: 'half-time',
+    outPlayerId: outgoing, inPlayerId: incoming,
+  }];
+  for (let seed = 1; seed <= 128; seed++) {
+    const input = prematch(seed);
+    const generated = simulate(input, policy, commands);
+    if (!generated.ok) continue;
+    const exposure = derive(input, policy, commands);
+    if (!exposure.ok) continue;
+    for (const incident of generated.generatedIncidents) {
+      if (incident.sanction === 'injury-withdrawal' ||
+          incident.teamId !== fixture.awayClubId ||
+          incident.elapsedSeconds <= 2700) continue;
+      const decision = generated.match.events.find(e =>
+        e.id === incident.sourceEventId);
+      const whistle = generated.match.events.find(e =>
+        e.kind === 'synthetic-foul-whistle' &&
+        e.sourceEventId === decision?.sourceEventId);
+      const entry = generated.match.events.find(e =>
+        e.kind === 'half-time-substitution' &&
+        e.replacedByPlayerId === incoming);
+      if (!decision || !whistle || !entry ||
+          !whistle.onField.home.includes(incoming) ||
+          entry.sequence >= whistle.sequence) continue;
+      const applied = success(apply(career, success(start(career)).journal, [{
+        schemaVersion: 5, commandId: 'v28-bench-applied',
+        careerId: career.careerId, expectedRevision: 0, prematch: input,
+        policy, halfTimeCommands: commands, inPlayCommands: [],
+        result: exposure,
+      }])).journal;
+      const medicalClaim = claim(fixture.homeClubId, incoming,
+        incident, decision.kind === 'caution' ? 'yellow' : 'red');
+      const reviewed = success(inspect(career, applied, 1, fixture.id,
+        medicalClaim, incident.id));
+      assert.equal(reviewed.evidence.victimSubstitutionEventId, entry.id);
+      assert.equal(reviewed.evidence.injuredPlayerId, incoming);
+      assert.equal(reviewed.actualInjuryAuthenticated, false);
+      assert.equal(reviewed.physicalLeaveOrReturnAuthorized, false);
+      const forged = structuredClone(applied);
+      forged.results[0].source.halfTimeCommands = [];
+      error(inspect(career, forged, 1, fixture.id, medicalClaim,
+        incident.id), 'INVALID_JOURNAL');
+      return;
+    }
+  }
+  assert.fail('no seeded replayed bench entrant + later carded foul');
+});

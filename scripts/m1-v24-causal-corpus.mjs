@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { argv, exitCode } from 'node:process';
+import { argv } from 'node:process';
 import { deriveM1V24PhysicalExposure, verifyM1V24PhysicalExposure }
   from '../dist/core/m1-v24-physical-exposure.js';
 import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';

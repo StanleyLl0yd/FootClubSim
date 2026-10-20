@@ -86,10 +86,10 @@ export function inspectM1V25GeneratedFoulLaw5Evidence(
   const decision = events.find(e => e.id === incident.sourceEventId);
   const whistle = events.find(e =>
     e.kind === 'synthetic-foul-whistle' &&
-    e.sourceEventId === incident.sourceEventId);
+    e.sourceEventId === decision?.sourceEventId);
   const restart = events.find(e =>
     e.kind === 'synthetic-foul-restart' &&
-    e.sourceEventId === incident.sourceEventId);
+    e.sourceEventId === decision?.sourceEventId);
   const card = decision?.kind === 'caution' ? 'yellow' :
     decision?.kind === 'second-yellow-dismissal' ||
     decision?.kind === 'straight-red-dismissal' ? 'red' : null;

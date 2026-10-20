@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { simulateM1V19InternalReferee as simulate,
   verifyM1V19InternalReferee as verify,
-  M1_V18_REFEREE_DOMAIN_SALT }
+  M1_V19_REFEREE_DOMAIN_SALT }
   from '../dist/core/m1-v19-internal-foul-injury.js';
 import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
 import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }

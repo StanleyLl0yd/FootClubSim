@@ -120,6 +120,9 @@ export function simulateM1V18InternalReferee(
     const playerId = candidates[Math.floor(playerDraw * candidates.length)]!;
     const kind: Sanction = severity < DIRECT_RED_TRIGGER &&
       active[side].size > 7 ? 'direct-red' : 'caution';
+    // An already-cautioned player would leave on a second caution.
+    // Never create a synthetic ruling that would reduce the team below 7.
+    if (active[side].size <= 7 && cautions.has(playerId)) continue;
     const id = 'm1-v18-ref-' + (phase + 1);
     commands.push({
       schemaVersion: 1, id, fixtureId: input.fixture.id,

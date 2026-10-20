@@ -211,11 +211,34 @@ export function simulateM1V22FoulStoppageCoaching(
     } else {
       cautions.add(playerId);
     }
+    if (kind !== 'injury-withdrawal') {
+      foulTimes.push(second);
+      for (const action of extraByTime.get(second) ?? []) {
+        const coachSide: Side | null =
+          action.teamId === clubIds.home ? 'home' :
+          action.teamId === clubIds.away ? 'away' : null;
+        const leaving = action.outPlayerId;
+        const entering = action.inPlayerId;
+        if (!coachSide || typeof leaving !== 'string' ||
+            typeof entering !== 'string' ||
+            !active[coachSide].has(leaving) ||
+            active[coachSide].has(entering)) {
+          return fail('INVALID_INPLAY_COMMANDS');
+        }
+        active[coachSide].delete(leaving);
+        active[coachSide].add(entering);
+        commands.push(action);
+        acceptedInPlayCommands++;
+      }
+    }
   }
-  // Only ONE source v8 match is evaluated, inside v17. There is no
-  // independent baseline used for goals, RNG or participant attribution.
+  if (acceptedInPlayCommands !== additional.length) {
+    return fail('NO_GENERATED_FOUL_STOPPAGE');
+  }
+  // Source v8 evaluates exactly one match with generated decisions
+  // and authenticated-internally stoppage-gated coach substitutions.
   const match = simulateM1V22RefereeMedicalFoulCoaching(
-    input, policy, commands, [], 0, 900,
+    input, policy, commands, [], 0, 900, foulTimes, 20,
   );
   if (!match.ok) return fail('SOURCE_MATCH_REJECTED');
   const decisions = match.events.filter(e =>
@@ -247,21 +270,22 @@ export function simulateM1V22FoulStoppageCoaching(
     refereeRngSeed: seed, refereeRngState: rng.snapshot(),
     refereeRngDraws: M1_CLOCK_MAX_EVENTS * REFEREE_DRAWS_PER_PHASE,
     generatedIncidents, acceptedHalfTimeCommands: requested.length,
-    match, inGameRefereeGenerated: true,
+    acceptedInPlayCommands, match, inGameRefereeGenerated: true,
     externalRefereeAuthorityAuthenticated: false,
     syntheticFoulRatesCalibrated: false,
     specialGoalsGenerated: false,syntheticInjuryWithdrawalsGenerated: true,
     injuryDiagnosisAndRecoverySupported: false,
-    inPlayCoachingAndLateEntrySupported: false,
+    inPlayCoachingAtGeneratedFoulSupported: true,
+    lateEntrySupported: false,
     arbitraryRestartSupported: false,
   };
 }
 export function verifyM1V22FoulStoppageCoaching(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
-  candidate: unknown,
+  inPlayCommands: unknown, candidate: unknown,
 ): boolean {
   if (!isPlainJsonTree(candidate)) return false;
   const replay = simulateM1V22FoulStoppageCoaching(
-    prematch, policy, halfTimeCommands);
+    prematch, policy, halfTimeCommands, inPlayCommands);
   return replay.ok && sameCanonicalValue(replay, candidate);
 }

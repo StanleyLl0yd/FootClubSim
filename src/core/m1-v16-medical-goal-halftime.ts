@@ -202,8 +202,10 @@ export function simulateM1V16MedicalGoalAndHalfTime(
   function replace(change:Change,kind:Kind,time:number,at:number):boolean{
     const xi=teams[change.side];
     if(!xi.has(change.outPlayerId)||xi.has(change.inPlayerId))return false;
+    // Another starter may already be temporarily off for treatment.
+    const physicalCount=xi.size;
     xi.delete(change.outPlayerId);xi.add(change.inPlayerId);
-    if(xi.size!==11)return false;
+    if(xi.size!==physicalCount||xi.size<7||xi.size>11)return false;
     emit(kind,time,at,change.sourceId,change.teamId,
       change.outPlayerId,change.inPlayerId);
     return true;

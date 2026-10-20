@@ -48,6 +48,22 @@ is imported or paid data purchased. P5 source/license policy remains
 calibration still blocked. This work establishes a reproducible
 engineering test surface for the v23/v24 chain only.
 
+
+## Optional hosted workload (engineering evidence only)
+
+[Manual workflow](../.github/workflows/m1-p5-v24-causal-benchmark.yml)
+runs the same local-only source replays on an Ubuntu 24.04 / Node 24
+GitHub runner. Its manual defaults are 16 seeds × 8 synthetic fixtures;
+set `seed_count=128` and `fixture_count=32` explicitly to request the
+4,096-attempt upper bound. The workflow validates all numeric arguments
+through the CLI, keeps temporary JSON private to the runner and writes
+only its synthetic summary and **one observed** elapsed time to the
+GitHub job summary. Pull requests changing this workflow run a separate
+4-seed × 3-fixture smoke. The optional run is NOT a continuous integration
+release-performance gate, memory benchmark, calibrated injury/card metric,
+licensed reference comparison or independent referee authentication.
+No third-party source fetches are performed.
+
 No versioned engine, M0 shell, career journal, browser persistence or
 public GUI was changed. P3 #29, P4 #30, P5 #31 and exit #3 remain
 open; full two-pass repository audit is still required before M2.

@@ -17,7 +17,8 @@
     "format:check": "node scripts/check-source-format.mjs",
     "diagnose:m1:v8": "npm run build:core && node scripts/m1-v8-medical-diagnostics.mjs",
     "diagnose:m1:v8:mirror": "npm run build:core && node scripts/m1-v8-mirrored-diagnostics.mjs",
-    "diagnose:m1:v8:career": "npm run build:core && node scripts/m1-v8-career-benchmark.mjs"
+    "diagnose:m1:v8:career": "npm run build:core && node scripts/m1-v8-career-benchmark.mjs",
+    "diagnose:m1:v24": "npm run build:core && node scripts/m1-v24-causal-corpus.mjs"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

@@ -215,3 +215,22 @@ test('half-time return precedes second-half kickoff and accepted substitution', 
   assert.equal(verify(prematch(), policy, commands, [exit, back],
     0, 900, current), true);
 });
+
+test('substituting another player while one is off-field preserves ten men', () => {
+  const medical = [departure(homeOut[2], 'home', 0, 'long-exit')];
+  const commands = [sub(homeOut[0], homeBench[0])];
+  const current = ok(run(commands, medical));
+  const halfSub = current.events.find(e => e.kind === 'half-time-substitution');
+  assert.equal(halfSub.runningSeconds, 2700);
+  assert.equal(halfSub.onField.home.length, 10);
+  assert.ok(halfSub.onField.home.includes(homeBench[0]));
+  assert.ok(!halfSub.onField.home.includes(homeOut[2]));
+  assert.equal(current.finalOnField.home.length, 10);
+  assert.deepEqual(current.offFieldAtFullTime, [homeOut[2]]);
+  const source = simulateM1V8MedicalPhases(prematch(), policy, commands, [], medical);
+  assert.equal(source.ok, true, JSON.stringify(source));
+  assert.deepEqual(current.finalOnField, source.onFieldAtFullTime);
+  assert.equal(current.rngState, source.rngState);
+  assert.equal(verify(prematch(), policy, commands, medical, 0, 900, current),
+    true);
+});

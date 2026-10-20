@@ -23,6 +23,8 @@ export interface M1MedicalExceptionClaim {
   readonly relatedTeamId: string | null;
   readonly relatedPlayerId: string | null;
   readonly opponentCard: 'yellow' | 'red' | null;
+  readonly physicalOffenceDeclared: boolean;
+  readonly bothPlayersNeedAttentionDeclared: boolean;
   readonly severeInjuryDeclared: boolean;
   readonly penaltyAwardedDeclared: boolean;
   readonly penaltyTakerDeclared: boolean;
@@ -50,6 +52,7 @@ export type M1MedicalExceptionResult =
 const fields = [
   'schemaVersion', 'fixtureId', 'teamId', 'playerId', 'kind',
   'relatedTeamId', 'relatedPlayerId', 'opponentCard',
+  'physicalOffenceDeclared', 'bothPlayersNeedAttentionDeclared',
   'severeInjuryDeclared', 'penaltyAwardedDeclared',
   'penaltyTakerDeclared',
 ] as const;
@@ -85,6 +88,8 @@ export function inspectM1MedicalExceptionClaim(
       !optionalId(raw.relatedTeamId) || !optionalId(raw.relatedPlayerId) ||
       ((raw.relatedTeamId === null) !== (raw.relatedPlayerId === null)) ||
       ![null, 'yellow', 'red'].includes(raw.opponentCard as string | null) ||
+      typeof raw.physicalOffenceDeclared !== 'boolean' ||
+      typeof raw.bothPlayersNeedAttentionDeclared !== 'boolean' ||
       typeof raw.severeInjuryDeclared !== 'boolean' ||
       typeof raw.penaltyAwardedDeclared !== 'boolean' ||
       typeof raw.penaltyTakerDeclared !== 'boolean') {
@@ -121,32 +126,39 @@ export function inspectM1MedicalExceptionClaim(
   const noRelated = !related;
   const noCard = claim.opponentCard === null;
   const noMedical = !claim.severeInjuryDeclared;
+  const noOffence = !claim.physicalOffenceDeclared;
+  const noCollisionAssessment = !claim.bothPlayersNeedAttentionDeclared;
   const noPenalty = !claim.penaltyAwardedDeclared &&
     !claim.penaltyTakerDeclared;
   let matches = false;
   switch (claim.kind) {
     case 'goalkeeper-injury':
-      matches = keeper && noRelated && noCard && noMedical && noPenalty;
+      matches = keeper && noRelated && noCard && noMedical && noPenalty &&
+        noOffence && noCollisionAssessment;
       break;
     case 'keeper-outfield-collision':
       matches = related && (keeper !== otherKeeper) &&
-        noCard && noMedical && noPenalty;
+        noCard && noMedical && noPenalty && noOffence &&
+        claim.bothPlayersNeedAttentionDeclared;
       break;
     case 'same-team-collision':
       matches = related && otherSide === side &&
-        noCard && noMedical && noPenalty;
+        noCard && noMedical && noPenalty && noOffence &&
+        claim.bothPlayersNeedAttentionDeclared;
       break;
     case 'severe-injury':
-      matches = noRelated && noCard &&
+      matches = noRelated && noCard && noOffence && noCollisionAssessment &&
         claim.severeInjuryDeclared && noPenalty;
       break;
     case 'opponent-cautioned-or-sent-off':
       matches = related && otherSide !== side &&
-        !noCard && noMedical && noPenalty;
+        !noCard && noMedical && noPenalty && noCollisionAssessment &&
+        claim.physicalOffenceDeclared;
       break;
     case 'injured-penalty-taker':
-      matches = noRelated && noCard && noMedical &&
-        claim.penaltyAwardedDeclared && claim.penaltyTakerDeclared;
+      matches = noRelated && noCard && noMedical && noOffence &&
+        noCollisionAssessment && claim.penaltyAwardedDeclared &&
+        claim.penaltyTakerDeclared;
       break;
   }
   if (!matches) return fail('EXCEPTION_FACTS_INCONSISTENT');

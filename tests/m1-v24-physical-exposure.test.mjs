@@ -115,11 +115,19 @@ test('temporary exit removes exactly 300 physical seconds from participant', () 
     const row = r.playerRows.find(x => x.playerId === medical.playerId);
     assert.ok(row);
     assert.ok(row.temporaryTreatmentExits > 0);
-    assert.equal(row.physicalSeconds,
+    // A later dismissal or withdrawal may also reduce physical time;
+    // do not attribute that entire loss to the earlier treatment.
+    assert.ok(row.physicalSeconds <=
       5400 - row.temporaryTreatmentExits * 300);
     assert.equal(row.temporaryTreatmentReturns,
       row.temporaryTreatmentExits);
-    assert.equal(row.onFieldAtFullTime, true);
+    if (row.secondYellowDismissals === 0 &&
+        row.straightRedDismissals === 0 &&
+        row.permanentInjuryWithdrawals === 0) {
+      assert.equal(row.physicalSeconds,
+        5400 - row.temporaryTreatmentExits * 300);
+      assert.equal(row.onFieldAtFullTime, true);
+    }
   }
 });
 

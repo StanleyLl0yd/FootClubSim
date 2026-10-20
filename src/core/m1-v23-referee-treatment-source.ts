@@ -246,6 +246,9 @@ export function simulateM1V23RefereeWithTreatment(
   const events:M1V23RefereeEvent[]=[];
   let running=0,wall=0,half=false,kickoffPending=false;
   const foulSeen=new Set<number>();
+  let pendingFoulRestart:{
+    time:number; beneficiary:string; sourceId:string|null;
+  }|null=null;
   const opportunities={home:new Set<number>(),away:new Set<number>()};
   const halfChanges={home:0,away:0};
   const effects={yellow:0,secondYellowRed:0,straightRed:0,
@@ -289,6 +292,21 @@ export function simulateM1V23RefereeWithTreatment(
   }
   emit('kickoff',0,0);
   for(const event of source.events){
+    // All same-second medical exits/returns are applied before the
+    // stoppage ends. A phase without a shot still resolves its pause
+    // before the next event / full-time boundary.
+    if(pendingFoulRestart!==null&&
+        (event.type==='shot'||
+         event.elapsedSeconds>pendingFoulRestart.time||
+         event.type==='full-time')){
+      if(running!==pendingFoulRestart.time){
+        return fail('ROSTER_REPLAY_MISMATCH');
+      }
+      wall+=foulPauseWallSeconds as number;
+      emit('synthetic-foul-restart',running,wall,
+        pendingFoulRestart.sourceId,pendingFoulRestart.beneficiary);
+      pendingFoulRestart=null;
+    }
     if(event.type==='full-time')continue;
     if(event.type==='availability'&&
         event.source.entry.action.kind==='substitute-normal'){
@@ -316,11 +334,11 @@ export function simulateM1V23RefereeWithTreatment(
         opportunities[change.side].add(time);
       }
       changes.delete(time);
-      wall+=foulPauseWallSeconds as number;
       const offender=foulOffendingTeam.get(time);
-      if(!offender)return fail('ROSTER_REPLAY_MISMATCH');
-      const beneficiary=offender===f.homeClubId?f.awayClubId:f.homeClubId;
-      emit('synthetic-foul-restart',running,wall,null,beneficiary);
+      if(!offender||pendingFoulRestart===null||
+          pendingFoulRestart.time!==time){
+        return fail('ROSTER_REPLAY_MISMATCH');
+      }
       continue;
     }
     if(!half&&event.elapsedSeconds>=2700&&!halfTime()){
@@ -365,10 +383,14 @@ export function simulateM1V23RefereeWithTreatment(
       }
       if(kind!=='caution')teams[side].delete(action.playerId);
       emit(kind,running,wall,event.id,action.teamId,action.playerId);
-      if(foulTimes.has(running)&&!changes.has(running)){
-        wall+=foulPauseWallSeconds as number;
-        const recipient=side==='home'?f.awayClubId:f.homeClubId;
-        emit('synthetic-foul-restart',running,wall,event.id,recipient);
+      if(foulTimes.has(running)){
+        if(pendingFoulRestart!==null){
+          return fail('ROSTER_REPLAY_MISMATCH');
+        }
+        pendingFoulRestart={
+          time:running,sourceId:event.id,
+          beneficiary:side==='home'?f.awayClubId:f.homeClubId,
+        };
       }
       continue;
     }
@@ -434,7 +456,8 @@ export function simulateM1V23RefereeWithTreatment(
     emit('second-half-kickoff',2700,wall);
     kickoffPending=false;
   }
-  if(changes.size!==0||!advance(M1_CLOCK_END_SECONDS)){
+  if(changes.size!==0||pendingFoulRestart!==null||
+      !advance(M1_CLOCK_END_SECONDS)){
     return fail('ROSTER_REPLAY_MISMATCH');
   }
   emit('full-time',running,wall);

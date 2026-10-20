@@ -4,19 +4,24 @@ import { M1_CLOCK_MAX_EVENTS, M1_CLOCK_STEP_SECONDS,
   from './m1-clock.js';
 import { isPlainJsonTree } from './plain-json-tree.js';
 import { SeededRng, RNG_VERSION } from './rng.js';
-import { simulateM1V22RefereeMedicalFoulCoaching,
-  type M1V22RefereeRun } from './m1-v22-referee-foul-coaching-source.js';
+import type { M1V7TemporaryMedicalAction }
+  from './m1-v7-temporary-medical.js';
+import { simulateM1V23RefereeWithTreatment,
+  type M1V23RefereeRun } from './m1-v23-referee-treatment-source.js';
 
 /**
- * Isolated v20: internally generated cards/withdrawals AND bounded,
- * source-validated halftime manager changes share one v17/v8 match.
- * No caller-supplied referee rulings, arbitrary in-play stoppages or
- * save migration. Rates remain explicitly uncalibrated.
+ * Isolated v23: generated referee foul windows may include synthetic
+ * temporary off-field treatment. The ONE v8 physical-XI source replay
+ * excludes absent players before later shooter and foul selection.
+ * Assessed injury/medical/referee authority remains unverified.
  */
 export const M1_V23_COACH_SCHEMA = 1 as const;
 export const M1_V23_COACH_RULES =
   'ifab-2026-27-internal-foul-temporary-treatment-subset' as const;
 export const M1_V23_COACH_DOMAIN_SALT = 0x7f4a7c15 as const;
+export const M1_V23_TREATMENT_DOMAIN_SALT = 0x5b33ab2d as const;
+const CONDITIONAL_TREATMENT_TRIGGER = 0.28;
+const TREATMENT_DRAWS_PER_PHASE = 3 as const;
 const FOUL_TRIGGER = 0.2;
 const DIRECT_RED_TRIGGER = 0.06;
 const SUSPECTED_INJURY_TRIGGER = 0.03;
@@ -54,13 +59,22 @@ export type M1V23CoachRun =
     generatedIncidents: readonly M1V23GeneratedIncident[];
     acceptedHalfTimeCommands: number;
     acceptedInPlayCommands: number;
-    match: Extract<M1V22RefereeRun, { ok: true }>;
+    syntheticTreatmentActions: readonly M1V7TemporaryMedicalAction[];
+    syntheticTemporaryExitCount: number;
+    syntheticTemporaryReturnCount: number;
+    treatmentRngSeed: number;
+    treatmentRngState: number;
+    treatmentRngDraws: number;
+    match: Extract<M1V23RefereeRun, { ok: true }>;
     inGameRefereeGenerated: true;
     externalRefereeAuthorityAuthenticated: false;
     syntheticFoulRatesCalibrated: false;
     specialGoalsGenerated: false;
     syntheticInjuryWithdrawalsGenerated: true;
     injuryDiagnosisAndRecoverySupported: false;
+    syntheticTemporaryTreatmentSupported: true;
+    externalMedicalAuthorityAuthenticated: false;
+    halfTimeMedicalExceptionSupported: false;
     inPlayCoachingAtGeneratedFoulSupported: true;
     lateEntrySupported: false;
     arbitraryRestartSupported: false;
@@ -132,6 +146,10 @@ export function simulateM1V23TemporaryTreatment(
   const seed = ((gate.state.rngSeed ^ M1_V23_COACH_DOMAIN_SALT) >>> 0)
     || 0x9e3779b9;
   const rng = new SeededRng(seed);
+  const treatmentSeed = (
+    (gate.state.rngSeed ^ M1_V23_TREATMENT_DOMAIN_SALT) >>> 0
+  ) || 0x9e3779b9;
+  const treatmentRng = new SeededRng(treatmentSeed);
   const clubIds = {
     home: input.fixture.homeClubId, away: input.fixture.awayClubId,
   };
@@ -141,6 +159,26 @@ export function simulateM1V23TemporaryTreatment(
     home: new Set(input.homeLineup.starters),
     away: new Set(input.awayLineup.starters),
   };
+  // At most one ordinary outfield assessment at any running checkpoint.
+  let pending: {side: Side; playerId: string; returnAt: number} | null = null;
+  const treatment: M1V7TemporaryMedicalAction[] = [];
+  let treatmentExits = 0;
+  let treatmentReturns = 0;
+  function completeDueReturn(second: number, phase: number): void {
+    if (pending === null || pending.returnAt !== second) return;
+    const action: M1V7TemporaryMedicalAction = {
+      schemaVersion: 1, id: 'm1-v23-return-' + (phase + 1),
+      fixtureId: input.fixture.id, teamId: clubIds[pending.side],
+      playerId: pending.playerId, elapsedSeconds: second,
+      kind: 'treatment-return', returnContext: 'running-clock',
+      ballInPlay: true, entryBoundary: 'touchline',
+      refereeSignalId: 'm1-v23-unverified-synthetic-signal',
+    };
+    treatment.push(action);
+    active[pending.side].add(pending.playerId);
+    pending = null;
+    treatmentReturns++;
+  }
   const cautions = new Set<string>();
   const commands: unknown[] = [];
   const incidents: Omit<M1V23GeneratedIncident, 'sourceEventId'>[] = [];

@@ -150,7 +150,7 @@ test('invalid asserted origins, duplicates and unavailable participants fail clo
   bad(run([card, card]), 'SOURCE_MATCH_REJECTED');
   bad(run([referee('caution', 'alien-player')]), 'SOURCE_MATCH_REJECTED');
   bad(run([referee('direct-red', home.starters.find(id =>
-    positions.get(id) === 'GK')]), 'SOURCE_MATCH_REJECTED');
+    positions.get(id) === 'GK'))]), 'SOURCE_MATCH_REJECTED');
 });
 
 test('forged disciplinary replay and getter-backed inputs are rejected', () => {

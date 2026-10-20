@@ -224,9 +224,11 @@ export function simulateM1V15GoalAndHalfTime(
     if(!clockStep(restart))return fail('ROSTER_REPLAY_MISMATCH');
     const group=changes.get(restart)??[];
     const signals={home:0,away:0};
-    for(const change of group){
-      const signal=signals[change.side]++;
-      emit('board-signal',running,wall+signal,
+    const boards=group.map((change,index)=>({
+      change,index,offset:signals[change.side]++,
+    })).sort((a,b)=>a.offset-b.offset||a.index-b.index);
+    for(const {change,offset} of boards){
+      emit('board-signal',running,wall+offset,
         change.sourceId,change.teamId,change.outPlayerId,
         change.inPlayerId);
     }

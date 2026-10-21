@@ -138,7 +138,7 @@ test('v23 ABI and synthetic RNG baseline remain independent of new mode', () => 
 
 test('v29 fails closed on bad source, forged assessment or injected authority', () => {
   assert.equal(simulate(null, policy).error, 'INVALID_SOURCE');
-  assert.equal(simulate(prematch(), null).error, 'INVALID_SOURCE');
+  assert.equal(simulate(prematch(), null).error, 'SOURCE_MATCH_REJECTED');
   assert.equal(simulate(prematch(), policy, {}, []).error,
     'INVALID_HALF_TIME_COMMANDS');
   const supported = Array.from({length: 128}, (_, i) => ({

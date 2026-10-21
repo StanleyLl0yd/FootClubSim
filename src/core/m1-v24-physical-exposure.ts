@@ -263,7 +263,7 @@ export function deriveM1V31CausalPhysicalExposure(
 ):M1V31CausalExposureRun {
   if(!isPlainJsonTree(prematch)||!isPlainJsonTree(policy)||
       !isPlainJsonTree(halfTimeCommands)||
-      !isPlainJsonTree(inPlayCommands))return fail('INVALID_SOURCE');
+      !isPlainJsonTree(inPlayCommands))return {ok:false,error:'INVALID_SOURCE'};
   const source=simulateM1V29CausalMedical(
     prematch,policy,halfTimeCommands,inPlayCommands);
   if(!source.ok)return {ok:false,error:source.error};

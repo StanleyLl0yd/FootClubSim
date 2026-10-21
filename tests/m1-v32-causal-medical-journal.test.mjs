@@ -66,7 +66,7 @@ test('v32 isolated replay stores real source-derived exposure, never inferred au
   const inputCopy = structuredClone(cmd);
   const journal0 = empty();
   const journal = success(apply(career, journal0, [cmd], 0));
-  assert.equal(journal.schemaVersion, 5);
+  assert.equal(journal.schemaVersion, 6);
   assert.equal(journal.revision, 1);
   assert.equal(journal0.revision, 0);
   const item = journal.results[0];
@@ -127,7 +127,7 @@ test('source/projection spoofing, old schemas and poisoned historical rows fail 
   other.results[0].source.prematch.rngSeed++;
   failed(validate(career, other), 'INVALID_JOURNAL');
   const forgedScore = structuredClone(cmd);
-  forgedScore.result.match.match.finalScore.home++;
+  forgedScore.result.source.source.match.finalScore.home++;
   failed(apply(career, empty(), [forgedScore]), 'INVALID_MATCH_RESULT');
   failed(apply(career, empty(),
     [{...cmd, prematch: {...cmd.prematch, catalog: {...catalog,

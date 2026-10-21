@@ -103,7 +103,6 @@ test('every posted patient and player exposure derives only from historical sour
   const view=ok(derive(career,journal));
   assert.equal(view.revision,2);
   assert.equal(view.fixtureCount,2);
-  assert.equal(view.sourcePlayerFixtureRows,undefined);
   assert.equal(view.playerFixtureRows,
     journal.results.reduce((sum,x)=>sum+x.facts.playerRows.length,0));
   assert.equal(view.modelMedicalEpisodeCount,

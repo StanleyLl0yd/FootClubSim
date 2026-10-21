@@ -17,8 +17,9 @@ A manual [GitHub Actions workflow](../.github/workflows/m1-p5-v29-causal-medical
 accepts only bounded positive seed and fixture counts (1..128 seeds,
 1..32 fixtures) for at most **4096 seeded fixture/seed attempts**.
 It logs exact source version, accepted and typed rejected cases,
-per-fixture completeness, generated foul stop counts, quick in-field
-and temporary off-field assessments, modelled return/exit counts,
+per-fixture completeness, generated foul stop counts, modelled on-field
+(legacy `on-field-quick` tag) and temporary off-field assessments,
+return/exit counts,
 score sums, one observed CI wall time and a SHA-256 of the
 deterministic, source-derived observations.
 

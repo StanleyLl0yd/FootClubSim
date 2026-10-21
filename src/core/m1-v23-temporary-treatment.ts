@@ -88,6 +88,7 @@ export interface M1V29CausalAssessment {
   readonly patientTeamId: string;
   readonly patientPlayerId: string;
   readonly elapsedSeconds: number;
+  /** Legacy v29 tag; 2026/27 Law 5 does NOT require quick completion. */
   readonly transition: 'on-field-quick' | 'off-field-return';
   readonly medicalExitEventId: string | null;
   readonly medicalReturnEventId: string | null;
@@ -347,17 +348,18 @@ function simulateTreatmentCore(
           if (eligible.length > 0) {
             const patient = eligible[
               Math.floor(treatmentPlayerRoll * eligible.length)]!;
-            const quick = treatmentTeamRoll < 0.5;
+            // A seeded on-field choice, not an IFAB treatment-time gate.
+            const modelledOnField = treatmentTeamRoll < 0.5;
             const canLeave = second !== 2400 && second < 5100 &&
               active[victimSide].size > 7;
-            if (quick || canLeave) {
+            if (modelledOnField || canLeave) {
               drafts.push({
                 incidentId: 'm1-v23-foul-' + (phase + 1),
                 patientTeamId: clubIds[victimSide],
                 patientPlayerId: patient, elapsedSeconds: second,
-                transition: quick ? 'on-field-quick' : 'off-field-return',
+                transition: modelledOnField ? 'on-field-quick' : 'off-field-return',
               });
-              if (!quick) {
+              if (!modelledOnField) {
                 treatment.push({
                   schemaVersion: 1, id: 'm1-v29-exit-' + (phase + 1),
                   fixtureId: input.fixture.id,

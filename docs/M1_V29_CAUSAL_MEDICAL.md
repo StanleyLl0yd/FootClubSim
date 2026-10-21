@@ -25,9 +25,13 @@ not present at the whistle cannot be declared victims, and new bench
 entrants cannot be mistaken for someone struck before entering.
 
 `treatmentRoll < 0.28` creates a **synthetic medical-need hypothesis**.
-The separate `treatmentTeamRoll` selects between a simulated quick
-on-field assessment (no physical departure) and ordinary off-field
-assessment. The rate and branch split are uncalibrated stress parameters,
+The separate `treatmentTeamRoll` selects between modelled on-field
+assessment (no physical departure) and ordinary off-field assessment.
+The historical v29 JSON tag `on-field-quick` names the seeded on-field
+branch, **not** a legal requirement that medical assessment be quick:
+the 2026/27 Law 5 amendment removed that condition for a physically
+fouled player whose opponent was cautioned or sent off. The engine does
+not model verified assessment duration or clinician authorization. The rate and branch split are uncalibrated stress parameters,
 not estimates of true RPL injury incidence, doctor decisions or Law 5
 exception frequency. If an off-field assessment would cross the unsupported
 half-time boundary, exceed the available phase horizon, reduce a team below

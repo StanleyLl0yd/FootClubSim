@@ -1,0 +1,84 @@
+name: M1 P5 v29 synthetic medical workload (not calibrated)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/m1-p5-v29-causal-medical.yml'
+  workflow_dispatch:
+    inputs:
+      seed_start:
+        description: 'First positive 32-bit seed'
+        required: false
+        type: number
+        default: 1
+      seed_count:
+        description: 'Seeds per fixture (1-128)'
+        required: false
+        type: number
+        default: 16
+      fixture_count:
+        description: 'Synthetic fixtures (1-32)'
+        required: false
+        type: number
+        default: 8
+
+permissions: {}
+
+concurrency:
+  group: m1-v29-causal-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bounded-medical-replay:
+    name: v29 medical incident-victim and transition replay
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      SEED_START: ${{ inputs.seed_start }}
+      SEED_COUNT: ${{ inputs.seed_count }}
+      FIXTURE_COUNT: ${{ inputs.fixture_count }}
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install exactly locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build isolated M1 core
+        run: npm run build:core
+      - name: Replay bounded v29 medical cohort and record one elapsed time
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          start="${SEED_START:-1}"
+          count="${SEED_COUNT:-16}"
+          fixtures="${FIXTURE_COUNT:-8}"
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          TIMEFORMAT='observed_elapsed_seconds=%R'
+          { time node --max-old-space-size=512 \
+            scripts/m1-v29-causal-corpus.mjs \
+            --start="$start" --count="$count" --fixtures="$fixtures" \
+            > "$work/report.json"; } 2> "$work/timing.txt"
+          {
+            echo '## v29 seeded medical causal replay (NOT observed injury calibration)'
+            echo
+            echo 'Node 24; ubuntu-24.04 runner; one observed timing, not an SLA.'
+            echo 'All events and medical decisions are synthetic; no external authority.'
+            echo
+            echo '~~~text'
+            cat "$work/timing.txt"
+            echo '~~~'
+            echo
+            echo '~~~json'
+            cat "$work/report.json"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"

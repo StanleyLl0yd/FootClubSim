@@ -79,6 +79,32 @@ export type M1V23CoachRun =
     lateEntrySupported: false;
     arbitraryRestartSupported: false;
   }>;
+/** Source-only v29 medical decisions. They assert no external clinical authority. */
+export interface M1V29CausalAssessment {
+  readonly incidentId: string;
+  readonly offenderSourceEventId: string;
+  readonly foulWhistleEventId: string;
+  readonly foulRestartEventId: string;
+  readonly patientTeamId: string;
+  readonly patientPlayerId: string;
+  readonly elapsedSeconds: number;
+  readonly transition: 'on-field-quick' | 'off-field-return';
+  readonly medicalExitEventId: string | null;
+  readonly medicalReturnEventId: string | null;
+  readonly simulatedMedicalNeed: true;
+  readonly decisionSource: 'seeded-internal-medical-referee';
+  readonly externalMedicalAuthorityAuthenticated: false;
+}
+export type M1V29CausalSourceRun =
+  | Extract<M1V23CoachRun, {ok:false}>
+  | (Extract<M1V23CoachRun, {ok:true}> &
+      Readonly<{causalAssessments: readonly M1V29CausalAssessment[]}>);
+type AssessmentDraft = Readonly<{
+  incidentId: string; patientTeamId: string; patientPlayerId: string;
+  elapsedSeconds: number;
+  transition: M1V29CausalAssessment['transition'];
+}>;
+
 const fail = (error: M1V23CoachError):
   M1V23CoachRun => ({ ok: false, error });
 const isAction = (v: unknown): v is Record<string, unknown> =>
@@ -94,6 +120,28 @@ export function simulateM1V23TemporaryTreatment(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown = [],
   inPlayCommands: unknown = [],
 ): M1V23CoachRun {
+  return simulateTreatmentCore(prematch, policy, halfTimeCommands,
+    inPlayCommands, false);
+}
+export function simulateM1V29CausalMedicalSource(
+  prematch: unknown, policy: unknown, halfTimeCommands: unknown = [],
+  inPlayCommands: unknown = [],
+): M1V29CausalSourceRun {
+  return simulateTreatmentCore(prematch, policy, halfTimeCommands,
+    inPlayCommands, true);
+}
+function simulateTreatmentCore(
+  prematch: unknown, policy: unknown, halfTimeCommands: unknown,
+  inPlayCommands: unknown, causalMode: false,
+): M1V23CoachRun;
+function simulateTreatmentCore(
+  prematch: unknown, policy: unknown, halfTimeCommands: unknown,
+  inPlayCommands: unknown, causalMode: true,
+): M1V29CausalSourceRun;
+function simulateTreatmentCore(
+  prematch: unknown, policy: unknown, halfTimeCommands: unknown,
+  inPlayCommands: unknown, causalMode: boolean,
+): M1V23CoachRun | M1V29CausalSourceRun {
   if (!isPlainJsonTree(prematch) || !isPlainJsonTree(policy) ||
       !isPlainJsonTree(halfTimeCommands) ||
       !isPlainJsonTree(inPlayCommands)) {
@@ -167,7 +215,8 @@ export function simulateM1V23TemporaryTreatment(
   function completeDueReturn(second: number, phase: number): void {
     if (pending === null || pending.returnAt !== second) return;
     const action: M1V7TemporaryMedicalAction = {
-      schemaVersion: 1, id: 'm1-v23-return-' + (phase + 1),
+      schemaVersion: 1, id: (causalMode ? 'm1-v29-return-' : 'm1-v23-return-') +
+        (phase + 1),
       fixtureId: input.fixture.id, teamId: clubIds[pending.side],
       playerId: pending.playerId, elapsedSeconds: second,
       kind: 'treatment-return', returnContext: 'running-clock',
@@ -183,6 +232,7 @@ export function simulateM1V23TemporaryTreatment(
   const commands: unknown[] = [];
   const incidents: Omit<M1V23GeneratedIncident, 'sourceEventId'>[] = [];
   const foulTimes: number[] = [];
+  const drafts: AssessmentDraft[] = [];
   let acceptedInPlayCommands = 0;
   for (let phase = 0; phase < M1_CLOCK_MAX_EVENTS; phase++) {
     const second = phase * M1_CLOCK_STEP_SECONDS;
@@ -234,6 +284,8 @@ export function simulateM1V23TemporaryTreatment(
       continue;
     }
     const playerId = candidates[Math.floor(playerDraw * candidates.length)]!;
+    const victimSide: Side = side === 'home' ? 'away' : 'home';
+    const atWhistleOpponents = [...active[victimSide]].sort();
     const kind: Sanction = injuryIncident ? 'injury-withdrawal' :
       severity < DIRECT_RED_TRIGGER && active[side].size > 7 ?
         'direct-red' : 'caution';
@@ -282,6 +334,47 @@ export function simulateM1V23TemporaryTreatment(
         commands.push(action);
         acceptedInPlayCommands++;
       }
+      if (causalMode) {
+        // The offender and patient must be on opposing physical XIs at
+        // the SAME whistle. Never infer a patient from the card alone.
+        if (pending === null && treatmentRoll <
+            CONDITIONAL_TREATMENT_TRIGGER) {
+          const initialStarters = victimSide === 'home' ?
+            input.homeLineup.starters : input.awayLineup.starters;
+          const eligible = atWhistleOpponents.filter(id =>
+            active[victimSide].has(id) && players.get(id) !== 'GK' &&
+            initialStarters.includes(id));
+          if (eligible.length > 0) {
+            const patient = eligible[
+              Math.floor(treatmentPlayerRoll * eligible.length)]!;
+            const quick = treatmentTeamRoll < 0.5;
+            const canLeave = second !== 2400 && second < 5100 &&
+              active[victimSide].size > 7;
+            if (quick || canLeave) {
+              drafts.push({
+                incidentId: 'm1-v23-foul-' + (phase + 1),
+                patientTeamId: clubIds[victimSide],
+                patientPlayerId: patient, elapsedSeconds: second,
+                transition: quick ? 'on-field-quick' : 'off-field-return',
+              });
+              if (!quick) {
+                treatment.push({
+                  schemaVersion: 1, id: 'm1-v29-exit-' + (phase + 1),
+                  fixtureId: input.fixture.id,
+                  teamId: clubIds[victimSide], playerId: patient,
+                  elapsedSeconds: second, kind: 'treatment-exit',
+                  reason: 'medical-staff-entered',
+                  restartAtRunningSeconds: second,
+                });
+                active[victimSide].delete(patient);
+                pending = {side: victimSide, playerId: patient,
+                  returnAt: second + M1_CLOCK_STEP_SECONDS};
+                treatmentExits++;
+              }
+            }
+          }
+        }
+      } else {
       // A new, medically absent outfielder is selected ONLY at an
       // internally generated foul stoppage. A 300-second absence suffices
       // for the narrow IFAB one-minute post-restart test; this is NOT an
@@ -311,6 +404,7 @@ export function simulateM1V23TemporaryTreatment(
             returnAt: second + M1_CLOCK_STEP_SECONDS };
           treatmentExits++;
         }
+      }
       }
     }
     completeDueReturn(second, phase);
@@ -345,7 +439,63 @@ export function simulateM1V23TemporaryTreatment(
     }
     generatedIncidents.push({ ...incident, sourceEventId: event.id });
   }
-  return {
+  const assessments: M1V29CausalAssessment[] = [];
+  if (causalMode) {
+    for (const draft of drafts) {
+      const incident = generatedIncidents.find(e => e.id === draft.incidentId);
+      const decision = match.events.find(e =>
+        e.id === incident?.sourceEventId);
+      const whistle = match.events.find(e =>
+        e.kind === 'synthetic-foul-whistle' &&
+        e.sourceEventId === decision?.sourceEventId);
+      const restart = match.events.find(e =>
+        e.kind === 'synthetic-foul-restart' &&
+        e.sourceEventId === decision?.sourceEventId);
+      const side = draft.patientTeamId === clubIds.home ? 'home' : 'away';
+      const offenderSide = side === 'home' ? 'away' : 'home';
+      const departure = match.events.find(e =>
+        e.kind === 'treatment-exit' &&
+        e.runningSeconds === draft.elapsedSeconds &&
+        e.playerId === draft.patientPlayerId &&
+        e.teamId === draft.patientTeamId);
+      const returnEvent = match.events.find(e =>
+        e.kind === 'treatment-return' &&
+        e.runningSeconds === draft.elapsedSeconds + M1_CLOCK_STEP_SECONDS &&
+        e.playerId === draft.patientPlayerId &&
+        e.teamId === draft.patientTeamId);
+      if (!incident || !decision || !whistle || !restart ||
+          incident.sanction === 'injury-withdrawal' ||
+          whistle.runningSeconds !== draft.elapsedSeconds ||
+          decision.runningSeconds !== draft.elapsedSeconds ||
+          restart.runningSeconds !== draft.elapsedSeconds ||
+          !whistle.onField[side].includes(draft.patientPlayerId) ||
+          !whistle.onField[offenderSide].includes(incident.playerId) ||
+          !(whistle.sequence < decision.sequence &&
+            decision.sequence < restart.sequence) ||
+          (draft.transition === 'on-field-quick' &&
+            (departure !== undefined || returnEvent !== undefined ||
+              !restart.onField[side].includes(draft.patientPlayerId))) ||
+          (draft.transition === 'off-field-return' &&
+            (!departure || !returnEvent ||
+              !(decision.sequence < departure.sequence &&
+                departure.sequence < restart.sequence &&
+                restart.sequence < returnEvent.sequence) ||
+              departure.onField[side].includes(draft.patientPlayerId) ||
+              !returnEvent.onField[side].includes(draft.patientPlayerId)))) {
+        return fail('REFEREE_REPLAY_MISMATCH');
+      }
+      assessments.push({
+        ...draft, offenderSourceEventId: decision.id,
+        foulWhistleEventId: whistle.id, foulRestartEventId: restart.id,
+        medicalExitEventId: departure?.id ?? null,
+        medicalReturnEventId: returnEvent?.id ?? null,
+        simulatedMedicalNeed: true,
+        decisionSource: 'seeded-internal-medical-referee',
+        externalMedicalAuthorityAuthenticated: false,
+      });
+    }
+  }
+  const baseRun: Extract<M1V23CoachRun, {ok:true}> = {
     ok: true, schemaVersion: M1_V23_COACH_SCHEMA,
     rulesId: M1_V23_COACH_RULES,
     status: 'INTERNAL_FOUL_TREATMENT_NOT_CALIBRATED',
@@ -372,6 +522,7 @@ export function simulateM1V23TemporaryTreatment(
     lateEntrySupported: false,
     arbitraryRestartSupported: false,
   };
+  return causalMode ? {...baseRun, causalAssessments: assessments} : baseRun;
 }
 export function verifyM1V23TemporaryTreatment(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,

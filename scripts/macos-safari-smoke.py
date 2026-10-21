@@ -160,7 +160,7 @@ def assert_restored_club(session: str):
 
 def exercise_journal_cas(session: str, schema: int):
     """Verify the requested fixture, not a stale page from the previous Safari run."""
-    if schema not in (7, 8):
+    if schema not in (7, 8, 26):
         raise ValueError("Unsupported native CAS fixture")
     url = f"http://127.0.0.1:5173/examples/m1-v{schema}-cas-smoke.html"
     expected_path = f"/examples/m1-v{schema}-cas-smoke.html"
@@ -194,8 +194,8 @@ def exercise_journal_cas(session: str, schema: int):
     raise AssertionError(f"Safari v{schema} CAS timed out, last page state: {last!r}")
 
 
-def exercise_journal_cas_pair(session: str):
-    """Keep one Vite process serving both fixtures to avoid port-reuse navigation races."""
+def exercise_journal_cas_group(session: str):
+    """Keep one Vite process for all CAS fixtures to avoid port-reuse races."""
     log_path = "/tmp/footclubsim-m1-safari-cas.log"
     with open(log_path, "w", encoding="utf-8") as log:
         server = subprocess.Popen(
@@ -205,7 +205,7 @@ def exercise_journal_cas_pair(session: str):
         )
         try:
             deadline = time.monotonic() + TIMEOUT
-            for schema in (7, 8):
+            for schema in (7, 8, 26):
                 url = f"http://127.0.0.1:5173/examples/m1-v{schema}-cas-smoke.html"
                 while time.monotonic() < deadline:
                     try:
@@ -219,7 +219,7 @@ def exercise_journal_cas_pair(session: str):
                     time.sleep(0.4)
                 else:
                     raise RuntimeError(f"Safari v{schema} Vite dev server unavailable")
-            for schema in (7, 8):
+            for schema in (7, 8, 26):
                 exercise_journal_cas(session, schema)
         except Exception:
             log.flush()
@@ -385,7 +385,7 @@ def main():
             if not run_script(session, "return Boolean(document.querySelector('.career-info'))"):
                 raise AssertionError("Active career disappeared after storage API failure")
             print("PASS: Safari initial career survives reload and unavailable storage")
-            exercise_journal_cas_pair(session)
+            exercise_journal_cas_group(session)
         except Exception:
             preview_log.flush()
             driver_log.flush()

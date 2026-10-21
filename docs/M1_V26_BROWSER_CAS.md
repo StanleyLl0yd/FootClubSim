@@ -25,8 +25,10 @@ database `footclubsim-m1-v26`, object store `result-journals`.
   quota-aborted put, and source-journal corruption.
 
 **Boundaries:** This is a domain adapter with a simulated-storage unit
-suite. No real-browser v26 native Chromium/Safari/Windows verification,
-OS/process-crash consistency experiment, eviction/quota persistence
+suite. The v26 native CAS fixture is wired to Chromium, Windows Chrome/Edge,
+and Safari hosted browser smoke; this document does not claim the tests
+passed until their exact-head/commit workflow results are verified.
+No OS/process-crash consistency experiment, eviction/quota persistence
 guarantee, accepted backup/restore design, or user-facing gameplay
 integration is claimed. Replaying a long history synchronously in a
 readwrite transaction is a potential latency/transaction-lifetime risk:

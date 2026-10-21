@@ -105,6 +105,9 @@ jobs:
             http://127.0.0.1:5173/examples/m1-v8-cas-smoke.html M1_V8_BROWSER_CAS
           node scripts/m1-v7-cdp-smoke.mjs "$browser" \
             http://127.0.0.1:5173/examples/m1-v26-cas-smoke.html M1_V26_BROWSER_CAS
+          node scripts/m1-v7-cdp-smoke.mjs "$browser" \
+            http://127.0.0.1:5173/examples/m1-v32-cas-smoke.html M1_V32_BROWSER_CAS
+          echo 'Real Chromium persisted v32 schema-6 causal medical journal and serialized CAS'
           echo 'Real Chromium persisted v26 schema-5 physical-exposure journal and serialized CAS'
           echo 'Real Chromium persisted v8 special-goal and medical dossier over navigation'
           echo 'Real Chromium persisted v7, survived reload and serialized competing CAS writes'
@@ -190,6 +193,9 @@ jobs:
               node scripts/m1-v7-cdp-smoke.mjs "$executable" 'http://127.0.0.1:5173/examples/m1-v26-cas-smoke.html' 'M1_V26_BROWSER_CAS'
               if ($LASTEXITCODE -ne 0) { throw "$browserName native v26 CAS smoke failed with code $LASTEXITCODE" }
               Write-Host "PASS: native Windows $browserName v26 schema-5 journal reload and competing CAS writes"
+              node scripts/m1-v7-cdp-smoke.mjs "$executable" 'http://127.0.0.1:5173/examples/m1-v32-cas-smoke.html' 'M1_V32_BROWSER_CAS'
+              if ($LASTEXITCODE -ne 0) { throw "$browserName native v32 CAS smoke failed with code $LASTEXITCODE" }
+              Write-Host "PASS: native Windows $browserName v32 schema-6 journal reload and competing CAS writes"
             } finally {
               Stop-Process -Id $casServer.Id -Force -ErrorAction SilentlyContinue
             }

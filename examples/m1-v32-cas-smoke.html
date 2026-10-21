@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v32 schema-6 IndexedDB CAS smoke</title></head>
+<body>
+  <h1>M1 v32 native IndexedDB persistence test (development only)</h1>
+  <pre id="status">M1_V32_BROWSER_CAS_RUNNING</pre>
+  <script type="module">
+    import { createSyntheticRplScaleCatalog, defaultSyntheticLineup }
+      from '../dist/core/synthetic.js';
+    import { createInitialCareer } from '../dist/core/save.js';
+    import { saveNewInitialCareer, loadInitialCareer }
+      from '../dist/browser/initial-career-store.js';
+    import { createM1V32PersistedJournal, loadM1V32PersistedJournal,
+      commitM1V32PersistedBatch } from '../dist/browser/m1-v32-journal-store.js';
+    import { deriveM1V31CausalPhysicalExposure }
+      from '../dist/core/m1-v24-physical-exposure.js';
+    import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
+    import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
+      from '../dist/core/match-contracts.js';
+    import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
+    import { defaultTacticalPlan } from '../dist/core/tactics.js';
+    import { RNG_VERSION } from '../dist/core/rng.js';
+
+    const status = document.getElementById('status');
+    const check = (condition, message) => {
+      if (!condition) throw new Error(message);
+    };
+    const catalog = createSyntheticRplScaleCatalog(77);
+    const career = createInitialCareer(
+      catalog, catalog.clubs[0].id, 42, 'm1-v32-native-cas');
+    const fixtures = generateDoubleRoundRobin(catalog.clubs.map(c => c.id))
+      .flatMap(round => round.fixtures);
+    const clubs = new Map(catalog.clubs.map(c => [c.id, c]));
+    const policy = {
+      home: {assignedActor: {kind: 'player'}, availableStaffIds: []},
+      away: {assignedActor: {kind: 'player'}, availableStaffIds: []},
+    };
+    function command(fixture, revision, id) {
+      const input = {
+        schemaVersion: MATCH_LEDGER_VERSION, engineVersion: M1_ENGINE_VERSION,
+        rulesPackId: M0_RULES_PACK_ID, rulesPackVersion: M0_RULES_PACK_VERSION,
+        fixture, catalog,
+        homeLineup: defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+        awayLineup: defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+        homeTactics: defaultTacticalPlan(fixture.homeClubId),
+        awayTactics: defaultTacticalPlan(fixture.awayClubId),
+        rosterRules: {starterCount: 11, maxBench: 12, maxForeignersOnField: 7},
+        rngAlgorithmVersion: RNG_VERSION, rngSeed: 1,
+      };
+      for (let seed = 1; seed <= 128; seed++) {
+        input.rngSeed = seed;
+        const result = deriveM1V31CausalPhysicalExposure(input, policy);
+        if (!result.ok) continue;
+        return {
+          schemaVersion: 6, commandId: id, careerId: career.careerId,
+          expectedRevision: revision, prematch: {...input}, policy,
+          halfTimeCommands: [], inPlayCommands: [], result,
+        };
+      }
+      throw new Error('no supported fixture/seed in bounded sample');
+    }
+    async function failCode(promise, expected) {
+      try { await promise; }
+      catch (error) {
+        check(error?.code === expected,
+          'expected ' + expected + ', got ' + String(error));
+        return;
+      }
+      throw new Error('expected rejection: ' + expected);
+    }
+    async function run() {
+      const stage = new URL(location.href).searchParams.get('stage');
+      if (stage === null) {
+        await saveNewInitialCareer(career);
+        const initial = await createM1V32PersistedJournal(career.careerId);
+        check(initial.revision === 0, 'initial journal revision invalid');
+        const first = command(fixtures[0], 0, 'v32-native-first');
+        const committed = await commitM1V32PersistedBatch(
+          career.careerId, 0, [first]);
+        check(committed.revision === 1 && committed.schemaVersion === 6 &&
+          committed.results[0].facts.rulesId === first.result.rulesId &&
+          committed.results[0].facts.syntheticMedicalDecisionCount ===
+            first.result.source.assessments.length,
+          'first source-derived exposure not committed');
+        const target = new URL(location.href);
+        target.searchParams.set('stage', 'verify');
+        location.replace(target.href);
+        return;
+      }
+      check(stage === 'verify', 'invalid stage');
+      const original = await loadInitialCareer(career.careerId);
+      check(original.selectedClubId === career.selectedClubId,
+        'read changed immutable initial career');
+      const recovered = await loadM1V32PersistedJournal(career.careerId);
+      check(recovered.revision === 1 && recovered.results.length === 1 &&
+        recovered.results[0].commandId === 'v32-native-first',
+        'reloaded schema-6 journal lost first match');
+      const facts = recovered.results[0].facts;
+      check(facts.playerRows.length >= 22 && facts.refereeRngDraws === 90 &&
+        facts.treatmentRngDraws === 54 &&
+        facts.medicalAuthorityAuthenticated === false &&
+        facts.medicalNeedAuthenticated === false &&
+        facts.syntheticMedicalDecisionCount === facts.causalAssessments.length &&
+        facts.causalAssessments.every(a => a.simulatedMedicalNeed === true &&
+          a.externalMedicalAuthorityAuthenticated === false) &&
+        !Object.hasOwn(recovered.results[0].source.prematch, 'catalog'),
+        'reloaded source/facts provenance did not match');
+      await failCode(createM1V32PersistedJournal(career.careerId),
+        'ALREADY_EXISTS');
+      await failCode(commitM1V32PersistedBatch(
+        career.careerId, 0, [command(fixtures[1], 0, 'v32-stale')]),
+        'STALE_REVISION');
+      const writers = await Promise.allSettled([
+        commitM1V32PersistedBatch(career.careerId, 1,
+          [command(fixtures[1], 1, 'v32-writer-a')]),
+        commitM1V32PersistedBatch(career.careerId, 1,
+          [command(fixtures[2], 1, 'v32-writer-b')]),
+      ]);
+      check(writers.filter(x => x.status === 'fulfilled').length === 1,
+        'competing CAS writers both committed or both failed');
+      check(writers.find(x => x.status === 'rejected')?.reason?.code ===
+        'STALE_REVISION', 'loser did not observe stored revision');
+      const afterRace = await loadM1V32PersistedJournal(career.careerId);
+      check(afterRace.revision === 2 && afterRace.results.length === 2 &&
+        afterRace.results[0].commandId === 'v32-native-first' &&
+        ['v32-writer-a', 'v32-writer-b'].includes(
+          afterRace.results[1].commandId),
+        'native competing transaction altered previous history');
+      await failCode(commitM1V32PersistedBatch(career.careerId, 2, [
+        command(fixtures[3], 2, 'v32-batch-good'),
+        command(fixtures[4], 2, 'v32-batch-stale-member'),
+      ]), 'DOMAIN_REJECTED');
+      const afterFailedBatch = await loadM1V32PersistedJournal(career.careerId);
+      check(afterFailedBatch.revision === 2 &&
+        afterFailedBatch.results.length === 2 &&
+        JSON.stringify(afterFailedBatch) === JSON.stringify(afterRace),
+        'partial application or mutation after invalid batch');
+      status.textContent = 'M1_V32_BROWSER_CAS_PASS';
+    }
+    run().catch(error => {
+      status.textContent = 'M1_V32_BROWSER_CAS_FAIL: ' +
+        String(error?.stack ?? error);
+    });
+  </script>
+</body>
+</html>

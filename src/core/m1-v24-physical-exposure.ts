@@ -1,6 +1,8 @@
 import { sameCanonicalValue } from './canonical-value.js';
 import { M1_CLOCK_END_SECONDS, type M1PrematchInput } from './m1-clock.js';
 import { isPlainJsonTree } from './plain-json-tree.js';
+import { simulateM1V29CausalMedical,
+  type M1V29CausalMedicalRun } from './m1-v29-causal-medical.js';
 import { simulateM1V23TemporaryTreatment,
   type M1V23CoachRun } from './m1-v23-temporary-treatment.js';
 
@@ -68,7 +70,13 @@ export function deriveM1V24PhysicalExposure(
   const match = simulateM1V23TemporaryTreatment(
     prematch, policy, halfTimeCommands, inPlayCommands);
   if (!match.ok) return fail('SOURCE_MATCH_REJECTED');
-  const input = prematch as M1PrematchInput;
+  return projectPhysicalExposure(prematch as M1PrematchInput, match);
+}
+
+/** Called only after the source simulator has replay-validated its own match. */
+function projectPhysicalExposure(
+  input: M1PrematchInput, match: Game,
+): M1V24ExposureRun {
   const clubs = {
     home: input.fixture.homeClubId,
     away: input.fixture.awayClubId,
@@ -213,4 +221,82 @@ export function verifyM1V24PhysicalExposure(
   const replay = deriveM1V24PhysicalExposure(
     prematch, policy, halfTimeCommands, inPlayCommands);
   return replay.ok && sameCanonicalValue(replay, candidate);
+}
+
+/**
+ * v31 reuses the v24 physical-time arithmetic against the ACTUAL v29
+ * medical decision/source event stream. Historical v24 has no behavior or
+ * schema change. On-field synthetic assessments do not remove playing time.
+ */
+export const M1_V31_CAUSAL_EXPOSURE_SCHEMA = 1 as const;
+export const M1_V31_CAUSAL_EXPOSURE_RULES =
+  'm1-v29-causal-medical-source-derived-physical-exposure' as const;
+type PhysicalGood = Extract<M1V24ExposureRun,{ok:true}>;
+type CausalGood = Extract<M1V29CausalMedicalRun,{ok:true}>;
+export type M1V31CausalExposureRun =
+  | Readonly<{ok:false;error:M1V24ExposureError |
+      Extract<M1V29CausalMedicalRun,{ok:false}>['error']}>
+  | Readonly<{
+    ok:true;
+    schemaVersion:typeof M1_V31_CAUSAL_EXPOSURE_SCHEMA;
+    rulesId:typeof M1_V31_CAUSAL_EXPOSURE_RULES;
+    status:'SYNTHETIC_CAUSAL_MEDICAL_PHYSICAL_EXPOSURE_NOT_CALIBRATED';
+    fixtureId:string;
+    source:CausalGood;
+    physical:Readonly<{
+      playingSeconds:typeof M1_CLOCK_END_SECONDS;
+      teamPhysicalPlayerSeconds:PhysicalGood['teamPhysicalPlayerSeconds'];
+      playerRows:PhysicalGood['playerRows'];
+      aggregatedEvents:PhysicalGood['aggregatedEvents'];
+    }>;
+    replayBoundPhysicalTime:true;
+    realWorldInjuryAuthenticated:false;
+    externalRefereeAuthorityAuthenticated:false;
+    externalMedicalAuthorityAuthenticated:false;
+    crossFixtureFitnessAndSanctionsCalibrated:false;
+    careerJournalIntegrated:false;
+  }>;
+
+export function deriveM1V31CausalPhysicalExposure(
+  prematch:unknown, policy:unknown, halfTimeCommands:unknown=[],
+  inPlayCommands:unknown=[],
+):M1V31CausalExposureRun {
+  if(!isPlainJsonTree(prematch)||!isPlainJsonTree(policy)||
+      !isPlainJsonTree(halfTimeCommands)||
+      !isPlainJsonTree(inPlayCommands))return {ok:false,error:'INVALID_SOURCE'};
+  const source=simulateM1V29CausalMedical(
+    prematch,policy,halfTimeCommands,inPlayCommands);
+  if(!source.ok)return {ok:false,error:source.error};
+  const projected=projectPhysicalExposure(
+    prematch as M1PrematchInput,source.source);
+  if(!projected.ok)return projected;
+  return {
+    ok:true,schemaVersion:M1_V31_CAUSAL_EXPOSURE_SCHEMA,
+    rulesId:M1_V31_CAUSAL_EXPOSURE_RULES,
+    status:'SYNTHETIC_CAUSAL_MEDICAL_PHYSICAL_EXPOSURE_NOT_CALIBRATED',
+    fixtureId:source.fixtureId,
+    source,
+    physical:{
+      playingSeconds:projected.playingSeconds,
+      teamPhysicalPlayerSeconds:projected.teamPhysicalPlayerSeconds,
+      playerRows:projected.playerRows,
+      aggregatedEvents:projected.aggregatedEvents,
+    },
+    replayBoundPhysicalTime:true,
+    realWorldInjuryAuthenticated:false,
+    externalRefereeAuthorityAuthenticated:false,
+    externalMedicalAuthorityAuthenticated:false,
+    crossFixtureFitnessAndSanctionsCalibrated:false,
+    careerJournalIntegrated:false,
+  };
+}
+
+export function verifyM1V31CausalPhysicalExposure(
+  prematch:unknown,policy:unknown,halfTimeCommands:unknown,
+  inPlayCommands:unknown,candidate:unknown,
+):boolean {
+  if(!isPlainJsonTree(candidate))return false;
+  const replay=deriveM1V31CausalPhysicalExposure(
+    prematch,policy,halfTimeCommands,inPlayCommands);
+  return replay.ok&&sameCanonicalValue(replay,candidate);
 }

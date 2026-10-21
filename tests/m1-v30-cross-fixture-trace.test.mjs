@@ -101,7 +101,7 @@ test('two posted source matches reconcile each player’s physical and event tot
   ];
   const ids=new Set();
   for(const x of view.players) {
-    const key=x.teamId+':'+x.playerId;
+    const key=JSON.stringify([x.teamId,x.playerId]);
     assert.equal(ids.has(key),false);
     ids.add(key);
     const sources=complete.results.flatMap(r=>

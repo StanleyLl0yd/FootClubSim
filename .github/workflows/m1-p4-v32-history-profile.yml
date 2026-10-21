@@ -1,0 +1,77 @@
+name: M1 P4 v32 full-history replay cost (not a gate)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/m1-p4-v32-history-profile.yml'
+  workflow_dispatch:
+    inputs:
+      fixtures:
+        description: 'Number of synthetic fixtures (1-32)'
+        type: number
+        required: false
+        default: 4
+      firstseed:
+        description: 'First positive 32-bit RNG seed'
+        type: number
+        required: false
+        default: 1
+
+permissions: {}
+
+concurrency:
+  group: m1-v32-history-profile-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  profile:
+    name: schema-6 source replay cost observation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      FIXTURE_COUNT: ${{ inputs.fixtures }}
+      FIRST_SEED: ${{ inputs.firstseed }}
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install exactly locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build isolated M1 core
+        run: npm run build:core
+      - name: Measure exact schema-6 replay workload
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          fixtures="${FIXTURE_COUNT:-4}"
+          seed="${FIRST_SEED:-1}"
+          scratch="$(mktemp -d)"
+          trap 'rm -rf "$scratch"' EXIT
+          TIMEFORMAT='observed_elapsed_seconds=%R'
+          { time node --max-old-space-size=512 \
+            scripts/m1-v32-history-workload.mjs \
+            --fixtures="$fixtures" --firstseed="$seed" \
+            > "$scratch/report.json"; } 2> "$scratch/timing.txt"
+          {
+            echo '## Schema-6 full-source replay observation (NOT latency acceptance)'
+            echo
+            echo 'One Node 24, ubuntu-24.04 hosted-runner observation.'
+            echo 'No production threshold, storage transaction, or clinical data.'
+            echo
+            echo '~~~text'
+            cat "$scratch/timing.txt"
+            echo '~~~'
+            echo
+            echo '~~~json'
+            cat "$scratch/report.json"
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"

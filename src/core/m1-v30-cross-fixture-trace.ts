@@ -62,7 +62,7 @@ export function deriveM1V30CareerTrace(
   for (const fixture of journal.results) {
     for (const row of fixture.facts.playerRows) {
       sourceRows++;
-      const key = row.teamId + ':' + row.playerId;
+      const key = JSON.stringify([row.teamId, row.playerId]);
       const current = accumulator.get(key);
       if (current) {
         current.fixtureRecords++;

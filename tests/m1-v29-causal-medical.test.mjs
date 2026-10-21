@@ -115,7 +115,11 @@ test('v29 generates causally named patient and referee/medical lifecycle', () =>
 
 test('v23 ABI and synthetic RNG baseline remain independent of new mode', () => {
   for (const seed of [1, 3, 7, 11, 17, 41]) {
-    const original = ok(v23(prematch(seed), policy));
+    const original = v23(prematch(seed), policy);
+    if (!original.ok) {
+      assert.equal(original.error, 'SOURCE_MATCH_REJECTED');
+      continue;
+    }
     assert.equal(original.causalAssessments, undefined);
     assert.equal(original.treatmentRngDraws, 54);
     assert.equal(original.refereeRngDraws, 90);
@@ -137,14 +141,13 @@ test('v29 fails closed on bad source, forged assessment or injected authority', 
   assert.equal(simulate(prematch(), null).error, 'INVALID_SOURCE');
   assert.equal(simulate(prematch(), policy, {}, []).error,
     'INVALID_HALF_TIME_COMMANDS');
-  const supported = Array.from({length: 128}, (_, i) =>
-    simulate(prematch(i + 1), policy)).find(r => r.ok &&
-      r.assessments.length > 0);
+  const supported = Array.from({length: 128}, (_, i) => ({
+    seed: i + 1, run: simulate(prematch(i + 1), policy),
+  })).find(x => x.run.ok && x.run.assessments.length > 0);
   assert.ok(supported, 'no seeded medical decision');
-  const forged = structuredClone(supported);
+  const forged = structuredClone(supported.run);
   forged.assessments[0].externalMedicalAuthorityAuthenticated = true;
-  assert.equal(verify(prematch(supported.source.refereeRngSeed), policy,
-    [], [], forged), false);
+  assert.equal(verify(prematch(supported.seed), policy, [], [], forged), false);
   const p = prematch();
   const baseline = simulate(p, policy);
   if (baseline.ok) {

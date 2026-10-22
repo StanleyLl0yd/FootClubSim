@@ -1,3 +1,4 @@
+import { sameCanonicalValue } from '../core/canonical-value.js';
 import { isStableId } from '../core/identifiers.js';
 import {
   applyM1V32ExposureBatch, startM1V32ExposureJournal,
@@ -9,8 +10,10 @@ import { loadInitialCareer } from './initial-career-store.js';
  * An isolated v32 schema-6 browser persistence prototype. The immutable M0 initial career
  * is read from its existing add-only store, never upgraded or rewritten here.
  * Atomicity is provided by ONE IndexedDB readwrite transaction per CAS.
- * Domain validation replays every accepted v29/v31 source entry synchronously.
- * This is correctness-first and may block the browser main thread.
+ * Domain validation replays every accepted v29/v31 source entry synchronously,
+ * but OUTSIDE IndexedDB transactions. Readwrite CAS rechecks the exact
+ * validated snapshot before put, preserving concurrent-writer correctness.
+ * Source replay may still block the browser main thread.
  * This is local crash/concurrency safety, NOT authenticated referee authority.
  */
 const DATABASE = 'footclubsim-m1-v32';
@@ -108,21 +111,30 @@ function verified(raw: unknown, initial: unknown): M1V32Journal {
   return outcome.journal;
 }
 
+/**
+ * Fetch one consistent structured-clone snapshot. Do not run expensive
+ * source replay from an IDB callback: a readonly transaction must finish
+ * before the caller validates and/or computes a proposed update.
+ */
+async function readRawJournal(careerId: string): Promise<unknown> {
+  return transact<unknown>('readonly', (store, abort, setResult, setRequestError) => {
+    const request = store.get(careerId);
+    request.onsuccess = () => {
+      if (request.result === undefined) { abort(fail('NOT_FOUND')); return; }
+      setResult(request.result as unknown);
+    };
+    request.onerror = () => setRequestError(fail(isQuota(request.error) ?
+      'QUOTA_EXCEEDED' : 'STORAGE_FAILED'));
+  });
+}
+
 /** Missing or damaged journals are NEVER created or silently replaced on read. */
 export async function loadM1V32PersistedJournal(careerId: string):
   Promise<M1V32Journal> {
   if (!validId(careerId)) throw fail('INVALID_ID');
   const initial = await loadInitialCareer(careerId);
-  return transact('readonly', (store, abort, setResult, setRequestError) => {
-    const request = store.get(careerId);
-    request.onsuccess = () => {
-      if (request.result === undefined) { abort(fail('NOT_FOUND')); return; }
-      try { setResult(verified(request.result, initial)); }
-      catch { abort(fail('CORRUPTED')); }
-    };
-    request.onerror = () => setRequestError(fail(isQuota(request.error) ?
-      'QUOTA_EXCEEDED' : 'STORAGE_FAILED'));
-  });
+  const raw = await readRawJournal(careerId);
+  return verified(raw, initial);
 }
 
 /** Add-only initialization. Never overwrites an existing M1 journal. */
@@ -165,12 +177,12 @@ export async function restoreM1V32PersistedJournal(
 }
 
 /**
- * A true read-modify-write CAS within a single IDB readwrite transaction.
- * The source career is loaded before opening that transaction. The stored
- * journal is source-replayed once before the revision check and domain batch.
- * Independent
- * tabs targeting the same object store serialize under IDB transaction locks.
- * The final batch is written once; a failed proposal aborts without any put.
+ * Optimistic read/validate/propose, followed by atomic version+content CAS.
+ * Full source replay executes OUTSIDE the readwrite transaction. The exact
+ * original source-replayed snapshot is compared against the current IDB
+ * value INSIDE the write lock; two writers cannot both win. A changed
+ * same-revision payload fails closed rather than being silently overwritten.
+ * No promises/await are used in the active IDB readwrite callback.
  */
 export async function commitM1V32PersistedBatch(
   careerId: string, expectedRevision: number, requests: unknown,
@@ -181,23 +193,34 @@ export async function commitM1V32PersistedBatch(
     throw fail('DOMAIN_REJECTED', 'INVALID_APPLY_COMMAND');
   }
   const initial = await loadInitialCareer(careerId);
+  const baseline = await readRawJournal(careerId);
+  const proposed = applyM1V32ExposureBatch(
+    initial, baseline, requests, expectedRevision);
+  if (!proposed.ok) {
+    if (proposed.error === 'INVALID_JOURNAL' ||
+        proposed.error === 'INVALID_INITIAL_CAREER') {
+      throw fail('CORRUPTED');
+    }
+    if (proposed.error === 'CAS_REVISION_MISMATCH') {
+      throw fail('STALE_REVISION');
+    }
+    throw fail('DOMAIN_REJECTED', proposed.error);
+  }
   return transact('readwrite', (store, abort, setResult, setRequestError) => {
     const read = store.get(careerId);
     read.onerror = () => setRequestError(fail(isQuota(read.error) ?
       'QUOTA_EXCEEDED' : 'STORAGE_FAILED'));
     read.onsuccess = () => {
       if (read.result === undefined) { abort(fail('NOT_FOUND')); return; }
-      const proposed = applyM1V32ExposureBatch(
-        initial, read.result, requests, expectedRevision);
-      if (!proposed.ok) {
-        if (proposed.error === 'INVALID_JOURNAL' ||
-            proposed.error === 'INVALID_INITIAL_CAREER') {
-          abort(fail('CORRUPTED'));
-        } else if (proposed.error === 'CAS_REVISION_MISMATCH') {
-          abort(fail('STALE_REVISION'));
-        } else {
-          abort(fail('DOMAIN_REJECTED', proposed.error));
-        }
+      // Complete equality detects a same-revision replacement or tampering.
+      // Checking the revision alone would permit a forged ABA-style overwrite.
+      if (!sameCanonicalValue(read.result, baseline)) {
+        const changed: unknown = read.result;
+        const revision = changed !== null && typeof changed === 'object' &&
+          !Array.isArray(changed) && Object.hasOwn(changed, 'revision') ?
+          (changed as Record<string, unknown>).revision : null;
+        abort(fail(Number.isSafeInteger(revision) &&
+          revision !== expectedRevision ? 'STALE_REVISION' : 'CORRUPTED'));
         return;
       }
       const put = store.put(proposed.journal, careerId);

@@ -209,7 +209,7 @@
         limitations: [
           'end-to-end API calls include full replay and IDB open/close',
           instrument ?
-            'readwrite transaction lifetime includes synchronous full source replay inside IDB get success callback' :
+            'readwrite transaction lifetime includes the IDB get callback and put, but source replay placement depends on adapter version' :
             'not an instrumented readwrite transaction-lifetime measurement',
           'synthetic fixtures, no medical or disciplinary authentication',
           'no 240-fixture benchmark or accepted latency threshold',

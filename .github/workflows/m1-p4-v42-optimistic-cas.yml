@@ -73,3 +73,29 @@ jobs:
             cat /tmp/m1-v42-profile.log
             echo '~~~'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Check native competing writers and restart safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vite --host 127.0.0.1 --port 5173 --strictPort >/tmp/m1-v42-replay-vite.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl -fsS 'http://127.0.0.1:5173/examples/m1-v32-cas-smoke.html' >/dev/null; then break; fi
+            sleep 1
+          done
+          browser=""
+          for exe in google-chrome google-chrome-stable chromium chromium-browser; do
+            if command -v "$exe" >/dev/null 2>&1; then browser="$exe"; break; fi
+          done
+          [[ -n "$browser" ]] || { echo 'Chromium missing'; exit 1; }
+          node scripts/m1-v7-cdp-smoke.mjs "$browser" \
+            http://127.0.0.1:5173/examples/m1-v32-cas-smoke.html \
+            M1_V32_BROWSER_CAS
+          node scripts/m1-v37-cdp-restart.mjs "$browser" \
+            http://127.0.0.1:5173/examples/m1-v37-process-restart.html
+          node scripts/m1-v38-cdp-interrupt.mjs "$browser" \
+            http://127.0.0.1:5173/examples/m1-v38-uncommitted-restart.html
+          node scripts/m1-v7-cdp-smoke.mjs "$browser" \
+            http://127.0.0.1:5173/examples/m1-v40-native-two-store-recovery.html \
+            M1_V40_BROWSER_RECOVERY

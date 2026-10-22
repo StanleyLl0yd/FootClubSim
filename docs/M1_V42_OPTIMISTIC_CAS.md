@@ -43,12 +43,32 @@ Existing browser races, invalid batch rollback, quota failure, hostile
 backup/restore, native process interruption and browser-engine smoke
 must continue passing unchanged.
 
-Performance improvement is **not presumed** from this code change:
-run the v41 native instrumentation on the modified head and report
-observed readwrite occupancy as well as end-to-end time. Replay remains
-required and may still block the JavaScript main thread. This change
-does not solve a 240-fixture full-history replay cost or establish a
-production latency SLA, actual eviction resistance or trusted
-medical/disciplinary authority.
+## Observed native Chromium result on initial v42 PR head
+
+[CI run 39762299558](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/39762299558)
+used Linux/HeadlessChrome 155, 8 synthetic fixtures on original
+`32844db86a2d58e5e11ddd022c91e58cf272e90f`.
+
+| Revision | v41 write occupancy | v42 write occupancy | v42 complete CAS |
+| --- | ---: | ---: | ---: |
+| 1 | 211.1 ms | 1.1 ms | 242.0 ms |
+| 4 | 719.7 ms | 1.7 ms | 807.7 ms |
+| 8 | 1,425.1 ms | 4.2 ms | 1,581.4 ms |
+
+These are **separate, unpaired hosted CI observations**, not benchmark
+distributions. The revision-8 readwrite interval shrank by roughly
+339 times, but end-to-end CAS latency **did not improve**: source replay
+remains mandatory and happens outside the transaction. The 8-fixture
+post-navigation load still took 1,649.5 ms, and restoring the 8-fixture
+backup took 3,204.7 ms. Full-history replay can still block the main
+thread. It is not a solution to a 240-fixture history performance SLA.
+
+The follow-up exact-head workflow also exercises native competing
+writer protection, acknowledged and interrupted SIGKILL/restart, and
+M0+schema-6 two-store recovery, not just the timing profile. Results
+must be verified from the **latest** exact-head CI before merging.
+
+No actual eviction resistance, power-failure recovery, trusted
+medical/disciplinary authority or calibrated realism is established.
 
 M1 P3 #29, P4 #30, P5 #31 and exit #3 OPEN. M2 prohibited.

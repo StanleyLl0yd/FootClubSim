@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v36 native schema-6 history profile</title></head>
+<body>
+  <h1>Development-only schema-6 native browser history profile</h1>
+  <pre id="status">M1_V36_BROWSER_PROFILE_RUNNING</pre>
+  <pre id="report"></pre>
+  <script type="module">
+    import { createSyntheticRplScaleCatalog, defaultSyntheticLineup }
+      from '../dist/core/synthetic.js';
+    import { createInitialCareer } from '../dist/core/save.js';
+    import { saveNewInitialCareer, loadInitialCareer }
+      from '../dist/browser/initial-career-store.js';
+    import { createM1V32PersistedJournal, loadM1V32PersistedJournal,
+      commitM1V32PersistedBatch } from '../dist/browser/m1-v32-journal-store.js';
+    import { exportM1V35Schema6Backup, restoreM1V35Schema6Backup }
+      from '../dist/browser/m1-v35-schema6-backup.js';
+    import { deriveM1V31CausalPhysicalExposure }
+      from '../dist/core/m1-v24-physical-exposure.js';
+    import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
+    import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
+      from '../dist/core/match-contracts.js';
+    import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
+    import { RNG_VERSION } from '../dist/core/rng.js';
+    import { defaultTacticalPlan } from '../dist/core/tactics.js';
+
+    const status = document.getElementById('status');
+    const reportNode = document.getElementById('report');
+    const params = new URL(location.href).searchParams;
+    const fixtureText = params.get('fixtures') ?? '2';
+    const assert = (condition, why) => {
+      if (!condition) throw new Error(why);
+    };
+    const ms = value => Math.round(value * 1000) / 1000;
+    const policy = {
+      home: {assignedActor: {kind: 'player'}, availableStaffIds: []},
+      away: {assignedActor: {kind: 'player'}, availableStaffIds: []},
+    };
+
+    async function run() {
+      // A bounded experiment only: it must not touch a real user career.
+      assert(/^[1-8]$/.test(fixtureText), 'fixtures must be 1..8');
+      const count = Number(fixtureText);
+      const catalog = createSyntheticRplScaleCatalog(77);
+      const career = createInitialCareer(
+        catalog, catalog.clubs[0].id, 42, 'm1-v36-native-history-' + count);
+      const fixtures = generateDoubleRoundRobin(catalog.clubs.map(c => c.id))
+        .flatMap(round => round.fixtures).slice(0, count);
+      const clubs = new Map(catalog.clubs.map(c => [c.id, c]));
+      const storageKey = 'm1-v36-native-report-' + count;
+      assert(fixtures.length === count, 'insufficient fixtures');
+      function request(fixture, revision) {
+        const prematch = {
+          schemaVersion: MATCH_LEDGER_VERSION, engineVersion: M1_ENGINE_VERSION,
+          rulesPackId: M0_RULES_PACK_ID, rulesPackVersion: M0_RULES_PACK_VERSION,
+          fixture, catalog,
+          homeLineup: defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+          awayLineup: defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+          homeTactics: defaultTacticalPlan(fixture.homeClubId),
+          awayTactics: defaultTacticalPlan(fixture.awayClubId),
+          rosterRules: {starterCount: 11, maxBench: 12, maxForeignersOnField: 7},
+          rngAlgorithmVersion: RNG_VERSION, rngSeed: 1,
+        };
+        for (let seed = 1; seed <= 128; seed++) {
+          prematch.rngSeed = seed;
+          const result = deriveM1V31CausalPhysicalExposure(
+            prematch, policy, [], []);
+          if (!result.ok) continue;
+          return {
+            schemaVersion: 6, commandId: 'v36-profile-' + revision,
+            careerId: career.careerId, expectedRevision: revision,
+            prematch: {...prematch}, policy,
+            halfTimeCommands: [], inPlayCommands: [], result,
+          };
+        }
+        throw new Error('NO_ACCEPTED_SOURCE:' + fixture.id);
+      }
+      const stage = params.get('stage');
+      if (stage === null) {
+        const started = performance.now();
+        await saveNewInitialCareer(career);
+        await createM1V32PersistedJournal(career.careerId);
+        const checkpoints = [];
+        for (let index = 0; index < count; index++) {
+          const beforeSource = performance.now();
+          const command = request(fixtures[index], index);
+          const sourceMs = ms(performance.now() - beforeSource);
+          const beforeCommit = performance.now();
+          const committed = await commitM1V32PersistedBatch(
+            career.careerId, index, [command]);
+          const endToEndCommitMs = ms(performance.now() - beforeCommit);
+          assert(committed.revision === index + 1, 'revision drift');
+          const beforeLoad = performance.now();
+          const loaded = await loadM1V32PersistedJournal(career.careerId);
+          const fullReplayLoadMs = ms(performance.now() - beforeLoad);
+          assert(loaded.revision === index + 1 &&
+            loaded.results.length === index + 1, 'history readback drift');
+          checkpoints.push({
+            revision: index + 1, sourceMs, endToEndCommitMs,
+            fullReplayLoadMs, journalChars: JSON.stringify(loaded).length,
+          });
+        }
+        sessionStorage.setItem(storageKey, JSON.stringify({
+          fixtureCount: count, checkpoints, initialAndAppendMs:
+            ms(performance.now() - started),
+        }));
+        const next = new URL(location.href);
+        next.searchParams.set('stage', 'verify');
+        location.replace(next.href);
+        return;
+      }
+      assert(stage === 'verify', 'invalid profile stage');
+      const saved = sessionStorage.getItem(storageKey);
+      assert(typeof saved === 'string', 'profile checkpoints lost');
+      const measurements = JSON.parse(saved);
+      assert(measurements.fixtureCount === count &&
+        measurements.checkpoints.length === count, 'checkpoint mismatch');
+      const readStart = performance.now();
+      const historical = await loadM1V32PersistedJournal(career.careerId);
+      const postReloadReplayMs = ms(performance.now() - readStart);
+      assert(historical.revision === count &&
+        historical.results.length === count, 'reloaded history mismatch');
+      const original = await loadInitialCareer(career.careerId);
+      assert(original.careerId === career.careerId, 'immutable M0 missing');
+      const exportStart = performance.now();
+      const backup = await exportM1V35Schema6Backup(career.careerId);
+      const exportMs = ms(performance.now() - exportStart);
+      // Destructive test applies only to this disposable profile journal.
+      const db = await new Promise((resolve, reject) => {
+        const open = indexedDB.open('footclubsim-m1-v32', 1);
+        open.onsuccess = () => resolve(open.result);
+        open.onerror = () => reject(new Error('profile IndexedDB open failed'));
+      });
+      try {
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction('result-journals', 'readwrite');
+          tx.objectStore('result-journals').delete(career.careerId);
+          tx.oncomplete = resolve;
+          tx.onabort = () => reject(new Error('profile journal removal failed'));
+        });
+      } finally { db.close(); }
+      const restoreStart = performance.now();
+      const restored = await restoreM1V35Schema6Backup(career.careerId, backup);
+      const addOnlyRestoreMs = ms(performance.now() - restoreStart);
+      assert(JSON.stringify(restored) === JSON.stringify(historical),
+        'source history changed after add-only restore');
+      const last = await loadM1V32PersistedJournal(career.careerId);
+      assert(last.revision === count &&
+        JSON.stringify(last) === JSON.stringify(historical),
+        'restored historical journal differs');
+      assert((await loadInitialCareer(career.careerId)).careerId ===
+        career.careerId, 'M0 altered during restore');
+      const report = {
+        schemaVersion: 1,
+        status: 'NATIVE_SCHEMA6_BOUNDED_OBSERVATION_NOT_A_RELEASE_GATE',
+        browser: navigator.userAgent, fixtureCount: count, schema: 6,
+        measurements: {...measurements, postReloadReplayMs, exportMs,
+          addOnlyRestoreMs, backupChars: backup.length},
+        limitations: [
+          'end-to-end API calls include full replay and IDB open/close',
+          'not an instrumented readwrite transaction-lifetime measurement',
+          'synthetic fixtures, no medical or disciplinary authentication',
+          'no 240-fixture benchmark or accepted latency threshold',
+          'not proof of OS crash, eviction or quota persistence',
+        ],
+      };
+      reportNode.textContent = JSON.stringify(report);
+      sessionStorage.removeItem(storageKey);
+      status.textContent = 'M1_V36_BROWSER_PROFILE_PASS';
+    }
+    run().catch(error => {
+      status.textContent = 'M1_V36_BROWSER_PROFILE_FAIL: ' +
+        String(error?.stack ?? error);
+    });
+  </script>
+</body>
+</html>

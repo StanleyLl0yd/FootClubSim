@@ -99,6 +99,28 @@ export function simulateM1V8MedicalPhases(
   prematch: unknown, policy: unknown, plannedCommands: unknown = [],
   trustedDecisions: unknown = [], medicalActions: unknown = [],
 ): M1V8Run {
+  return calculateMedicalPhases(prematch, policy, plannedCommands,
+    trustedDecisions, medicalActions, false);
+}
+
+/**
+ * Explicit v53 opt-in. An otherwise legal substitution can replace an
+ * off-field medical patient without first admitting a one-minute re-entry.
+ * Existing v8 entry points and saved/replayed results remain unchanged.
+ */
+export function simulateM1V53OffFieldSubstitutionSource(
+  prematch: unknown, policy: unknown, plannedCommands: unknown = [],
+  trustedDecisions: unknown = [], medicalActions: unknown = [],
+): M1V8Run {
+  return calculateMedicalPhases(prematch, policy, plannedCommands,
+    trustedDecisions, medicalActions, true);
+}
+
+function calculateMedicalPhases(
+  prematch: unknown, policy: unknown, plannedCommands: unknown,
+  trustedDecisions: unknown, medicalActions: unknown,
+  allowSubstituteForOffFieldPatient: boolean,
+): M1V8Run {
   const baseline = simulateM1V7Phases(prematch, policy, plannedCommands, trustedDecisions);
   if (!baseline.ok || !Array.isArray(plannedCommands)) return fail('INVALID_MATCH_SOURCE');
   if (!Array.isArray(medicalActions) ||
@@ -174,9 +196,16 @@ export function simulateM1V8MedicalPhases(
         const action = next.entry.action;
         const side = action.teamId === input.fixture.homeClubId ? 'home' : 'away';
         if (action.kind === 'substitute-normal') {
-          if (absent.has(action.outPlayerId)) return fail('EXCEPTION_RULING_REQUIRED');
           const index = teams[side].indexOf(action.outPlayerId);
           if (index < 0) return fail('INVALID_TRANSITION');
+          if (absent.has(action.outPlayerId)) {
+            if (!allowSubstituteForOffFieldPatient) {
+              return fail('EXCEPTION_RULING_REQUIRED');
+            }
+            // The patient leaves the match, not returns to play: their
+            // pending one-minute return permission is cancelled.
+            absent.delete(action.outPlayerId);
+          }
           teams[side][index] = action.inPlayerId;
         } else if (next.entry.effect !== 'yellow') {
           if (absent.has(action.playerId)) return fail('EXCEPTION_RULING_REQUIRED');

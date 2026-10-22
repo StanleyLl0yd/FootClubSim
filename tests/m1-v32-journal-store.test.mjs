@@ -9,7 +9,10 @@ import { saveNewInitialCareer, loadInitialCareer }
 import { createHash } from 'node:crypto';
 import { exportM1V35Schema6Backup, restoreM1V35Schema6Backup }
   from '../dist/browser/m1-v35-schema6-backup.js';
-import { createInitialCareer } from '../dist/core/save.js';
+import { createInitialCareer, exportInitialCareer } from '../dist/core/save.js';
+import {
+  exportM1V40TwoStoreBackup, restoreM1V40TwoStoreBackup,
+} from '../dist/browser/m1-v40-two-store-backup.js';
 import { createSyntheticRplScaleCatalog, defaultSyntheticLineup }
   from '../dist/core/synthetic.js';
 import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
@@ -413,5 +416,108 @@ test('v35 restoration add is atomic under quota and concurrent writers', async (
       {code:'ALREADY_EXISTS'});
     assert.deepEqual(mock.entries('footclubsim-m1-v32','result-journals')
       .get(career.careerId),corrupted);
+  });
+});
+
+test('v40 two-store backup recovers lost M0 and schema-6 and is idempotent', async () => {
+  await withStorage(async mock => {
+    await createM1V32PersistedJournal(career.careerId);
+    const expected = await commitM1V32PersistedBatch(
+      career.careerId, 0, [matchRequest(fixtures[0], 0, 'v40-one')]);
+    const initial = await loadInitialCareer(career.careerId);
+    const backup = await exportM1V40TwoStoreBackup(career.careerId);
+    mock.entries('footclubsim-m0', 'initial-careers').delete(career.careerId);
+    mock.entries('footclubsim-m1-v32', 'result-journals').delete(career.careerId);
+    await assert.rejects(loadInitialCareer(career.careerId), {code:'NOT_FOUND'});
+    const restored = await restoreM1V40TwoStoreBackup(career.careerId, backup);
+    assert.deepEqual(restored.initial, initial);
+    assert.deepEqual(restored.journal, expected);
+    assert.deepEqual(await loadInitialCareer(career.careerId), initial);
+    assert.deepEqual(await loadM1V32PersistedJournal(career.careerId), expected);
+    assert.deepEqual(await restoreM1V40TwoStoreBackup(career.careerId, backup),
+      restored);
+    const again = await Promise.all([
+      restoreM1V40TwoStoreBackup(career.careerId, backup),
+      restoreM1V40TwoStoreBackup(career.careerId, backup),
+    ]);
+    assert.deepEqual(again, [restored, restored]);
+  });
+});
+
+test('v40 preflight rejects corrupted data before recreating either lost store', async () => {
+  await withStorage(async mock => {
+    await createM1V32PersistedJournal(career.careerId);
+    await commitM1V32PersistedBatch(
+      career.careerId, 0, [matchRequest(fixtures[0], 0, 'v40-tamper')]);
+    const backup = await exportM1V40TwoStoreBackup(career.careerId);
+    const m0 = mock.entries('footclubsim-m0', 'initial-careers');
+    const journalStore = mock.entries('footclubsim-m1-v32', 'result-journals');
+    m0.delete(career.careerId);
+    journalStore.delete(career.careerId);
+    const changed = JSON.parse(backup);
+    changed.m0Checksum = 'a'.repeat(64);
+    await assert.rejects(restoreM1V40TwoStoreBackup(
+      career.careerId, JSON.stringify(changed)), {code:'INVALID_BACKUP'});
+    const malicious = JSON.parse(backup);
+    const journal = JSON.parse(malicious.journalPayload);
+    journal.results[0].facts.refereeRngState ^= 1;
+    malicious.journalPayload = JSON.stringify(journal);
+    malicious.journalChecksum = createHash('sha256')
+      .update(malicious.journalPayload).digest('hex');
+    await assert.rejects(restoreM1V40TwoStoreBackup(
+      career.careerId, JSON.stringify(malicious)), {code:'INVALID_BACKUP'});
+    await assert.rejects(restoreM1V40TwoStoreBackup(
+      career.careerId, '{"format":'), {code:'INVALID_BACKUP'});
+    assert.equal(mock.entries('footclubsim-m0','initial-careers')
+      .has(career.careerId), false);
+    assert.equal(mock.entries('footclubsim-m1-v32','result-journals')
+      .has(career.careerId), false);
+  });
+});
+
+test('v40 never overwrites conflicting M0 or corrupted schema-6 history', async () => {
+  await withStorage(async mock => {
+    await createM1V32PersistedJournal(career.careerId);
+    await commitM1V32PersistedBatch(
+      career.careerId, 0, [matchRequest(fixtures[0], 0, 'v40-conflict')]);
+    const backup = await exportM1V40TwoStoreBackup(career.careerId);
+    const m0Entries = mock.entries('footclubsim-m0','initial-careers');
+    const conflicting = createInitialCareer(
+      catalog, catalog.clubs[1].id, 19, career.careerId);
+    const conflictingEncoded = await exportInitialCareer(conflicting);
+    m0Entries.set(career.careerId, conflictingEncoded);
+    await assert.rejects(restoreM1V40TwoStoreBackup(career.careerId, backup),
+      {code:'CONFLICT'});
+    assert.equal(mock.entries('footclubsim-m0','initial-careers')
+      .get(career.careerId), conflictingEncoded);
+    mock.entries('footclubsim-m0','initial-careers')
+      .set(career.careerId, (JSON.parse(backup)).m0Payload);
+    const resultEntries = mock.entries('footclubsim-m1-v32','result-journals');
+    const damaged = structuredClone(resultEntries.get(career.careerId));
+    damaged.revision += 1;
+    resultEntries.set(career.careerId, damaged);
+    await assert.rejects(restoreM1V40TwoStoreBackup(career.careerId, backup),
+      {code:'CORRUPTED'});
+    assert.deepEqual(mock.entries('footclubsim-m1-v32','result-journals')
+      .get(career.careerId), damaged);
+  });
+});
+
+test('v40 retry completes second store after quota-aborted journal add', async () => {
+  await withStorage(async mock => {
+    await createM1V32PersistedJournal(career.careerId);
+    const expected = await commitM1V32PersistedBatch(
+      career.careerId, 0, [matchRequest(fixtures[0], 0, 'v40-retry')]);
+    const backup = await exportM1V40TwoStoreBackup(career.careerId);
+    mock.entries('footclubsim-m1-v32', 'result-journals')
+      .delete(career.careerId);
+    mock.setQuotaPut(true);
+    await assert.rejects(restoreM1V40TwoStoreBackup(career.careerId, backup),
+      {code:'QUOTA_EXCEEDED'});
+    assert.equal(mock.entries('footclubsim-m1-v32','result-journals')
+      .has(career.careerId), false);
+    mock.setQuotaPut(false);
+    const completed = await restoreM1V40TwoStoreBackup(career.careerId, backup);
+    assert.deepEqual(completed.journal, expected);
   });
 });

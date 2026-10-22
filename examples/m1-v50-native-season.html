@@ -29,8 +29,6 @@
 
     const statusMarker='M1_V50_NATIVE_FULL_SEASON';
     const count=240,batchSize=16;
-    const status=document.querySelector('#status');
-    const reportNode=document.querySelector('#report');
     const assert=(condition,message)=>{if(!condition)throw Error(message);};
     const ms=value=>Math.round(value*1000)/1000;
     const catalog=createSyntheticRplScaleCatalog(77);

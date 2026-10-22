@@ -4,7 +4,11 @@ import {
   createM1V32PersistedJournal, loadM1V32PersistedJournal,
   commitM1V32PersistedBatch,
 } from '../dist/browser/m1-v32-journal-store.js';
-import { saveNewInitialCareer } from '../dist/browser/initial-career-store.js';
+import { saveNewInitialCareer, loadInitialCareer }
+  from '../dist/browser/initial-career-store.js';
+import { createHash } from 'node:crypto';
+import { exportM1V35Schema6Backup, restoreM1V35Schema6Backup }
+  from '../dist/browser/m1-v35-schema6-backup.js';
 import { createInitialCareer } from '../dist/core/save.js';
 import { createSyntheticRplScaleCatalog, defaultSyntheticLineup }
   from '../dist/core/synthetic.js';
@@ -84,7 +88,7 @@ function fakeIndexedDB() {
               undefined;
           } else if (op.kind === 'add' && staged.has(op.id)) {
             failure = 'ConstraintError';
-          } else if (op.kind === 'put' && quotaPut) {
+          } else if ((op.kind === 'put' || op.kind === 'add') && quotaPut) {
             failure = 'QuotaExceededError';
           } else staged.set(op.id, structuredClone(op.value));
           if (failure) {
@@ -314,5 +318,100 @@ test('CAS detects corruption before stale revision and never commits invalid bat
     await assert.rejects(commitM1V32PersistedBatch(career.careerId, 0, []),
       { code: 'CORRUPTED' });
     assert.deepEqual(entries.get(career.careerId), damaged);
+  });
+});
+
+test('v35 exported schema-6 backup restores only missing journal for existing M0', async () => {
+  await withStorage(async mock => {
+    await createM1V32PersistedJournal(career.careerId);
+    const committed = await commitM1V32PersistedBatch(career.careerId, 0,
+      [matchRequest(fixtures[0], 0, 'backup-one')]);
+    const source = await loadInitialCareer(career.careerId);
+    const backup = await exportM1V35Schema6Backup(career.careerId);
+    const envelope = JSON.parse(backup);
+    assert.equal(envelope.format,
+      'footclubsim-schema6-existing-m0-career-journal');
+    assert.equal(envelope.version, 1);
+    assert.equal(envelope.careerId, career.careerId);
+    assert.equal(envelope.checksumAlgorithm, 'sha256');
+    assert.equal(envelope.journalChecksum,
+      createHash('sha256').update(envelope.payload).digest('hex'));
+    const entries = mock.entries('footclubsim-m1-v32', 'result-journals');
+    entries.delete(career.careerId);
+    await assert.rejects(loadM1V32PersistedJournal(career.careerId),
+      {code: 'NOT_FOUND'});
+    assert.deepEqual(await restoreM1V35Schema6Backup(career.careerId, backup),
+      committed);
+    assert.deepEqual(await loadM1V32PersistedJournal(career.careerId),
+      committed);
+    assert.deepEqual(await loadInitialCareer(career.careerId), source);
+    await assert.rejects(restoreM1V35Schema6Backup(career.careerId, backup),
+      {code: 'ALREADY_EXISTS'});
+  });
+});
+
+test('v35 checksum, initial binding and full source replay reject hostile imports', async () => {
+  await withStorage(async mock => {
+    await createM1V32PersistedJournal(career.careerId);
+    await commitM1V32PersistedBatch(career.careerId, 0,
+      [matchRequest(fixtures[0], 0, 'backup-tamper')]);
+    const backup = await exportM1V35Schema6Backup(career.careerId);
+    const entries = mock.entries('footclubsim-m1-v32', 'result-journals');
+    entries.delete(career.careerId);
+    const changed = JSON.parse(backup);
+    changed.journalChecksum = '0'.repeat(64);
+    await assert.rejects(restoreM1V35Schema6Backup(
+      career.careerId, JSON.stringify(changed)), {code:'INVALID_BACKUP'});
+    const wrongInitial = JSON.parse(backup);
+    wrongInitial.initialFingerprint = 'f'.repeat(64);
+    await assert.rejects(restoreM1V35Schema6Backup(
+      career.careerId, JSON.stringify(wrongInitial)), {code:'INVALID_BACKUP'});
+    const spoof = JSON.parse(backup);
+    const journal = JSON.parse(spoof.payload);
+    journal.results[0].facts.medicalAuthorityAuthenticated = true;
+    spoof.payload = JSON.stringify(journal);
+    // Even a recomputed unkeyed hash MUST NOT bypass source validation.
+    spoof.journalChecksum = createHash('sha256')
+      .update(spoof.payload).digest('hex');
+    await assert.rejects(restoreM1V35Schema6Backup(
+      career.careerId, JSON.stringify(spoof)), {code:'INVALID_BACKUP'});
+    await assert.rejects(restoreM1V35Schema6Backup(
+      career.careerId, '{"format":'), {code:'INVALID_BACKUP'});
+    assert.equal(entries.has(career.careerId),false);
+    assert.equal((await loadInitialCareer(career.careerId)).careerId,
+      career.careerId);
+  });
+});
+
+test('v35 restoration add is atomic under quota and concurrent writers', async () => {
+  await withStorage(async mock => {
+    await createM1V32PersistedJournal(career.careerId);
+    const backup = await exportM1V35Schema6Backup(career.careerId);
+    const entries = mock.entries('footclubsim-m1-v32', 'result-journals');
+    entries.delete(career.careerId);
+    mock.setQuotaPut(true);
+    await assert.rejects(restoreM1V35Schema6Backup(career.careerId,backup),
+      {code:'QUOTA_EXCEEDED'});
+    assert.equal(entries.has(career.careerId),false);
+    mock.setQuotaPut(false);
+    const settled = await Promise.allSettled([
+      restoreM1V35Schema6Backup(career.careerId,backup),
+      restoreM1V35Schema6Backup(career.careerId,backup),
+    ]);
+    assert.equal(settled.filter(x=>x.status==='fulfilled').length,1);
+    assert.equal(settled.filter(x=>x.status==='rejected').length,1);
+    assert.equal(settled.find(x=>x.status==='rejected').reason.code,
+      'ALREADY_EXISTS');
+    assert.equal((await loadM1V32PersistedJournal(career.careerId)).revision,0);
+    // The fake IDB swaps its committed Map after a successful transaction.
+    // Re-read the live store instead of mutating a stale pre-commit snapshot.
+    const currentEntries=mock.entries('footclubsim-m1-v32','result-journals');
+    const corrupted=structuredClone(currentEntries.get(career.careerId));
+    corrupted.revision=7;
+    currentEntries.set(career.careerId,corrupted);
+    await assert.rejects(restoreM1V35Schema6Backup(career.careerId,backup),
+      {code:'ALREADY_EXISTS'});
+    assert.deepEqual(mock.entries('footclubsim-m1-v32','result-journals')
+      .get(career.careerId),corrupted);
   });
 });

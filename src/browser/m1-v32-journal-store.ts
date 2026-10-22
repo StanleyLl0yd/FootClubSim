@@ -143,6 +143,28 @@ export async function createM1V32PersistedJournal(careerId: string):
 }
 
 /**
+ * Restore only to a MISSING schema-6 key for an ALREADY PRESENT immutable
+ * M0 initial career. Never overwrite even a corrupt journal. Verify the
+ * complete source against the local initial career before opening a write
+ * transaction; the add-only IDB operation is atomic under competing writers.
+ */
+export async function restoreM1V32PersistedJournal(
+  careerId:string,candidate:unknown,
+):Promise<M1V32Journal> {
+  if(!validId(careerId))throw fail('INVALID_ID');
+  const initial=await loadInitialCareer(careerId);
+  const journal=verified(candidate,initial);
+  if(journal.careerId!==careerId)throw fail('CORRUPTED');
+  return transact('readwrite',(store,_abort,setResult,setRequestError)=>{
+    const request=store.add(journal,careerId);
+    request.onerror=()=>setRequestError(fail(
+      request.error?.name==='ConstraintError'?'ALREADY_EXISTS':
+        isQuota(request.error)?'QUOTA_EXCEEDED':'STORAGE_FAILED'));
+    setResult(journal);
+  });
+}
+
+/**
  * A true read-modify-write CAS within a single IDB readwrite transaction.
  * The source career is loaded before opening that transaction. The stored
  * journal is source-replayed once before the revision check and domain batch.

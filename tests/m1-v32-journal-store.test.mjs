@@ -403,11 +403,15 @@ test('v35 restoration add is atomic under quota and concurrent writers', async (
     assert.equal(settled.find(x=>x.status==='rejected').reason.code,
       'ALREADY_EXISTS');
     assert.equal((await loadM1V32PersistedJournal(career.careerId)).revision,0);
-    const corrupted=structuredClone(entries.get(career.careerId));
+    // The fake IDB swaps its committed Map after a successful transaction.
+    // Re-read the live store instead of mutating a stale pre-commit snapshot.
+    const currentEntries=mock.entries('footclubsim-m1-v32','result-journals');
+    const corrupted=structuredClone(currentEntries.get(career.careerId));
     corrupted.revision=7;
-    entries.set(career.careerId,corrupted);
+    currentEntries.set(career.careerId,corrupted);
     await assert.rejects(restoreM1V35Schema6Backup(career.careerId,backup),
       {code:'ALREADY_EXISTS'});
-    assert.deepEqual(entries.get(career.careerId),corrupted);
+    assert.deepEqual(mock.entries('footclubsim-m1-v32','result-journals')
+      .get(career.careerId),corrupted);
   });
 });

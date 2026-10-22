@@ -252,14 +252,19 @@ test('v56 automatically denies next match XI and bench after fourth simple model
   // this club's narrow automatic-ban admission (not medical/KDK clearance).
   const side=fifth.homeClubId===teamId?'homeLineup':'awayLineup';
   const starting=unmodified[side];
-  const entrant=starting.bench[0];
+  // Several independently generated players may reach a fourth warning
+  // at the same checkpoint. Omit EVERY internally suspended player.
+  const blocked=new Set(rejected.affectedPlayerIds);
+  const survivors=starting.starters.filter(id=>!blocked.has(id));
+  const eligibleBench=starting.bench.filter(id=>!blocked.has(id));
+  while(survivors.length<11){
+    const entrant=eligibleBench.shift();
+    assert.ok(entrant,'not enough eligible synthetic replacements');
+    survivors.push(entrant);
+  }
   const clear={
     ...unmodified,
-    [side]:{
-      ...starting,
-      starters:starting.starters.map(id=>id===target?entrant:id),
-      bench:starting.bench.filter(id=>id!==entrant),
-    },
+    [side]:{...starting,starters:survivors,bench:eligibleBench},
   };
   const admitted=admit(career,journal,clear,teamId);
   assert.equal(admitted.ok,true,JSON.stringify(admitted).slice(0,500));

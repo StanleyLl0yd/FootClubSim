@@ -5,7 +5,7 @@
  * republishes rows, nor treats missing event coverage as zero.
  */
 import {createHash} from 'node:crypto';
-import {readFileSync,statSync} from 'node:fs';
+import {openSync,closeSync,fstatSync,readSync,constants} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
 import {pathToFileURL} from 'node:url';
 
@@ -257,10 +257,25 @@ export function inspectFootbolnoLocalBytes(matchBytes,eventGzipBytes,
 // Only two fixed local basenames, never user-supplied filesystem paths.
 function main(){
   const check=(filename,max)=>{
-    const stat=statSync(filename);
-    if(!stat.isFile()||stat.size<20||stat.size>max)
-      throw Error('SOURCE_FILE_SIZE');
-    return readFileSync(filename);
+    const fd=openSync(filename,constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      const stat=fstatSync(fd);
+      if(!stat.isFile()||stat.size<20||stat.size>max)
+        throw Error('SOURCE_FILE_SIZE');
+      const bytes=Buffer.alloc(stat.size);
+      let offset=0;
+      while(offset<bytes.length){
+        const n=readSync(fd,bytes,offset,bytes.length-offset,offset);
+        if(n===0)throw Error('SOURCE_FILE_TRUNCATED');
+        offset+=n;
+      }
+      const probe=Buffer.alloc(1);
+      if(readSync(fd,probe,0,1,offset)!==0)
+        throw Error('SOURCE_FILE_GREW_DURING_READ');
+      return bytes;
+    }finally{
+      closeSync(fd);
+    }
   };
   const output=inspectFootbolnoLocalBytes(
     check('matches.csv',MAX_MATCH_BYTES),

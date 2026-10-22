@@ -25,7 +25,10 @@ Public documented endpoints:
 development season 2023/24**. It rejects incomplete season fixture
 coverage (240 completed games), invalid or duplicate match IDs,
 unsupported CSV headers, malformed event rows associated with selected
-matches, bad gzip and excessive byte/row sizes. The CLI only opens two fixed file basenames from its working directory,
+matches, bad gzip and excessive byte/row sizes. The CLI reads two fixed file basenames through a single descriptor per file,
+using `O_NOFOLLOW`, bounded `fstatSync` and `readSync` rather than a
+vulnerable path-level check-then-reopen sequence. It never follows links.
+The CLI only opens two fixed file basenames from its working directory,
 never arbitrary paths from command-line arguments. Zero eligible source
 matches cause the hosted evidence check to fail (not a green false-positive).
 It SHA-256 hashes the

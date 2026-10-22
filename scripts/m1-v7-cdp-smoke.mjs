@@ -118,6 +118,16 @@ try {
         profile.measurements.checkpoints.length !== profile.fixtureCount) {
       throw new Error('Unexpected native profile report');
     }
+    if (url.includes('instrument=1')) {
+      if (profile.measurements?.transactionLifetimeInstrumented !== true ||
+          !Number.isFinite(profile.measurements?.addOnlyRestoreTransactionMs) ||
+          !profile.measurements.checkpoints.every(row =>
+            Number.isFinite(row.transactionLifetimeMs) &&
+            row.transactionLifetimeMs >= 0 &&
+            row.transactionLifetimeMs <= row.endToEndCommitMs + 5)) {
+        throw new Error('Native transaction-lifetime instrumentation missing');
+      }
+    }
     console.log(JSON.stringify(profile));
     console.log('PASS: ' + result + ' (real Chromium, navigation and IDB recovery)');
   } else {

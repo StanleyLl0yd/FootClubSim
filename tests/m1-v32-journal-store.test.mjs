@@ -21,6 +21,8 @@ import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
 import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
 import { RNG_VERSION } from '../dist/core/rng.js';
 import { defaultTacticalPlan } from '../dist/core/tactics.js';
+import { applyM1V32ExposureBatch }
+  from '../dist/core/m1-v32-causal-medical-journal.js';
 import { deriveM1V31CausalPhysicalExposure } from '../dist/core/m1-v24-physical-exposure.js';
 
 // Minimal asynchronous IndexedDB model: transactions on the same DB serialize,
@@ -29,6 +31,7 @@ function fakeIndexedDB() {
   const spaces = new Map();
   const pending = new Map();
   let quotaPut = false;
+  let beforeWriteStart = null;
   function space(dbName, storeName) {
     if (!spaces.has(dbName)) spaces.set(dbName, new Map());
     const stores = spaces.get(dbName);
@@ -103,6 +106,12 @@ function fakeIndexedDB() {
           queueMicrotask(drain);
         }
         function start() {
+          if (mode === 'readwrite' && beforeWriteStart &&
+              name === 'footclubsim-m1-v32') {
+            const hook = beforeWriteStart;
+            beforeWriteStart = null;
+            hook(space(name, storeName));
+          }
           staged = new Map([...space(name, storeName)].map(([key, value]) =>
             [key, structuredClone(value)]));
           queueMicrotask(drain);
@@ -116,6 +125,7 @@ function fakeIndexedDB() {
   return {
     entries(dbName, storeName) { return space(dbName, storeName); },
     setQuotaPut(value) { quotaPut = value; },
+    beforeNextSchema6WriteStart(callback) { beforeWriteStart = callback; },
     indexedDB: { open(name) {
       const request = {
         result: db(name), error: null, onupgradeneeded: null,
@@ -519,5 +529,57 @@ test('v40 retry completes second store after quota-aborted journal add', async (
     mock.setQuotaPut(false);
     const completed = await restoreM1V40TwoStoreBackup(career.careerId, backup);
     assert.deepEqual(completed.journal, expected);
+  });
+});
+
+test('v42 CAS rejects a valid concurrent update between replay and write-lock', async () => {
+  await withStorage(async mock => {
+    await createM1V32PersistedJournal(career.careerId);
+    const entries = mock.entries('footclubsim-m1-v32', 'result-journals');
+    const original = structuredClone(entries.get(career.careerId));
+    const rival = applyM1V32ExposureBatch(career, original,
+      [matchRequest(fixtures[0], 0, 'v42-rival')], 0);
+    assert.equal(rival.ok, true);
+    mock.beforeNextSchema6WriteStart(store => {
+      store.set(career.careerId, structuredClone(rival.journal));
+    });
+    await assert.rejects(commitM1V32PersistedBatch(career.careerId, 0,
+      [matchRequest(fixtures[1], 0, 'v42-loser')]), {code:'STALE_REVISION'});
+    const persisted = await loadM1V32PersistedJournal(career.careerId);
+    assert.deepEqual(persisted, rival.journal);
+    assert.equal(persisted.results[0].commandId, 'v42-rival');
+  });
+});
+
+test('v42 CAS fails closed on concurrent same-revision payload mutation', async () => {
+  await withStorage(async mock => {
+    await createM1V32PersistedJournal(career.careerId);
+    mock.beforeNextSchema6WriteStart(store => {
+      const corrupted = structuredClone(store.get(career.careerId));
+      corrupted.basePackVersion = 'forged-pack-version';
+      store.set(career.careerId, corrupted);
+    });
+    await assert.rejects(commitM1V32PersistedBatch(career.careerId, 0,
+      [matchRequest(fixtures[0], 0, 'v42-same-revision')]), {code:'CORRUPTED'});
+    await assert.rejects(loadM1V32PersistedJournal(career.careerId),
+      {code:'CORRUPTED'});
+    assert.equal(mock.entries('footclubsim-m1-v32','result-journals')
+      .get(career.careerId).basePackVersion, 'forged-pack-version');
+  });
+});
+
+test('v42 malformed preflight still rejects before any write transaction', async () => {
+  await withStorage(async mock => {
+    await createM1V32PersistedJournal(career.careerId);
+    const entries = mock.entries('footclubsim-m1-v32','result-journals');
+    const damaged = structuredClone(entries.get(career.careerId));
+    damaged.revision = 1;
+    entries.set(career.careerId, damaged);
+    let writeInvoked = false;
+    mock.beforeNextSchema6WriteStart(() => { writeInvoked = true; });
+    await assert.rejects(commitM1V32PersistedBatch(career.careerId, 0,
+      [matchRequest(fixtures[0], 0, 'v42-corrupted')]), {code:'CORRUPTED'});
+    assert.equal(writeInvoked, false);
+    assert.deepEqual(entries.get(career.careerId), damaged);
   });
 });

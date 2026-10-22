@@ -2,23 +2,31 @@
 
 **22 October 2026. Model evidence only. NOT an authenticated RFU/RPL
 suspension or clearance.** The Russian Football Union's
-[disciplinary rules](https://www.rfs.ru/subject/1/documents?cat_id=59&mobile=no)
-and specific RPL competition regulations must take priority over
-general guesses about red-card durations, automatic accumulation,
-appeals, sanction revocation and fixture postponement.
+[RPL 2026/27 regulations, article 20.6](https://www.rfs.ru/subject/1/documents/preview?documentId=2164)
+explicitly identify each fourth warning in different championship
+matches as an automatic-disqualification category. The current
+[RFU disciplinary regulations](https://www.rfs.ru/subject/1/documents?cat_id=59&mobile=no)
+and any current rulings must take priority over guesses about red-card
+durations, served fixtures, appeals, revocation and postponements.
 
 `deriveM1V55CautionReview` validates the entire original schema-6
 career journal with **full source match and player-exposure replay**.
 It sorts fixtures by canonical *synthetic* round, not the order in
 which results were committed. It counts `firstYellowCards===1` from
 each already replay-validated physical fixture for each
-`(teamId,playerId)` identity. The count is of **distinct source
-fixtures**. At cumulative 4, 8, ... it emits an internal
+`(teamId,playerId)` identity **only when that fixture has no
+second-yellow or straight-red dismissal for the same player**.
+Those mixed-card matches instead remain separate review-only signals
+so a pair of YC leading to dismissal can never be mistaken for
+two simple accumulated cautions. The count is of **distinct source
+fixtures with uncomplicated caution evidence**. At cumulative 4, 8, ... it emits an internal
 `fourthDistinctCautionReviewSignal` and the next synthetic scheduled
 round fixture to *review*, not to unilaterally ban participation.
 Cases of a second-yellow or straight-red dismissal in the same
-fixture remain explicitly visible rather than silently being
-equated with a regular fourth yellow.
+fixture are explicitly marked `excludedFromSimpleCautionThreshold`
+rather than silently counted toward the next four distinct
+uncomplicated warnings. This is conservative and might undercount
+real-world sanctions until official adjudication.
 
 The read-only `laterMatchdayListings` scans both original starting
 XI and **complete named bench**, including unused substitutes with

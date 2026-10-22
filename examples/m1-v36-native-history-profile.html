@@ -28,6 +28,41 @@
     const reportNode = document.getElementById('report');
     const params = new URL(location.href).searchParams;
     const fixtureText = params.get('fixtures') ?? '2';
+    const instrument = params.get('instrument') === '1';
+    const transactionTimeline = [];
+    if (instrument) {
+      // Diagnostic instrumentation only: never modify transaction logic.
+      const transaction = IDBDatabase.prototype.transaction;
+      IDBDatabase.prototype.transaction = function(...args) {
+        const started = performance.now();
+        const tx = Reflect.apply(transaction, this, args);
+        if (this.name === 'footclubsim-m1-v32' &&
+            args[1] === 'readwrite') {
+          const row = {started, status: 'pending', durationMs: null};
+          transactionTimeline.push(row);
+          tx.addEventListener('complete', () => {
+            row.durationMs = Math.round((performance.now() - started) *
+              1000) / 1000;
+            row.status = 'complete';
+          }, {once: true});
+          tx.addEventListener('abort', () => {
+            row.durationMs = Math.round((performance.now() - started) *
+              1000) / 1000;
+            row.status = 'abort';
+          }, {once: true});
+        }
+        return tx;
+      };
+    }
+    function lastCompletedTransaction(start, reason) {
+      const matching = transactionTimeline.slice(start);
+      assert(matching.length === 1 &&
+        matching[0].status === 'complete' &&
+        Number.isFinite(matching[0].durationMs) &&
+        matching[0].durationMs >= 0,
+        'expected exactly one committed schema-6 transaction: ' + reason);
+      return matching[0].durationMs;
+    }
     const assert = (condition, why) => {
       if (!condition) throw new Error(why);
     };
@@ -87,9 +122,16 @@
           const command = request(fixtures[index], index);
           const sourceMs = ms(performance.now() - beforeSource);
           const beforeCommit = performance.now();
+          const beforeTransactions = transactionTimeline.length;
           const committed = await commitM1V32PersistedBatch(
             career.careerId, index, [command]);
           const endToEndCommitMs = ms(performance.now() - beforeCommit);
+          const transactionLifetimeMs = instrument ?
+            lastCompletedTransaction(beforeTransactions, 'commit-' + index) :
+            null;
+          assert(transactionLifetimeMs === null ||
+            transactionLifetimeMs <= endToEndCommitMs + 5,
+            'instrumented transaction exceeds end-to-end commit');
           assert(committed.revision === index + 1, 'revision drift');
           const beforeLoad = performance.now();
           const loaded = await loadM1V32PersistedJournal(career.careerId);
@@ -98,7 +140,8 @@
             loaded.results.length === index + 1, 'history readback drift');
           checkpoints.push({
             revision: index + 1, sourceMs, endToEndCommitMs,
-            fullReplayLoadMs, journalChars: JSON.stringify(loaded).length,
+            transactionLifetimeMs, fullReplayLoadMs,
+            journalChars: JSON.stringify(loaded).length,
           });
         }
         sessionStorage.setItem(storageKey, JSON.stringify({
@@ -141,8 +184,12 @@
         });
       } finally { db.close(); }
       const restoreStart = performance.now();
+      const restoreTransactions = transactionTimeline.length;
       const restored = await restoreM1V35Schema6Backup(career.careerId, backup);
       const addOnlyRestoreMs = ms(performance.now() - restoreStart);
+      const addOnlyRestoreTransactionMs = instrument ?
+        lastCompletedTransaction(restoreTransactions, 'add-only-restore') :
+        null;
       assert(JSON.stringify(restored) === JSON.stringify(historical),
         'source history changed after add-only restore');
       const last = await loadM1V32PersistedJournal(career.careerId);
@@ -156,10 +203,14 @@
         status: 'NATIVE_SCHEMA6_BOUNDED_OBSERVATION_NOT_A_RELEASE_GATE',
         browser: navigator.userAgent, fixtureCount: count, schema: 6,
         measurements: {...measurements, postReloadReplayMs, exportMs,
-          addOnlyRestoreMs, backupChars: backup.length},
+          addOnlyRestoreMs, addOnlyRestoreTransactionMs,
+          transactionLifetimeInstrumented: instrument,
+          backupChars: backup.length},
         limitations: [
           'end-to-end API calls include full replay and IDB open/close',
-          'not an instrumented readwrite transaction-lifetime measurement',
+          instrument ?
+            'readwrite transaction lifetime includes synchronous full source replay inside IDB get success callback' :
+            'not an instrumented readwrite transaction-lifetime measurement',
           'synthetic fixtures, no medical or disciplinary authentication',
           'no 240-fixture benchmark or accepted latency threshold',
           'not proof of OS crash, eviction or quota persistence',

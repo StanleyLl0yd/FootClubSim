@@ -154,6 +154,46 @@ test('later named starter generates review listing without implied legal ban',()
   assert.equal(verify(career,expanded,review),true);
 });
 
+test('later named but unused bench player still triggers independent review',()=>{
+  const {journal,target,scored}=fourMatchJournal();
+  const fifth=schedule[4],base=prematch(fifth,1);
+  const side=fifth.homeClubId===teamId?'homeLineup':'awayLineup';
+  const team=base[side];
+  assert.ok(team.starters.includes(target));
+  const entrant=team.bench[0];
+  assert.ok(entrant);
+  const input={
+    ...base,
+    [side]:{
+      ...team,
+      starters:team.starters.map(id=>id===target?entrant:id),
+      bench:team.bench.map(id=>id===entrant?target:id),
+    },
+  };
+  let found=null;
+  for(let seed=1;seed<=40;seed++){
+    input.rngSeed=seed;
+    const candidate=simulate(input,policy);
+    if(candidate.ok){found=candidate;break;}
+  }
+  assert.ok(found,'bench-only source fixture cannot be replayed');
+  const cmd={schemaVersion:6,commandId:'caution-unused-bench',
+    careerId:career.careerId,expectedRevision:4,
+    prematch:input,policy,halfTimeCommands:[],inPlayCommands:[],
+    result:found};
+  const expanded=accepted(apply(career,journal,[cmd],4));
+  const reviewed=accepted(derive(career,expanded));
+  const row=reviewed.laterMatchdayListings.find(x=>
+    x.playerId===target&&x.fixtureId===fifth.id);
+  assert.ok(row);
+  assert.equal(row.listedInStartingXI,false);
+  assert.equal(row.listedInNamedBench,true);
+  assert.equal(row.physicalSeconds,0);
+  assert.equal(row.observedFourthCautionFixtureId,
+    scored[3].input.fixture.id);
+  assert.equal(verify(career,expanded,reviewed),true);
+});
+
 test('tampered caution facts, forged authority and untrusted history fail',()=>{
   const {journal}=fourMatchJournal();
   const source=accepted(derive(career,journal));

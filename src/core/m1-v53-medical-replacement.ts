@@ -47,6 +47,10 @@ export function simulateM1V53MedicalReplacement(
 ):M1V53MedicalReplacementResult {
   if (![prematch,policy,plannedCommands,trustedDecisions,medicalActions]
     .every(isPlainJsonTree) ||
+      prematch === null || typeof prematch !== 'object' ||
+      Array.isArray(prematch) ||
+      policy === null || typeof policy !== 'object' ||
+      Array.isArray(policy) ||
       !Array.isArray(plannedCommands) ||
       !Array.isArray(trustedDecisions) ||
       !Array.isArray(medicalActions)) {

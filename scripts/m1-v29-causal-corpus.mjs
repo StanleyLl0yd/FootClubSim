@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { m1Wilson95 } from '../dist/core/m1-diagnostics.js';
 import { argv } from 'node:process';
 import { simulateM1V29CausalMedical, verifyM1V29CausalMedical }
   from '../dist/core/m1-v29-causal-medical.js';
@@ -57,6 +58,15 @@ export function runCorpus() {
   let accepted = 0, rejected = 0, quickAssessments = 0;
   let offFieldAssessments = 0, generatedFouls = 0;
   let totalGoals = 0, medicalExitEvents = 0, medicalReturnEvents = 0;
+  // Rejected seeds are recorded separately, never treated as zero-valued games.
+  const observed = {
+    homeWins:0, draws:0, awayWins:0, scorelessDraws:0,
+    matchesWithModelledAssessment:0,
+    goals:0, shots:0, yellowCards:0, dismissals:0,
+    syntheticInjuryWithdrawals:0, modelledAssessments:0,
+  };
+  const squared = {goals:0,shots:0,yellowCards:0,dismissals:0,
+    syntheticInjuryWithdrawals:0,modelledAssessments:0};
   for (const fixture of fixtures) {
     const home = catalog.clubs.find(c => c.id === fixture.homeClubId);
     const away = catalog.clubs.find(c => c.id === fixture.awayClubId);
@@ -159,13 +169,43 @@ export function runCorpus() {
       }
       medicalExitEvents += exits.length;
       medicalReturnEvents += returns.length;
+      const {home:homeGoals,away:awayGoals} = match.finalScore;
+      const goals = homeGoals + awayGoals;
+      const shots = match.events.filter(e => e.kind === 'shot').length;
+      const referee = match.sourceRefereeEffects;
+      const yellowCards = referee.yellow;
+      const dismissals = referee.secondYellowRed + referee.straightRed;
+      const syntheticInjuryWithdrawals = referee.injuryWithdrawn;
+      if (match.events.filter(e => e.kind === 'caution').length !== yellowCards ||
+          match.events.filter(e => e.kind === 'second-yellow-dismissal' ||
+            e.kind === 'straight-red-dismissal').length !== dismissals ||
+          match.events.filter(e => e.kind === 'injury-withdrawal').length !==
+            syntheticInjuryWithdrawals ||
+          goals > shots || !Number.isSafeInteger(goals) ||
+          !Number.isSafeInteger(shots)) {
+        throw Error('SOURCE_METRICS_MISMATCH:' + fixture.id + ':' + seed);
+      }
+      observed.homeWins += Number(homeGoals > awayGoals);
+      observed.draws += Number(homeGoals === awayGoals);
+      observed.awayWins += Number(homeGoals < awayGoals);
+      observed.scorelessDraws += Number(goals === 0);
+      observed.matchesWithModelledAssessment +=
+        Number(run.assessments.length > 0);
+      const sample = {goals,shots,yellowCards,dismissals,
+        syntheticInjuryWithdrawals,modelledAssessments:run.assessments.length};
+      for (const [name,value] of Object.entries(sample)) {
+        observed[name] += value;
+        squared[name] += value * value;
+      }
       generatedFouls += match.generatedFoulStoppages;
-      totalGoals += match.finalScore.home + match.finalScore.away;
+      totalGoals += goals;
       accepted++;fixtureAccepted++;
       digest.update(JSON.stringify({
         fixtureId:fixture.id,seed,score:match.finalScore,
         rng:match.rngState,refereeRng:run.source.refereeRngState,
         treatmentRng:run.source.treatmentRngState,
+        observed:{goals,shots,yellowCards,dismissals,
+          syntheticInjuryWithdrawals},
         assessments:run.assessments.map(a=>({
           incident:a.incidentId,patient:a.patientPlayerId,
           mode:a.transition,exit:a.medicalExitEventId,
@@ -182,6 +222,62 @@ export function runCorpus() {
   if (!accepted || accepted + rejected !== count * fixtureCount) {
     throw Error('INVALID_CORPUS_COVERAGE');
   }
+  const rate = count => ({
+    count,denominator:accepted,rate:count / accepted,
+    wilson95:m1Wilson95(count,accepted),
+  });
+  const mean = key => {
+    const sum = observed[key];
+    const average = sum / accepted;
+    const variance = accepted > 1 ?
+      Math.max(0,(squared[key] - sum * sum / accepted) / (accepted - 1)) :
+      null;
+    const sampleStdDev = variance === null ? null : Math.sqrt(variance);
+    const margin = sampleStdDev === null ? null :
+      1.959963984540054 * sampleStdDev / Math.sqrt(accepted);
+    return {count:accepted,total:sum,mean:average,sampleStdDev,
+      normalMean95:margin === null ? null : {
+        lower:average - margin,upper:average + margin,
+      }};
+  };
+  const p5Observation = {
+    schemaVersion:1,
+    status:'SYNTHETIC_V29_CONDITIONAL_OBSERVATION_NOT_CALIBRATION',
+    denominatorPolicy:'SUCCESSFUL_FULL_SOURCE_REPLAYS_ONLY',
+    accepted, rejected, attempted:accepted+rejected,
+    outcomeRates:{
+      homeWin:rate(observed.homeWins),draw:rate(observed.draws),
+      awayWin:rate(observed.awayWins),
+      scorelessDraw:rate(observed.scorelessDraws),
+    },
+    modelledAssessmentIncidencePerAcceptedMatch:
+      rate(observed.matchesWithModelledAssessment),
+    perAcceptedMatch:{
+      goals:mean('goals'), shots:mean('shots'),
+      yellowCards:mean('yellowCards'),
+      dismissals:mean('dismissals'),
+      syntheticInjuryWithdrawals:mean('syntheticInjuryWithdrawals'),
+      modelledAssessments:mean('modelledAssessments'),
+    },
+    xg:{status:'UNAVAILABLE_NOT_EXPOSED_BY_V29_SOURCE_TIMELINE',
+      total:null,interval95:null},
+    realInjuries:{status:'UNAVAILABLE_NO_CLINICAL_DIAGNOSIS',
+      total:null,interval95:null},
+    externalReference:{status:'UNAVAILABLE_METRIC_COMPATIBLE_LICENSED_RPL',
+      matchingSampleSize:null,preregisteredTolerance:null,pass:null},
+    sourceEventCoverage:{
+      goals:'OPEN_PLAY_ONLY_NO_GENERATED_PENALTIES_OR_OWN_GOALS',
+      shots:'V29_SOURCE_TIMELINE_SHOT_EVENTS',
+      cards:'SEEDED_INTERNAL_REFEREE_NOT_EXTERNAL_AUTHORITY',
+      injuryWithdrawals:'SYNTHETIC_NOT_DIAGNOSED',
+      medicalAssessments:'SEEDED_HYPOTHESIS_NOT_DIAGNOSED',
+    },
+  };
+  if (observed.goals !== totalGoals ||
+      observed.homeWins+observed.draws+observed.awayWins !== accepted ||
+      observed.modelledAssessments !== quickAssessments+offFieldAssessments) {
+    throw Error('SOURCE_METRICS_AGGREGATE_MISMATCH');
+  }
   return {
     schemaVersion:1,status:'SEEDED_CAUSAL_MEDICAL_REGRESSION_NOT_CALIBRATION',
     sourceEngine:'m1-v29-synthetic-medical-source',start,count,fixtureCount,
@@ -189,6 +285,7 @@ export function runCorpus() {
     fixtureSummaries:summaries,rejectionReasons:rejections,
     generatedFouls,quickAssessments,offFieldAssessments,
     medicalExitEvents,medicalReturnEvents,totalGoals,
+    p5Observation,
     deterministicSha256:digest.digest('hex'),
     realFootballReferenceSample:false,
     injuryOccurrenceCalibrated:false,

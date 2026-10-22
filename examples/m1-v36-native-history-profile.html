@@ -39,7 +39,8 @@
 
     async function run() {
       // A bounded experiment only: it must not touch a real user career.
-      assert(/^[1-8]$/.test(fixtureText), 'fixtures must be 1..8');
+      assert(/^(?:[1-9]|[12][0-9]|3[0-2])$/.test(fixtureText),
+        'fixtures must be 1..32');
       const count = Number(fixtureText);
       const catalog = createSyntheticRplScaleCatalog(77);
       const career = createInitialCareer(

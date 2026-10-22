@@ -3,7 +3,7 @@
 **Development-only, 22 October 2026. No accepted production performance SLA.**
 
 The browser experiment in `examples/m1-v36-native-history-profile.html`
-posts **1-8 source-replayed v29/v31 fixtures** to a dedicated synthetic
+posts **1-32 source-replayed v29/v31 fixtures** to a dedicated synthetic
 v32/schema-6 career. It reports increasing-history measurements for each
 `commitM1V32PersistedBatch`, full replay on a subsequent load, and
 journal size in UTF-16 code units. A page navigation then tests genuine
@@ -14,7 +14,9 @@ immutable M0 career is preserved.
 The separate, manually dispatchable workflow
 `.github/workflows/m1-p4-v36-native-history-profile.yml` exercises real
 hosted Chromium with a fresh browser profile and includes a small
-pull-request smoke. The `fixtures` input is strictly bounded to 1..8.
+pull-request smoke. The `fixtures` input is strictly bounded to 1..32. As of v39, the PR
+smoke runs 16 fixtures (previous v36 evidence used 2); this is a
+research-only scale-up rather than a production lifetime gate.
 The report is printed in CI output and step summary, not committed
 as immutable reference data: timing and user-agent depend on runner.
 

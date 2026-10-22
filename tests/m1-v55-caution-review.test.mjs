@@ -64,6 +64,8 @@ function fourMatchJournal(){
       if(!result.ok)continue;
       const matches=result.physical.playerRows.filter(row=>
         row.teamId===teamId && row.firstYellowCards===1 &&
+        row.secondYellowDismissals===0 &&
+        row.straightRedDismissals===0 &&
         (target===null || row.playerId===target));
       if(matches.length===0)continue;
       winner={input,result,playerId:matches[0].playerId};
@@ -114,6 +116,7 @@ test('four distinct match cautions follow round, not insertion order',()=>{
   assert.deepEqual(player.map(x=>x.postedRevision),[2,4,3,1]);
   assert.deepEqual(player.map(x=>x.fourthDistinctCautionReviewSignal),
     [false,false,false,true]);
+  assert.ok(player.every(x=>x.excludedFromSimpleCautionThreshold===false));
   assert.equal(player[3].nextSyntheticRoundFixtureId,schedule[4].id);
   assert.equal(result.automaticEligibilityAllowed,false);
   assert.equal(result.servedMatchOrAppealStatusKnown,false);

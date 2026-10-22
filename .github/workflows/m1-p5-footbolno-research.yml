@@ -1,0 +1,70 @@
+name: M1 P5 Footbolno open-data evidence
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-footbolno-rpl-events.mjs'
+      - 'tests/m1-p5-footbolno-rpl-events.test.mjs'
+      - 'docs/M1_P5_V59_FOOTBOLNO_RPL_OPEN_DATA.md'
+      - '.github/workflows/m1-p5-footbolno-research.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-rpl-source:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v59-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout researcher, not data
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Inspect live CC BY candidate in ephemeral runner only
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          curl --fail --location --silent --show-error --max-time 60 \
+            --max-filesize 2000000 --retry 2 --retry-delay 2 \
+            'https://footbolno.ru/data/league/235-matches.csv' \
+            --output "$tmp/matches.csv"
+          curl --fail --location --silent --show-error --max-time 60 \
+            --max-filesize 20000000 --retry 2 --retry-delay 2 \
+            'https://footbolno.ru/data/bundles/all-events.csv.gz' \
+            --output "$tmp/events.csv.gz"
+          (cd "$tmp" && node "$GITHUB_WORKSPACE/scripts/m1-p5-footbolno-rpl-events.mjs") > "$tmp/report.json"
+          node - "$tmp/report.json" <<'NODE'
+          const fs = require('node:fs');
+          const file = process.argv[2];
+          const r = JSON.parse(fs.readFileSync(file,'utf8'));
+          const info = [
+            '# Footbolno RPL 2023/24 evidence (research only)',
+            '',
+            '- Source: https://footbolno.ru/otkrytye-dannye',
+            '- Publisher license claim: CC BY 4.0; upstream not audited',
+            '- Source snapshot match SHA-256: '+r.snapshot.matchCsvSha256,
+            '- Source snapshot event-gzip SHA-256: '+r.snapshot.eventGzipSha256,
+            '- Matched source season labels: '+r.sample.sourceSeasonLabels.join(', '),
+            '- Finished matches: '+r.sample.finishedMatches,
+            '- Matches with >=1 event: '+r.sample.matchesWithAnyEvent,
+            '- Matches without events: '+r.sample.matchesWithoutEventRows,
+            '- Yellow source tags: '+r.observedEventKindCounts.yellow,
+            '- Red source tags: '+r.observedEventKindCounts.red,
+            '- Event completeness proven: NO',
+            '- Clinical injuries and xG: UNAVAILABLE',
+            '- Independent realism pass: NOT CLAIMED',
+          ];
+          if (r.sample.finishedMatches === 0) {
+            throw Error('ZERO_INDEPENDENT_RPL_DEVELOPMENT_COVERAGE');
+          }
+          const text = info.join('\n')+'\n';
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,text);
+          process.stdout.write(text);
+          NODE

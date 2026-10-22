@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v38 interrupted schema-6 CAS probe</title></head>
+<body>
+  <h1>Development-only interrupted IndexedDB transaction probe</h1>
+  <pre id="status">M1_V38_RUNNING</pre>
+  <script type="module">
+    import { createSyntheticRplScaleCatalog, defaultSyntheticLineup }
+      from '../dist/core/synthetic.js';
+    import { createInitialCareer } from '../dist/core/save.js';
+    import { saveNewInitialCareer, loadInitialCareer }
+      from '../dist/browser/initial-career-store.js';
+    import { createM1V32PersistedJournal, loadM1V32PersistedJournal,
+      commitM1V32PersistedBatch } from '../dist/browser/m1-v32-journal-store.js';
+    import { deriveM1V31CausalPhysicalExposure }
+      from '../dist/core/m1-v24-physical-exposure.js';
+    import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
+    import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
+      from '../dist/core/match-contracts.js';
+    import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
+    import { RNG_VERSION } from '../dist/core/rng.js';
+    import { defaultTacticalPlan } from '../dist/core/tactics.js';
+
+    const status = document.getElementById('status');
+    const check = (condition, reason) => {
+      if (!condition) throw new Error(reason);
+    };
+    const catalog = createSyntheticRplScaleCatalog(77);
+    const career = createInitialCareer(
+      catalog, catalog.clubs[0].id, 42, 'm1-v38-uncommitted-kill');
+    const fixtures = generateDoubleRoundRobin(catalog.clubs.map(c => c.id))
+      .flatMap(round => round.fixtures).slice(0, 2);
+    const clubs = new Map(catalog.clubs.map(c => [c.id, c]));
+    const policy = {
+      home: {assignedActor: {kind: 'player'}, availableStaffIds: []},
+      away: {assignedActor: {kind: 'player'}, availableStaffIds: []},
+    };
+
+    function command(index) {
+      const fixture = fixtures[index];
+      const prematch = {
+        schemaVersion: MATCH_LEDGER_VERSION, engineVersion: M1_ENGINE_VERSION,
+        rulesPackId: M0_RULES_PACK_ID, rulesPackVersion: M0_RULES_PACK_VERSION,
+        fixture, catalog,
+        homeLineup: defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+        awayLineup: defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+        homeTactics: defaultTacticalPlan(fixture.homeClubId),
+        awayTactics: defaultTacticalPlan(fixture.awayClubId),
+        rosterRules: {starterCount: 11, maxBench: 12, maxForeignersOnField: 7},
+        rngAlgorithmVersion: RNG_VERSION, rngSeed: 1,
+      };
+      for (let seed = 1; seed <= 128; seed++) {
+        prematch.rngSeed = seed;
+        const result = deriveM1V31CausalPhysicalExposure(
+          prematch, policy, [], []);
+        if (!result.ok) continue;
+        return {
+          schemaVersion: 6, commandId: 'v38-transaction-' + index,
+          careerId: career.careerId, expectedRevision: index,
+          prematch: {...prematch}, policy,
+          halfTimeCommands: [], inPlayCommands: [], result,
+        };
+      }
+      throw new Error('NO_ADMISSIBLE_SOURCE:' + fixture.id);
+    }
+
+    async function run() {
+      check(fixtures.length === 2, 'missing fixture');
+      const stage = new URL(location.href).searchParams.get('stage');
+      check(['prepare', 'interrupt', 'verify'].includes(stage),
+        'unsupported stage');
+      if (stage === 'prepare') {
+        await saveNewInitialCareer(career);
+        await createM1V32PersistedJournal(career.careerId);
+        const committed = await commitM1V32PersistedBatch(
+          career.careerId, 0, [command(0)]);
+        const loaded = await loadM1V32PersistedJournal(career.careerId);
+        check(committed.revision === 1 &&
+          JSON.stringify(committed) === JSON.stringify(loaded) &&
+          loaded.results[0].commandId === 'v38-transaction-0',
+          'baseline commit not acknowledged and replayed');
+        status.textContent = 'M1_V38_PREPARED';
+        return;
+      }
+      if (stage === 'interrupt') {
+        const loaded = await loadM1V32PersistedJournal(career.careerId);
+        check(loaded.revision === 1 && loaded.results.length === 1,
+          'baseline missing before interrupted transaction');
+        const second = command(1);
+        // Instrument only this disposable test page. The actual schema-6
+        // commit function must reach its native IDBObjectStore.put call.
+        const originalPut = IDBObjectStore.prototype.put;
+        let intercepted = 0;
+        IDBObjectStore.prototype.put = function(...args) {
+          const request = Reflect.apply(originalPut, this, args);
+          if (this.name === 'result-journals') {
+            intercepted++;
+            console.log('M1_V38_UNACKNOWLEDGED_PUT_QUEUED');
+            // CDP Debugger.paused freezes this callback BEFORE the current
+            // readwrite task returns; the runner SIGKILLs the browser here.
+            debugger;
+          }
+          return request;
+        };
+        await commitM1V32PersistedBatch(career.careerId, 1, [second]);
+        // If execution reaches here, it was not a valid interruption.
+        throw new Error('TRANSACTION_FINISHED_WITHOUT_KILL:' + intercepted);
+      }
+      const initial = await loadInitialCareer(career.careerId);
+      check(initial.careerId === career.careerId &&
+        initial.selectedClubId === career.selectedClubId,
+        'immutable M0 career lost');
+      const recovered = await loadM1V32PersistedJournal(career.careerId);
+      check(recovered.schemaVersion === 6 && recovered.revision === 1 &&
+        recovered.results.length === 1 &&
+        recovered.results[0].commandId === 'v38-transaction-0' &&
+        recovered.results[0].source.prematch.fixture.id === fixtures[0].id,
+        'interrupted in-flight transaction was not rolled back');
+      // A retry of the interrupted command must be an ordinary valid CAS.
+      const retried = await commitM1V32PersistedBatch(
+        career.careerId, 1, [command(1)]);
+      check(retried.revision === 2 && retried.results.length === 2 &&
+        retried.results[0].commandId === 'v38-transaction-0' &&
+        retried.results[1].commandId === 'v38-transaction-1' &&
+        retried.results[1].source.prematch.fixture.id === fixtures[1].id,
+        'clean retry of interrupted command failed');
+      const readback = await loadM1V32PersistedJournal(career.careerId);
+      check(JSON.stringify(readback) === JSON.stringify(retried),
+        'replayed clean retry differs from committed journal');
+      status.textContent = 'M1_V38_RECOVERED';
+    }
+    run().catch(error => {
+      status.textContent = 'M1_V38_FAIL: ' +
+        String(error?.stack ?? error);
+    });
+  </script>
+</body>
+</html>

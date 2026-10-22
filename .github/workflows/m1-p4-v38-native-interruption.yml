@@ -1,0 +1,57 @@
+name: M1 P4 v38 interrupted IDB transaction (not a release gate)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/m1-p4-v38-native-interruption.yml'
+      - 'examples/m1-v38-uncommitted-restart.html'
+      - 'scripts/m1-v38-cdp-interrupt.mjs'
+      - 'docs/M1_V38_NATIVE_UNCOMMITTED_INTERRUPTION.md'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  native-interruption:
+    name: Native Chromium unacknowledged schema-6 CAS rollback
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout pinned
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js pinned
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install exactly locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Compile isolated M1 domain
+        run: npm run build:core
+      - name: Interrupt real IndexedDB CAS while put callback is paused
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vite --host 127.0.0.1 --port 5173 --strictPort >/tmp/m1-v38-vite.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in {1..30}; do
+            if curl -fsS 'http://127.0.0.1:5173/examples/m1-v38-uncommitted-restart.html' >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [[ "$ready" != 1 ]]; then cat /tmp/m1-v38-vite.log; exit 1; fi
+          browser=""
+          for exe in google-chrome google-chrome-stable chromium chromium-browser; do
+            if command -v "$exe" >/dev/null 2>&1; then browser="$exe"; break; fi
+          done
+          [[ -n "$browser" ]] || { echo 'Chromium missing'; exit 1; }
+          node scripts/m1-v38-cdp-interrupt.mjs "$browser" \
+            http://127.0.0.1:5173/examples/m1-v38-uncommitted-restart.html

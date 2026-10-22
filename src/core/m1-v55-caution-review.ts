@@ -32,6 +32,8 @@ export interface M1V55CautionSignal {
   readonly cumulativeDistinctCautionMatches:number;
   readonly secondYellowDismissalInSameFixture:boolean;
   readonly straightRedDismissalInSameFixture:boolean;
+  /** Dismissed same-match cards never automatically trigger a fourth-YC gate. */
+  readonly excludedFromSimpleCautionThreshold:boolean;
   /** Review trigger only. Not a suspension or proof of a new ban. */
   readonly fourthDistinctCautionReviewSignal:boolean;
   readonly nextSyntheticRoundFixtureId:string|null;
@@ -143,9 +145,14 @@ export function deriveM1V55CautionReview(
         ok:false,error:'SOURCE_INVARIANT_FAILED',
       };
       const k=key(row.teamId,row.playerId);
-      const count=(counts.get(k)??0)+1;
+      const dismissed=row.secondYellowDismissals>0 ||
+        row.straightRedDismissals>0;
+      // Two YC in one match are a dismissal, not two independent
+      // accumulated cautions. Any YC plus direct RC needs authority
+      // adjudication too, so this narrow preview excludes both.
+      const count=(counts.get(k)??0)+(dismissed?0:1);
       counts.set(k,count);
-      const review=count%4===0;
+      const review=!dismissed&&count%4===0;
       const future=(byTeam.get(row.teamId)??[])
         .find(next=>next.round>fixture.round)?.fixtureId??null;
       signals.push({
@@ -155,6 +162,7 @@ export function deriveM1V55CautionReview(
         cumulativeDistinctCautionMatches:count,
         secondYellowDismissalInSameFixture:row.secondYellowDismissals>0,
         straightRedDismissalInSameFixture:row.straightRedDismissals>0,
+        excludedFromSimpleCautionThreshold:dismissed,
         fourthDistinctCautionReviewSignal:review,
         nextSyntheticRoundFixtureId:future,
       });

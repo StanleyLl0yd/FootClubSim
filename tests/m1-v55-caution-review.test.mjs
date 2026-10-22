@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {deriveM1V55CautionReview as derive,
   verifyM1V55CautionReview as verify}
   from '../dist/core/m1-v55-caution-review.js';
+import {admitM1V56ModelledAutomaticDiscipline as admit}
+  from '../dist/core/m1-v56-automatic-discipline.js';
 import {startM1V32ExposureJournal as start,
   applyM1V32ExposureBatch as apply}
   from '../dist/core/m1-v32-causal-medical-journal.js';
@@ -67,6 +69,11 @@ function fourMatchJournal(){
         row.secondYellowDismissals===0 &&
         row.straightRedDismissals===0 &&
         (target===null || row.playerId===target));
+      // Ensure the tested completed history has no OTHER unresolved KDK
+      // straight-red cases or auto one-game double-yellow sanctions.
+      if(result.physical.playerRows.some(row=>row.teamId===teamId &&
+          (row.straightRedDismissals>0 ||
+            row.secondYellowDismissals>0)))continue;
       if(matches.length===0)continue;
       winner={input,result,playerId:matches[0].playerId};
       break;
@@ -217,4 +224,106 @@ test('tampered caution facts, forged authority and untrusted history fail',()=>{
   assert.deepEqual(derive(career,getter),
     {ok:false,error:'INVALID_JOURNAL'});
   assert.equal(accessed,0);
+});
+
+test('v56 first synthetic fixture is safe under empty replayed career',()=>{
+  const journal=accepted(start(career));
+  const fixture=schedule[0];
+  const p=prematch(fixture,1);
+  const review=admit(career,journal,p,teamId);
+  assert.equal(review.ok,true,JSON.stringify(review).slice(0,400));
+  assert.equal(review.status,'MODELLED_AUTOMATIC_BANS_CONTROLLED_CLUB_ONLY');
+  assert.equal(review.verifiedPriorClubFixtures,0);
+  assert.deepEqual(review.automaticBans,[]);
+  assert.equal(review.opponentEligibilityChecked,false);
+  assert.equal(review.realRplSanctionOrKdkAuthorityAuthenticated,false);
+});
+
+test('v56 automatically denies next match XI and bench after fourth simple modelled caution',()=>{
+  const {journal,target}=fourMatchJournal();
+  const fifth=schedule[4];
+  const unmodified=prematch(fifth,1);
+  const rejected=admit(career,journal,unmodified,teamId);
+  assert.equal(rejected.ok,false);
+  assert.equal(rejected.error,'CURRENT_LINEUP_BLOCKED');
+  assert.equal(rejected.affectedFixtureId,fifth.id);
+  assert.ok(rejected.affectedPlayerIds.includes(target));
+  // Removing the player entirely from XI and matchday bench restores
+  // this club's narrow automatic-ban admission (not medical/KDK clearance).
+  const side=fifth.homeClubId===teamId?'homeLineup':'awayLineup';
+  const starting=unmodified[side];
+  const entrant=starting.bench[0];
+  const clear={
+    ...unmodified,
+    [side]:{
+      ...starting,
+      starters:starting.starters.map(id=>id===target?entrant:id),
+      bench:starting.bench.filter(id=>id!==entrant),
+    },
+  };
+  const admitted=admit(career,journal,clear,teamId);
+  assert.equal(admitted.ok,true,JSON.stringify(admitted).slice(0,500));
+  assert.equal(admitted.automaticBans.some(x=>x.playerId===target &&
+    x.reason==='four-distinct-simple-cautions'),true);
+  assert.equal(admitted.verifiedPriorClubFixtures,4);
+  assert.equal(admitted.currentNamedLineupClearOfAutomaticBans,true);
+  assert.equal(admitted.resolvedStraightRedOrAppealAuthority,false);
+  assert.equal(admitted.medicalFitnessVerified,false);
+});
+
+test('v56 incomplete club history never treats unknown games as zero cautions',()=>{
+  const early=accepted(start(career));
+  const fifth=schedule[4];
+  const response=admit(career,early,prematch(fifth,1),teamId);
+  assert.equal(response.ok,false);
+  assert.equal(response.error,'PRIOR_CLUB_MATCHES_MISSING');
+  assert.deepEqual(response.missingFixtureIds,
+    schedule.slice(0,4).map(x=>x.id));
+  const {journal}=fourMatchJournal();
+  assert.deepEqual(admit(career,journal,prematch(schedule[0],1),teamId),
+    {ok:false,error:'ALREADY_COMMITTED_FIXTURE'});
+  assert.deepEqual(admit(career,journal,prematch(fifth,1),'not-a-team'),
+    {ok:false,error:'UNRELATED_CLUB'});
+});
+
+test('v56 old matchday ban violation remains visible as historical conflict',()=>{
+  const {journal,target}=fourMatchJournal();
+  const fifth=schedule[4];
+  let p=prematch(fifth,1),source=null;
+  for(let seed=1;seed<=32;seed++){
+    p.rngSeed=seed;
+    const trial=simulate(p,policy);
+    if(trial.ok){source=trial;break;}
+  }
+  assert.ok(source);
+  const cmd={schemaVersion:6,commandId:'v56-invalid-model-matchday',
+    careerId:career.careerId,expectedRevision:4,
+    prematch:p,policy,halfTimeCommands:[],inPlayCommands:[],result:source};
+  const later=accepted(apply(career,journal,[cmd],4));
+  const response=admit(career,later,prematch(schedule[5],1),teamId);
+  assert.equal(response.ok,false);
+  assert.equal(response.error,'HISTORICAL_AUTO_BAN_CONFLICT');
+  assert.equal(response.affectedFixtureId,fifth.id);
+  assert.ok(response.affectedPlayerIds.includes(target));
+});
+
+test('v56 forged journal and invalid prematch fail before any eligibility claim',()=>{
+  const {journal}=fourMatchJournal();
+  const p=prematch(schedule[4],1);
+  const corrupt=structuredClone(journal);
+  corrupt.results[0].facts.playerRows[0].physicalSeconds++;
+  assert.deepEqual(admit(career,corrupt,p,teamId),
+    {ok:false,error:'INVALID_INITIAL_OR_JOURNAL'});
+  assert.deepEqual(admit(career,journal,{...p,rngSeed:0},teamId),
+    {ok:false,error:'INVALID_PREMATCH'});
+  assert.deepEqual(admit(career,journal,null,teamId),
+    {ok:false,error:'INVALID_PREMATCH'});
+  let reads=0;
+  const evil=structuredClone(journal);
+  Object.defineProperty(evil.results[0].source.prematch,'rngSeed',{
+    enumerable:true,get(){reads++;return 3;},
+  });
+  assert.deepEqual(admit(career,evil,p,teamId),
+    {ok:false,error:'INVALID_INITIAL_OR_JOURNAL'});
+  assert.equal(reads,0);
 });

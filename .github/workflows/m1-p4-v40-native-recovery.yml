@@ -1,0 +1,59 @@
+name: M1 P4 v40 native two-store recovery (not a release gate)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/m1-p4-v40-native-recovery.yml'
+      - 'examples/m1-v40-native-two-store-recovery.html'
+      - 'src/browser/m1-v40-two-store-backup.ts'
+      - 'scripts/m1-v7-cdp-smoke.mjs'
+      - 'docs/M1_V40_TWO_STORE_RECOVERY.md'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  native-two-store-recovery:
+    name: Chromium M0 and schema-6 add-only recovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout pinned
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js pinned
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install exactly locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Compile isolated M1 domain
+        run: npm run build:core
+      - name: Recreate lost M0 and schema-6 in real Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/vite --host 127.0.0.1 --port 5173 --strictPort >/tmp/m1-v40-vite.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in {1..30}; do
+            if curl -fsS 'http://127.0.0.1:5173/examples/m1-v40-native-two-store-recovery.html' >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [[ "$ready" != 1 ]]; then cat /tmp/m1-v40-vite.log; exit 1; fi
+          browser=""
+          for exe in google-chrome google-chrome-stable chromium chromium-browser; do
+            if command -v "$exe" >/dev/null 2>&1; then browser="$exe"; break; fi
+          done
+          [[ -n "$browser" ]] || { echo 'Chromium missing'; exit 1; }
+          node scripts/m1-v7-cdp-smoke.mjs "$browser" \
+            http://127.0.0.1:5173/examples/m1-v40-native-two-store-recovery.html \
+            M1_V40_BROWSER_RECOVERY

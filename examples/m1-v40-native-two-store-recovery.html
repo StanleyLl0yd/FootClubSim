@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v40 native two-store recovery</title></head>
+<body>
+  <h1>Disposable Chromium M0 plus schema-6 recovery probe</h1>
+  <pre id="status">M1_V40_BROWSER_RECOVERY_RUNNING</pre>
+  <script type="module">
+    import { createSyntheticRplScaleCatalog, defaultSyntheticLineup }
+      from '../dist/core/synthetic.js';
+    import { createInitialCareer } from '../dist/core/save.js';
+    import { saveNewInitialCareer, loadInitialCareer }
+      from '../dist/browser/initial-career-store.js';
+    import { createM1V32PersistedJournal, loadM1V32PersistedJournal,
+      commitM1V32PersistedBatch } from '../dist/browser/m1-v32-journal-store.js';
+    import { exportM1V40TwoStoreBackup, restoreM1V40TwoStoreBackup }
+      from '../dist/browser/m1-v40-two-store-backup.js';
+    import { deriveM1V31CausalPhysicalExposure }
+      from '../dist/core/m1-v24-physical-exposure.js';
+    import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
+    import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
+      from '../dist/core/match-contracts.js';
+    import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
+    import { RNG_VERSION } from '../dist/core/rng.js';
+    import { defaultTacticalPlan } from '../dist/core/tactics.js';
+
+    const status = document.querySelector('#status');
+    const check = (condition, why) => {
+      if (!condition) throw new Error(why);
+    };
+    const catalog = createSyntheticRplScaleCatalog(77);
+    const career = createInitialCareer(
+      catalog, catalog.clubs[0].id, 42, 'm1-v40-two-store-native');
+    const fixture = generateDoubleRoundRobin(catalog.clubs.map(c => c.id))
+      [0].fixtures[0];
+    const clubs = new Map(catalog.clubs.map(c => [c.id, c]));
+    const policy = {
+      home: {assignedActor: {kind: 'player'}, availableStaffIds: []},
+      away: {assignedActor: {kind: 'player'}, availableStaffIds: []},
+    };
+    const backupKey = 'm1-v40-native-disposable-backup';
+    function command() {
+      const prematch = {
+        schemaVersion: MATCH_LEDGER_VERSION, engineVersion: M1_ENGINE_VERSION,
+        rulesPackId: M0_RULES_PACK_ID, rulesPackVersion: M0_RULES_PACK_VERSION,
+        fixture, catalog,
+        homeLineup: defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+        awayLineup: defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+        homeTactics: defaultTacticalPlan(fixture.homeClubId),
+        awayTactics: defaultTacticalPlan(fixture.awayClubId),
+        rosterRules: {starterCount: 11, maxBench: 12, maxForeignersOnField: 7},
+        rngAlgorithmVersion: RNG_VERSION, rngSeed: 1,
+      };
+      for (let seed = 1; seed <= 128; seed++) {
+        prematch.rngSeed = seed;
+        const result = deriveM1V31CausalPhysicalExposure(
+          prematch, policy, [], []);
+        if (!result.ok) continue;
+        return {
+          schemaVersion: 6, commandId: 'v40-native-committed',
+          careerId: career.careerId, expectedRevision: 0,
+          prematch: {...prematch}, policy, halfTimeCommands: [],
+          inPlayCommands: [], result,
+        };
+      }
+      throw new Error('NO_ADMISSIBLE_SOURCE');
+    }
+    async function eraseOnlyDisposableKey(dbName, storeName) {
+      const db = await new Promise((resolve, reject) => {
+        const open = indexedDB.open(dbName, 1);
+        open.onsuccess = () => resolve(open.result);
+        open.onerror = () => reject(new Error('open failed: ' + dbName));
+      });
+      try {
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(storeName, 'readwrite');
+          tx.objectStore(storeName).delete(career.careerId);
+          tx.oncomplete = resolve;
+          tx.onabort = () => reject(new Error('delete failed: ' + dbName));
+        });
+      } finally { db.close(); }
+    }
+    async function run() {
+      const stage = new URL(location.href).searchParams.get('stage');
+      check(stage === null || stage === 'restore', 'unsupported stage');
+      if (stage === null) {
+        await saveNewInitialCareer(career);
+        await createM1V32PersistedJournal(career.careerId);
+        const committed = await commitM1V32PersistedBatch(
+          career.careerId, 0, [command()]);
+        check(committed.revision === 1 &&
+          committed.results[0].commandId === 'v40-native-committed',
+          'baseline commit missing');
+        const archive = await exportM1V40TwoStoreBackup(career.careerId);
+        sessionStorage.setItem(backupKey, archive);
+        // Only a throwaway browser profile and synthetic career are touched.
+        await eraseOnlyDisposableKey('footclubsim-m0','initial-careers');
+        await eraseOnlyDisposableKey('footclubsim-m1-v32','result-journals');
+        const next = new URL(location.href);
+        next.searchParams.set('stage', 'restore');
+        location.replace(next.href);
+        return;
+      }
+      const archive = sessionStorage.getItem(backupKey);
+      check(typeof archive === 'string', 'lost test archive');
+      let missingM0 = false;
+      try { await loadInitialCareer(career.careerId); }
+      catch (error) { missingM0 = error?.code === 'NOT_FOUND'; }
+      check(missingM0, 'M0 was not removed before simulated restore');
+      const imported = await restoreM1V40TwoStoreBackup(
+        career.careerId, archive);
+      check(JSON.stringify(imported.initial) === JSON.stringify(career) &&
+        imported.journal.revision === 1 &&
+        imported.journal.results.length === 1 &&
+        imported.journal.results[0].commandId === 'v40-native-committed' &&
+        imported.journal.results[0].source.prematch.fixture.id === fixture.id,
+        'recovered two-store history invalid');
+      check(JSON.stringify(await loadInitialCareer(career.careerId)) ===
+        JSON.stringify(career), 'restored immutable M0 differs');
+      const loaded = await loadM1V32PersistedJournal(career.careerId);
+      check(JSON.stringify(loaded) === JSON.stringify(imported.journal),
+        'recovered schema-6 replay differs');
+      // Simulate a second-stage interruption with M0 already present.
+      await eraseOnlyDisposableKey('footclubsim-m1-v32','result-journals');
+      const resumed = await restoreM1V40TwoStoreBackup(
+        career.careerId, archive);
+      const repeated = await restoreM1V40TwoStoreBackup(
+        career.careerId, archive);
+      check(JSON.stringify(resumed.journal) === JSON.stringify(loaded) &&
+        JSON.stringify(repeated.journal) === JSON.stringify(loaded),
+        'idempotent second-stage recovery differs');
+      sessionStorage.removeItem(backupKey);
+      status.textContent = 'M1_V40_BROWSER_RECOVERY_PASS';
+    }
+    run().catch(error => {
+      status.textContent = 'M1_V40_BROWSER_RECOVERY_FAIL: ' +
+        String(error?.stack ?? error);
+    });
+  </script>
+</body>
+</html>

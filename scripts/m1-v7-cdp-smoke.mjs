@@ -12,7 +12,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const executable = process.argv[2];
 const url = process.argv[3] ?? 'http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html';
 const marker = process.argv[4] ?? 'M1_V7_BROWSER_CAS';
-if (!/^M1_V(?:7|8|26|32)_BROWSER_CAS$/.test(marker)) {
+if (!/^(?:M1_V(?:7|8|26|32)_BROWSER_CAS|M1_V36_BROWSER_PROFILE)$/.test(marker)) {
   throw new Error('Unsupported browser CAS status marker');
 }
 if (!executable) {
@@ -101,8 +101,29 @@ try {
     if (typeof value !== 'string') return null;
     if (value.startsWith(marker + '_FAIL')) throw new Error(value);
     return value === marker + '_PASS' ? value : null;
-  }, marker + ' native IndexedDB CAS post-navigation result', 90_000);
-  console.log('PASS: ' + result + ' (real Chromium, reload, concurrent readwrite locks)');
+  }, marker + ' native IndexedDB post-navigation result',
+    marker === 'M1_V36_BROWSER_PROFILE' ? 240_000 : 90_000);
+  if (marker === 'M1_V36_BROWSER_PROFILE') {
+    const reply = await send('Runtime.evaluate', {
+      expression: 'document.querySelector("#report")?.textContent ?? ""',
+      returnByValue: true,
+    });
+    const payload = reply.result?.value;
+    if (typeof payload !== 'string') throw new Error('Profile report missing');
+    const profile = JSON.parse(payload);
+    if (profile.schemaVersion !== 1 ||
+        profile.status !== 'NATIVE_SCHEMA6_BOUNDED_OBSERVATION_NOT_A_RELEASE_GATE' ||
+        !Number.isInteger(profile.fixtureCount) ||
+        !Array.isArray(profile.measurements?.checkpoints) ||
+        profile.measurements.checkpoints.length !== profile.fixtureCount) {
+      throw new Error('Unexpected native profile report');
+    }
+    console.log(JSON.stringify(profile));
+    console.log('PASS: ' + result + ' (real Chromium, navigation and IDB recovery)');
+  } else {
+    console.log('PASS: ' + result +
+      ' (real Chromium, reload, concurrent readwrite locks)');
+  }
 } catch (error) {
   console.error(error);
   process.exitCode = 1;

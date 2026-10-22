@@ -5,15 +5,16 @@ on:
     paths:
       - 'examples/m1-v36-native-history-profile.html'
       - 'scripts/m1-v7-cdp-smoke.mjs'
+      - 'docs/M1_V39_NATIVE_BROWSER_EXTENDED_HISTORY.md'
       - '.github/workflows/m1-p4-v36-native-history-profile.yml'
       - 'docs/M1_V36_NATIVE_BROWSER_HISTORY_PROFILE.md'
   workflow_dispatch:
     inputs:
       fixtures:
-        description: 'Number of synthetic fixtures (1-8)'
+        description: 'Number of synthetic fixtures (1-32)'
         type: number
         required: false
-        default: 2
+        default: 16
 
 permissions: {}
 
@@ -44,8 +45,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          fixtures="${FIXTURE_COUNT:-2}"
-          [[ "$fixtures" =~ ^[1-8]$ ]] || { echo 'Invalid fixture count'; exit 2; }
+          fixtures="${FIXTURE_COUNT:-16}"
+          [[ "$fixtures" =~ ^([1-9]|[12][0-9]|3[0-2])$ ]] || { echo 'Invalid fixture count'; exit 2; }
           ./node_modules/.bin/vite --host 127.0.0.1 --port 5173 --strictPort > /tmp/m1-v36-vite.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT

@@ -61,10 +61,10 @@ jobs:
             '- Clinical injuries and xG: UNAVAILABLE',
             '- Independent realism pass: NOT CLAIMED',
           ];
-          if (r.sample.finishedMatches === 0) {
-            throw Error('ZERO_INDEPENDENT_RPL_DEVELOPMENT_COVERAGE');
-          }
           const text = info.join('\n')+'\n';
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,text);
           process.stdout.write(text);
+          if (r.sample.finishedMatches === 0) {
+            throw Error('ZERO_INDEPENDENT_RPL_DEVELOPMENT_COVERAGE');
+          }
           NODE

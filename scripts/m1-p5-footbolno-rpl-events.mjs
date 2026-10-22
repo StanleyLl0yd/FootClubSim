@@ -95,7 +95,7 @@ export function parseFootbolnoCsv(source,expectedColumns,maxRows){
 }
 const sha=data=>createHash('sha256').update(data).digest('hex');
 const invalid=(why)=>{throw Error('INVALID_FOOTBOLNO_SOURCE:'+why);};
-const seasons=new Set(['2023/24','2023-24','2023-2024']);
+const seasons=new Set(['2023/2024','2023/24','2023-24','2023-2024']);
 export function inspectFootbolnoRplDevelopment(
   matchesCsv,eventsCsv,{requiredMatches=EXPECTED_MATCHES}={},
 ){

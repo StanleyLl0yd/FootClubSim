@@ -44,7 +44,9 @@ eligibility, official clinical injuries or referee authenticity.
 Footbolno's documentation specifically excludes xG, advanced shot
 statistics and complete per-match lineups. Therefore xG, shots and
 clinical injuries are marked `null` rather than silently calibrated
-by an unrepresentative historical substitute. The 2024/25 season is
+by an unrepresentative historical substitute. Season labels are recognized in the publisher's full `YYYY/YYYY` form
+as well as the shortened legacy `YYYY/YY` form, not from input dates alone.
+The 2024/25 season is
 reserved as the scientific holdout and is **not evaluated or tuned**
 in this diagnostic. The authors' license claim alone does not permit
 a reviewer to assume the upstream sources are correctly relicensed.

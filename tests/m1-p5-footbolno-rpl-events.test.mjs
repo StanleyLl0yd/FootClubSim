@@ -133,3 +133,17 @@ test('season label filter accepts digits but rejects control characters',()=>{
   assert.equal(y.sample.finishedMatches,0);
   assert.equal(y.eligibleForAnyCalibration,false);
 });
+
+test('publisher canonical YYYY/YYYY development season and holdout isolation',()=>{
+  const csv=matches()
+    .replaceAll('2023/24','2023/2024')
+    .replaceAll('2024/25','2024/2025');
+  const x=inspect(csv,events(),opts);
+  assert.equal(x.sample.finishedMatches,2);
+  assert.equal(x.sample.sourceSeasonRows,2);
+  assert.equal(x.sample.otherSeasonMatchRows,1);
+  assert.equal(x.observedResultCounts.allGoals,3);
+  assert.equal(x.observedEventKindCounts.red,0);
+  assert.equal(x.reservedHoldoutUsed,false);
+  assert.equal(x.externalModelAcceptance,null);
+});

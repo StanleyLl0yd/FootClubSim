@@ -137,8 +137,6 @@ test('v53 rejects post-substitution medical return and false or malformed eviden
   Object.defineProperty(hostile,'outPlayerId',{enumerable:true,get(){
     throw Error('untrusted getter');
   }});
-  // JSON preflight in the source engine rejects accessor-driven input;
-  // callers see a typed rejection, never an attacker-defined value.
-  assert.deepEqual(evaluate([hostile]),{ok:false,
-    error:'SOURCE_MATCH_REJECTED',sourceError:'INVALID_MATCH_SOURCE'});
+  // Strict plain-JSON admission prevents running untrusted getters.
+  assert.deepEqual(evaluate([hostile]),{ok:false,error:'INVALID_INPUT'});
 });

@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  checks: read
 
 jobs:
   independent-rpl-source:
@@ -25,6 +26,13 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
+      - name: Diagnose previous CodeQL alert location (metadata only)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api 'repos/StanleyLl0yd/FootClubSim/check-runs/119983243577/annotations' \
+            --jq '.[] | {path, start_line, end_line, annotation_level, title, message}'
       - name: Inspect live CC BY candidate in ephemeral runner only
         shell: bash
         run: |

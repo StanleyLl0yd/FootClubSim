@@ -94,8 +94,6 @@
         const actual=new Worker(
           new URL('../dist/browser/m1-v43-schema6-worker.js',import.meta.url),
           {type:'module'});
-        let unseenReplyCount=0;
-        actual.addEventListener('message',()=>{unseenReplyCount++;});
         const blind={
           onmessage:null,onerror:null,onmessageerror:null,
           postMessage(value){actual.postMessage(value);},
@@ -118,7 +116,6 @@
             reviewed.journalRevision===1 &&
             reviewed.automaticRetryAllowed===false,
             'replay evidence did not distinguish committed match');
-          check(unseenReplyCount>=0,'invalid dropped-reply count');
         }finally{actual.terminate();}
         sessionStorage.setItem('m1-v47-unknown-check','observed');
         const next=new URL(location.href);

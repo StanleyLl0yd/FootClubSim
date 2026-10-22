@@ -60,3 +60,46 @@ test('invalid CLI arguments fail closed and emit no partial JSON',()=>{
     assert.match(result.stderr,/M1_V29_CORPUS_ERROR:/);
   }
 });
+
+test('P5 source-derived mixed metric observation keeps confidence and missing coverage honest',()=>{
+  const corpus=run(1,8,3);
+  const metrics=corpus.p5Observation;
+  assert.equal(metrics.schemaVersion,1);
+  assert.equal(metrics.status,
+    'SYNTHETIC_V29_CONDITIONAL_OBSERVATION_NOT_CALIBRATION');
+  assert.equal(metrics.accepted,corpus.accepted);
+  assert.equal(metrics.rejected,corpus.rejected);
+  assert.equal(metrics.attempted,24);
+  assert.equal(metrics.denominatorPolicy,'SUCCESSFUL_FULL_SOURCE_REPLAYS_ONLY');
+  const outcome=metrics.outcomeRates;
+  assert.equal(outcome.homeWin.count+outcome.draw.count+
+    outcome.awayWin.count,corpus.accepted);
+  for(const value of Object.values(outcome)){
+    assert.equal(value.denominator,corpus.accepted);
+    assert.ok(value.rate>=0&&value.rate<=1);
+    assert.ok(value.wilson95.lower>=0&&value.wilson95.upper<=1);
+    assert.ok(value.wilson95.lower<=value.rate);
+    assert.ok(value.rate<=value.wilson95.upper);
+  }
+  assert.equal(metrics.perAcceptedMatch.goals.total,corpus.totalGoals);
+  assert.equal(metrics.perAcceptedMatch.modelledAssessments.total,
+    corpus.quickAssessments+corpus.offFieldAssessments);
+  for(const value of Object.values(metrics.perAcceptedMatch)){
+    assert.equal(value.count,corpus.accepted);
+    assert.equal(value.mean,value.total/corpus.accepted);
+    assert.ok(value.total>=0);
+    if(value.normalMean95!==null){
+      assert.ok(value.normalMean95.lower<=value.mean);
+      assert.ok(value.mean<=value.normalMean95.upper);
+    }
+  }
+  assert.equal(metrics.xg.total,null);
+  assert.match(metrics.xg.status,/^UNAVAILABLE_/);
+  assert.equal(metrics.realInjuries.total,null);
+  assert.match(metrics.realInjuries.status,/^UNAVAILABLE_/);
+  assert.equal(metrics.externalReference.pass,null);
+  assert.match(metrics.externalReference.status,/^UNAVAILABLE_/);
+  assert.equal(metrics.sourceEventCoverage.cards,
+    'SEEDED_INTERNAL_REFEREE_NOT_EXTERNAL_AUTHORITY');
+  assert.deepEqual(corpus,run(1,8,3));
+});

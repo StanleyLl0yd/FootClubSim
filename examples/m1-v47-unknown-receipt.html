@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v43 native Worker CAS</title></head>
+<body>
+  <h1>Development-only schema-6 DedicatedWorker replay</h1>
+  <pre id="status">M1_V47_BROWSER_UNKNOWN_RUNNING</pre>
+  <script type="module">
+    import { createSyntheticRplScaleCatalog, defaultSyntheticLineup }
+      from '../dist/core/synthetic.js';
+    import { createInitialCareer } from '../dist/core/save.js';
+    import { saveNewInitialCareer, loadInitialCareer }
+      from '../dist/browser/initial-career-store.js';
+    import { createM1V32PersistedJournal, loadM1V32PersistedJournal }
+      from '../dist/browser/m1-v32-journal-store.js';
+    import { runM1V43WorkerCommit }
+      from '../dist/browser/m1-v43-schema6-worker-client.js';
+    import { reviewM1V45PotentialCAS }
+      from '../dist/core/m1-v45-unknown-commit-review.js';
+    import { deriveM1V31CausalPhysicalExposure }
+      from '../dist/core/m1-v24-physical-exposure.js';
+    import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
+    import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
+      from '../dist/core/match-contracts.js';
+    import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
+    import { RNG_VERSION } from '../dist/core/rng.js';
+    import { defaultTacticalPlan } from '../dist/core/tactics.js';
+
+    const status=document.querySelector('#status');
+    const check=(condition,why)=>{if(!condition)throw Error(why);};
+    const catalog=createSyntheticRplScaleCatalog(77);
+    const career=createInitialCareer(
+      catalog,catalog.clubs[0].id,42,'m1-v47-unknown-receipt');
+    const fixtures=generateDoubleRoundRobin(catalog.clubs.map(c=>c.id))
+      .flatMap(round=>round.fixtures).slice(0,6);
+    const clubs=new Map(catalog.clubs.map(c=>[c.id,c]));
+    const policy={
+      home:{assignedActor:{kind:'player'},availableStaffIds:[]},
+      away:{assignedActor:{kind:'player'},availableStaffIds:[]},
+    };
+    function command(index){
+      const fixture=fixtures[index];
+      const prematch={
+        schemaVersion:MATCH_LEDGER_VERSION,engineVersion:M1_ENGINE_VERSION,
+        rulesPackId:M0_RULES_PACK_ID,rulesPackVersion:M0_RULES_PACK_VERSION,
+        fixture,catalog,
+        homeLineup:defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+        awayLineup:defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+        homeTactics:defaultTacticalPlan(fixture.homeClubId),
+        awayTactics:defaultTacticalPlan(fixture.awayClubId),
+        rosterRules:{starterCount:11,maxBench:12,maxForeignersOnField:7},
+        rngAlgorithmVersion:RNG_VERSION,rngSeed:1,
+      };
+      for(let seed=1;seed<=128;seed++){
+        prematch.rngSeed=seed;
+        const result=deriveM1V31CausalPhysicalExposure(
+          prematch,policy,[],[]);
+        if(!result.ok)continue;
+        return {schemaVersion:6,commandId:'v43-native-'+index,
+          careerId:career.careerId,expectedRevision:index,
+          prematch:{...prematch},policy,
+          halfTimeCommands:[],inPlayCommands:[],result};
+      }
+      throw Error('NO_ADMISSIBLE_SOURCE:'+fixture.id);
+    }
+    async function eventualStored(expectedRevision,maxMs=30_000){
+      const deadline=performance.now()+maxMs;
+      let lastError;
+      while(performance.now()<deadline){
+        try{
+          const row=await loadM1V32PersistedJournal(career.careerId);
+          if(row.revision===expectedRevision)return row;
+          if(row.revision>expectedRevision)
+            throw Error('unexpected concurrent revision');
+        }catch(error){lastError=error;}
+        await new Promise(resolve=>setTimeout(resolve,40));
+      }
+      throw Error('persisted result not observed: '+String(lastError));
+    }
+    async function run(){
+      const stage=new URL(location.href).searchParams.get('stage');
+      check(stage===null||stage==='verify','unexpected stage');
+      const claim={schemaVersion:1,careerId:career.careerId,
+        expectedRevision:0,requests:[command(0)]};
+      if(stage===null){
+        await saveNewInitialCareer(career);
+        await createM1V32PersistedJournal(career.careerId);
+        const initial=await loadM1V32PersistedJournal(career.careerId);
+        const absent=reviewM1V45PotentialCAS(career,initial,claim);
+        check(absent.ok&&absent.status==='NOT_OBSERVED_AT_READ' &&
+          absent.automaticRetryAllowed===false,
+          'initial absence misclassified or unsafe retry suggested');
+        // Keep the genuine Worker running but deliberately suppress its
+        // message at the transport boundary: this is a *lost acknowledgement*.
+        const actual=new Worker(
+          new URL('../dist/browser/m1-v43-schema6-worker.js',import.meta.url),
+          {type:'module'});
+        const blind={
+          onmessage:null,onerror:null,onmessageerror:null,
+          postMessage(value){actual.postMessage(value);},
+          terminate(){/* drop client receipt; Worker deliberately keeps running */},
+        };
+        try{
+          let code=null;
+          try{
+            await runM1V43WorkerCommit(blind,{
+              schemaVersion:1,kind:'commit',
+              jobId:'v47-lost-receipt',careerId:career.careerId,
+              expectedRevision:0,requests:[claim.requests[0]],
+            },10);
+          }catch(error){code=error?.code;}
+          check(code==='COMMIT_OUTCOME_UNKNOWN',
+            'timeout did not classify outcome as unknown');
+          const stored=await eventualStored(1);
+          const reviewed=reviewM1V45PotentialCAS(career,stored,claim);
+          check(reviewed.ok&&reviewed.status==='OBSERVED_COMMITTED' &&
+            reviewed.journalRevision===1 &&
+            reviewed.automaticRetryAllowed===false,
+            'replay evidence did not distinguish committed match');
+        }finally{actual.terminate();}
+        sessionStorage.setItem('m1-v47-unknown-check','observed');
+        const next=new URL(location.href);
+        next.searchParams.set('stage','verify');
+        location.replace(next.href);
+        return;
+      }
+      check(sessionStorage.getItem('m1-v47-unknown-check')==='observed',
+        'actual browser navigation was not completed');
+      check((await loadInitialCareer(career.careerId)).careerId===
+        career.careerId,'M0 source missing after browser navigation');
+      const persisted=await loadM1V32PersistedJournal(career.careerId);
+      check(persisted.revision===1&&persisted.results.length===1,
+        'confirmed persisted journal missing');
+      const reviewed=reviewM1V45PotentialCAS(career,persisted,claim);
+      check(reviewed.ok&&reviewed.status==='OBSERVED_COMMITTED' &&
+        reviewed.fullSourceReplayVerified===true &&
+        reviewed.automaticRetryAllowed===false,
+        'post-navigation uncertain commit misclassified');
+      sessionStorage.removeItem('m1-v47-unknown-check');
+      status.textContent='M1_V47_BROWSER_UNKNOWN_PASS';
+    }
+    run().catch(error=>{
+      status.textContent='M1_V47_BROWSER_UNKNOWN_FAIL: '+
+        String(error?.stack??error);
+    });
+  </script>
+</body>
+</html>

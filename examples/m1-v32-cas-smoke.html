@@ -14,6 +14,8 @@
       commitM1V32PersistedBatch } from '../dist/browser/m1-v32-journal-store.js';
     import { deriveM1V31CausalPhysicalExposure }
       from '../dist/core/m1-v24-physical-exposure.js';
+    import { exportM1V35Schema6Backup, restoreM1V35Schema6Backup }
+      from '../dist/browser/m1-v35-schema6-backup.js';
     import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
     import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
       from '../dist/core/match-contracts.js';
@@ -135,6 +137,35 @@
         afterFailedBatch.results.length === 2 &&
         JSON.stringify(afterFailedBatch) === JSON.stringify(afterRace),
         'partial application or mutation after invalid batch');
+      // Restore simulation operates ONLY on this disposable, isolated v32
+      // test journal. Its immutable M0 initial career must remain present.
+      const backup = await exportM1V35Schema6Backup(career.careerId);
+      const backupEnvelope = JSON.parse(backup);
+      check(backupEnvelope.version === 1 &&
+        backupEnvelope.careerId === career.careerId,
+        'backup envelope did not bind original career');
+      const isolated = await new Promise((resolve, reject) => {
+        const open = indexedDB.open('footclubsim-m1-v32', 1);
+        open.onsuccess = () => resolve(open.result);
+        open.onerror = () => reject(new Error('restore test DB open failed'));
+      });
+      try {
+        await new Promise((resolve, reject) => {
+          const tx = isolated.transaction('result-journals', 'readwrite');
+          tx.objectStore('result-journals').delete(career.careerId);
+          tx.oncomplete = () => resolve();
+          tx.onabort = () => reject(new Error('restore test delete failed'));
+        });
+      } finally { isolated.close(); }
+      await failCode(loadM1V32PersistedJournal(career.careerId), 'NOT_FOUND');
+      const restored = await restoreM1V35Schema6Backup(career.careerId,backup);
+      check(restored.revision === 2 &&
+        JSON.stringify(restored) === JSON.stringify(afterRace),
+        'native add-only restore did not recover exact source history');
+      await failCode(restoreM1V35Schema6Backup(career.careerId,backup),
+        'ALREADY_EXISTS');
+      check((await loadInitialCareer(career.careerId)).careerId ===
+        career.careerId,'restore modified original M0 identity');
       status.textContent = 'M1_V32_BROWSER_CAS_PASS';
     }
     run().catch(error => {

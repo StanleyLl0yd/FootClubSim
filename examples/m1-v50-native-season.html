@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v50 full synthetic season</title></head>
+<body>
+  <h1>Disposable Chromium 240-fixture schema-6 native season profile</h1>
+  <pre id="status">M1_V50_NATIVE_FULL_SEASON_RUNNING</pre>
+  <pre id="report"></pre>
+  <script type="module">
+    import { createSyntheticRplScaleCatalog, defaultSyntheticLineup }
+      from '../dist/core/synthetic.js';
+    import { createInitialCareer } from '../dist/core/save.js';
+    import { saveNewInitialCareer, loadInitialCareer }
+      from '../dist/browser/initial-career-store.js';
+    import { createM1V32PersistedJournal, loadM1V32PersistedJournal,
+      commitM1V32PersistedBatch } from '../dist/browser/m1-v32-journal-store.js';
+    import { exportM1V35Schema6Backup, restoreM1V35Schema6Backup }
+      from '../dist/browser/m1-v35-schema6-backup.js';
+    import { deriveM1V31CausalPhysicalExposure }
+      from '../dist/core/m1-v24-physical-exposure.js';
+    import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
+    import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
+      from '../dist/core/match-contracts.js';
+    import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
+    import { RNG_VERSION } from '../dist/core/rng.js';
+    import { defaultTacticalPlan } from '../dist/core/tactics.js';
+
+    const status = document.getElementById('status');
+    const reportNode = document.getElementById('report');
+
+    const statusMarker='M1_V50_NATIVE_FULL_SEASON';
+    const count=240,batchSize=16;
+    const status=document.querySelector('#status');
+    const reportNode=document.querySelector('#report');
+    const assert=(condition,message)=>{if(!condition)throw Error(message);};
+    const ms=value=>Math.round(value*1000)/1000;
+    const catalog=createSyntheticRplScaleCatalog(77);
+    const career=createInitialCareer(
+      catalog,catalog.clubs[0].id,42,'m1-v50-full-synthetic-240');
+    const fixtures=generateDoubleRoundRobin(catalog.clubs.map(c=>c.id))
+      .flatMap(round=>round.fixtures);
+    const clubs=new Map(catalog.clubs.map(c=>[c.id,c]));
+    const policy={
+      home:{assignedActor:{kind:'player'},availableStaffIds:[]},
+      away:{assignedActor:{kind:'player'},availableStaffIds:[]},
+    };
+    function sourceCommand(index){
+      const fixture=fixtures[index];
+      const prematch={
+        schemaVersion:MATCH_LEDGER_VERSION,
+        engineVersion:M1_ENGINE_VERSION,
+        rulesPackId:M0_RULES_PACK_ID,rulesPackVersion:M0_RULES_PACK_VERSION,
+        fixture,catalog,
+        homeLineup:defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+        awayLineup:defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+        homeTactics:defaultTacticalPlan(fixture.homeClubId),
+        awayTactics:defaultTacticalPlan(fixture.awayClubId),
+        rosterRules:{starterCount:11,maxBench:12,maxForeignersOnField:7},
+        rngAlgorithmVersion:RNG_VERSION,rngSeed:1,
+      };
+      for(let seed=1;seed<=128;seed++){
+        prematch.rngSeed=seed;
+        const result=deriveM1V31CausalPhysicalExposure(
+          prematch,policy,[],[]);
+        if(!result.ok)continue;
+        return {
+          schemaVersion:6,commandId:'v50-synthetic-fixture-'+index,
+          careerId:career.careerId,expectedRevision:index,
+          prematch:{...prematch},policy,
+          halfTimeCommands:[],inPlayCommands:[],result,
+        };
+      }
+      throw Error('NO_ADMISSIBLE_SOURCE:'+fixture.id);
+    }
+    async function run(){
+      assert(fixtures.length===count,'not exactly 240 fixtures');
+      assert(new Set(fixtures.map(f=>f.id)).size===count,
+        'duplicate synthetic fixture id');
+      const stage=new URL(location.href).searchParams.get('stage');
+      assert(stage===null||stage==='verify','unknown phase');
+      const key='m1-v50-disposable-measurements';
+      if(stage===null){
+        await saveNewInitialCareer(career);
+        await createM1V32PersistedJournal(career.careerId);
+        const checkpoints=[];
+        const entireStart=performance.now();
+        for(let start=0;start<count;start+=batchSize){
+          const sourceStart=performance.now();
+          const commands=fixtures.slice(start,start+batchSize)
+            .map((_,offset)=>sourceCommand(start+offset));
+          const sourceMs=ms(performance.now()-sourceStart);
+          assert(commands.length===batchSize &&
+            commands.every((c,offset)=>
+              c.expectedRevision===start+offset),
+            'malformed 16-command batch');
+          const commitStart=performance.now();
+          const saved=await commitM1V32PersistedBatch(
+            career.careerId,start,commands);
+          const commitMs=ms(performance.now()-commitStart);
+          assert(saved.revision===start+batchSize &&
+            saved.results.length===start+batchSize,
+            'revision or result count drift');
+          const position=start+batchSize;
+          // Readbacks at four milestones, never claiming time percentiles.
+          let readbackMs=null,journalChars=null;
+          if([16,64,128,240].includes(position)){
+            const readStart=performance.now();
+            const validated=await loadM1V32PersistedJournal(career.careerId);
+            readbackMs=ms(performance.now()-readStart);
+            assert(validated.revision===position,
+              'full replay checkpoint revision drift');
+            journalChars=JSON.stringify(validated).length;
+          }
+          checkpoints.push({revision:position,sourceMs,commitMs,
+            readbackMs,journalChars});
+          await new Promise(resolve=>setTimeout(resolve,0));
+        }
+        const appendAndSourceMs=ms(performance.now()-entireStart);
+        sessionStorage.setItem(key,JSON.stringify({
+          checkpoints,appendAndSourceMs,
+        }));
+        const next=new URL(location.href);
+        next.searchParams.set('stage','verify');
+        location.replace(next.href);
+        return;
+      }
+      const encoded=sessionStorage.getItem(key);
+      assert(typeof encoded==='string','profile missing after navigation');
+      const measurements=JSON.parse(encoded);
+      assert(measurements.checkpoints.length===15 &&
+        measurements.checkpoints.at(-1).revision===240,
+        'missing full-season checkpoints');
+      const replayStart=performance.now();
+      const historical=await loadM1V32PersistedJournal(career.careerId);
+      const postReloadReplayMs=ms(performance.now()-replayStart);
+      assert(historical.revision===count &&
+        historical.results.length===count &&
+        new Set(historical.results.map(x=>x.fixtureId)).size===count,
+        'full season history not source replayed');
+      assert((await loadInitialCareer(career.careerId)).careerId===
+        career.careerId,'immutable M0 disappeared');
+      const exportStart=performance.now();
+      const archive=await exportM1V35Schema6Backup(career.careerId);
+      const exportMs=ms(performance.now()-exportStart);
+      // Destroy ONLY the synthetic journal in this disposable CDP profile.
+      const db=await new Promise((resolve,reject)=>{
+        const open=indexedDB.open('footclubsim-m1-v32',1);
+        open.onsuccess=()=>resolve(open.result);
+        open.onerror=()=>reject(Error('IndexedDB open failed'));
+      });
+      try{
+        await new Promise((resolve,reject)=>{
+          const tx=db.transaction('result-journals','readwrite');
+          tx.objectStore('result-journals').delete(career.careerId);
+          tx.oncomplete=resolve;
+          tx.onabort=()=>reject(Error('disposable delete aborted'));
+        });
+      }finally{db.close();}
+      const restoreStart=performance.now();
+      const restored=await restoreM1V35Schema6Backup(
+        career.careerId,archive);
+      const restoreMs=ms(performance.now()-restoreStart);
+      assert(JSON.stringify(restored)===JSON.stringify(historical),
+        'add-only 240-fixture restore differs from original');
+      const readback=await loadM1V32PersistedJournal(career.careerId);
+      assert(JSON.stringify(readback)===JSON.stringify(historical),
+        're-read replay mismatch after restore');
+      const report={
+        schemaVersion:1,
+        status:'NATIVE_240_SYNTHETIC_SCHEMA6_NOT_RELEASE_GATE',
+        browser:navigator.userAgent,
+        fixtureCount:count,batchSize,
+        checkpointCount:measurements.checkpoints.length,
+        immutableM0Preserved:true,
+        allFixturesReplayValidated:true,
+        fullRestoreIdentical:true,
+        measurements:{...measurements,postReloadReplayMs,exportMs,
+          restoreMs,archiveChars:archive.length,
+          journalChars:JSON.stringify(readback).length},
+        limitations:[
+          '240 independent synthetic fixture sources, not a playable career',
+          'no intermatch fatigue, sanction or medical dependency replay',
+          'real Chromium but one short-lived disposable host runner',
+          'no measured production p95/p99 latency or memory SLA',
+          'no OS power-loss/eviction/medical/referee authority',
+          'no statistical calibration against lawful RPL distributions',
+        ],
+      };
+      reportNode.textContent=JSON.stringify(report);
+      sessionStorage.removeItem(key);
+      status.textContent=statusMarker+'_PASS';
+    }
+    run().catch(error=>{
+      status.textContent=statusMarker+'_FAIL: '+
+        String(error?.stack??error);
+    });
+  </script>
+</body>
+</html>

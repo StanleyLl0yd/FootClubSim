@@ -103,3 +103,32 @@ test('P5 source-derived mixed metric observation keeps confidence and missing co
     'SEEDED_INTERNAL_REFEREE_NOT_EXTERNAL_AUTHORITY');
   assert.deepEqual(corpus,run(1,8,3));
 });
+
+test('explicit 1-based fixture windows have unique disjoint deterministic source IDs',()=>{
+  const cliWithOffset=(first)=>JSON.parse(execFileSync(process.execPath,[
+    cli,'--start=1','--count=3','--fixtures=4',
+    '--firstfixture='+first,
+  ],{encoding:'utf8',timeout:60000}));
+  const a=cliWithOffset(1),b=cliWithOffset(5);
+  assert.equal(a.firstFixture,1);
+  assert.equal(b.firstFixture,5);
+  assert.equal(a.totalCases,12);
+  assert.equal(b.totalCases,12);
+  assert.equal(a.accepted+a.rejected,12);
+  assert.equal(b.accepted+b.rejected,12);
+  const ids=new Set(a.fixtureSummaries.map(x=>x.fixtureId));
+  assert.ok(b.fixtureSummaries.every(x=>!ids.has(x.fixtureId)));
+  assert.deepEqual(a,cliWithOffset(1));
+  assert.notEqual(a.deterministicSha256,b.deterministicSha256);
+  for(const args of [
+    ['--firstfixture=0'],['--firstfixture=241'],
+    ['--firstfixture=240','--fixtures=2'],
+    ['--firstfixture=1','--firstfixture=2'],
+  ]){
+    const x=spawnSync(process.execPath,[cli,...args],
+      {encoding:'utf8',timeout:30000});
+    assert.equal(x.status,1);
+    assert.equal(x.stdout,'');
+    assert.match(x.stderr,/M1_V29_CORPUS_ERROR:/);
+  }
+});

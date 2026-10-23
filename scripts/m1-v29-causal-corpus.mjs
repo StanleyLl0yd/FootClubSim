@@ -27,7 +27,7 @@ function option(name, fallback) {
   return number;
 }
 export function runCorpus() {
-  const allowed = new Set(['start','count','fixtures']);
+  const allowed = new Set(['start','count','fixtures','firstfixture']);
   for (const arg of argv.slice(2)) {
     if (!/^--[a-z]+=[^=]*$/.test(arg) ||
         !allowed.has(arg.slice(2).split('=')[0])) {
@@ -37,14 +37,19 @@ export function runCorpus() {
   const start = option('start', 1);
   const count = option('count', 12);
   const fixtureCount = option('fixtures', 1);
-  if (fixtureCount > 32) throw Error('BOUNDED_FIXTURE_RANGE_REQUIRED');
+  const firstFixture = option('firstfixture', 1);
+  if (fixtureCount > 32 || firstFixture>240 ||
+      firstFixture+fixtureCount-1>240) {
+    throw Error('BOUNDED_FIXTURE_RANGE_REQUIRED');
+  }
   if (count > 128 || start > 0xffffffff ||
       start + count - 1 > 0xffffffff) {
     throw Error('BOUNDED_SEED_RANGE_REQUIRED');
   }
   const catalog = createSyntheticRplScaleCatalog(77);
   const fixtures = generateDoubleRoundRobin(catalog.clubs.map(c => c.id))
-    .flatMap(r => r.fixtures).slice(0, fixtureCount);
+    .flatMap(r => r.fixtures)
+    .slice(firstFixture-1, firstFixture-1+fixtureCount);
   if (fixtures.length !== fixtureCount) {
     throw Error('BOUNDED_FIXTURE_RANGE_REQUIRED');
   }
@@ -281,6 +286,7 @@ export function runCorpus() {
   return {
     schemaVersion:1,status:'SEEDED_CAUSAL_MEDICAL_REGRESSION_NOT_CALIBRATION',
     sourceEngine:'m1-v29-synthetic-medical-source',start,count,fixtureCount,
+    firstFixture,
     totalCases:count * fixtureCount, accepted,rejected,
     fixtureSummaries:summaries,rejectionReasons:rejections,
     generatedFouls,quickAssessments,offFieldAssessments,

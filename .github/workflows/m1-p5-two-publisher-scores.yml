@@ -1,0 +1,76 @@
+name: M1 P5 independent RPL 2023-24 score triangulation
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-two-publisher-2023-24.mjs'
+      - 'tests/m1-p5-two-publisher-2023-24.test.mjs'
+      - 'docs/M1_P5_V60_TWO_PUBLISHER_SCORES.md'
+      - '.github/workflows/m1-p5-two-publisher-scores.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-2023-24-scores:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v60-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Checkout code only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Fetch and independently inspect both publisher snapshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          curl --fail --location --silent --show-error --max-time 60 \
+            --max-filesize 2000000 --retry 2 \
+            'https://footbolno.ru/data/league/235-matches.csv' \
+            --output "$tmp/matches.csv"
+          curl --fail --location --silent --show-error --max-time 60 \
+            --max-filesize 20000000 --retry 2 \
+            'https://footbolno.ru/data/bundles/all-events.csv.gz' \
+            --output "$tmp/events.csv.gz"
+          curl --fail --location --silent --show-error --max-time 60 \
+            --max-filesize 131072 --retry 2 \
+            'https://raw.githubusercontent.com/openfootball/europe/63df627f3c87ce71708f016522ea236cf74332c3/russia/2023-24_ru1.txt' \
+            --output "$tmp/openfootball.txt"
+          (cd "$tmp" && node --input-type=module <<'NODE'
+          import {readFileSync,appendFileSync} from 'node:fs';
+          import {pathToFileURL} from 'node:url';
+          const uri=name=>pathToFileURL(process.env.GITHUB_WORKSPACE+'/scripts/'+name);
+          const {inspectFootbolnoLocalBytes}=await import(uri('m1-p5-footbolno-rpl-events.mjs'));
+          const {inspectPinned2023RplTrainingCandidate}=await import(uri('m1-p5-openfootball-2023-24.mjs'));
+          const {compare2023RplIndependentScoreReports}=await import(uri('m1-p5-two-publisher-2023-24.mjs'));
+          const foot=inspectFootbolnoLocalBytes(readFileSync('matches.csv'),readFileSync('events.csv.gz'));
+          const open=inspectPinned2023RplTrainingCandidate(readFileSync('openfootball.txt'));
+          const compare=compare2023RplIndependentScoreReports(foot,open);
+          const lines=[
+            '# Two independently inspected RPL 2023/24 score sources',
+            '',
+            '- Source 1: Footbolno, publisher CC BY 4.0 claim; upstream unverified',
+            '- Source 2: OpenFootball pinned CC0 claim, one in-memory verified correction',
+            '- Completed fixtures in each: 240; clubs: 16',
+            '- Exact aggregate agreement: '+compare.sourceScoreAgreement,
+            '- Metric deltas (Footbolno minus OpenFootball):',
+            ...compare.deltas.map(x=>'  - '+x.metric+': '+x.footbolnoMinusOpenFootball+
+              ' (Footbolno '+x.footbolno+', OpenFootball '+x.openfootball+')'),
+            '- Footbolno games with >=1 event: '+foot.sample.matchesWithAnyEvent+'/240',
+            '- Event completeness: NOT PROVEN',
+            '- Upstream rights audit: NOT COMPLETE',
+            '- Reserved 2024/25 holdout: NOT EVALUATED',
+            '- Simulator realism acceptance: NOT CLAIMED',
+          ];
+          const text=lines.join('\n')+'\n';
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,text);
+          process.stdout.write(text);
+          NODE
+          )

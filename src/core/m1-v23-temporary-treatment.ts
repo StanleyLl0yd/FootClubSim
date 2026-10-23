@@ -131,17 +131,40 @@ export function simulateM1V29CausalMedicalSource(
   return simulateTreatmentCore(prematch, policy, halfTimeCommands,
     inPlayCommands, true);
 }
+type M1V29InternalRejectionTrace={
+  sourceError:Extract<M1V23RefereeRun,{ok:false}>['error']|null;
+};
+/**
+ * Research-only diagnostic. The main v29 return schema and seeded engine
+ * are unchanged. Only typed internal source rejection codes are exposed.
+ */
+export function diagnoseM1V29SourceFailure(
+  prematch:unknown,policy:unknown,halfTimeCommands:unknown=[],
+  inPlayCommands:unknown=[],
+): Readonly<{ok:true;error:null;sourceError:null}> |
+  Readonly<{ok:false;error:M1V23CoachError;
+    sourceError:M1V29InternalRejectionTrace['sourceError']}> {
+  const trace:M1V29InternalRejectionTrace={sourceError:null};
+  const run=simulateTreatmentCore(prematch,policy,
+    halfTimeCommands,inPlayCommands,true,trace);
+  return run.ok?
+    {ok:true,error:null,sourceError:null}:
+    {ok:false,error:run.error,sourceError:trace.sourceError};
+}
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: false,
+  trace?:M1V29InternalRejectionTrace,
 ): M1V23CoachRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: true,
+  trace?:M1V29InternalRejectionTrace,
 ): M1V29CausalSourceRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: boolean,
+  trace?:M1V29InternalRejectionTrace,
 ): M1V23CoachRun | M1V29CausalSourceRun {
   if (!isPlainJsonTree(prematch) || !isPlainJsonTree(policy) ||
       !isPlainJsonTree(halfTimeCommands) ||
@@ -419,7 +442,10 @@ function simulateTreatmentCore(
   const match = simulateM1V23RefereeWithTreatment(
     input, policy, commands, treatment, 0, 900, foulTimes, 20,
   );
-  if (!match.ok) return fail('SOURCE_MATCH_REJECTED');
+  if (!match.ok) {
+    if (trace) trace.sourceError=match.error;
+    return fail('SOURCE_MATCH_REJECTED');
+  }
   const decisions = match.events.filter(e =>
     e.kind === 'caution' || e.kind === 'second-yellow-dismissal' ||
     e.kind === 'straight-red-dismissal' || e.kind === 'injury-withdrawal');

@@ -1,0 +1,73 @@
+name: M1 P5 v29 rejection-root research
+on:
+  pull_request:
+    paths:
+      - 'src/core/m1-v23-temporary-treatment.ts'
+      - 'scripts/m1-p5-v64-rejection-taxonomy.mjs'
+      - 'tests/m1-p5-v64-rejection-taxonomy.test.mjs'
+      - 'docs/M1_P5_V64_REJECTION_CAUSE_DIAGNOSTICS.md'
+      - '.github/workflows/m1-p5-v64-rejection-root.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-rejection-root-corpus:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v64-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout diagnostic source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Compile same exact TypeScript source engine
+        run: |
+          npm ci --ignore-scripts
+          npm run build:core
+      - name: Reproduce 256 seeded cases and classify rejection roots
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/m1-p5-v64-rejection-taxonomy.mjs \
+            --start=1 --count=32 --fixtures=8 > v64-report.json
+          node --input-type=module <<'NODE'
+          import {readFileSync,appendFileSync} from 'node:fs';
+          const x=JSON.parse(readFileSync('v64-report.json','utf8'));
+          if(x.schemaVersion!==1||x.attempted!==256||
+              x.accepted+x.rejected!==256||
+              Object.values(x.rejectionRootCounts).reduce((a,b)=>a+b,0)!==
+                x.rejected||
+              !/^[a-f0-9]{64}$/.test(x.deterministicSha256)||
+              x.calibrationAccepted!==false||
+              x.real2024_25HoldoutUsed!==false||
+              x.simulatorBehaviorChanged!==false){
+            throw Error('INVALID_BOUNDED_V29_REJECTION_TAXONOMY');
+          }
+          const lines=[
+            '# M1 P5 v64 source-replayed rejection root evidence',
+            '',
+            '- Cases attempted: '+x.attempted,
+            '- Accepted: '+x.accepted,
+            '- Rejected: '+x.rejected,
+            '- Rejection fraction: '+x.rejectionFraction,
+            '- Lower-level referee reasons recovered: '+
+              x.lowerLevelRefereeFailuresClassified,
+            '- Root categories:',
+            ...Object.entries(x.rejectionRootCounts).map(
+              ([key,count])=>'  - '+key+': '+count),
+            '- SHA-256: '+x.deterministicSha256,
+            '- Production simulation outputs: UNCHANGED',
+            '- No publisher downloads, no medical authority, no holdout',
+            '- Calibration accepted: NO',
+          ];
+          const text=lines.join('\n')+'\n';
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,text);
+          process.stdout.write(text);
+          NODE
+          rm -f v64-report.json

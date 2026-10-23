@@ -60,7 +60,8 @@ test('bad accepted denominators, forged scores and missing input fail closed',()
     [x=>{x.accepted=11;},/CORPUS_PROVENANCE/],
     [x=>{x.p5Observation.accepted=11;},/CORPUS_PROVENANCE/],
     [x=>{x.p5Observation.outcomeRates.draw.rate=0.1;},/OUTCOME/],
-    [x=>{x.p5Observation.outcomeRates.draw.count=12;},/OUTCOME_CONSERVATION/],
+    [x=>{x.p5Observation.outcomeRates.draw.count=12;
+      x.p5Observation.outcomeRates.draw.rate=1;},/OUTCOME_CONSERVATION/],
     [x=>{x.totalGoals=20;},/GOALS_CONSERVATION/],
     [x=>{x.injuryOccurrenceCalibrated=true;},/CORPUS_PROVENANCE/],
   ];

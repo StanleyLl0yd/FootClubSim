@@ -7,7 +7,9 @@ import { SeededRng, RNG_VERSION } from './rng.js';
 import type { M1V7TemporaryMedicalAction }
   from './m1-v7-temporary-medical.js';
 import { simulateM1V23RefereeWithTreatment,
-  type M1V23RefereeRun } from './m1-v23-referee-treatment-source.js';
+  type M1V23RefereeRun, type M1V23SourceRejectionTrace,
+  type M1V23UnsupportedSubreason }
+  from './m1-v23-referee-treatment-source.js';
 
 /**
  * Isolated v23: generated referee foul windows may include synthetic
@@ -133,6 +135,7 @@ export function simulateM1V29CausalMedicalSource(
 }
 type M1V29InternalRejectionTrace={
   sourceError:Extract<M1V23RefereeRun,{ok:false}>['error']|null;
+  sourceSubreason:M1V23UnsupportedSubreason|null;
 };
 /**
  * Research-only diagnostic. The main v29 return schema and seeded engine
@@ -141,15 +144,17 @@ type M1V29InternalRejectionTrace={
 export function diagnoseM1V29SourceFailure(
   prematch:unknown,policy:unknown,halfTimeCommands:unknown=[],
   inPlayCommands:unknown=[],
-): Readonly<{ok:true;error:null;sourceError:null}> |
+): Readonly<{ok:true;error:null;sourceError:null;sourceSubreason:null}> |
   Readonly<{ok:false;error:M1V23CoachError;
-    sourceError:M1V29InternalRejectionTrace['sourceError']}> {
-  const trace:M1V29InternalRejectionTrace={sourceError:null};
+    sourceError:M1V29InternalRejectionTrace['sourceError'];
+    sourceSubreason:M1V23UnsupportedSubreason|null}> {
+  const trace:M1V29InternalRejectionTrace={sourceError:null,sourceSubreason:null};
   const run=simulateTreatmentCore(prematch,policy,
     halfTimeCommands,inPlayCommands,true,trace);
   return run.ok?
-    {ok:true,error:null,sourceError:null}:
-    {ok:false,error:run.error,sourceError:trace.sourceError};
+    {ok:true,error:null,sourceError:null,sourceSubreason:null}:
+    {ok:false,error:run.error,sourceError:trace.sourceError,
+      sourceSubreason:trace.sourceSubreason};
 }
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
@@ -439,9 +444,11 @@ function simulateTreatmentCore(
   }
   // Source v8 evaluates exactly one match with generated decisions
   // and authenticated-internally stoppage-gated coach substitutions.
+  const sourceTrace:M1V23SourceRejectionTrace={subreason:null};
   const match = simulateM1V23RefereeWithTreatment(
-    input, policy, commands, treatment, 0, 900, foulTimes, 20,
+    input, policy, commands, treatment, 0, 900, foulTimes, 20,sourceTrace,
   );
+  if(trace)trace.sourceSubreason=sourceTrace.subreason;
   if (!match.ok) {
     if (trace) trace.sourceError=match.error;
     return fail('SOURCE_MATCH_REJECTED');

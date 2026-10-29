@@ -18,6 +18,11 @@ test('v64 narrow source root taxonomy is deterministic, additive and honest',()=
   assert.equal(Object.values(x.rejectionRootCounts)
     .reduce((sum,n)=>sum+n,0),x.rejected);
   assert.ok(x.lowerLevelRefereeFailuresClassified<=x.rejected);
+  assert.equal(Object.values(x.rejectionSubreasonCounts)
+    .reduce((sum,n)=>sum+n,0),x.rejected);
+  if(x.rejected>0) {
+    assert.equal(x.rejectionSubreasonCounts.NO_UNDERLYING_SUBREASON??0,0);
+  }
   assert.match(x.deterministicSha256,/^[a-f0-9]{64}$/);
 });
 test('v64 invalid options fail before publishing a partial report',()=>{

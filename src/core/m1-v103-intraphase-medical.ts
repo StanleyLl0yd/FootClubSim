@@ -104,6 +104,18 @@ export function simulateM1V103IntraphaseMedical(
   const started=startM1PlayerControl(prematch,policy);
   if(!started.ok)return {ok:false,error:'SOURCE_REJECTED'};
   const input=prematch as M1PrematchInput;
+  const sourceActionIds=new Set<string>();
+  for(const event of source.events){
+    if(event.type!=='physical-transition')continue;
+    const transition=event.source;
+    if(transition.type==='medical'){
+      sourceActionIds.add(transition.action.id);
+    }else{
+      const command=transition.source.entry.action;
+      sourceActionIds.add(command.kind==='substitute-normal'?
+        command.commandId:command.id);
+    }
+  }
   const actions:M1V7TemporaryMedicalAction[]=[];
   const ids=new Set<string>();
   let prev=-1;
@@ -112,7 +124,7 @@ export function simulateM1V103IntraphaseMedical(
     if(!a||a.fixtureId!==input.fixture.id||
         (a.teamId!==input.fixture.homeClubId&&
           a.teamId!==input.fixture.awayClubId)||
-        a.elapsedSeconds<=prev||ids.has(a.id))
+        a.elapsedSeconds<=prev||ids.has(a.id)||sourceActionIds.has(a.id))
       return {ok:false,error:'INVALID_INTRAPHASE_SCHEDULE'};
     prev=a.elapsedSeconds;
     ids.add(a.id);

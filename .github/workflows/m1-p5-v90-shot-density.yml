@@ -1,0 +1,55 @@
+name: M1 P5 v90 shot opportunity density counterfactual
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-v90-opt-in-shot-density.mjs'
+      - 'tests/m1-p5-v90-opt-in-shot-density.test.mjs'
+      - 'docs/M1_P5_V90_SHOT_OPPORTUNITY_FEASIBILITY.md'
+      - '.github/workflows/m1-p5-v90-shot-density.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shot-density-research:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v90-')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture_group: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Compile locked pure core
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build:core
+      - name: Run paired four-density fixture shard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ${{ matrix.fixture_group }} == 0 ]]; then
+            node --test tests/m1-p5-v90-opt-in-shot-density.test.mjs
+          fi
+          node scripts/m1-p5-v90-opt-in-shot-density.mjs ${{ matrix.fixture_group }} | tee v90-shard.txt
+          if [[ ${{ matrix.fixture_group }} == 0 ]]; then
+            node scripts/m1-p5-v90-opt-in-shot-density.mjs 0 > v90-repeat.txt
+            node --input-type=module -e "
+              import {readFileSync} from 'node:fs';
+              const get=p=>JSON.parse(readFileSync(p,'utf8').replace(/^V90_SHARD_RESULT=/,''));
+              const a=get('v90-shard.txt'),b=get('v90-repeat.txt');
+              delete a.performanceObservation;delete b.performanceObservation;
+              if(JSON.stringify(a)!==JSON.stringify(b))throw Error('V90_NONDETERMINISM');
+            "
+          fi
+          cat v90-shard.txt >> "$GITHUB_STEP_SUMMARY"

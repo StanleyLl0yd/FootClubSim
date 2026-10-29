@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "status": "P5_INDEPENDENT_REAL_RPL_2025_26_AGGREGATES_NOT_CALIBRATION",
+  "competition": "Russian Premier League",
+  "season": "2025/26",
+  "stage": "30 regular-season rounds, excludes relegation playoffs",
+  "checkedOn": "2026-10-29",
+  "source": {
+    "publisher": "Спорт-Экспресс",
+    "url": "https://www.sport-express.ru/football/n/russia/premier/2025-2026/statistics/common/",
+    "section": "Статистика. Общая - 2025/2026; season totals for 30 rounds",
+    "method": "Transcribed short factual season totals, no provider table redistributed"
+  },
+  "regularSeason": {
+    "rounds": 30,
+    "matchesPerRound": 8,
+    "matches": 240,
+    "goalsAllTypes": 609,
+    "shotsAll": 5548,
+    "shotsOnTarget": 1879,
+    "penaltiesRecorded": 99,
+    "penaltiesScored": 76,
+    "fouls": 6815,
+    "yellowCards": 1035,
+    "redCards": 26
+  },
+  "secondarySource": {
+    "publisher": "PerformanceOdds",
+    "url": "https://www.performanceodds.com/league_stats_overall/14893/",
+    "shotsAll": 5867,
+    "goalsAllTypes": 609,
+    "note": "Different provider shot total; retain as alternative definition, do not silently average"
+  },
+  "metricLimits": {
+    "realXg": null,
+    "realModelledMedicalWithdrawals": null,
+    "realShotEventTaxonomyMapped": false,
+    "simulatorPenaltyGoalSemanticsAligned": false
+  },
+  "referenceOnly": true,
+  "holdout2024_25Used": false
+}

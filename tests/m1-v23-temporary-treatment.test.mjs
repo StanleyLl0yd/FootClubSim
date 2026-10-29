@@ -144,7 +144,8 @@ test('internally seeded temporary assessment and return exclude unavailable shoo
 test('recomputed scores and referee RNG remain generated from one source', async () => {
   const { simulateM1V22FoulStoppageCoaching: oldRun } =
     await import('../dist/core/m1-v22-inplay-foul-coaching.js');
-  let successful = 0, withAbsences = 0;
+  let successful = 0, withAbsences = 0, legacyRejected = 0;
+  let bothAccepted = 0;
   for (let seed = 1; seed <= 32; seed++) {
     const newer = run(seed);
     const older = oldRun(prematch(seed), policy);
@@ -152,8 +153,19 @@ test('recomputed scores and referee RNG remain generated from one source', async
       assert.equal(newer.error, 'SOURCE_MATCH_REJECTED');
       continue;
     }
-    assert.equal(older.ok, true);
     successful++;
+    if(!older.ok){
+      // The old v22 prototype still rejects some same-second
+      // post-goal fouls which the replay-ordered v23 now admits.
+      assert.equal(older.error,'SOURCE_MATCH_REJECTED');
+      legacyRejected++;
+      assert.equal(newer.refereeRngDraws,90);
+      assert.equal(newer.match.rngDraws,90);
+      assert.equal(newer.treatmentRngDraws,54);
+      assert.equal(verify(prematch(seed),policy,[],[],newer),true);
+      continue;
+    }
+    bothAccepted++;
     assert.equal(newer.refereeRngState, older.refereeRngState);
     assert.equal(newer.refereeRngDraws, 90);
     assert.equal(newer.match.rngDraws, 90);
@@ -169,6 +181,10 @@ test('recomputed scores and referee RNG remain generated from one source', async
     }
     assert.equal(verify(prematch(seed), policy, [], [], newer), true);
   }
+  assert.ok(legacyRejected>0,
+    'the old v22 rejection path was not exercised');
+  assert.ok(bothAccepted>0,
+    'no common accepted source for parity comparison');
   assert.ok(successful >= 8, 'excessive rejection of seeded baseline');
   assert.ok(withAbsences > 0, 'synthetic path never exercised');
 });

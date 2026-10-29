@@ -1,3 +1,6 @@
+import {
+  commitM1V75MedicallyGatedFixture, type M1V75GatedCommitResult,
+} from '../core/m1-v75-medical-admission-commit.js';
 import { sameCanonicalValue } from '../core/canonical-value.js';
 import { isStableId } from '../core/identifiers.js';
 import {
@@ -226,6 +229,71 @@ export async function commitM1V32PersistedBatch(
       const put = store.put(proposed.journal, careerId);
       put.onerror = () => setRequestError(fail(isQuota(put.error) ?
         'QUOTA_EXCEEDED' : 'STORAGE_FAILED'));
+      setResult(proposed.journal);
+    };
+  });
+}
+
+/**
+ * P3 opt-in browser admission. Medical/disciplinary gate and source append
+ * are computed from one validated snapshot OUTSIDE the IDB write lock.
+ * A single readwrite transaction requires that exact snapshot before put.
+ * The legacy v32 batch endpoint is not redirected by this opt-in path.
+ */
+type M1V76AdmissionDenied=Extract<M1V75GatedCommitResult,
+  {ok:false;error:'ADMISSION_DENIED'}>;
+export class M1V76AdmissionError extends Error {
+  readonly code='ADMISSION_DENIED' as const;
+  constructor(public readonly gateError:M1V76AdmissionDenied['gateError']) {
+    super('ADMISSION_DENIED: '+gateError);
+    this.name='M1V76AdmissionError';
+  }
+}
+
+export async function commitM1V76PersistedMedicallyGatedFixture(
+  careerId:string,expectedRevision:number,request:unknown,
+):Promise<M1V32Journal> {
+  if(!validId(careerId))throw fail('INVALID_ID');
+  if(!Number.isSafeInteger(expectedRevision)||expectedRevision<0||
+      expectedRevision>240)throw fail('DOMAIN_REJECTED','INVALID_APPLY_COMMAND');
+
+  const initial=await loadInitialCareer(careerId);
+  const baseline=await readRawJournal(careerId);
+  const proposed=commitM1V75MedicallyGatedFixture(
+    initial,baseline,request,expectedRevision);
+  if(!proposed.ok){
+    switch(proposed.error){
+      case 'INVALID_JOURNAL':throw fail('CORRUPTED');
+      case 'CAS_REVISION_MISMATCH':throw fail('STALE_REVISION');
+      case 'ADMISSION_DENIED':
+        throw new M1V76AdmissionError(proposed.gateError);
+      case 'CLAIMED_SOURCE_RESULT_MISMATCH':
+        throw fail('DOMAIN_REJECTED','INVALID_MATCH_RESULT');
+      case 'JOURNAL_APPEND_DENIED':
+        throw fail('DOMAIN_REJECTED',proposed.journalError);
+      default:throw fail('DOMAIN_REJECTED','INVALID_APPLY_COMMAND');
+    }
+  }
+  if(proposed.journal.careerId!==careerId)throw fail('CORRUPTED');
+
+  return transact('readwrite',(store,abort,setResult,setRequestError)=>{
+    const read=store.get(careerId);
+    read.onerror=()=>setRequestError(fail(isQuota(read.error)?
+      'QUOTA_EXCEEDED':'STORAGE_FAILED'));
+    read.onsuccess=()=>{
+      if(read.result===undefined){abort(fail('NOT_FOUND'));return;}
+      if(!sameCanonicalValue(read.result,baseline)){
+        const changed:unknown=read.result;
+        const revision=changed!==null&&typeof changed==='object'&&
+          !Array.isArray(changed)&&Object.hasOwn(changed,'revision')?
+          (changed as Record<string,unknown>).revision:null;
+        abort(fail(Number.isSafeInteger(revision)&&
+          revision!==expectedRevision?'STALE_REVISION':'CORRUPTED'));
+        return;
+      }
+      const put=store.put(proposed.journal,careerId);
+      put.onerror=()=>setRequestError(fail(isQuota(put.error)?
+        'QUOTA_EXCEEDED':'STORAGE_FAILED'));
       setResult(proposed.journal);
     };
   });

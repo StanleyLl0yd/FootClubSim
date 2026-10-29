@@ -125,7 +125,7 @@ export function runM1V97TargetSourceShard(group){
     modelOpenPlayGoalsNotComparableToAllRealGoals:true,
     independentRealXgUnavailable:true,
     clinicalOrRefereeAuthorityClaimed:false,
-    2024_25_holdout_used:false,
+    holdout2024_25Used:false,
     productionRngOrSavedSchemaChanged:false,
     releaseCalibrationAccepted:false,
     runtimeObservation:{elapsedMs:Math.round(

@@ -160,7 +160,7 @@ def assert_restored_club(session: str):
 
 def exercise_journal_cas(session: str, schema: int):
     """Verify the requested fixture, not a stale page from the previous Safari run."""
-    if schema not in (7, 8, 26, 32):
+    if schema not in (7, 8, 26, 32, 78):
         raise ValueError("Unsupported native CAS fixture")
     url = f"http://127.0.0.1:5173/examples/m1-v{schema}-cas-smoke.html"
     expected_path = f"/examples/m1-v{schema}-cas-smoke.html"
@@ -205,7 +205,7 @@ def exercise_journal_cas_group(session: str):
         )
         try:
             deadline = time.monotonic() + TIMEOUT
-            for schema in (7, 8, 26, 32):
+            for schema in (7, 8, 26, 32, 78):
                 url = f"http://127.0.0.1:5173/examples/m1-v{schema}-cas-smoke.html"
                 while time.monotonic() < deadline:
                     try:
@@ -219,7 +219,7 @@ def exercise_journal_cas_group(session: str):
                     time.sleep(0.4)
                 else:
                     raise RuntimeError(f"Safari v{schema} Vite dev server unavailable")
-            for schema in (7, 8, 26, 32):
+            for schema in (7, 8, 26, 32, 78):
                 exercise_journal_cas(session, schema)
         except Exception:
             log.flush()

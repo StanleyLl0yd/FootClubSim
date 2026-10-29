@@ -59,8 +59,8 @@ export function simulateM1V99IntraphaseShots(
     away:input.awayLineup.starters};
   const rng=new SeededRng(input.rngSeed);
   let state=start.state;
-  let home={goals:0,shots:0,shotsOnTarget:0,xgMilli:0};
-  let away={goals:0,shots:0,shotsOnTarget:0,xgMilli:0};
+  const home={goals:0,shots:0,shotsOnTarget:0,xgMilli:0};
+  const away={goals:0,shots:0,shotsOnTarget:0,xgMilli:0};
   const events:M1V99Event[]=[];
   let lastSecond=-1;
   for(let phase=0;phase<M1_CLOCK_MAX_EVENTS;phase++){
@@ -88,8 +88,10 @@ export function simulateM1V99IntraphaseShots(
       } else if(raw.outcome==='saved'){
         team.shotsOnTarget++;
       }
-      const {schemaVersion:_oldSchema,id:_oldId,
-        sequence:_oldSequence,elapsedSeconds:_oldTime,...detail}=raw;
+      const detail={type:raw.type,teamId:raw.teamId,
+        playerId:raw.playerId,zone:raw.zone,focus:raw.focus,
+        fatigueMilli:raw.fatigueMilli,xgMilli:raw.xgMilli,
+        outcome:raw.outcome};
       events.push({...detail,schemaVersion:M1_V99_INTRAPHASE_EVENT_SCHEMA,
         id:'m1-v99-shot-'+(phase+1)+'-'+(slot+1),
         sequence:events.length+1,elapsedSeconds});

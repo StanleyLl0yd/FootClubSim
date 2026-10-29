@@ -1,0 +1,111 @@
+name: M1 P5 v70 full 4096 exact source xG
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-v70-source-xg-corpus.mjs'
+      - 'tests/m1-p5-v70-source-xg-corpus.test.mjs'
+      - 'docs/M1_P5_V70_FULL_SOURCE_XG.md'
+      - '.github/workflows/m1-p5-v70-source-xg-4096.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-source-xg-1024:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v70-')
+    name: Exact source xG fixtures ${{ matrix.firstfixture }}..${{ matrix.lastfixture }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - firstfixture: 1
+            lastfixture: 8
+          - firstfixture: 9
+            lastfixture: 16
+          - firstfixture: 17
+            lastfixture: 24
+          - firstfixture: 25
+            lastfixture: 32
+    steps:
+      - name: Checkout exact tested head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Build isolated source core
+        run: |
+          npm ci --ignore-scripts
+          npm run build:core
+          node --test tests/m1-p5-v70-source-xg-corpus.test.mjs
+      - name: Reconcile full source xG and realized goals against v66
+        shell: bash
+        env:
+          FIRST_FIXTURE: ${{ matrix.firstfixture }}
+          LAST_FIXTURE: ${{ matrix.lastfixture }}
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          start=$(date +%s)
+          node scripts/m1-p5-v70-source-xg-corpus.mjs \
+            --firstfixture="$FIRST_FIXTURE" --fixtures=8 --start=1 --count=128 \
+            > "$tmp/source-xg.json"
+          end=$(date +%s)
+          node - "$tmp/source-xg.json" "$((end-start))" <<'NODE'
+          const fs=require('node:fs');
+          const x=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          const seconds=Number(process.argv[3]);
+          const first=Number(process.env.FIRST_FIXTURE);
+          const last=Number(process.env.LAST_FIXTURE);
+          const v66Goals={1:1216,9:1210,17:1206,25:1227};
+          if(x.schemaVersion!==1||
+              x.status!=='INTERNAL_V8_XG_CORPUS_NOT_CALIBRATED'||
+              x.firstFixture!==first||last!==first+7||
+              x.fixtureCount!==8||x.start!==1||x.count!==128||
+              x.attempted!==1024||x.accepted!==1024||x.rejected!==0||
+              x.fixtureSummaries.length!==8||
+              new Set(x.fixtureSummaries.map(f=>f.fixtureId)).size!==8||
+              x.fixtureSummaries.some(f=>f.accepted!==128||f.rejected!==0)||
+              x.sourceOpenPlayGoals!==v66Goals[first]||
+              x.sourceShots>1024*18||x.sourceOpenPlayGoals>x.sourceShots||
+              x.sourceOpenPlayXgMilli<20*x.sourceShots||
+              x.sourceOpenPlayXgMilli>600*x.sourceShots||
+              x.independentRealXgReferenceAvailable!==false||
+              x.holdout2024_25Used!==false||x.modelNotTuned!==true||
+              x.refereeMedicalAuthorityAuthenticated!==false||
+              !/^[a-f0-9]{64}$/.test(x.deterministicSha256)){
+            throw Error('SOURCE_XG_4096_SHARD_RECONCILIATION_FAILED');
+          }
+          const lines=[
+            '# P5 v70 exact source xG shard (NOT independently calibrated)',
+            '',
+            '- Fixture indices: '+first+'..'+last,
+            '- Seeds: 1..128',
+            '- Attempted: '+x.attempted,
+            '- Accepted full source replay: '+x.accepted,
+            '- Rejected: '+x.rejected,
+            '- Source shot events: '+x.sourceShots,
+            '- Realized source open-play goals: '+x.sourceOpenPlayGoals,
+            '- Internal source v8 model xG (goals): '+x.sourceOpenPlayXgMilli/1000,
+            '- Internal model xG per accepted match: '+x.modelXgPerAcceptedMatch,
+            '- Source shots per accepted match: '+x.sourceShotsPerAcceptedMatch,
+            '- Realized goals per source shot: '+x.sourceGoalsPerShot,
+            '- Model xG per source shot: '+x.modelXgPerShot,
+            '- Matches with shots but no goals: '+x.scorelessMatchesWithShots,
+            '- Matches without shots: '+x.shotlessMatches,
+            '- Deterministic source SHA-256: '+x.deterministicSha256,
+            '- One observed job wall duration seconds: '+seconds,
+            '- Full 4096 only if all FOUR shard jobs pass',
+            '- Real-world calibrated shot/xG reference: NONE',
+            '- 2024/25 holdout untouched; no model tuning',
+          ];
+          const output=lines.join('\n')+'\n';
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,output);
+          process.stdout.write(output);
+          NODE

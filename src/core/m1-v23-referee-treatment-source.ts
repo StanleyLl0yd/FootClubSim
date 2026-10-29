@@ -107,6 +107,10 @@ export type M1V23UnsupportedSubreason =
   'GOAL_RESTART_AND_FOUL_COLLISION';
 export interface M1V23SourceRejectionTrace {
   subreason: M1V23UnsupportedSubreason | null;
+  // Opt-in model-only metrics from the exact validated v8 physical XI.
+  shotXgMilli?: number;
+  shotCount?: number;
+  openPlayGoals?: number;
 }
 export function simulateM1V23RefereeWithTreatment(
   prematch:unknown,policy:unknown,commands:unknown=[],
@@ -500,6 +504,14 @@ export function simulateM1V23RefereeWithTreatment(
       !sameCanonicalValue(finalOnField,source.onFieldAtFullTime)||
       opportunities.home.size>3||opportunities.away.size>3){
     return fail('ROSTER_REPLAY_MISMATCH');
+  }
+  if (trace) {
+    // Source v8 has shot xG; legacy v23 timeline intentionally omits it.
+    // This opt-in trace does not change any saved game or return schema.
+    trace.shotXgMilli=source.report.home.xgMilli+source.report.away.xgMilli;
+    trace.shotCount=source.report.home.shots+source.report.away.shots;
+    trace.openPlayGoals=
+      source.report.home.openPlayGoals+source.report.away.openPlayGoals;
   }
   return{ok:true,schemaVersion:M1_V23_REFEREE_SCHEMA,
     rulesId:M1_V23_REFEREE_RULES,

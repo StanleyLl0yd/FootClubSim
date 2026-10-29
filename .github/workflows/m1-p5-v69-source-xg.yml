@@ -1,0 +1,101 @@
+name: M1 P5 v69 internal xG source trace
+on:
+  pull_request:
+    paths:
+      - 'src/core/m1-v23-referee-treatment-source.ts'
+      - 'src/core/m1-v23-temporary-treatment.ts'
+      - 'tests/m1-p5-v69-source-xg.test.mjs'
+      - 'docs/M1_P5_V69_INTERNAL_SOURCE_XG.md'
+      - '.github/workflows/m1-p5-v69-source-xg.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-physical-xg:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v69-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Compile source and verify dedicated assertions
+        run: |
+          npm ci --ignore-scripts
+          npm run build:core
+          node --test tests/m1-p5-v69-source-xg.test.mjs
+      - name: Measure source open-play xG and realized goals
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import {appendFileSync} from 'node:fs';
+          import {inspectM1V29SourceOpenPlayXg as inspect}
+            from './dist/core/m1-v23-temporary-treatment.js';
+          import {createSyntheticRplScaleCatalog,defaultSyntheticLineup}
+            from './dist/core/synthetic.js';
+          import {generateDoubleRoundRobin}
+            from './dist/core/fixtures.js';
+          import {MATCH_LEDGER_VERSION,M0_RULES_PACK_ID,M0_RULES_PACK_VERSION}
+            from './dist/core/match-contracts.js';
+          import {M1_ENGINE_VERSION} from './dist/core/m1-clock.js';
+          import {RNG_VERSION} from './dist/core/rng.js';
+          import {defaultTacticalPlan} from './dist/core/tactics.js';
+          const catalog=createSyntheticRplScaleCatalog(77);
+          const clubs=new Map(catalog.clubs.map(x=>[x.id,x]));
+          const fixture=generateDoubleRoundRobin(catalog.clubs.map(x=>x.id))[0].fixtures[0];
+          const policy={home:{assignedActor:{kind:'player'},availableStaffIds:[]},
+            away:{assignedActor:{kind:'player'},availableStaffIds:[]}};
+          let accepted=0,rejected=0,shots=0,goals=0,xgMilli=0;
+          for(let seed=1;seed<=32;seed++){
+            const pre={
+              schemaVersion:MATCH_LEDGER_VERSION,engineVersion:M1_ENGINE_VERSION,
+              rulesPackId:M0_RULES_PACK_ID,rulesPackVersion:M0_RULES_PACK_VERSION,
+              fixture,catalog,
+              homeLineup:defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+              awayLineup:defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+              homeTactics:defaultTacticalPlan(fixture.homeClubId),
+              awayTactics:defaultTacticalPlan(fixture.awayClubId),
+              rosterRules:{starterCount:11,maxBench:12,maxForeignersOnField:7},
+              rngAlgorithmVersion:RNG_VERSION,rngSeed:seed,
+            };
+            const x=inspect(pre,policy);
+            if(!x.ok){rejected++;continue;}
+            if(x.independentRealXgReferenceAvailable!==false||
+                x.modelNotTuned!==true||x.sourceOpenPlayGoals>x.sourceShots||
+                x.sourceOpenPlayXgMilli<20*x.sourceShots||
+                x.sourceOpenPlayXgMilli>600*x.sourceShots){
+              throw Error('SOURCE_XG_INVARIANT_FAILED');
+            }
+            accepted++;shots+=x.sourceShots;
+            goals+=x.sourceOpenPlayGoals;xgMilli+=x.sourceOpenPlayXgMilli;
+          }
+          if(accepted+rejected!==32||accepted<24||
+              !(xgMilli>0)||shots<goals){
+            throw Error('SOURCE_XG_CORPUS_INVALID');
+          }
+          const lines=[
+            '# P5 v69 exact internally sourced open-play shot xG',
+            '',
+            '- Attempted fully source-generated fixtures: 32',
+            '- Accepted: '+accepted,
+            '- Rejected: '+rejected,
+            '- Source shot events: '+shots,
+            '- Realized model open-play goals: '+goals,
+            '- Source v8 shot xG (goals): '+(xgMilli/1000),
+            '- Mean model xG per accepted match: '+xgMilli/(1000*accepted),
+            '- Real goals versus model xG difference: '+(goals-xgMilli/1000),
+            '- REAL RPL xG validation: NONE',
+            '- No extra RNG, medical authority, holdout or model tuning',
+          ];
+          const txt=lines.join('\n')+'\n';
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,txt);
+          process.stdout.write(txt);
+          NODE

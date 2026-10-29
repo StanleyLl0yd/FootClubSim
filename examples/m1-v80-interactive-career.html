@@ -60,7 +60,7 @@
     <p id="result" class="result">Пока нет результатов.</p>
   </section>
   <script type="module">
-    import {createSyntheticRplScaleCatalog,defaultSyntheticLineup}
+    import {createSyntheticRplScaleCatalog}
       from '../dist/core/synthetic.js';
     import {createInitialCareer} from '../dist/core/save.js';
     import {saveNewInitialCareer,loadInitialCareer}
@@ -70,6 +70,8 @@
       from '../dist/browser/m1-v32-journal-store.js';
     import {deriveM1V31CausalPhysicalExposure}
       from '../dist/core/m1-v24-physical-exposure.js';
+    import {deriveM1V82SourceBoundAvailableLineups}
+      from '../dist/core/m1-v82-source-bound-eligible-lineup.js';
     import {generateDoubleRoundRobin} from '../dist/core/fixtures.js';
     import {MATCH_LEDGER_VERSION,M0_RULES_PACK_ID,M0_RULES_PACK_VERSION}
       from '../dist/core/match-contracts.js';
@@ -79,7 +81,6 @@
 
     const careerId='m1-v80-interactive-career';
     const catalog=createSyntheticRplScaleCatalog(77);
-    const clubs=new Map(catalog.clubs.map(c=>[c.id,c]));
     const fixtures=generateDoubleRoundRobin(catalog.clubs.map(c=>c.id))
       .flatMap(r=>r.fixtures);
     const policy={home:{assignedActor:{kind:'player'},availableStaffIds:[]},
@@ -114,7 +115,7 @@
       }
       canPlay=Boolean(fixture);
       controls();
-      return {journal,fixture};
+      return {initial,journal,fixture};
     }
     async function openCareer(){
       busy=true;controls();
@@ -156,14 +157,17 @@
       if(!opened||busy)return;
       busy=true;controls();
       try{
-        const {journal,fixture}=await snapshot();
+        const {initial,journal,fixture}=await snapshot();
         if(!fixture){message('Все матчи тестового сезона уже записаны.');return;}
+        const lineup=deriveM1V82SourceBoundAvailableLineups(
+          initial,journal,fixture);
+        if(!lineup.ok)throw Error('SAFE_LINEUP_REJECTED: '+lineup.error);
         const prematch={
           schemaVersion:MATCH_LEDGER_VERSION,engineVersion:M1_ENGINE_VERSION,
           rulesPackId:M0_RULES_PACK_ID,rulesPackVersion:M0_RULES_PACK_VERSION,
           fixture,catalog,
-          homeLineup:defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
-          awayLineup:defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+          homeLineup:lineup.homeLineup,
+          awayLineup:lineup.awayLineup,
           homeTactics:defaultTacticalPlan(fixture.homeClubId),
           awayTactics:defaultTacticalPlan(fixture.awayClubId),
           rosterRules:{starterCount:11,maxBench:12,maxForeignersOnField:7},
@@ -179,7 +183,9 @@
         };
         const saved=await commitM1V76PersistedMedicallyGatedFixture(
           careerId,journal.revision,request);
-        message('Матч '+fixture.id+' сохранён. Ревизия '+saved.revision+'.');
+        message('Матч '+fixture.id+' сохранён. Ревизия '+saved.revision+
+          '. Исключено из составов из-за медицинских ограничений: '+
+          lineup.excludedMedicalPlayers.length+'.');
         await snapshot();
       }catch(error){
         message('Матч отклонён без записи: '+

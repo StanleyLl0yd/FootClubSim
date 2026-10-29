@@ -1,0 +1,738 @@
+{
+  "schemaVersion": 1,
+  "status": "P5_V106_OBSERVED_JOINT_CANDIDATES_NOT_CALIBRATED",
+  "source": {
+    "pr": 382,
+    "headSha": "183cc7c24ee96de2a9879027cf8e0209d642f624",
+    "workflowRunId": 40954498398,
+    "fixtureGroups": 16,
+    "fixturesPerGroup": 15,
+    "seedsPerFixture": 8,
+    "baselineSchema": 99,
+    "candidateSchema": 104,
+    "replayedBaselineAgainstFrozenV102": true
+  },
+  "parameters": {
+    "baseline": {
+      "shotOpportunityMultiplier": 1,
+      "xgMultiplier": 1,
+      "saveMultiplier": 1
+    },
+    "candidateA": {
+      "shotOpportunityMultiplier": 1.08,
+      "xgMultiplier": 0.62,
+      "saveMultiplier": 0.72
+    },
+    "candidateB": {
+      "shotOpportunityMultiplier": 1.08,
+      "xgMultiplier": 0.6,
+      "saveMultiplier": 0.68
+    }
+  },
+  "shards": [
+    {
+      "group": 0,
+      "sourceJobId": 123730944332,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2562,
+          "onTarget": 1301,
+          "goals": 483,
+          "saved": 818,
+          "blocked": 564,
+          "offTarget": 697,
+          "xgMilli": 463538
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2776,
+          "onTarget": 1055,
+          "goals": 313,
+          "saved": 742,
+          "blocked": 755,
+          "offTarget": 966,
+          "xgMilli": 312008
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2776,
+          "onTarget": 1010,
+          "goals": 300,
+          "saved": 710,
+          "blocked": 775,
+          "offTarget": 991,
+          "xgMilli": 301949
+        }
+      },
+      "digests": {
+        "baseline": "f8227cd991b313dbbc44a30f25f9e2bb3fca605907713a822b3f992a56e0122c",
+        "candidateA": "4ccde5d5f11b9d8c2739de7c299aee2d98af71576d0163edd5102add2a5860eb",
+        "candidateB": "e38b0e9d641fecf2d50936a385c3f34e42bdad023fb18abe9aeab7078deb12de"
+      }
+    },
+    {
+      "group": 1,
+      "sourceJobId": 123730944506,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2623,
+          "onTarget": 1328,
+          "goals": 508,
+          "saved": 820,
+          "blocked": 578,
+          "offTarget": 717,
+          "xgMilli": 481659
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2833,
+          "onTarget": 1084,
+          "goals": 348,
+          "saved": 736,
+          "blocked": 762,
+          "offTarget": 987,
+          "xgMilli": 322276
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2833,
+          "onTarget": 1031,
+          "goals": 337,
+          "saved": 694,
+          "blocked": 785,
+          "offTarget": 1017,
+          "xgMilli": 311900
+        }
+      },
+      "digests": {
+        "baseline": "2733bf11796b0a467e4173f37084a885da428c951444b95a66ae4c50182085c1",
+        "candidateA": "2754622c402e388c3c09cd1e8a2cea4c04ce0f7e175464a6963f2b2ae437aad1",
+        "candidateB": "00b6f7910b3783108f0459336af012fb80fc4a107b1d9b218f8d1c565b3dc98b"
+      }
+    },
+    {
+      "group": 2,
+      "sourceJobId": 123730944027,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2576,
+          "onTarget": 1334,
+          "goals": 446,
+          "saved": 888,
+          "blocked": 542,
+          "offTarget": 700,
+          "xgMilli": 468050
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2787,
+          "onTarget": 1005,
+          "goals": 298,
+          "saved": 707,
+          "blocked": 806,
+          "offTarget": 976,
+          "xgMilli": 314432
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2787,
+          "onTarget": 953,
+          "goals": 289,
+          "saved": 664,
+          "blocked": 827,
+          "offTarget": 1007,
+          "xgMilli": 304294
+        }
+      },
+      "digests": {
+        "baseline": "c7ad22de91cda2be4e50cbddd27f64ed2a8577553e76881ac0fafa08e01363fb",
+        "candidateA": "dfca36eecbfc292221ae35ed23f635f35bd2374be6710b4d1b59069ed42ff1f5",
+        "candidateB": "d1e836b1e9a222041c2ca8b2a0c89b0829a03e5749c0c87b7a342b074c5c6174"
+      }
+    },
+    {
+      "group": 3,
+      "sourceJobId": 123730944511,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2610,
+          "onTarget": 1326,
+          "goals": 505,
+          "saved": 821,
+          "blocked": 571,
+          "offTarget": 713,
+          "xgMilli": 481510
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2803,
+          "onTarget": 1042,
+          "goals": 360,
+          "saved": 682,
+          "blocked": 791,
+          "offTarget": 970,
+          "xgMilli": 321398
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2803,
+          "onTarget": 1003,
+          "goals": 347,
+          "saved": 656,
+          "blocked": 807,
+          "offTarget": 993,
+          "xgMilli": 311014
+        }
+      },
+      "digests": {
+        "baseline": "176d7120d67d825f302f656620f0fa0561dc33d129b5d09a1027d87eac823223",
+        "candidateA": "a4a0437e2c8d538df178179f92226cf94f5c470af7467f9eb9c7cdf38a3e21c9",
+        "candidateB": "057e931783cec3090cf52b87f539b32be4d4cc33c958417dc783f70fa64a83b9"
+      }
+    },
+    {
+      "group": 4,
+      "sourceJobId": 123730944307,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2593,
+          "onTarget": 1347,
+          "goals": 481,
+          "saved": 866,
+          "blocked": 542,
+          "offTarget": 704,
+          "xgMilli": 464633
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2813,
+          "onTarget": 1062,
+          "goals": 331,
+          "saved": 731,
+          "blocked": 772,
+          "offTarget": 979,
+          "xgMilli": 314055
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2813,
+          "onTarget": 1011,
+          "goals": 325,
+          "saved": 686,
+          "blocked": 801,
+          "offTarget": 1001,
+          "xgMilli": 303928
+        }
+      },
+      "digests": {
+        "baseline": "6d6597c3b739e40f777be922e5fae45d67a23d1bc7681979c27ead3d129c955e",
+        "candidateA": "ff60e358c2561d9f75d6bbdd663f37b8ef75374843f2ba383dfcfe07408c1716",
+        "candidateB": "9aa8302c72d9186d36502d919591891bb7a8dd0e0ad4687979ba5d45282cea65"
+      }
+    },
+    {
+      "group": 5,
+      "sourceJobId": 123730944334,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2554,
+          "onTarget": 1291,
+          "goals": 455,
+          "saved": 836,
+          "blocked": 586,
+          "offTarget": 677,
+          "xgMilli": 468812
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2766,
+          "onTarget": 1015,
+          "goals": 312,
+          "saved": 703,
+          "blocked": 812,
+          "offTarget": 939,
+          "xgMilli": 314858
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2766,
+          "onTarget": 968,
+          "goals": 307,
+          "saved": 661,
+          "blocked": 832,
+          "offTarget": 966,
+          "xgMilli": 304693
+        }
+      },
+      "digests": {
+        "baseline": "deebb7268370404d192cc127e4d714da4485ded0da9876aee07dc31c6ce13492",
+        "candidateA": "faa0e29c87cedfdde5ba32c52bca9da04532e180f12449839d610bce9c14ed7a",
+        "candidateB": "b3a4a5d043acd5840aaaf329ba32c4e43a3f261fb32797b72272a2cc19ff5480"
+      }
+    },
+    {
+      "group": 6,
+      "sourceJobId": 123730944270,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2543,
+          "onTarget": 1290,
+          "goals": 456,
+          "saved": 834,
+          "blocked": 538,
+          "offTarget": 715,
+          "xgMilli": 460574
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2747,
+          "onTarget": 1010,
+          "goals": 290,
+          "saved": 720,
+          "blocked": 766,
+          "offTarget": 971,
+          "xgMilli": 307744
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2747,
+          "onTarget": 960,
+          "goals": 283,
+          "saved": 677,
+          "blocked": 793,
+          "offTarget": 994,
+          "xgMilli": 297815
+        }
+      },
+      "digests": {
+        "baseline": "4d7a3d8c757609a0c0f620bf2a3529aafb75d106db9c5d071d47eadceff7a5f2",
+        "candidateA": "1da0518a937c8f829cf4e20eed5a4ec55513e17106dfc753bfeadb0137dea567",
+        "candidateB": "3722691b6c17438260e9efc13918da2c2e2eb2b865048cc82bc586dc1c35543c"
+      }
+    },
+    {
+      "group": 7,
+      "sourceJobId": 123730944303,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2605,
+          "onTarget": 1374,
+          "goals": 499,
+          "saved": 875,
+          "blocked": 562,
+          "offTarget": 669,
+          "xgMilli": 478872
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2793,
+          "onTarget": 1079,
+          "goals": 310,
+          "saved": 769,
+          "blocked": 778,
+          "offTarget": 936,
+          "xgMilli": 318015
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2793,
+          "onTarget": 1028,
+          "goals": 300,
+          "saved": 728,
+          "blocked": 806,
+          "offTarget": 959,
+          "xgMilli": 307803
+        }
+      },
+      "digests": {
+        "baseline": "ae002af940aecccf089550f5ecda3d83b9466f7a6da2b7e81ae0ba5cf197bd02",
+        "candidateA": "8d5c03146858897238cbe01ff4ccfa19ea3adae6d1c420b4c4044eec0ebcf1ce",
+        "candidateB": "88cad0536dc499cd220d767e7efbb93e5b465593e541bce00acc61b317d7d90c"
+      }
+    },
+    {
+      "group": 8,
+      "sourceJobId": 123730944419,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2510,
+          "onTarget": 1298,
+          "goals": 452,
+          "saved": 846,
+          "blocked": 543,
+          "offTarget": 669,
+          "xgMilli": 461074
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2750,
+          "onTarget": 1030,
+          "goals": 296,
+          "saved": 734,
+          "blocked": 773,
+          "offTarget": 947,
+          "xgMilli": 312816
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2750,
+          "onTarget": 975,
+          "goals": 281,
+          "saved": 694,
+          "blocked": 800,
+          "offTarget": 975,
+          "xgMilli": 302746
+        }
+      },
+      "digests": {
+        "baseline": "815e8642e4a856cae680d618766d95e4da6f1e3282f6aa7e52dcdcb60cf05e6a",
+        "candidateA": "a9fba7aba015fd9afc73e074fda36721e64d09bfa9920d68ce3a534f3783901c",
+        "candidateB": "d6354ac12d816bf5f1950871ca867197698a7431492913ce330cc4907b825ac8"
+      }
+    },
+    {
+      "group": 9,
+      "sourceJobId": 123730944375,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2562,
+          "onTarget": 1307,
+          "goals": 470,
+          "saved": 837,
+          "blocked": 565,
+          "offTarget": 690,
+          "xgMilli": 470851
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2786,
+          "onTarget": 1015,
+          "goals": 323,
+          "saved": 692,
+          "blocked": 804,
+          "offTarget": 967,
+          "xgMilli": 318055
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2786,
+          "onTarget": 979,
+          "goals": 312,
+          "saved": 667,
+          "blocked": 820,
+          "offTarget": 987,
+          "xgMilli": 307825
+        }
+      },
+      "digests": {
+        "baseline": "723e4f3eeab577c9e9a7ed168be92d6e713871a58a2e95adefe628ccb8d0a5c2",
+        "candidateA": "dce4f5dc10737676a1e8aed1a87f57e6001cc204a3f316772b5f5e73503d9a24",
+        "candidateB": "5b38113c9bb69f82fe0d53d48ca0ec168596aed91315c8d5510cbeb7df90e5b6"
+      }
+    },
+    {
+      "group": 10,
+      "sourceJobId": 123730944374,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2551,
+          "onTarget": 1270,
+          "goals": 444,
+          "saved": 826,
+          "blocked": 577,
+          "offTarget": 704,
+          "xgMilli": 470239
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2763,
+          "onTarget": 958,
+          "goals": 296,
+          "saved": 662,
+          "blocked": 839,
+          "offTarget": 966,
+          "xgMilli": 315531
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2763,
+          "onTarget": 917,
+          "goals": 286,
+          "saved": 631,
+          "blocked": 851,
+          "offTarget": 995,
+          "xgMilli": 305356
+        }
+      },
+      "digests": {
+        "baseline": "87e0ab4195f90ea3679fe31f718ca212ec67198c51c00dd65f6d53f797507328",
+        "candidateA": "f07f4657722ccaa6d8136278719862983f0f9426b49aab196714028827f6bf1f",
+        "candidateB": "1268914992f2b1ca86d1ee50a0f5a581a2dbb35eb5d8623d90de20beb80b19a1"
+      }
+    },
+    {
+      "group": 11,
+      "sourceJobId": 123730944333,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2532,
+          "onTarget": 1276,
+          "goals": 462,
+          "saved": 814,
+          "blocked": 563,
+          "offTarget": 693,
+          "xgMilli": 465255
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2755,
+          "onTarget": 1007,
+          "goals": 301,
+          "saved": 706,
+          "blocked": 761,
+          "offTarget": 987,
+          "xgMilli": 313683
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2755,
+          "onTarget": 961,
+          "goals": 293,
+          "saved": 668,
+          "blocked": 784,
+          "offTarget": 1010,
+          "xgMilli": 303571
+        }
+      },
+      "digests": {
+        "baseline": "36c5c8f84942144f5da7a29348a3ca4383df6733de3bd62537ebbead8be6b23e",
+        "candidateA": "873b68abb75077ea03cafcc79d5966aaa746abdd0ea6d79582152696831bfd9d",
+        "candidateB": "f5ebe3d233318262250c2d3b5be7345f0c042c610f02e37699216ce07a6114ec"
+      }
+    },
+    {
+      "group": 12,
+      "sourceJobId": 123730944258,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2589,
+          "onTarget": 1311,
+          "goals": 457,
+          "saved": 854,
+          "blocked": 582,
+          "offTarget": 696,
+          "xgMilli": 470536
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2797,
+          "onTarget": 1034,
+          "goals": 314,
+          "saved": 720,
+          "blocked": 773,
+          "offTarget": 990,
+          "xgMilli": 314877
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2797,
+          "onTarget": 999,
+          "goals": 304,
+          "saved": 695,
+          "blocked": 780,
+          "offTarget": 1018,
+          "xgMilli": 304708
+        }
+      },
+      "digests": {
+        "baseline": "be22a7b30e1f55e6290efc2d86caf8f1346d8f88dac1ba80d558e16186672d25",
+        "candidateA": "15698305f7ef31fd6d56202b44cfb4b7838326664eb064675336420f9161fda3",
+        "candidateB": "99af6a9b262523aa3a7ab1c92abc1681ed4a386decfbd3a300589ebda882a597"
+      }
+    },
+    {
+      "group": 13,
+      "sourceJobId": 123730944212,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2616,
+          "onTarget": 1321,
+          "goals": 482,
+          "saved": 839,
+          "blocked": 589,
+          "offTarget": 706,
+          "xgMilli": 484257
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2802,
+          "onTarget": 1034,
+          "goals": 321,
+          "saved": 713,
+          "blocked": 797,
+          "offTarget": 971,
+          "xgMilli": 321195
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2802,
+          "onTarget": 980,
+          "goals": 315,
+          "saved": 665,
+          "blocked": 823,
+          "offTarget": 999,
+          "xgMilli": 310807
+        }
+      },
+      "digests": {
+        "baseline": "32e4f960ee4d9d9dacff4876df6c7f4c24b49a6a020e72499f53d9852a90f3f0",
+        "candidateA": "3b2ef177d8a8336acb0711bc041bea506a987920d0f702b1a2cfa93d7ef0dd41",
+        "candidateB": "63bbee3376ed09c46c29573d8339026441584d57c33feed6156d3365fdd0899b"
+      }
+    },
+    {
+      "group": 14,
+      "sourceJobId": 123730944423,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2632,
+          "onTarget": 1336,
+          "goals": 472,
+          "saved": 864,
+          "blocked": 571,
+          "offTarget": 725,
+          "xgMilli": 482240
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2825,
+          "onTarget": 1037,
+          "goals": 284,
+          "saved": 753,
+          "blocked": 757,
+          "offTarget": 1031,
+          "xgMilli": 320947
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2825,
+          "onTarget": 997,
+          "goals": 275,
+          "saved": 722,
+          "blocked": 774,
+          "offTarget": 1054,
+          "xgMilli": 310617
+        }
+      },
+      "digests": {
+        "baseline": "70d301b36d6437fed0bc6b1a5299ecfc9c655a7addf301c2da7692e53a94d5ed",
+        "candidateA": "1de8ecdbdc3e56a03c45df9fa37d11748b181f4f7dbbdbd5790f34d2a669ec2e",
+        "candidateB": "825a5e4362f2a5e2a0679bc16eeb0deff9e83fdab9abfc41a1d6772addedbef2"
+      }
+    },
+    {
+      "group": 15,
+      "sourceJobId": 123730944251,
+      "totals": {
+        "baseline": {
+          "matches": 120,
+          "shots": 2580,
+          "onTarget": 1313,
+          "goals": 463,
+          "saved": 850,
+          "blocked": 564,
+          "offTarget": 703,
+          "xgMilli": 467657
+        },
+        "candidateA": {
+          "matches": 120,
+          "shots": 2788,
+          "onTarget": 1016,
+          "goals": 305,
+          "saved": 711,
+          "blocked": 806,
+          "offTarget": 966,
+          "xgMilli": 313314
+        },
+        "candidateB": {
+          "matches": 120,
+          "shots": 2788,
+          "onTarget": 979,
+          "goals": 294,
+          "saved": 685,
+          "blocked": 812,
+          "offTarget": 997,
+          "xgMilli": 303219
+        }
+      },
+      "digests": {
+        "baseline": "84a7855c4617aa01c7d009188aba5759b9e5fdf0eacf969ebd50557a6ce1c7eb",
+        "candidateA": "20c51f43e0c126094a4212a5e0b5573c7737c00fd9ec211f5eb7160d3aa9abf9",
+        "candidateB": "f6ec4b7652679929fc8767813e914cd916da57d4e2b9f5250a944847ca38258a"
+      }
+    }
+  ],
+  "observedTotals": {
+    "baseline": {
+      "matches": 1920,
+      "shots": 41238,
+      "onTarget": 21023,
+      "goals": 7535,
+      "saved": 13488,
+      "blocked": 9037,
+      "offTarget": 11178,
+      "xgMilli": 7539757
+    },
+    "candidateA": {
+      "matches": 1920,
+      "shots": 44584,
+      "onTarget": 16483,
+      "goals": 5002,
+      "saved": 11481,
+      "blocked": 12552,
+      "offTarget": 15549,
+      "xgMilli": 5055204
+    },
+    "candidateB": {
+      "matches": 1920,
+      "shots": 44584,
+      "onTarget": 15751,
+      "goals": 4848,
+      "saved": 10903,
+      "blocked": 12870,
+      "offTarget": 15963,
+      "xgMilli": 4892245
+    }
+  },
+  "reference": {
+    "season": "2025/26",
+    "matches": 240,
+    "shots": 5548,
+    "onTarget": 1879,
+    "goalsAllTypes": 609
+  },
+  "interpretation": {
+    "modelGoalsOpenPlayOnly": true,
+    "realGoalsAllTypes": true,
+    "shotTaxonomyHarmonized": false,
+    "externalRefereeClinicalAuthorityAuthenticated": false,
+    "holdout2024_25Used": false,
+    "careerCasAdmitted": false,
+    "releaseCalibrationAccepted": false
+  }
+}

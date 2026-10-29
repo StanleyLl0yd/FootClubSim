@@ -44,7 +44,7 @@ export function diagnoseBoundedRejects(){
     home:{assignedActor:{kind:'player'},availableStaffIds:[]},
     away:{assignedActor:{kind:'player'},availableStaffIds:[]},
   };
-  const reasonCounts={},hash=createHash('sha256');
+  const reasonCounts={},subreasonCounts={},hash=createHash('sha256');
   let accepted=0,rejected=0,lowerLevelRooted=0;
   for(const fixture of fixtures){
     const base={
@@ -75,12 +75,15 @@ export function diagnoseBoundedRejects(){
         'UNCLASSIFIED:'+detail.error:'REFEREE:'+detail.sourceError;
       if(detail.sourceError!==null)lowerLevelRooted++;
       reasonCounts[reason]=(reasonCounts[reason]??0)+1;
+      const sub=detail.sourceSubreason??'NO_UNDERLYING_SUBREASON';
+      subreasonCounts[sub]=(subreasonCounts[sub]??0)+1;
       hash.update(JSON.stringify([fixture.id,seed,detail.error,reason])+'\n');
     }
   }
   const attempted=count*fixtureCount;
   if(accepted+rejected!==attempted||
-      Object.values(reasonCounts).reduce((n,x)=>n+x,0)!==rejected) {
+      Object.values(reasonCounts).reduce((n,x)=>n+x,0)!==rejected||
+      Object.values(subreasonCounts).reduce((n,x)=>n+x,0)!==rejected) {
     throw Error('INVALID_TAXONOMY_TOTALS');
   }
   return {
@@ -90,6 +93,8 @@ export function diagnoseBoundedRejects(){
     start,count,fixtureCount,attempted,accepted,rejected,
     rejectionFraction:rejected/attempted,
     lowerLevelRefereeFailuresClassified:lowerLevelRooted,
+    rejectionSubreasonCounts:Object.fromEntries(
+      Object.entries(subreasonCounts).sort(([a],[b])=>a<b?-1:a>b?1:0)),
     rejectionRootCounts:Object.fromEntries(
       Object.entries(reasonCounts).sort(([a],[b])=>a<b?-1:a>b?1:0)),
     deterministicSha256:hash.digest('hex'),

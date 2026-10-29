@@ -100,12 +100,25 @@ const clockStep=(time:number):boolean=>time>=M1_CLOCK_STEP_SECONDS&&
  *
  * Synthetic stopped-wall durations do not claim measured physical timings.
  */
+export type M1V23UnsupportedSubreason =
+  'FOUL_STOP_COUNT_OVER_18' | 'FOUL_STOP_INVALID_OR_DUPLICATE' |
+  'REFEREE_ACTION_TIME' | 'SUBSTITUTION_RULES' | 'UNKNOWN_ACTION_KIND' |
+  'UNORDERED_REFEREE_SUBSTITUTION' | 'GENERATED_FOUL_SOURCE_MISMATCH' |
+  'GOAL_RESTART_AND_FOUL_COLLISION';
+export interface M1V23SourceRejectionTrace {
+  subreason: M1V23UnsupportedSubreason | null;
+}
 export function simulateM1V23RefereeWithTreatment(
   prematch:unknown,policy:unknown,commands:unknown=[],
   medicalActions:unknown=[],goalPauseWallSeconds:unknown=0,
   halfTimeWallSeconds:unknown=900,foulStopSeconds:unknown=[],
   foulPauseWallSeconds:unknown=20,
+  trace?:M1V23SourceRejectionTrace,
 ):M1V23RefereeRun{
+  const unsupported=(subreason:M1V23UnsupportedSubreason):M1V23RefereeRun=>{
+    if(trace)trace.subreason=subreason;
+    return fail('UNSUPPORTED_COMMAND');
+  };
   if(!interval(goalPauseWallSeconds,120)||
       !interval(halfTimeWallSeconds,900)||
       !interval(foulPauseWallSeconds,120)||
@@ -115,10 +128,12 @@ export function simulateM1V23RefereeWithTreatment(
   const raw=clone(commands,1_000_000);
   const medical=clone(medicalActions,1_000_000);
   const authorized=clone(foulStopSeconds,1024);
-  if(!Array.isArray(authorized)||authorized.length>18||
-      authorized.some(x=>!clockStep(x as number))||
+  if(!Array.isArray(authorized)||authorized.length>18){
+    return unsupported('FOUL_STOP_COUNT_OVER_18');
+  }
+  if(authorized.some(x=>!clockStep(x as number))||
       new Set(authorized).size!==authorized.length){
-    return fail('UNSUPPORTED_COMMAND');
+    return unsupported('FOUL_STOP_INVALID_OR_DUPLICATE');
   }
   const foulTimes=new Set<number>(authorized as number[]);
   if(!record(input)||!record(input.fixture)||
@@ -135,18 +150,18 @@ export function simulateM1V23RefereeWithTreatment(
         action.elapsedSeconds<0||
         action.elapsedSeconds>=M1_CLOCK_END_SECONDS||
         action.elapsedSeconds%M1_CLOCK_STEP_SECONDS!==0){
-      return fail('UNSUPPORTED_COMMAND');
+      return unsupported('REFEREE_ACTION_TIME');
     }
     if(action.kind==='substitute-normal'){
       if(!clockStep(action.elapsedSeconds)||
           (action.elapsedSeconds===2700?
             action.stoppage!=='half-time':
             action.stoppage!=='referee-authorized')){
-        return fail('UNSUPPORTED_COMMAND');
+        return unsupported('SUBSTITUTION_RULES');
       }
     }else if(action.kind!=='caution'&&action.kind!=='direct-red'&&
         action.kind!=='injury-withdrawal'){
-      return fail('UNSUPPORTED_COMMAND');
+      return unsupported('UNKNOWN_ACTION_KIND');
     }
   }
   if(raw.some(x=>record(x)&&x.kind==='substitute-normal'&&
@@ -209,7 +224,7 @@ export function simulateM1V23RefereeWithTreatment(
     e.type==='availability'&&e.source.entry.action.kind!=='substitute-normal')
     .map(e=>e.elapsedSeconds));
   if([...changes.keys()].some(t=>refereeTimes.has(t)&&!foulTimes.has(t))){
-    return fail('UNSUPPORTED_COMMAND');
+    return unsupported('UNORDERED_REFEREE_SUBSTITUTION');
   }
   const generatedFouls=available.filter(e=>
     e.type==='availability'&&
@@ -217,7 +232,7 @@ export function simulateM1V23RefereeWithTreatment(
      e.source.entry.action.kind==='direct-red'));
   if(generatedFouls.length!==foulTimes.size||
       generatedFouls.some(e=>!foulTimes.has(e.elapsedSeconds))){
-    return fail('UNSUPPORTED_COMMAND');
+    return unsupported('GENERATED_FOUL_SOURCE_MISMATCH');
   }
   const foulOffendingTeam=new Map<number,string>(
     generatedFouls.map(e=>[e.elapsedSeconds,e.source.entry.action.teamId]));
@@ -228,7 +243,7 @@ export function simulateM1V23RefereeWithTreatment(
     .map(e=>e.elapsedSeconds+1));
   // A goal restart and a synthetic foul may not both be claimed at
   // exactly the same running second without subsecond source evidence.
-  if([...foulTimes].some(t=>goalRestarts.has(t)))return fail('UNSUPPORTED_COMMAND');
+  if([...foulTimes].some(t=>goalRestarts.has(t)))return unsupported('GOAL_RESTART_AND_FOUL_COLLISION');
   for(const [time,group] of changes){
     if(time!==2700&&!goalRestarts.has(time)&&!foulTimes.has(time)){
       return fail('MISSING_INTERNAL_STOPPAGE');

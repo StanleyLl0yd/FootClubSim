@@ -194,6 +194,35 @@ def exercise_journal_cas(session: str, schema: int):
     raise AssertionError(f"Safari v{schema} CAS timed out, last page state: {last!r}")
 
 
+def exercise_interactive_career(session: str):
+    """Exercise a real user-action pipeline with persisted M1 source replay."""
+    url = "http://127.0.0.1:5173/examples/m1-v80-interactive-career.html?selftest=init"
+    wd(session, "url", {"url": url})
+    deadline = time.monotonic() + 120
+    navigation_deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        value = run_script(session, """
+            return {path: location.pathname,
+                    stage: new URL(location.href).searchParams.get('selftest'),
+                    status: document.querySelector('#status')?.textContent ?? ''};
+        """)
+        if not isinstance(value, dict):
+            raise AssertionError(f"Safari v80 invalid UI response: {value!r}")
+        if value.get("path") != "/examples/m1-v80-interactive-career.html":
+            if time.monotonic() > navigation_deadline:
+                raise AssertionError(f"Safari v80 UI navigation failed: {value!r}")
+            time.sleep(0.4)
+            continue
+        status = value.get("status")
+        if status == "M1_V80_BROWSER_INTERACTIVE_PASS" and value.get("stage") == "verify":
+            print("PASS: real Safari v80 interactive M1 fixture and source journal reload")
+            return
+        if isinstance(status, str) and "M1_V80_BROWSER_INTERACTIVE_FAIL" in status:
+            raise AssertionError(f"Safari v80 UI fixture failed: {value!r}")
+        time.sleep(0.4)
+    raise AssertionError("Safari v80 interactive fixture timed out")
+
+
 def exercise_journal_cas_group(session: str):
     """Keep one Vite process for all CAS fixtures to avoid port-reuse races."""
     log_path = "/tmp/footclubsim-m1-safari-cas.log"
@@ -221,6 +250,7 @@ def exercise_journal_cas_group(session: str):
                     raise RuntimeError(f"Safari v{schema} Vite dev server unavailable")
             for schema in (7, 8, 26, 32, 78):
                 exercise_journal_cas(session, schema)
+            exercise_interactive_career(session)
         except Exception:
             log.flush()
             print(f"---- {log_path} ----", file=sys.stderr)

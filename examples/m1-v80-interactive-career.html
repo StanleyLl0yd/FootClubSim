@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>FootClubSim M1 - безопасная игровая карьера</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+      background:#101923;color:#f0f5f7;color-scheme:dark}
+    body{max-width:860px;margin:0 auto;padding:24px}
+    h1{font-size:clamp(1.6rem,4vw,2.3rem);margin:.4rem 0}
+    h2{font-size:1.15rem}
+    .muted{color:#a8b9c6;line-height:1.5}
+    .eyebrow{color:#5dc9b3;text-transform:uppercase;font-size:.75rem;
+      font-weight:700;letter-spacing:.15em}
+    .panel{border:1px solid #384b59;background:#1b2834;
+      border-radius:16px;padding:22px;margin:20px 0}
+    .actions{display:flex;flex-wrap:wrap;gap:10px}
+    button{background:#55c5af;color:#0e2428;border:0;border-radius:9px;
+      padding:12px 18px;font:inherit;font-weight:700;cursor:pointer}
+    button:hover:not(:disabled){background:#76e7d1}
+    button:disabled{cursor:not-allowed;opacity:.42}
+    .secondary{background:#394e5a;color:#fff}
+    .secondary:hover:not(:disabled){background:#4b6270}
+    .metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .metric{background:#233644;border-radius:12px;padding:16px}
+    .metric strong{display:block;font-size:1.6rem}
+    .metric span{font-size:.85rem;color:#acc1cc}
+    #status{white-space:pre-wrap;overflow-wrap:anywhere;
+      border-left:3px solid #58c9b1;padding:10px 15px;background:#223542}
+    .result{padding:12px;border:1px solid #435a68;border-radius:10px}
+    @media(max-width:540px){.metrics{grid-template-columns:1fr}
+      body{padding:14px}}
+  </style>
+</head>
+<body>
+  <p class="eyebrow">Изолированный интерактивный прототип M1</p>
+  <h1>Лига приколов - карьера</h1>
+  <p class="muted">Первый игровой путь: матч моделируется и сохраняется
+    исключительно через проверку медицинских и дисциплинарных ограничений,
+    затем через атомарную IndexedDB CAS-транзакцию. M0 не перезаписывается.</p>
+  <section class="panel" aria-label="Управление карьерой">
+    <div class="actions">
+      <button id="open">Создать или открыть карьеру</button>
+      <button id="play" disabled>Сыграть следующий матч</button>
+      <button id="reload" class="secondary" disabled>Обновить журнал</button>
+    </div>
+    <p class="muted">Составы пока стандартные. Если игрок находится под
+      медицинским ограничением или дисквалификацией, запись будет запрещена,
+      а история останется неизменной. Подтверждённого лечения нет.</p>
+    <p id="status" role="status" aria-live="polite">Карьера ещё не открыта.</p>
+  </section>
+  <section class="panel" aria-label="Состояние">
+    <div class="metrics">
+      <div class="metric"><strong id="revision">-</strong><span>Ревизия</span></div>
+      <div class="metric"><strong id="played">-</strong><span>Сыграно матчей</span></div>
+      <div class="metric"><strong id="next">-</strong><span>Следующий матч</span></div>
+    </div>
+    <h2>Последний результат</h2>
+    <p id="result" class="result">Пока нет результатов.</p>
+  </section>
+  <script type="module">
+    import {createSyntheticRplScaleCatalog,defaultSyntheticLineup}
+      from '../dist/core/synthetic.js';
+    import {createInitialCareer} from '../dist/core/save.js';
+    import {saveNewInitialCareer,loadInitialCareer}
+      from '../dist/browser/initial-career-store.js';
+    import {createM1V32PersistedJournal,loadM1V32PersistedJournal,
+      commitM1V76PersistedMedicallyGatedFixture}
+      from '../dist/browser/m1-v32-journal-store.js';
+    import {deriveM1V31CausalPhysicalExposure}
+      from '../dist/core/m1-v24-physical-exposure.js';
+    import {generateDoubleRoundRobin} from '../dist/core/fixtures.js';
+    import {MATCH_LEDGER_VERSION,M0_RULES_PACK_ID,M0_RULES_PACK_VERSION}
+      from '../dist/core/match-contracts.js';
+    import {M1_ENGINE_VERSION} from '../dist/core/m1-clock.js';
+    import {defaultTacticalPlan} from '../dist/core/tactics.js';
+    import {RNG_VERSION} from '../dist/core/rng.js';
+
+    const careerId='m1-v80-interactive-career';
+    const catalog=createSyntheticRplScaleCatalog(77);
+    const clubs=new Map(catalog.clubs.map(c=>[c.id,c]));
+    const fixtures=generateDoubleRoundRobin(catalog.clubs.map(c=>c.id))
+      .flatMap(r=>r.fixtures);
+    const policy={home:{assignedActor:{kind:'player'},availableStaffIds:[]},
+      away:{assignedActor:{kind:'player'},availableStaffIds:[]}};
+    const node=id=>document.getElementById(id);
+    let busy=false,opened=false,canPlay=false;
+    const message=text=>{node('status').textContent=text;};
+    const isMissing=e=>e?.code==='NOT_FOUND';
+    function controls(){
+      node('open').disabled=busy;
+      node('play').disabled=busy||!opened||!canPlay;
+      node('reload').disabled=busy||!opened;
+    }
+    async function snapshot(){
+      const initial=await loadInitialCareer(careerId);
+      if(initial.careerId!==careerId||
+          initial.basePackId!==catalog.packId||
+          initial.basePackVersion!==catalog.packVersion){
+        throw Error('Начальная карьера отличается от выбранной тестовой базы');
+      }
+      const journal=await loadM1V32PersistedJournal(careerId);
+      const used=new Set(journal.results.map(r=>r.fixtureId));
+      const fixture=fixtures.find(f=>!used.has(f.id));
+      node('revision').textContent=String(journal.revision);
+      node('played').textContent=String(journal.results.length);
+      node('next').textContent=fixture?
+        fixture.homeClubId+' / '+fixture.awayClubId:'Сезон завершён';
+      const last=journal.results.at(-1);
+      if(last){
+        node('result').textContent=last.fixtureId+': '+
+          last.facts.score.home+' : '+last.facts.score.away;
+      }
+      canPlay=Boolean(fixture);
+      controls();
+      return {journal,fixture};
+    }
+    async function openCareer(){
+      busy=true;controls();
+      try{
+        let initial;
+        try{initial=await loadInitialCareer(careerId);}
+        catch(error){
+          if(!isMissing(error))throw error;
+          initial=createInitialCareer(catalog,catalog.clubs[0].id,42,careerId);
+          try{await saveNewInitialCareer(initial);}
+          catch(e){if(e?.code!=='ALREADY_EXISTS')throw e;}
+          initial=await loadInitialCareer(careerId);
+        }
+        if(initial.basePackId!==catalog.packId||
+            initial.basePackVersion!==catalog.packVersion)
+          throw Error('Несовместимая сохранённая карьера');
+        try{await loadM1V32PersistedJournal(careerId);}
+        catch(error){
+          if(!isMissing(error))throw error;
+          try{await createM1V32PersistedJournal(careerId);}
+          catch(e){if(e?.code!=='ALREADY_EXISTS')throw e;}
+        }
+        opened=true;
+        message('Карьера открыта. Запись только через защищённый M1 v76.');
+        await snapshot();
+      }catch(error){
+        opened=false;
+        message('Открытие запрещено: '+String(error?.message??error));
+        throw error;
+      }finally{busy=false;controls();}
+    }
+    async function fixtureSeed(fixtureId){
+      const source=new TextEncoder().encode(
+        'FootClubSim-M1-v80-experimental-fixture-seed:'+careerId+':'+fixtureId);
+      const digest=await crypto.subtle.digest('SHA-256',source);
+      return new DataView(digest).getUint32(0,false)||1;
+    }
+    async function playNext(){
+      if(!opened||busy)return;
+      busy=true;controls();
+      try{
+        const {journal,fixture}=await snapshot();
+        if(!fixture){message('Все матчи тестового сезона уже записаны.');return;}
+        const prematch={
+          schemaVersion:MATCH_LEDGER_VERSION,engineVersion:M1_ENGINE_VERSION,
+          rulesPackId:M0_RULES_PACK_ID,rulesPackVersion:M0_RULES_PACK_VERSION,
+          fixture,catalog,
+          homeLineup:defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+          awayLineup:defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+          homeTactics:defaultTacticalPlan(fixture.homeClubId),
+          awayTactics:defaultTacticalPlan(fixture.awayClubId),
+          rosterRules:{starterCount:11,maxBench:12,maxForeignersOnField:7},
+          rngAlgorithmVersion:RNG_VERSION,
+          rngSeed:await fixtureSeed(fixture.id),
+        };
+        const result=deriveM1V31CausalPhysicalExposure(prematch,policy,[],[]);
+        if(!result.ok)throw Error('SOURCE_MATCH_REJECTED: '+result.error);
+        const request={
+          schemaVersion:6,commandId:'m1-v80-'+fixture.id,
+          careerId,expectedRevision:journal.revision,
+          prematch,policy,halfTimeCommands:[],inPlayCommands:[],result,
+        };
+        const saved=await commitM1V76PersistedMedicallyGatedFixture(
+          careerId,journal.revision,request);
+        message('Матч '+fixture.id+' сохранён. Ревизия '+saved.revision+'.');
+        await snapshot();
+      }catch(error){
+        message('Матч отклонён без записи: '+
+          String(error?.code??error?.message??error)+
+          (error?.gateError?' / '+error.gateError:''));
+      }finally{busy=false;controls();}
+    }
+    let opening=null,playing=null;
+    node('open').addEventListener('click',()=>{
+      opening=openCareer();void opening.catch(()=>{});
+    });
+    node('play').addEventListener('click',()=>{
+      playing=playNext();void playing.catch(()=>{});
+    });
+    node('reload').addEventListener('click',()=>{void snapshot().then(()=>
+      message('Журнал повторно загружен с полной проверкой source replay.'))
+      .catch(e=>message('Проверка запрещена: '+String(e?.message??e)));});
+    const selftest=new URL(location.href).searchParams.get('selftest');
+    if(selftest==='init'){
+      (async()=>{
+        node('open').click();
+        if(!opening)throw Error('Open button handler not wired');
+        await opening;
+        node('play').click();
+        if(!playing)throw Error('Play button handler not wired');
+        await playing;
+        const value=await loadM1V32PersistedJournal(careerId);
+        if(value.revision!==1||value.results.length!==1)
+          throw Error('Первый пользовательский матч не сохранён');
+        const next=new URL(location.href);
+        next.searchParams.set('selftest','verify');
+        location.replace(next.href);
+      })().catch(error=>message('M1_V80_BROWSER_INTERACTIVE_FAIL: '+String(error)));
+    }else if(selftest==='verify'){
+      (async()=>{
+        node('open').click();
+        if(!opening)throw Error('Restore button handler not wired');
+        await opening;
+        const value=await loadM1V32PersistedJournal(careerId);
+        if(value.revision!==1||value.results.length!==1||
+            value.results[0].commandId!=='m1-v80-'+fixtures[0].id)
+          throw Error('Журнал после перезагрузки не совпал');
+        const initial=await loadInitialCareer(careerId);
+        if(initial.careerId!==careerId||initial.revision!==0)
+          throw Error('Перезаписан исходный M0');
+        message('M1_V80_BROWSER_INTERACTIVE_PASS');
+      })().catch(error=>message('M1_V80_BROWSER_INTERACTIVE_FAIL: '+String(error)));
+    }
+  </script>
+</body>
+</html>

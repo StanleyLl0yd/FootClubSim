@@ -12,7 +12,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const executable = process.argv[2];
 const url = process.argv[3] ?? 'http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html';
 const marker = process.argv[4] ?? 'M1_V7_BROWSER_CAS';
-if (!/^(?:M1_V(?:7|8|26|32|78)_BROWSER_CAS|M1_V36_BROWSER_PROFILE|M1_V40_BROWSER_RECOVERY|M1_V43_BROWSER_WORKER|M1_V47_BROWSER_UNKNOWN|M1_V46_BROWSER_READ)$/.test(marker)) {
+if (!/^(?:M1_V(?:7|8|26|32|78)_BROWSER_CAS|M1_V80_BROWSER_INTERACTIVE|M1_V36_BROWSER_PROFILE|M1_V40_BROWSER_RECOVERY|M1_V43_BROWSER_WORKER|M1_V47_BROWSER_UNKNOWN|M1_V46_BROWSER_READ)$/.test(marker)) {
   throw new Error('Unsupported browser CAS status marker');
 }
 if (!executable) {

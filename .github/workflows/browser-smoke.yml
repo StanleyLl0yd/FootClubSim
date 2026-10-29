@@ -109,6 +109,8 @@ jobs:
             http://127.0.0.1:5173/examples/m1-v32-cas-smoke.html M1_V32_BROWSER_CAS
           node scripts/m1-v7-cdp-smoke.mjs "$browser" \
             http://127.0.0.1:5173/examples/m1-v78-cas-smoke.html M1_V78_BROWSER_CAS
+          node scripts/m1-v7-cdp-smoke.mjs "$browser" \
+            'http://127.0.0.1:5173/examples/m1-v80-interactive-career.html?selftest=init' M1_V80_BROWSER_INTERACTIVE
           echo 'Real Chromium persisted v32 schema-6 causal medical journal and serialized CAS'
           echo 'Real Chromium persisted v26 schema-5 physical-exposure journal and serialized CAS'
           echo 'Real Chromium persisted v8 special-goal and medical dossier over navigation'
@@ -201,6 +203,9 @@ jobs:
               node scripts/m1-v7-cdp-smoke.mjs "$executable" 'http://127.0.0.1:5173/examples/m1-v78-cas-smoke.html' 'M1_V78_BROWSER_CAS'
               if ($LASTEXITCODE -ne 0) { throw "$browserName native v78 medical admission CAS failed with code $LASTEXITCODE" }
               Write-Host "PASS: native Windows $browserName v78 medical admission, reload and competing CAS writes"
+              node scripts/m1-v7-cdp-smoke.mjs "$executable" 'http://127.0.0.1:5173/examples/m1-v80-interactive-career.html?selftest=init' 'M1_V80_BROWSER_INTERACTIVE'
+              if ($LASTEXITCODE -ne 0) { throw "$browserName native v80 interactive match UI failed with code $LASTEXITCODE" }
+              Write-Host "PASS: native Windows $browserName v80 interactive match saved and replayed after navigation"
             } finally {
               Stop-Process -Id $casServer.Id -Force -ErrorAction SilentlyContinue
             }

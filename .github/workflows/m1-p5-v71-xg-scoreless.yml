@@ -1,0 +1,78 @@
+name: M1 P5 v71 xG and scoreless strata
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-v71-xg-scoreless-strata.mjs'
+      - 'tests/m1-p5-v71-xg-scoreless-strata.test.mjs'
+      - 'docs/M1_P5_V71_XG_SCORELESS_STRATA.md'
+      - '.github/workflows/m1-p5-v71-xg-scoreless.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-source-xg-strata:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v71-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Build and test the strata contract
+        run: |
+          npm ci --ignore-scripts
+          npm run build:core
+          node --test tests/m1-p5-v71-xg-scoreless-strata.test.mjs
+      - name: Measure same v68 256-case source cohort without tuning
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import {appendFileSync} from 'node:fs';
+          import {collectM1V71SourceXgStrata as collect}
+            from './scripts/m1-p5-v71-xg-scoreless-strata.mjs';
+          const x=collect({firstfixture:1,fixtures:8,start:1,count:32});
+          if(x.schemaVersion!==1||
+              x.status!=='SOURCE_XG_STRATA_NOT_CAUSAL_CALIBRATION'||
+              x.attempted!==256||x.accepted!==256||x.rejected!==0||
+              x.shots!==1972||x.goals!==303||
+              x.xgMilli<20*x.shots||x.xgMilli>600*x.shots||
+              x.xgBands.reduce((a,b)=>a+b.matches,0)!==256||
+              x.shotBands.reduce((a,b)=>a+b.matches,0)!==256||
+              x.xgBands.reduce((a,b)=>a+b.scoreless,0)!==x.scoreless||
+              x.shotBands.reduce((a,b)=>a+b.scoreless,0)!==x.scoreless||
+              x.xgBands.reduce((a,b)=>a+b.shots,0)!==x.shots||
+              x.shotBands.reduce((a,b)=>a+b.goals,0)!==x.goals||
+              x.independentExternalRplXgAvailable!==false||
+              x.internalXgOnly!==true||x.modelNotTuned!==true||
+              x.holdout2024_25Used!==false||
+              !/^[0-9a-f]{64}$/.test(x.sourceSha256)){
+            throw Error('SOURCE_XG_STRATA_REPLAY_OR_CONSERVATION_FAILED');
+          }
+          const lines=[
+            '# P5 v71 internally sourced xG vs scoreless, 256-game subset',
+            '',
+            '- Attempted: '+x.attempted,
+            '- Accepted: '+x.accepted,
+            '- Rejected: '+x.rejected,
+            '- Source shots: '+x.shots,
+            '- Open-play goals: '+x.goals,
+            '- Internal model xG: '+x.xgMilli/1000,
+            '- Scoreless with shot events: '+x.scoreless,
+            '- By internal total match xG: '+JSON.stringify(x.xgBands),
+            '- By source shot events: '+JSON.stringify(x.shotBands),
+            '- Source observation SHA-256: '+x.sourceSha256,
+            '- Descriptive and clustered ONLY, no external xG calibration',
+            '- No model tuning, no 2024/25 holdout',
+          ];
+          const result=lines.join('\n')+'\n';
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,result);
+          process.stdout.write(result);
+          NODE

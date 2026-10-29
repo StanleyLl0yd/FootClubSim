@@ -2,6 +2,7 @@ import {argv} from 'node:process';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
+import {isDeepStrictEqual} from 'node:util';
 import {simulateM1V104JointCandidate}
   from '../dist/core/m1-v104-joint-candidate.js';
 import {simulateM1V99IntraphaseShots}
@@ -77,9 +78,8 @@ export function runM1V104JointShard(group){
           const original=simulateM1V99IntraphaseShots(input,policy);
           if(!original.ok||
               original.rngState!==run.rngState||
-              JSON.stringify(original.report)!==JSON.stringify(run.report)||
-              JSON.stringify(shotDetails(original))!==
-                JSON.stringify(shotDetails(run)))
+              !isDeepStrictEqual(original.report,run.report)||
+              !isDeepStrictEqual(shotDetails(original),shotDetails(run)))
             throw Error('V104_BASELINE_V99_REPLAY_PARITY');
         }
         const shots=run.events.filter(e=>e.type==='shot');

@@ -207,7 +207,8 @@ export function simulateM1V103IntraphaseMedical(
   }
   for(let phase=0;phase<M1_CLOCK_MAX_EVENTS;phase++){
     const second=phase*M1_CLOCK_STEP_SECONDS;
-    if(transitions[sourceIndex]?.elapsedSeconds<second)
+    if(sourceIndex<transitions.length&&
+        transitions[sourceIndex]!.elapsedSeconds<second)
       return {ok:false,error:'PHYSICAL_SOURCE_CONFLICT'};
     while(transitions[sourceIndex]?.elapsedSeconds===second){
       if(!applySource(transitions[sourceIndex]!))
@@ -216,7 +217,8 @@ export function simulateM1V103IntraphaseMedical(
     }
     for(let slot=0;slot<M1_V99_SLOTS_PER_CHECKPOINT;slot++){
       const shotSecond=second+(slot+1)*M1_V99_SECONDS_PER_SLOT-1;
-      while(actions[medicalIndex]?.elapsedSeconds<=shotSecond){
+      while(medicalIndex<actions.length&&
+          actions[medicalIndex]!.elapsedSeconds<=shotSecond){
         if(!applyIntraphase(actions[medicalIndex]!))
           return {ok:false,error:'INVALID_RETURN'};
         medicalIndex++;

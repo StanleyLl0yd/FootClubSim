@@ -1,5 +1,6 @@
 import {isPlainJsonTree} from './plain-json-tree.js';
-import {validateLineup} from './validation.js';
+import {selectM1V96EligibleRegisteredLineup}
+  from './m1-v96-cap-safe-lineup.js';
 import {deriveM1V82SourceBoundAvailableLineups}
   from './m1-v82-source-bound-eligible-lineup.js';
 import {admitM1V56ModelledAutomaticDiscipline,
@@ -37,20 +38,10 @@ function validRegisteredLineup(
   club:Club,players:ReadonlyMap<string,Player>,
   medical:ReadonlySet<string>,banned:ReadonlySet<string>,
 ):MatchLineup|null {
-  // v82 lists up to twelve bench players. When a later v56 ban removes
-  // someone, do not lose other eligible players registered beyond that
-  // initial bench window. Both exclusions come from fully replayed gates.
-  const eligible=club.registeredPlayerIds.filter(id=>
-    !medical.has(id)&&!banned.has(id));
-  const goalkeeper=eligible.find(id=>players.get(id)?.primaryPosition==='GK');
-  if(!goalkeeper)return null;
-  const field=eligible.filter(id=>players.get(id)?.primaryPosition!=='GK');
-  const starters=[goalkeeper,...field.slice(0,10)];
-  if(starters.length!==11)return null;
-  const chosen=new Set(starters);
-  const result:MatchLineup={clubId:club.id,starters,
-    bench:eligible.filter(id=>!chosen.has(id)).slice(0,12)};
-  return validateLineup(result,club,players,RULES).length===0?result:null;
+  // Medical holds and verified automatic bans are separate source-replayed
+  // exclusions, both respected by the common cap-aware full roster picker.
+  return selectM1V96EligibleRegisteredLineup(club,players,
+    new Set([...medical,...banned]),RULES);
 }
 
 export function proposeM1V84MedicallyAndAutomaticallyEligibleLineups(

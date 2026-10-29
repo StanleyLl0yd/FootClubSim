@@ -1,0 +1,57 @@
+name: M1 P5 v100 versioned intraphase source cohort
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-v100-intraphase-shard.mjs'
+      - 'tests/m1-p5-v100-intraphase-shard.test.mjs'
+      - 'docs/M1_P5_V100_VERSIONED_INTRAPHASE_COHORT.md'
+      - '.github/workflows/m1-p5-v100-intraphase.yml'
+      - 'src/core/m1-v99-intraphase-shots.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  versioned-source:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v100-')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture_group: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - name: Exact source checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Build locked core
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build:core
+      - name: Versioned source event replay and aggregate checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ${{ matrix.fixture_group }} == 0 ]]; then
+            node --test tests/m1-p5-v100-intraphase-shard.test.mjs
+          fi
+          node scripts/m1-p5-v100-intraphase-shard.mjs ${{ matrix.fixture_group }} | tee v100-shard.txt
+          if [[ ${{ matrix.fixture_group }} == 0 ]]; then
+            node scripts/m1-p5-v100-intraphase-shard.mjs 0 > v100-repeat.txt
+            node --input-type=module -e "
+              import {readFileSync} from 'node:fs';
+              const read=p=>JSON.parse(readFileSync(p,'utf8').replace(/^V100_SHARD_RESULT=/,''));
+              const a=read('v100-shard.txt'),b=read('v100-repeat.txt');
+              delete a.runtimeObservation;delete b.runtimeObservation;
+              if(JSON.stringify(a)!==JSON.stringify(b))
+                throw Error('V100_DETERMINISM_DRIFT');
+            "
+          fi
+          cat v100-shard.txt >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,79 @@
+name: M1 P5 v73 seed coverage sensitivity
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-v73-seed-coverage.mjs'
+      - 'tests/m1-p5-v73-seed-coverage.test.mjs'
+      - 'docs/M1_P5_V73_LOW_SEED_COVERAGE.md'
+      - '.github/workflows/m1-p5-v73-seed-coverage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-seed-sensitivity:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v73-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Build and validate seed-mapping invariants
+        run: |
+          npm ci --ignore-scripts
+          npm run build:core
+          node --test tests/m1-p5-v73-seed-coverage.test.mjs
+      - name: Measure same 256 fixtures with original versus mapped seeds
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import {appendFileSync} from 'node:fs';
+          import {compareM1V73SeedCoverage as inspect}
+            from './scripts/m1-p5-v73-seed-coverage.mjs';
+          const x=inspect({firstfixture:1,fixtures:8,start:1,count:32});
+          if(x.schemaVersion!==1||
+              x.status!=='RNG_SEED_REUSE_SENSITIVITY_NOT_REALISM_CALIBRATION'||
+              x.attempted!==256||x.original.accepted!==256||
+              x.original.rejected!==0||x.original.shots!==1972||
+              x.original.goals!==303||x.original.xgMilli!==355386||
+              x.lowFirstDraw.count!==32||
+              x.lowFirstDraw.belowOneHundredth!==32||
+              x.mappedFirstDraw.count!==32||
+              x.mappedFirstDraw.belowHalf!==16||
+              x.mappedFirstDraw.min<=0||x.mappedFirstDraw.max>=1||
+              x.mapped.accepted+x.mapped.rejected!==256||
+              x.mapped.accepted<1||x.mapped.goals>x.mapped.shots||
+              x.mapped.xgMilli<20*x.mapped.shots||
+              x.mapped.xgMilli>600*x.mapped.shots||
+              x.engineAndMatchRngUnmodified!==true||
+              x.mappedSeedsAreDifferentCounterfactualRuns!==true||
+              x.independentFootballReferenceAvailable!==false||
+              x.modelNotTuned!==true||x.holdout2024_25Used!==false||
+              !/^[0-9a-f]{64}$/.test(x.mapped.sourceSha256)){
+            throw Error('SOURCE_SEED_SENSITIVITY_REPLAY_INVARIANT_FAILED');
+          }
+          const lines=[
+            '# P5 v73 same synthetic fixtures, alternate seed coverage',
+            '',
+            '- Attempted per cohort: '+x.attempted,
+            '- Original low-index first possession draws: '+JSON.stringify(x.lowFirstDraw),
+            '- SHA-256 mapped-seed first possession draws: '+JSON.stringify(x.mappedFirstDraw),
+            '- Original low-seed full replay: '+JSON.stringify(x.original),
+            '- Mapped-seed full replay: '+JSON.stringify(x.mapped),
+            '- No independent real RPL xG/shot reference',
+            '- Not a paired shot/RNG-stream causal comparison',
+            '- Synthetic fixtures and seed clusters are dependent',
+            '- No match RNG, tuning, save format or 2024/25 holdout changes',
+          ];
+          const txt=lines.join('\n')+'\n';
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,txt);
+          process.stdout.write(txt);
+          NODE

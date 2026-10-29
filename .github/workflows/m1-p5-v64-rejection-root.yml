@@ -3,9 +3,11 @@ on:
   pull_request:
     paths:
       - 'src/core/m1-v23-temporary-treatment.ts'
+      - 'src/core/m1-v23-referee-treatment-source.ts'
       - 'scripts/m1-p5-v64-rejection-taxonomy.mjs'
       - 'tests/m1-p5-v64-rejection-taxonomy.test.mjs'
       - 'docs/M1_P5_V64_REJECTION_CAUSE_DIAGNOSTICS.md'
+      - 'docs/M1_P5_V65_REJECTION_SUBREASON.md'
       - '.github/workflows/m1-p5-v64-rejection-root.yml'
   workflow_dispatch:
 
@@ -14,7 +16,7 @@ permissions:
 
 jobs:
   source-rejection-root-corpus:
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v64-')
+    if: github.event_name == 'workflow_dispatch' || (startsWith(github.head_ref, 'm1/p5-v64-') || startsWith(github.head_ref, 'm1/p5-v65-'))
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -43,6 +45,8 @@ jobs:
               x.accepted+x.rejected!==256||
               Object.values(x.rejectionRootCounts).reduce((a,b)=>a+b,0)!==
                 x.rejected||
+              Object.values(x.rejectionSubreasonCounts).reduce((a,b)=>a+b,0)!==
+                x.rejected||
               !/^[a-f0-9]{64}$/.test(x.deterministicSha256)||
               x.calibrationAccepted!==false||
               x.real2024_25HoldoutUsed!==false||
@@ -60,6 +64,9 @@ jobs:
               x.lowerLevelRefereeFailuresClassified,
             '- Root categories:',
             ...Object.entries(x.rejectionRootCounts).map(
+              ([key,count])=>'  - '+key+': '+count),
+            '- Distinct UNSUPPORTED_COMMAND subreasons:',
+            ...Object.entries(x.rejectionSubreasonCounts).map(
               ([key,count])=>'  - '+key+': '+count),
             '- SHA-256: '+x.deterministicSha256,
             '- Production simulation outputs: UNCHANGED',

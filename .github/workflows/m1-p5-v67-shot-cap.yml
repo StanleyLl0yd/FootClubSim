@@ -1,0 +1,77 @@
+name: M1 P5 v67 observed shot capacity
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-v29-causal-corpus.mjs'
+      - 'tests/m1-v29-causal-corpus.test.mjs'
+      - 'docs/M1_P5_V67_SHOT_STRUCTURE.md'
+      - '.github/workflows/m1-p5-v67-shot-cap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-shot-structure:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v67-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Build
+        run: |
+          npm ci --ignore-scripts
+          npm run build:core
+      - name: Reproduce bounded modelled shot structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/m1-v29-causal-corpus.mjs \
+            --start=1 --count=32 --fixtures=8 > v67-result.json
+          node --input-type=module <<'NODE'
+          import {readFileSync,appendFileSync} from 'node:fs';
+          const x=JSON.parse(readFileSync('v67-result.json','utf8'));
+          const s=x.p5Observation.shotStructure;
+          if(x.totalCases!==256||x.accepted<=0||
+              x.accepted+x.rejected!==256||
+              s.schemaVersion!==1||s.virtualPhasesPerMatch!==18||
+              s.theoreticalShotEventsCapPerMatch!==18||
+              s.oneShotEventPerPhaseVerified!==true||
+              s.observedMinimumShotsPerAcceptedMatch<0||
+              s.observedMaximumShotsPerAcceptedMatch>18||
+              s.modelShotsPerAcceptedMatch!==
+                x.p5Observation.perAcceptedMatch.shots.mean||
+              s.realRplShotReferenceAvailable!==false||
+              x.injuryOccurrenceCalibrated!==false){
+            throw Error('SOURCE_SHOT_CEILING_INVARIANT');
+          }
+          const lines=[
+            '# M1 P5 v67 source-derived shot capacity observation',
+            '',
+            '- Attempted model games: '+x.totalCases,
+            '- Source replay accepted: '+x.accepted,
+            '- Rejected, not counted as 0-shot: '+x.rejected,
+            '- Virtual phases: '+s.virtualPhasesPerMatch,
+            '- Theoretical total shots per accepted game: 0..18',
+            '- Actual min shots: '+s.observedMinimumShotsPerAcceptedMatch,
+            '- Actual max shots: '+s.observedMaximumShotsPerAcceptedMatch,
+            '- Source shotless games: '+s.observedShotlessAcceptedMatches,
+            '- Mean shots per accepted game: '+s.modelShotsPerAcceptedMatch,
+            '- Mean open-play goals per accepted game: '+
+              x.p5Observation.perAcceptedMatch.goals.mean,
+            '- Deterministic SHA-256: '+x.deterministicSha256,
+            '- No independently validated full RPL shot/xG baseline',
+            '- NO realism/calibration pass or medical diagnosis',
+          ];
+          const message=lines.join('\n')+'\n';
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,message);
+          process.stdout.write(message);
+          NODE
+          rm -f v67-result.json

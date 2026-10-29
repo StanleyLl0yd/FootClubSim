@@ -1,7 +1,8 @@
 import {sameCanonicalValue} from './canonical-value.js';
 import {generateDoubleRoundRobin} from './fixtures.js';
 import {isPlainJsonTree} from './plain-json-tree.js';
-import {validateLineup} from './validation.js';
+import {selectM1V96EligibleRegisteredLineup}
+  from './m1-v96-cap-safe-lineup.js';
 import {validateM1V32ExposureJournal} from './m1-v32-causal-medical-journal.js';
 import type {InitialCareerSave} from './save.js';
 import type {Catalog,Club,MatchLineup,Player} from './model.js';
@@ -49,22 +50,10 @@ const key=(team:string,player:string)=>JSON.stringify([team,player]);
 
 function registeredEligibleLineup(
   club:Club,players:ReadonlyMap<string,Player>,medical:ReadonlySet<string>,
-):MatchLineup|null{
-  const available=club.registeredPlayerIds.filter(id=>
-    !medical.has(key(club.id,id)));
-  const keeper=available.find(id=>players.get(id)?.primaryPosition==='GK');
-  if(!keeper)return null;
-  // Keep registration order, favor domestic and field players; never invent
-  // a player or silently name an unresolved modelled medical withdrawal.
-  const field=available.filter(id=>players.get(id)?.primaryPosition!=='GK');
-  const chosen=[keeper,...field.slice(0,10)];
-  if(chosen.length!==11)return null;
-  const selected=new Set(chosen);
-  const result:MatchLineup={
-    clubId:club.id,starters:chosen,
-    bench:available.filter(id=>!selected.has(id)).slice(0,RULES.maxBench),
-  };
-  return validateLineup(result,club,players,RULES).length===0?result:null;
+):MatchLineup|null {
+  const blocked=new Set(club.registeredPlayerIds.filter(id=>
+    medical.has(key(club.id,id))));
+  return selectM1V96EligibleRegisteredLineup(club,players,blocked,RULES);
 }
 
 export function deriveM1V82SourceBoundAvailableLineups(

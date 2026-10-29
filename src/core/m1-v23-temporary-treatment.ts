@@ -136,6 +136,9 @@ export function simulateM1V29CausalMedicalSource(
 type M1V29InternalRejectionTrace={
   sourceError:Extract<M1V23RefereeRun,{ok:false}>['error']|null;
   sourceSubreason:M1V23UnsupportedSubreason|null;
+  sourceShotXgMilli?:number;
+  sourceShotCount?:number;
+  sourceOpenPlayGoals?:number;
 };
 /**
  * Research-only diagnostic. The main v29 return schema and seeded engine
@@ -155,6 +158,47 @@ export function diagnoseM1V29SourceFailure(
     {ok:true,error:null,sourceError:null,sourceSubreason:null}:
     {ok:false,error:run.error,sourceError:trace.sourceError,
       sourceSubreason:trace.sourceSubreason};
+}
+/**
+ * Opt-in internal xG observation, extracted from the EXACT validated v8
+ * source used by a single v29 causal match. It never appears in v29 output.
+ * NOT independently observed xG, not real football shot data.
+ */
+export function inspectM1V29SourceOpenPlayXg(
+  prematch:unknown,policy:unknown,halfTimeCommands:unknown=[],
+  inPlayCommands:unknown=[],
+):Readonly<
+  {ok:false;error:M1V23CoachError|'SOURCE_MODEL_XG_INVARIANT_FAILED'} |
+  {ok:true;schemaVersion:1;status:'INTERNAL_V8_OPEN_PLAY_XG_NOT_CALIBRATED';
+    fixtureId:string;sourceShots:number;sourceOpenPlayGoals:number;
+    sourceOpenPlayXgMilli:number;fullSourceReplayVerified:true;
+    independentRealXgReferenceAvailable:false;modelNotTuned:true}
+>{
+  const trace:M1V29InternalRejectionTrace={
+    sourceError:null,sourceSubreason:null,
+  };
+  const run=simulateTreatmentCore(prematch,policy,
+    halfTimeCommands,inPlayCommands,true,trace);
+  if(!run.ok)return {ok:false,error:run.error};
+  const shots=run.match.events.filter(x=>x.kind==='shot').length;
+  const score=run.match.finalScore.home+run.match.finalScore.away;
+  if(!Number.isSafeInteger(trace.sourceShotXgMilli)||
+      (trace.sourceShotXgMilli as number)<0||
+      trace.sourceShotCount!==shots||
+      trace.sourceOpenPlayGoals!==score||
+      score>shots) {
+    return {ok:false,error:'SOURCE_MODEL_XG_INVARIANT_FAILED'};
+  }
+  return {
+    ok:true,schemaVersion:1,
+    status:'INTERNAL_V8_OPEN_PLAY_XG_NOT_CALIBRATED',
+    fixtureId:run.fixtureId,sourceShots:shots,
+    sourceOpenPlayGoals:score,
+    sourceOpenPlayXgMilli:trace.sourceShotXgMilli as number,
+    fullSourceReplayVerified:true,
+    independentRealXgReferenceAvailable:false,
+    modelNotTuned:true,
+  };
 }
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
@@ -448,7 +492,15 @@ function simulateTreatmentCore(
   const match = simulateM1V23RefereeWithTreatment(
     input, policy, commands, treatment, 0, 900, foulTimes, 20,sourceTrace,
   );
-  if(trace)trace.sourceSubreason=sourceTrace.subreason;
+  if(trace){
+    trace.sourceSubreason=sourceTrace.subreason;
+    if(sourceTrace.shotXgMilli!==undefined)
+      trace.sourceShotXgMilli=sourceTrace.shotXgMilli;
+    if(sourceTrace.shotCount!==undefined)
+      trace.sourceShotCount=sourceTrace.shotCount;
+    if(sourceTrace.openPlayGoals!==undefined)
+      trace.sourceOpenPlayGoals=sourceTrace.openPlayGoals;
+  }
   if (!match.ok) {
     if (trace) trace.sourceError=match.error;
     return fail('SOURCE_MATCH_REJECTED');

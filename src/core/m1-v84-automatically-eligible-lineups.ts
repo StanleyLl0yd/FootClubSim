@@ -1,5 +1,6 @@
 import {isPlainJsonTree} from './plain-json-tree.js';
-import {validateLineup} from './validation.js';
+import {selectM1V96EligibleRegisteredLineup}
+  from './m1-v96-cap-safe-lineup.js';
 import {deriveM1V82SourceBoundAvailableLineups}
   from './m1-v82-source-bound-eligible-lineup.js';
 import {admitM1V56ModelledAutomaticDiscipline,
@@ -34,21 +35,13 @@ const fail=(error:Extract<M1V84SafeLineupProposal,{ok:false}>['error'],
 const RULES={starterCount:11,maxBench:12,maxForeignersOnField:7} as const;
 type Denied=Extract<M1V56DisciplineGateRun,{ok:false}>;
 function validRegisteredLineup(
-  club:Club,allowed:MatchLineup,players:ReadonlyMap<string,Player>,
-  banned:ReadonlySet<string>,
+  club:Club,players:ReadonlyMap<string,Player>,
+  medical:ReadonlySet<string>,banned:ReadonlySet<string>,
 ):MatchLineup|null {
-  const registered=new Set(club.registeredPlayerIds);
-  const eligible=[...allowed.starters,...allowed.bench].filter(id=>
-    !banned.has(id)&&registered.has(id));
-  const goalkeeper=eligible.find(id=>players.get(id)?.primaryPosition==='GK');
-  if(!goalkeeper)return null;
-  const field=eligible.filter(id=>players.get(id)?.primaryPosition!=='GK');
-  const starters=[goalkeeper,...field.slice(0,10)];
-  if(starters.length!==11)return null;
-  const chosen=new Set(starters);
-  const result:MatchLineup={clubId:club.id,starters,
-    bench:eligible.filter(id=>!chosen.has(id)).slice(0,12)};
-  return validateLineup(result,club,players,RULES).length===0?result:null;
+  // Medical holds and verified automatic bans are separate source-replayed
+  // exclusions, both respected by the common cap-aware full roster picker.
+  return selectM1V96EligibleRegisteredLineup(club,players,
+    new Set([...medical,...banned]),RULES);
 }
 
 export function proposeM1V84MedicallyAndAutomaticallyEligibleLineups(
@@ -69,6 +62,11 @@ export function proposeM1V84MedicallyAndAutomaticallyEligibleLineups(
   const away=clubs.get(input.fixture.awayClubId);
   if(!home||!away)return fail('INVALID_INPUT');
   const removed={home:new Set<string>(),away:new Set<string>()};
+  const held={home:new Set<string>(),away:new Set<string>()};
+  for(const entry of medical.excludedMedicalPlayers){
+    if(entry.teamId===home.id)held.home.add(entry.playerId);
+    else if(entry.teamId===away.id)held.away.add(entry.playerId);
+  }
   let homeLineup=medical.homeLineup,awayLineup=medical.awayLineup;
   for(let attempt=0;attempt<=home.registeredPlayerIds.length+
     away.registeredPlayerIds.length;attempt++){
@@ -113,10 +111,10 @@ export function proposeM1V84MedicallyAndAutomaticallyEligibleLineups(
       if(!foundNew)return fail('DISCIPLINE_NOT_RESOLVABLE',
         'NO_BAN_PROGRESS',club.id);
     }
-    const newerHome=validRegisteredLineup(home,medical.homeLineup,
-      players,removed.home);
-    const newerAway=validRegisteredLineup(away,medical.awayLineup,
-      players,removed.away);
+    const newerHome=validRegisteredLineup(home,players,
+      held.home,removed.home);
+    const newerAway=validRegisteredLineup(away,players,
+      held.away,removed.away);
     if(!newerHome||!newerAway)
       return fail('NOT_ENOUGH_REGISTERED_PLAYERS',undefined,
         !newerHome?home.id:away.id);

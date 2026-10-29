@@ -3,7 +3,8 @@ import { m1Wilson95 } from '../dist/core/m1-diagnostics.js';
 import { argv } from 'node:process';
 import { simulateM1V29CausalMedical, verifyM1V29CausalMedical }
   from '../dist/core/m1-v29-causal-medical.js';
-import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
+import { M1_ENGINE_VERSION, M1_CLOCK_MAX_EVENTS,
+  M1_CLOCK_STEP_SECONDS } from '../dist/core/m1-clock.js';
 import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION }
   from '../dist/core/match-contracts.js';
 import { createSyntheticRplScaleCatalog, defaultSyntheticLineup }
@@ -63,6 +64,8 @@ export function runCorpus() {
   let accepted = 0, rejected = 0, quickAssessments = 0;
   let offFieldAssessments = 0, generatedFouls = 0;
   let totalGoals = 0, medicalExitEvents = 0, medicalReturnEvents = 0;
+  let minShotsPerMatch = Infinity, maxShotsPerMatch = 0;
+  let shotlessMatches = 0;
   // Rejected seeds are recorded separately, never treated as zero-valued games.
   const observed = {
     homeWins:0, draws:0, awayWins:0, scorelessDraws:0,
@@ -176,7 +179,16 @@ export function runCorpus() {
       medicalReturnEvents += returns.length;
       const {home:homeGoals,away:awayGoals} = match.finalScore;
       const goals = homeGoals + awayGoals;
-      const shots = match.events.filter(e => e.kind === 'shot').length;
+      const shotEvents = match.events.filter(e => e.kind === 'shot');
+      const shots = shotEvents.length;
+      if (shots > M1_CLOCK_MAX_EVENTS ||
+          new Set(shotEvents.map(e=>
+            Math.floor(e.runningSeconds/M1_CLOCK_STEP_SECONDS))).size!==shots||
+          shotEvents.some(e=>
+            e.runningSeconds%M1_CLOCK_STEP_SECONDS !==
+              M1_CLOCK_STEP_SECONDS-1)) {
+        throw Error('SHOT_PHASE_BUDGET_BROKEN:' + fixture.id + ':' + seed);
+      }
       const referee = match.sourceRefereeEffects;
       const yellowCards = referee.yellow;
       const dismissals = referee.secondYellowRed + referee.straightRed;
@@ -190,6 +202,9 @@ export function runCorpus() {
           !Number.isSafeInteger(shots)) {
         throw Error('SOURCE_METRICS_MISMATCH:' + fixture.id + ':' + seed);
       }
+      minShotsPerMatch=Math.min(minShotsPerMatch,shots);
+      maxShotsPerMatch=Math.max(maxShotsPerMatch,shots);
+      shotlessMatches+=Number(shots===0);
       observed.homeWins += Number(homeGoals > awayGoals);
       observed.draws += Number(homeGoals === awayGoals);
       observed.awayWins += Number(homeGoals < awayGoals);
@@ -263,6 +278,19 @@ export function runCorpus() {
       dismissals:mean('dismissals'),
       syntheticInjuryWithdrawals:mean('syntheticInjuryWithdrawals'),
       modelledAssessments:mean('modelledAssessments'),
+    },
+    shotStructure:{
+      schemaVersion:1,
+      virtualPhasesPerMatch:M1_CLOCK_MAX_EVENTS,
+      runningSecondsPerPhase:M1_CLOCK_STEP_SECONDS,
+      theoreticalShotEventsCapPerMatch:M1_CLOCK_MAX_EVENTS,
+      observedMinimumShotsPerAcceptedMatch:minShotsPerMatch,
+      observedMaximumShotsPerAcceptedMatch:maxShotsPerMatch,
+      observedShotlessAcceptedMatches:shotlessMatches,
+      oneShotEventPerPhaseVerified:true,
+      modelShotsPerAcceptedMatch:observed.shots/accepted,
+      realRplShotReferenceAvailable:false,
+      role:'STRUCTURAL_DIAGNOSTIC_NOT_REALISM_GATE',
     },
     xg:{status:'UNAVAILABLE_NOT_EXPOSED_BY_V29_SOURCE_TIMELINE',
       total:null,interval95:null},

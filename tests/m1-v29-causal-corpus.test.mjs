@@ -93,6 +93,21 @@ test('P5 source-derived mixed metric observation keeps confidence and missing co
       assert.ok(value.mean<=value.normalMean95.upper);
     }
   }
+  const structure=metrics.shotStructure;
+  assert.equal(structure.schemaVersion,1);
+  assert.equal(structure.virtualPhasesPerMatch,18);
+  assert.equal(structure.runningSecondsPerPhase,300);
+  assert.equal(structure.theoreticalShotEventsCapPerMatch,18);
+  assert.equal(structure.oneShotEventPerPhaseVerified,true);
+  assert.ok(structure.observedMaximumShotsPerAcceptedMatch<=18);
+  assert.ok(structure.observedMinimumShotsPerAcceptedMatch>=0);
+  assert.ok(structure.observedMaximumShotsPerAcceptedMatch>=
+    structure.observedMinimumShotsPerAcceptedMatch);
+  assert.equal(structure.modelShotsPerAcceptedMatch,
+    metrics.perAcceptedMatch.shots.mean);
+  assert.ok(structure.observedShotlessAcceptedMatches<=corpus.accepted);
+  assert.equal(structure.realRplShotReferenceAvailable,false);
+  assert.match(structure.role,/NOT_REALISM_GATE/);
   assert.equal(metrics.xg.total,null);
   assert.match(metrics.xg.status,/^UNAVAILABLE_/);
   assert.equal(metrics.realInjuries.total,null);

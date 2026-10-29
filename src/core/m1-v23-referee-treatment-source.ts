@@ -110,6 +110,7 @@ export interface M1V23SourceRejectionTrace {
   // Opt-in model-only metrics from the exact validated v8 physical XI.
   shotXgMilli?: number;
   shotCount?: number;
+  shotOnTargetCount?: number;
   openPlayGoals?: number;
 }
 export function simulateM1V23RefereeWithTreatment(
@@ -510,6 +511,8 @@ export function simulateM1V23RefereeWithTreatment(
     // This opt-in trace does not change any saved game or return schema.
     trace.shotXgMilli=source.report.home.xgMilli+source.report.away.xgMilli;
     trace.shotCount=source.report.home.shots+source.report.away.shots;
+    trace.shotOnTargetCount=
+      source.report.home.shotsOnTarget+source.report.away.shotsOnTarget;
     trace.openPlayGoals=
       source.report.home.openPlayGoals+source.report.away.openPlayGoals;
   }

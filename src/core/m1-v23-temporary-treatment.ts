@@ -138,6 +138,7 @@ type M1V29InternalRejectionTrace={
   sourceSubreason:M1V23UnsupportedSubreason|null;
   sourceShotXgMilli?:number;
   sourceShotCount?:number;
+  sourceShotsOnTarget?:number;
   sourceOpenPlayGoals?:number;
 };
 /**
@@ -198,6 +199,55 @@ export function inspectM1V29SourceOpenPlayXg(
     fullSourceReplayVerified:true,
     independentRealXgReferenceAvailable:false,
     modelNotTuned:true,
+  };
+}
+/**
+ * Read-only v88 research: count exactly the shots-on-target in the same
+ * fully replayed v8 source that v29 already uses. No save or event changes.
+ */
+export function inspectM1V88SourceShotOnTarget(
+  prematch:unknown,policy:unknown,halfTimeCommands:unknown=[],
+  inPlayCommands:unknown=[],
+):Readonly<
+  {ok:false;error:M1V23CoachError|'SOURCE_SHOT_TARGET_INVARIANT_FAILED'} |
+  {ok:true;schemaVersion:1;
+    status:'SOURCE_V88_SHOT_TARGET_TRACE_NOT_INDEPENDENT_CALIBRATION';
+    fixtureId:string;sourceShots:number;sourceShotsOnTarget:number;
+    sourceOpenPlayGoals:number;sourceOpenPlayXgMilli:number;
+    fullyReplayedV8PhysicalXi:true;
+    historicalSaveAndRngUnchanged:true;
+    realWorldShotDefinitionVerified:false}
+>{
+  const trace:M1V29InternalRejectionTrace={
+    sourceError:null,sourceSubreason:null,
+  };
+  const run=simulateTreatmentCore(prematch,policy,
+    halfTimeCommands,inPlayCommands,true,trace);
+  if(!run.ok)return {ok:false,error:run.error};
+  const sourceShots=run.match.events.filter(x=>x.kind==='shot').length;
+  const sourceOpenPlayGoals=
+    run.match.finalScore.home+run.match.finalScore.away;
+  const target=trace.sourceShotsOnTarget;
+  if(trace.sourceShotCount!==sourceShots||
+      !Number.isSafeInteger(target)||
+      (target as number)<0||
+      (target as number)>sourceShots||
+      sourceOpenPlayGoals>(target as number)||
+      trace.sourceOpenPlayGoals!==sourceOpenPlayGoals||
+      !Number.isSafeInteger(trace.sourceShotXgMilli)||
+      (trace.sourceShotXgMilli as number)<0) {
+    return {ok:false,error:'SOURCE_SHOT_TARGET_INVARIANT_FAILED'};
+  }
+  return{
+    ok:true,schemaVersion:1,
+    status:'SOURCE_V88_SHOT_TARGET_TRACE_NOT_INDEPENDENT_CALIBRATION',
+    fixtureId:run.fixtureId,sourceShots,
+    sourceShotsOnTarget:target as number,
+    sourceOpenPlayGoals,
+    sourceOpenPlayXgMilli:trace.sourceShotXgMilli as number,
+    fullyReplayedV8PhysicalXi:true,
+    historicalSaveAndRngUnchanged:true,
+    realWorldShotDefinitionVerified:false,
   };
 }
 function simulateTreatmentCore(
@@ -498,6 +548,8 @@ function simulateTreatmentCore(
       trace.sourceShotXgMilli=sourceTrace.shotXgMilli;
     if(sourceTrace.shotCount!==undefined)
       trace.sourceShotCount=sourceTrace.shotCount;
+    if(sourceTrace.shotOnTargetCount!==undefined)
+      trace.sourceShotsOnTarget=sourceTrace.shotOnTargetCount;
     if(sourceTrace.openPlayGoals!==undefined)
       trace.sourceOpenPlayGoals=sourceTrace.openPlayGoals;
   }

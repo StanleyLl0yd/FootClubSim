@@ -1,5 +1,5 @@
 import {sameCanonicalValue} from './canonical-value.js';
-import {generateDoubleRoundRobin,type Fixture} from './fixtures.js';
+import {generateDoubleRoundRobin} from './fixtures.js';
 import {isPlainJsonTree} from './plain-json-tree.js';
 import {validateLineup} from './validation.js';
 import {validateM1V32ExposureJournal} from './m1-v32-causal-medical-journal.js';

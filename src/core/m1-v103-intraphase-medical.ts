@@ -68,8 +68,9 @@ function readIntraphaseMedical(raw:unknown):M1V7TemporaryMedicalAction|null{
       !Number.isSafeInteger(action.elapsedSeconds)||
       (action.elapsedSeconds as number)<=0||
       (action.elapsedSeconds as number)>=5400||
-      (action.elapsedSeconds as number)%M1_V99_SECONDS_PER_SLOT!==0||
-      (action.elapsedSeconds as number)%M1_CLOCK_STEP_SECONDS===0)
+      (action.elapsedSeconds as number)%M1_CLOCK_STEP_SECONDS===0||
+      (action.elapsedSeconds as number)%M1_V99_SECONDS_PER_SLOT===
+        M1_V99_SECONDS_PER_SLOT-1)
     return null;
   if(action.kind==='treatment-exit'){
     if(!['injury-stopped-play','medical-staff-entered',

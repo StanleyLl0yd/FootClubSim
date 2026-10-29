@@ -241,9 +241,11 @@ export function simulateM1V23RefereeWithTreatment(
     e.type==='shot'&&e.outcome==='goal'&&
     e.elapsedSeconds+1!==2700&&e.elapsedSeconds+1<M1_CLOCK_END_SECONDS)
     .map(e=>e.elapsedSeconds+1));
-  // A goal restart and a synthetic foul may not both be claimed at
-  // exactly the same running second without subsecond source evidence.
-  if([...foulTimes].some(t=>goalRestarts.has(t)))return unsupported('GOAL_RESTART_AND_FOUL_COLLISION');
+  // Goal-whistle T-1 and source-derived restart-kickoff T precede any
+  // generated foul T, even when coarse running-second timestamps coincide.
+  // Same-second ordering must be proved by source event sequence below.
+  const orderedSameSecond=new Set(
+    [...foulTimes].filter(t=>goalRestarts.has(t)));
   for(const [time,group] of changes){
     if(time!==2700&&!goalRestarts.has(time)&&!foulTimes.has(time)){
       return fail('MISSING_INTERNAL_STOPPAGE');
@@ -386,6 +388,13 @@ export function simulateM1V23RefereeWithTreatment(
         kind='injury-withdrawal';effects.injuryWithdrawn++;
       }else{return fail('UNSUPPORTED_SOURCE_EVENT');}
       if(foulTimes.has(running)){
+        if(orderedSameSecond.has(running)){
+          const priorKickoff=events.find(e=>
+            e.kind==='restart-kickoff'&&
+            e.runningSeconds===running&&
+            e.sourceEventId!==null);
+          if(!priorKickoff)return fail('ROSTER_REPLAY_MISMATCH');
+        }
         if(foulSeen.has(running)||
             (kind!=='caution'&&kind!=='second-yellow-dismissal'&&
               kind!=='straight-red-dismissal')){
@@ -477,6 +486,15 @@ export function simulateM1V23RefereeWithTreatment(
   }
   emit('full-time',running,wall);
   const finalOnField={home:sorted(home),away:sorted(away)};
+  for(const second of orderedSameSecond){
+    const kickoff=events.find(e=>e.kind==='restart-kickoff'&&
+      e.runningSeconds===second);
+    const whistle=events.find(e=>e.kind==='synthetic-foul-whistle'&&
+      e.runningSeconds===second);
+    if(!kickoff||!whistle||kickoff.sequence>=whistle.sequence){
+      return fail('ROSTER_REPLAY_MISMATCH');
+    }
+  }
   if(events.length>320||foulSeen.size!==foulTimes.size||
       !sameCanonicalValue(sorted(absent),source.offFieldAtFullTime)||
       !sameCanonicalValue(finalOnField,source.onFieldAtFullTime)||

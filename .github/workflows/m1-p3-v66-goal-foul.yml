@@ -1,0 +1,65 @@
+name: M1 P3 v66 goal restart and foul replay regression
+on:
+  pull_request:
+    paths:
+      - 'src/core/m1-v23-referee-treatment-source.ts'
+      - 'tests/m1-v66-ordered-goal-foul.test.mjs'
+      - 'docs/M1_V66_ORDERED_GOAL_FOUL.md'
+      - '.github/workflows/m1-p3-v66-goal-foul.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  same-256-source-cases:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p3-v66-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Compile exact engine
+        run: |
+          npm ci --ignore-scripts
+          npm run build:core
+      - name: Run unchanged bounded 256-case corpus and check rejection improvement
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/m1-p5-v64-rejection-taxonomy.mjs \
+            --start=1 --count=32 --fixtures=8 > v66-observation.json
+          node --input-type=module <<'NODE'
+          import {readFileSync,appendFileSync} from 'node:fs';
+          const x=JSON.parse(readFileSync('v66-observation.json','utf8'));
+          if(x.attempted!==256||x.accepted+x.rejected!==256||
+              x.rejected>=17||x.calibrationAccepted!==false||
+              x.real2024_25HoldoutUsed!==false||
+              x.simulatorBehaviorChanged!==false||
+              Object.values(x.rejectionRootCounts).reduce((a,b)=>a+b,0)!==x.rejected||
+              Object.values(x.rejectionSubreasonCounts).reduce((a,b)=>a+b,0)!==x.rejected){
+            throw Error('SAME_SEED_GOAL_FOUL_REGRESSION_NOT_IMPROVED');
+          }
+          const lines=[
+            '# Same 256 source replay cases before/after ordered restart',
+            '',
+            '- Prior v65 accepted: 239; rejected: 17',
+            '- New exact engine accepted: '+x.accepted,
+            '- New exact engine rejected: '+x.rejected,
+            '- Delta accepted: '+(x.accepted-239),
+            '- Root causes still rejected: '+JSON.stringify(x.rejectionSubreasonCounts),
+            '- Source digest: '+x.deterministicSha256,
+            '- No seed changes or real data reweighting',
+            '- No IFAB medical/KDK or realism acceptance',
+          ];
+          const summary=lines.join('\n')+'\n';
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,summary);
+          process.stdout.write(summary);
+          NODE
+          rm -f v66-observation.json

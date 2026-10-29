@@ -1,0 +1,110 @@
+name: M1 P3 v66 goal-foul full 4096 source replay
+on:
+  pull_request:
+    paths:
+      - 'src/core/m1-v23-referee-treatment-source.ts'
+      - 'tests/m1-v66-ordered-goal-foul.test.mjs'
+      - 'docs/M1_V66_ORDERED_GOAL_FOUL.md'
+      - '.github/workflows/m1-p3-v66-4096-replay.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replay-1024-source-cases:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p3-v66-')
+    name: Replay fixtures ${{ matrix.firstfixture }}..${{ matrix.firstfixture_end }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - firstfixture: 1
+            firstfixture_end: 8
+          - firstfixture: 9
+            firstfixture_end: 16
+          - firstfixture: 17
+            firstfixture_end: 24
+          - firstfixture: 25
+            firstfixture_end: 32
+    steps:
+      - name: Checkout isolated source engine
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Build exact core
+        run: |
+          npm ci --ignore-scripts
+          npm run build:core
+      - name: Verify 1024 exact seeded full source replays
+        env:
+          FIRST_FIXTURE: ${{ matrix.firstfixture }}
+          LAST_FIXTURE: ${{ matrix.firstfixture_end }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          start=$(date +%s)
+          node scripts/m1-v29-causal-corpus.mjs \
+            --start=1 --count=128 --fixtures=8 \
+            --firstfixture="$FIRST_FIXTURE" > "$tmp/result.json"
+          end=$(date +%s)
+          node - "$tmp/result.json" "$((end-start))" <<'NODE'
+          const fs=require('node:fs');
+          const path=process.argv[2];
+          const seconds=Number(process.argv[3]);
+          const x=JSON.parse(fs.readFileSync(path,'utf8'));
+          const first=Number(process.env.FIRST_FIXTURE);
+          const last=Number(process.env.LAST_FIXTURE);
+          if(x.schemaVersion!==1||x.sourceEngine!=='m1-v29-synthetic-medical-source'||
+              x.firstFixture!==first||last!==first+7||
+              x.count!==128||x.start!==1||x.fixtureCount!==8||
+              x.totalCases!==1024||x.accepted<=0||
+              x.accepted+x.rejected!==1024||
+              x.fixtureSummaries.length!==8||
+              new Set(x.fixtureSummaries.map(f=>f.fixtureId)).size!==8||
+              x.fixtureSummaries.some(f=>f.accepted+f.rejected!==128)||
+              x.p5Observation.accepted!==x.accepted||
+              x.p5Observation.rejected!==x.rejected||
+              !/^[a-f0-9]{64}$/.test(x.deterministicSha256)||
+              x.injuryOccurrenceCalibrated!==false||
+              x.physicianOrRefereeAuthorityAuthenticated!==false||
+              x.realFootballReferenceSample!==false){
+            throw Error('INVALID_1024_SOURCE_REPLAY_SHARD');
+          }
+          const oldRejected={1:219,9:217,17:223,25:223}[first];
+          if(!Number.isInteger(oldRejected)||x.rejected>oldRejected){
+            throw Error('SOURCE_REPLAY_REJECTION_REGRESSED');
+          }
+          const lines=[
+            '# P3 v66 4096 replay source chronology shard',
+            '',
+            '- Engine: '+x.sourceEngine,
+            '- First fixture index: '+first,
+            '- Last fixture index: '+last,
+            '- Seed IDs: 1..128',
+            '- Attempted cases: '+x.totalCases,
+            '- Accepted full replays: '+x.accepted,
+            '- Rejected cases: '+x.rejected,
+            '- Same shard previously rejected (v62): '+oldRejected,
+            '- Recovered cases (v66): '+(oldRejected-x.rejected),
+            '- Rejection reasons: '+JSON.stringify(x.rejectionReasons),
+            '- Deterministic SHA-256: '+x.deterministicSha256,
+            '- Score: '+JSON.stringify(x.p5Observation.outcomeRates),
+            '- Goals per accepted match: '+x.p5Observation.perAcceptedMatch.goals.mean,
+            '- Source-replay wall time seconds (one observation): '+seconds,
+            '- Full cohort covered ONLY if ALL FOUR shards PASS (4096 attempted)',
+            '- Coarse second source ordered goal -> restart -> foul',
+            '- NOT externally calibrated; NO clinical claims',
+          ];
+          const output=lines.join('\n')+'\n';
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,output);
+          process.stdout.write(output);
+          NODE

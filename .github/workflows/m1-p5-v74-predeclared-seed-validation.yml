@@ -1,0 +1,48 @@
+name: M1 P5 v74 preregistered seed validation
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-v74-seed-shard.mjs'
+      - 'scripts/m1-p5-v73-seed-coverage.mjs'
+      - 'tests/m1-p5-v74-seed-shard.test.mjs'
+      - 'docs/M1_P5_V74_PREDECLARED_SEED_VALIDATION.md'
+      - '.github/workflows/m1-p5-v74-predeclared-seed-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-seed-validation:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v74-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture_group: [0, 1, 2, 3]
+        seed_group: [0, 1, 2, 3]
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Build and verify preregistered shard coverage
+        run: |
+          npm ci --ignore-scripts
+          npm run build:core
+          node --test tests/m1-p5-v74-seed-shard.test.mjs
+      - name: Run bounded source-replayed shard
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/m1-p5-v74-seed-shard.mjs ${{ matrix.fixture_group }} ${{ matrix.seed_group }} | tee v74-shard.txt
+          if [[ ${{ matrix.fixture_group }} == 0 && ${{ matrix.seed_group }} == 0 ]]; then
+            node scripts/m1-p5-v74-seed-shard.mjs 0 0 > v74-repeat.txt
+            cmp v74-shard.txt v74-repeat.txt
+          fi
+          cat v74-shard.txt >> "$GITHUB_STEP_SUMMARY"

@@ -107,7 +107,10 @@ export function compareM1V73SeedCoverage({
     rngVersion:RNG_VERSION,lowFirstDraw,mappedFirstDraw,
     original:{accepted:baseline.accepted,rejected:baseline.rejected,
       shots:baseline.sourceShots,goals:baseline.sourceOpenPlayGoals,
-      xgMilli:baseline.sourceOpenPlayXgMilli},
+      xgMilli:baseline.sourceOpenPlayXgMilli,
+      zeroOpenPlayGoals:baseline.shotlessMatches+
+        baseline.scorelessMatchesWithShots,
+      sourceSha256:baseline.deterministicSha256},
     mapped:{accepted,rejected,rejectionReasons,shots,goals,xgMilli,
       scoreless,sourceSha256:digest.digest('hex')},
     sameFixtureAndIndexCount:true,

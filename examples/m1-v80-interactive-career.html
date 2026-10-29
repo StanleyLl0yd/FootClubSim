@@ -60,7 +60,7 @@
     <p id="result" class="result">Пока нет результатов.</p>
   </section>
   <script type="module">
-    import {createSyntheticRplScaleCatalog}
+    import {createSyntheticRplScaleCatalog,defaultSyntheticLineup}
       from '../dist/core/synthetic.js';
     import {createInitialCareer} from '../dist/core/save.js';
     import {saveNewInitialCareer,loadInitialCareer}
@@ -70,8 +70,8 @@
       from '../dist/browser/m1-v32-journal-store.js';
     import {deriveM1V31CausalPhysicalExposure}
       from '../dist/core/m1-v24-physical-exposure.js';
-    import {deriveM1V82SourceBoundAvailableLineups}
-      from '../dist/core/m1-v82-source-bound-eligible-lineup.js';
+    import {proposeM1V84MedicallyAndAutomaticallyEligibleLineups}
+      from '../dist/core/m1-v84-automatically-eligible-lineups.js';
     import {generateDoubleRoundRobin} from '../dist/core/fixtures.js';
     import {MATCH_LEDGER_VERSION,M0_RULES_PACK_ID,M0_RULES_PACK_VERSION}
       from '../dist/core/match-contracts.js';
@@ -81,6 +81,7 @@
 
     const careerId='m1-v80-interactive-career';
     const catalog=createSyntheticRplScaleCatalog(77);
+    const clubs=new Map(catalog.clubs.map(c=>[c.id,c]));
     const fixtures=generateDoubleRoundRobin(catalog.clubs.map(c=>c.id))
       .flatMap(r=>r.fixtures);
     const policy={home:{assignedActor:{kind:'player'},availableStaffIds:[]},
@@ -159,33 +160,40 @@
       try{
         const {initial,journal,fixture}=await snapshot();
         if(!fixture){message('Все матчи тестового сезона уже записаны.');return;}
-        const lineup=deriveM1V82SourceBoundAvailableLineups(
-          initial,journal,fixture);
-        if(!lineup.ok)throw Error('SAFE_LINEUP_REJECTED: '+lineup.error);
         const prematch={
           schemaVersion:MATCH_LEDGER_VERSION,engineVersion:M1_ENGINE_VERSION,
           rulesPackId:M0_RULES_PACK_ID,rulesPackVersion:M0_RULES_PACK_VERSION,
           fixture,catalog,
-          homeLineup:lineup.homeLineup,
-          awayLineup:lineup.awayLineup,
+          homeLineup:defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+          awayLineup:defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
           homeTactics:defaultTacticalPlan(fixture.homeClubId),
           awayTactics:defaultTacticalPlan(fixture.awayClubId),
           rosterRules:{starterCount:11,maxBench:12,maxForeignersOnField:7},
           rngAlgorithmVersion:RNG_VERSION,
           rngSeed:await fixtureSeed(fixture.id),
         };
-        const result=deriveM1V31CausalPhysicalExposure(prematch,policy,[],[]);
+        const lineup=proposeM1V84MedicallyAndAutomaticallyEligibleLineups(
+          initial,journal,prematch);
+        if(!lineup.ok)throw Error('SAFE_LINEUP_REJECTED: '+lineup.error+
+          (lineup.sourceError?' / '+lineup.sourceError:''));
+        const admittedPrematch={...prematch,
+          homeLineup:lineup.homeLineup,awayLineup:lineup.awayLineup};
+        const result=deriveM1V31CausalPhysicalExposure(
+          admittedPrematch,policy,[],[]);
         if(!result.ok)throw Error('SOURCE_MATCH_REJECTED: '+result.error);
         const request={
           schemaVersion:6,commandId:'m1-v80-'+fixture.id,
           careerId,expectedRevision:journal.revision,
-          prematch,policy,halfTimeCommands:[],inPlayCommands:[],result,
+          prematch:admittedPrematch,policy,
+          halfTimeCommands:[],inPlayCommands:[],result,
         };
         const saved=await commitM1V76PersistedMedicallyGatedFixture(
           careerId,journal.revision,request);
         message('Матч '+fixture.id+' сохранён. Ревизия '+saved.revision+
           '. Исключено из составов из-за медицинских ограничений: '+
-          lineup.excludedMedicalPlayers.length+'.');
+          lineup.excludedMedicalPlayers.length+
+          '; автоматические дисквалификации: '+
+          lineup.excludedAutomaticBanPlayers.length+'.');
         await snapshot();
       }catch(error){
         message('Матч отклонён без записи: '+

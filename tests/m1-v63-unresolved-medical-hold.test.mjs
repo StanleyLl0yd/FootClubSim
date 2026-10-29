@@ -189,3 +189,53 @@ test('first fixture starts with no phantom source medical holds',()=>{
   assert.deepEqual(good.pendingMedicalHolds,[]);
   assert.equal(good.result.sameJournalForBothClubs,true);
 });
+
+test('previously withdrawn player cannot be laundered through a committed later XI or bench',()=>{
+  const {journal,injured}=historyWithInjury();
+  const held=injured.find(row=>
+    row.teamId===second.homeClubId||row.teamId===second.awayClubId);
+  assert.ok(held,'replayed first-round withdrawal must affect second round');
+  const future=rounds[2].fixtures.find(f=>
+    f.homeClubId===held.teamId||f.awayClubId===held.teamId);
+  assert.ok(future,'same club must have a subsequent scheduled match');
+  for(const benchOnly of [false,true]){
+    let candidate=null;
+    for(let seed=1;seed<=64;seed++){
+      const prematch=input(second,seed);
+      const lineup=held.teamId===second.homeClubId?
+        prematch.homeLineup:prematch.awayLineup;
+      assert.ok(lineup.starters.includes(held.playerId),
+        'historically withdrawn player begins in original XI');
+      if(benchOnly){
+        const substitute=lineup.bench.find(id=>
+          Number(id.split('-').at(-1))<=17);
+        assert.ok(substitute,'eligible player required for bench-only bypass');
+        lineup.starters=lineup.starters.map(id=>
+          id===held.playerId?substitute:id);
+        lineup.bench=lineup.bench.map(id=>
+          id===substitute?held.playerId:id);
+        assert.ok(!lineup.starters.includes(held.playerId));
+        assert.ok(lineup.bench.includes(held.playerId));
+      }
+      const replay=source(prematch,policy);
+      if(replay.ok){candidate={prematch,replay};break;}
+    }
+    assert.ok(candidate,'fully source-replayed historical eligibility breach');
+    const posted=get(apply(career,journal,[{
+      schemaVersion:6,
+      commandId:benchOnly?'v72-history-medical-bench':'v72-history-medical-xi',
+      careerId:career.careerId,expectedRevision:journal.revision,
+      prematch:candidate.prematch,policy,
+      halfTimeCommands:[],inPlayCommands:[],
+      result:candidate.replay,
+    }],journal.revision));
+    const before=structuredClone(posted);
+    const rejected=run(career,posted,input(future),policy);
+    assert.equal(rejected.ok,false);
+    assert.equal(rejected.error,'HISTORICAL_UNRESOLVED_MEDICAL_CONFLICT');
+    assert.equal(rejected.affectedFixtureId,second.id);
+    assert.equal(rejected.affectedTeamId,held.teamId);
+    assert.ok(rejected.affectedPlayerIds.includes(held.playerId));
+    assert.deepEqual(posted,before);
+  }
+});

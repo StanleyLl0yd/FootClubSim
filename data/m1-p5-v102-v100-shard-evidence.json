@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "status": "P5_V102_OBSERVED_NOT_CALIBRATED",
+  "evidence": {
+    "githubRunId": 40945616709,
+    "prNumber": 378,
+    "sourceHeadSha": "b592971ef103cf23e0db1459ad2fb604125ef2ee",
+    "sourceSchema": 99,
+    "fullTimeSeconds": 5400,
+    "drawsPerMatch": 270,
+    "fixturePositions": 240,
+    "seedsPerFixture": 8,
+    "shardCount": 16,
+    "fixturesPerShard": 15,
+    "sourceStatus": "P5_V100_UNCALIBRATED_VERSIONED_SOURCE_COHORT"
+  },
+  "shards": [
+    {
+      "group": 0,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2562,
+      "onTarget": 1301,
+      "openPlayGoals": 483,
+      "digestSha256": "8f7135a971371646aef98007ba1222d8667e3c8858b7aeabab0d4d9458b98cd9"
+    },
+    {
+      "group": 1,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2623,
+      "onTarget": 1328,
+      "openPlayGoals": 508,
+      "digestSha256": "5ffc782b64fc99875a07b2aa06448b5d1e9e4986c0f02501fbcc724a5a661853"
+    },
+    {
+      "group": 2,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2576,
+      "onTarget": 1334,
+      "openPlayGoals": 446,
+      "digestSha256": "b576ea3f91cb01a2f729363742fc65999d0252059f0d78689e7b46cbd61fcd5b"
+    },
+    {
+      "group": 3,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2610,
+      "onTarget": 1326,
+      "openPlayGoals": 505,
+      "digestSha256": "10d0dfdc2a44b37f1737eaf742c4c0c719365b817bd33c7f8ac3804d46b93671"
+    },
+    {
+      "group": 4,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2593,
+      "onTarget": 1347,
+      "openPlayGoals": 481,
+      "digestSha256": "7d05be2a28e71e509fed78d8e4c1da843bd1051af5b6f030b5deae1ab47c11f7"
+    },
+    {
+      "group": 5,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2554,
+      "onTarget": 1291,
+      "openPlayGoals": 455,
+      "digestSha256": "d8ea56376b07ced90abcea610218e8df9a0200c66992aae53e8cd77ce0d03e0d"
+    },
+    {
+      "group": 6,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2543,
+      "onTarget": 1290,
+      "openPlayGoals": 456,
+      "digestSha256": "c6472cca4ed7c52e00896ecf7ed0f5d14ba4f15d9b6d5ccf83e804cb892992f4"
+    },
+    {
+      "group": 7,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2605,
+      "onTarget": 1374,
+      "openPlayGoals": 499,
+      "digestSha256": "699a16bf9e03b367a9e919e5368d524def9a9551c5babe5e72f538d22ec7a635"
+    },
+    {
+      "group": 8,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2510,
+      "onTarget": 1298,
+      "openPlayGoals": 452,
+      "digestSha256": "267d5fb105a85d84f409ee66f4cd65fe88ac04afaeb15d37ed15d87e4fbb4daa"
+    },
+    {
+      "group": 9,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2562,
+      "onTarget": 1307,
+      "openPlayGoals": 470,
+      "digestSha256": "d2d6fcf455969c80fc6c08d3b96fbeac6f1fed041b6bf5701ac93c4d488fb325"
+    },
+    {
+      "group": 10,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2551,
+      "onTarget": 1270,
+      "openPlayGoals": 444,
+      "digestSha256": "91fc378dc4f6be3fd4e5ed9ccc65efe5d26db86d8deeb9b985282d91f11c1de7"
+    },
+    {
+      "group": 11,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2532,
+      "onTarget": 1276,
+      "openPlayGoals": 462,
+      "digestSha256": "b4d1d3e86195fd5c9481c4e87edd011347371967c4530150823b324b701cf885"
+    },
+    {
+      "group": 12,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2589,
+      "onTarget": 1311,
+      "openPlayGoals": 457,
+      "digestSha256": "9027ea92a54877572d74926f203f00a9b1885a0c8c152110846d396536c9a927"
+    },
+    {
+      "group": 13,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2616,
+      "onTarget": 1321,
+      "openPlayGoals": 482,
+      "digestSha256": "29d43fe2bdca2ce60d94898baa0d179fc02243d207415454057b528540c311c2"
+    },
+    {
+      "group": 14,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2632,
+      "onTarget": 1336,
+      "openPlayGoals": 472,
+      "digestSha256": "91dde8e280482048e49702b70911becc994c1bc32d8ab8c8f51d229a68c64776"
+    },
+    {
+      "group": 15,
+      "matchesAttempted": 120,
+      "matchesAccepted": 120,
+      "matchesRejected": 0,
+      "shots": 2580,
+      "onTarget": 1313,
+      "openPlayGoals": 463,
+      "digestSha256": "71ddb6bbd18b2c01939e15992e37815a30b4c9685a8af7ae0af4d652e7e02762"
+    }
+  ],
+  "observedModelTotals": {
+    "matchesAttempted": 1920,
+    "matchesAccepted": 1920,
+    "matchesRejected": 0,
+    "shots": 41238,
+    "onTarget": 21023,
+    "openPlayGoals": 7535,
+    "saved": 13488,
+    "blocked": 9037,
+    "offTarget": 11178,
+    "xgMilli": 7539757,
+    "over18ShotMatches": 1537,
+    "maxShots": 37
+  },
+  "reference": {
+    "path": "data/rpl-2025-26-p5-shot-discipline-reference.json",
+    "season": "2025/26",
+    "matchCount": 240,
+    "source": "Sport-Express",
+    "goalsAllTypes": 609,
+    "shots": 5548,
+    "onTarget": 1879
+  },
+  "interpretation": {
+    "modelGoalsOpenPlayOnly": true,
+    "realGoalsAllTypes": true,
+    "shotTaxonomyHarmonized": false,
+    "holdout2024_25Used": false,
+    "refereeMedicalAndCASAdmitted": false,
+    "releaseCalibrationAccepted": false
+  }
+}

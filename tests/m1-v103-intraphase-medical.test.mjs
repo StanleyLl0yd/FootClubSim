@@ -148,8 +148,8 @@ test('v103 rejects tampered medical identities, times and source results',()=>{
   const valid=simulate(input,policy,[],[],[exit,returning]);
   assert.equal(valid.ok,true);
   const mutate=[
-    x=>{x.events[0].elapsedSeconds=99;},
-    x=>{x.events[0].action.playerId=keeper;},
+    x=>{x.events.find(e=>e.type==='intraphase-medical').elapsedSeconds=99;},
+    x=>{x.events.find(e=>e.type==='intraphase-medical').action.playerId=keeper;},
     x=>{x.report.home.goals++;},
     x=>{x.rngDraws=90;},
     x=>{x.clinicalAndRefereeSourceAuthenticated=true;},

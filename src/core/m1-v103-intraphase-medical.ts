@@ -85,7 +85,7 @@ function readIntraphaseMedical(raw:unknown):M1V7TemporaryMedicalAction|null{
       !['touchline','goal-line'].includes(action.entryBoundary as string)||
       !isStableId(action.refereeSignalId))
     return null;
-  return action as M1V7TemporaryMedicalAction;
+  return action as unknown as M1V7TemporaryMedicalAction;
 }
 
 /** Separate schema: v8/v101 checkpoints stay unchanged, new 100s commands

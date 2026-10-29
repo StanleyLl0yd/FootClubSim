@@ -90,8 +90,9 @@ test('v103 treatment exit at 100 affects only later shot slots and return at 200
       e.elapsedSeconds>=100&&e.elapsedSeconds<200)){
     assert.notEqual(shot.playerId,patient);
   }
-  assert.ok(current.events.some(e=>e.type==='shot'&&e.elapsedSeconds===99)||
-    current.events.filter(e=>e.type==='shot').every(e=>e.elapsedSeconds!==99));
+  assert.ok(medical[0].sequence>1||current.events[0].elapsedSeconds===100);
+  assert.ok(current.events.filter(e=>e.type==='shot'&&
+    e.elapsedSeconds<100).every(e=>e.elapsedSeconds===99));
   assert.equal(verify(input,policy,[],[],[exit,returning],current),true);
   assert.deepEqual(input,originals[0]);
   assert.deepEqual(exit,originals[1]);

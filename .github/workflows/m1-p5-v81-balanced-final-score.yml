@@ -1,0 +1,55 @@
+name: M1 P5 v81 full two-leg balance sensitivity
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-v81-balanced-final-score-shard.mjs'
+      - 'tests/m1-p5-v81-balanced-final-score-shard.test.mjs'
+      - 'docs/M1_P5_V81_BALANCED_FINAL_SCORE_COHORT.md'
+      - '.github/workflows/m1-p5-v81-balanced-final-score.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  balanced-final-score:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v81-')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture_group: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Build exact source
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build:core
+      - name: Measure balanced full-calendar source replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ${{ matrix.fixture_group }} == 0 ]]; then
+            node --test tests/m1-p5-v81-balanced-final-score-shard.test.mjs
+          fi
+          node scripts/m1-p5-v81-balanced-final-score-shard.mjs ${{ matrix.fixture_group }} | tee v81-result.txt
+          if [[ ${{ matrix.fixture_group }} == 0 ]]; then
+            node scripts/m1-p5-v81-balanced-final-score-shard.mjs 0 > v81-repeat.txt
+            node --input-type=module -e "
+              import {readFileSync} from 'node:fs';
+              const value=p=>JSON.parse(readFileSync(p,'utf8').replace(/^V81_SHARD_RESULT=/,''));
+              const a=value('v81-result.txt'),b=value('v81-repeat.txt');
+              delete a.runtimeObservation;delete b.runtimeObservation;
+              if(JSON.stringify(a)!==JSON.stringify(b))throw Error('V81_DETERMINISM_DRIFT');
+            "
+          fi
+          cat v81-result.txt >> "$GITHUB_STEP_SUMMARY"

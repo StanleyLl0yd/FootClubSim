@@ -21,6 +21,25 @@ import { RNG_VERSION, SeededRng } from './rng.js';
 export const M1_V5_ENGINE_VERSION = '4' as const;
 export const M1_V5_EVENT_SCHEMA_VERSION = 5 as const;
 export const M1_V5_DRAWS_PER_PHASE = 5 as const;
+/** Explicit opt-in research controls; absent controls retain historical v5. */
+export interface M1V104ResearchParameters {
+  readonly shotOpportunityMultiplier: number;
+  readonly xgMultiplier: number;
+  readonly saveMultiplier: number;
+}
+export function validM1V104ResearchParameters(v: unknown): v is M1V104ResearchParameters {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+  const p = v as Record<string, unknown>;
+  const names = ['shotOpportunityMultiplier', 'xgMultiplier', 'saveMultiplier'];
+  if (Object.keys(p).length !== 3 || !names.every(k => Object.hasOwn(p, k))) return false;
+  return typeof p.shotOpportunityMultiplier === 'number' &&
+    Number.isFinite(p.shotOpportunityMultiplier) &&
+    p.shotOpportunityMultiplier >= 0.5 && p.shotOpportunityMultiplier <= 1.5 &&
+    typeof p.xgMultiplier === 'number' && Number.isFinite(p.xgMultiplier) &&
+    p.xgMultiplier >= 0.35 && p.xgMultiplier <= 1.5 &&
+    typeof p.saveMultiplier === 'number' && Number.isFinite(p.saveMultiplier) &&
+    p.saveMultiplier >= 0.3 && p.saveMultiplier <= 1.5;
+}
 export type M1V5Zone = 'left' | 'center' | 'right';
 interface M1V5Base {
   readonly schemaVersion: typeof M1_V5_EVENT_SCHEMA_VERSION;
@@ -194,13 +213,17 @@ function fatigueMilli(phase: number, player: Player, pressing: number): number {
   const drain = 160 + (100 - player.attributes.stamina) * 1.3 + (pressing - 50) * 0.6;
   return Math.round(clamp(1000 - (phase / 17) * drain, 700, 1000));
 }
-function shotOutcome(xgMilli: number, player: Player, draw: number): ShotOutcome {
+function shotOutcome(
+  xgMilli: number, player: Player, draw: number,
+  research?: M1V104ResearchParameters,
+): ShotOutcome {
   const p = xgMilli / 1000;
   const save = (1 - p) * clamp(0.38 + (player.attributes.finishing - 50) / 350, 0.2, 0.56);
-  const blocked = (1 - p - save) * 0.45;
+  const effectiveSave = research ? Math.min(1 - p, save * research.saveMultiplier) : save;
+  const blocked = (1 - p - effectiveSave) * 0.45;
   if (draw < p) return 'goal';
-  if (draw < p + save) return 'saved';
-  if (draw < p + save + blocked) return 'blocked';
+  if (draw < p + effectiveSave) return 'saved';
+  if (draw < p + effectiveSave + blocked) return 'blocked';
   return 'off-target';
 }
 
@@ -214,6 +237,26 @@ export function computeM1V5PhaseShot(
   players: ReadonlyMap<string, Player>,
   active: Readonly<{ home: readonly string[]; away: readonly string[] }>,
   phase: number, rng: SeededRng, sequence: number,
+): M1V5Shot | null {
+  return computeM1ShotKernel(input, state, players, active, phase, rng, sequence);
+}
+/** Never called by production/v99/v101/v103 without explicit opt-in. */
+export function computeM1V104ResearchPhaseShot(
+  input: M1PrematchInput, state: M1PlayerControlState,
+  players: ReadonlyMap<string, Player>,
+  active: Readonly<{ home: readonly string[]; away: readonly string[] }>,
+  phase: number, rng: SeededRng, sequence: number,
+  research: M1V104ResearchParameters,
+): M1V5Shot | null {
+  if (!validM1V104ResearchParameters(research)) throw Error('INVALID_V104_PARAMETERS');
+  return computeM1ShotKernel(input, state, players, active, phase, rng, sequence, research);
+}
+function computeM1ShotKernel(
+  input: M1PrematchInput, state: M1PlayerControlState,
+  players: ReadonlyMap<string, Player>,
+  active: Readonly<{ home: readonly string[]; away: readonly string[] }>,
+  phase: number, rng: SeededRng, sequence: number,
+  research?: M1V104ResearchParameters,
 ): M1V5Shot | null {
     // No skipped PRNG draws: five per phase for either tactical/roster state.
     const possession = rng.nextFloat();
@@ -252,7 +295,7 @@ export function computeM1V5PhaseShot(
       (attackFocus - defenseFocus) * 0.012 - phase * 0.002,
       0.08, 0.75,
     );
-    if (chanceDraw < chance) {
+    if (chanceDraw < (research ? clamp(chance * research.shotOpportunityMultiplier, 0, 1) : chance)) {
       const player = chooseShooter(activeIds, players, state, playerDraw);
       const focus = focusFor(state, player.id);
       const otherIds = homeTeam ? awayIds : homeIds;
@@ -270,7 +313,8 @@ export function computeM1V5PhaseShot(
         (74 + (player.attributes.finishing - 50) * 2 +
           (player.attributes.composure - 50) * 1.2 -
           (keeper.attributes.reflexes - 50) * 0.9 +
-          quality * 220 + zoneBonus + focusBonus) * fatigue / 1000,
+          quality * 220 + zoneBonus + focusBonus) * fatigue / 1000 *
+          (research ? research.xgMultiplier : 1),
         20, 600,
       ));
       return {
@@ -280,7 +324,7 @@ export function computeM1V5PhaseShot(
         elapsedSeconds: (phase + 1) * M1_CLOCK_STEP_SECONDS - 1,
         type: 'shot', teamId, playerId: player.id, zone, focus,
         fatigueMilli: fatigue, xgMilli,
-        outcome: shotOutcome(xgMilli, player, outcomeDraw),
+        outcome: shotOutcome(xgMilli, player, outcomeDraw, research),
       };
     }
     return null;

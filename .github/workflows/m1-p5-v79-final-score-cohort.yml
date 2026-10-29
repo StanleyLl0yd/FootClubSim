@@ -1,0 +1,57 @@
+name: M1 P5 v79 final-score reference cohort
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-v79-final-score-shard.mjs'
+      - 'tests/m1-p5-v79-final-score-shard.test.mjs'
+      - 'data/rpl-2025-26-p5-reference.json'
+      - 'docs/M1_P5_V79_FINAL_SCORE_COHORT.md'
+      - '.github/workflows/m1-p5-v79-final-score-cohort.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  final-score-source-replay:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v79-')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture_group: [0, 1, 2, 3]
+        seed_group: [0, 1, 2, 3]
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Build exactly locked source
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build:core
+      - name: Run deterministic complete source-replayed final-score shard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ${{ matrix.fixture_group }} == 0 && ${{ matrix.seed_group }} == 0 ]]; then
+            node --test tests/m1-p5-v79-final-score-shard.test.mjs
+          fi
+          node scripts/m1-p5-v79-final-score-shard.mjs ${{ matrix.fixture_group }} ${{ matrix.seed_group }} | tee v79-result.txt
+          if [[ ${{ matrix.fixture_group }} == 0 && ${{ matrix.seed_group }} == 0 ]]; then
+            node scripts/m1-p5-v79-final-score-shard.mjs 0 0 > v79-repeat.txt
+            node --input-type=module -e "
+              import {readFileSync} from 'node:fs';
+              const value=p=>JSON.parse(readFileSync(p,'utf8').replace(/^V79_SHARD_RESULT=/,''));
+              const a=value('v79-result.txt'),b=value('v79-repeat.txt');
+              delete a.runtimeObservation;delete b.runtimeObservation;
+              if(JSON.stringify(a)!==JSON.stringify(b))throw Error('V79_DETERMINISM_DRIFT');
+            "
+          fi
+          cat v79-result.txt >> "$GITHUB_STEP_SUMMARY"

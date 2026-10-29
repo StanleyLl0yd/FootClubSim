@@ -1,0 +1,51 @@
+name: M1 P5 v104 joint candidate
+on:
+  pull_request:
+    paths:
+      - 'src/core/m1-phases-v5.ts'
+      - 'src/core/m1-v104-joint-candidate.ts'
+      - 'scripts/m1-p5-v104-joint-candidate-shard.mjs'
+      - 'tests/m1-p5-v104-joint-candidate.test.mjs'
+      - 'docs/M1_P5_V104_JOINT_CANDIDATES.md'
+      - '.github/workflows/m1-p5-v104-joint-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  joint-research:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v104-')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture_group: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - name: Exact source checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Build locked core
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build:core
+      - name: Same-seed v99 baseline and joint candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ${{ matrix.fixture_group }} == 0 ]]; then
+            node --test tests/m1-p5-v104-joint-candidate.test.mjs
+          fi
+          node scripts/m1-p5-v104-joint-candidate-shard.mjs ${{ matrix.fixture_group }} | tee v104-shard.txt
+          if [[ ${{ matrix.fixture_group }} == 0 ]]; then
+            node scripts/m1-p5-v104-joint-candidate-shard.mjs 0 > v104-repeat.txt
+            cmp v104-shard.txt v104-repeat.txt
+          fi
+          cat v104-shard.txt >> "$GITHUB_STEP_SUMMARY"

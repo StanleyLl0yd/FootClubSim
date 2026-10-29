@@ -133,6 +133,8 @@ test('v103 rejects malformed, early or unauthorized medical transitions',()=>{
     {...exit,fixtureId:'other-fixture'}]).ok,false);
   assert.equal(simulate(input,policy,[],[],[
     {...exit,extra:'forbidden'}]).ok,false);
+  assert.equal(simulate(input,policy,[],[checkpointExit],[
+    {...exit,id:checkpointExit.id,playerId:patientTwo}]).ok,false);
   assert.equal(simulate(input,policy,[],[],[
     {...exit,restartAtRunningSeconds:195},returning]).ok,false);
   assert.equal(simulate(input,policy,[],[],[

@@ -99,6 +99,25 @@ test('v103 treatment exit at 100 affects only later shot slots and return at 200
   assert.deepEqual(returning,originals[2]);
 });
 
+test('v103 arbitrary-second exit at 150 and return at 250 update different shot slots',()=>{
+  const departure={...exit,id:'v103-arbitrary-exit-150',
+    elapsedSeconds:150,restartAtRunningSeconds:165};
+  const arrival={...returning,id:'v103-arbitrary-return-250',
+    elapsedSeconds:250};
+  const match=simulate(input,policy,[],[],[departure,arrival]);
+  assert.equal(match.ok,true,JSON.stringify(match).slice(0,500));
+  const events=match.events.filter(e=>e.type==='intraphase-medical');
+  assert.deepEqual(events.map(e=>e.elapsedSeconds),[150,250]);
+  assert.ok(match.events.filter(e=>e.type==='shot'&&
+    e.elapsedSeconds>=150&&e.elapsedSeconds<250)
+    .every(e=>e.playerId!==patient));
+  assert.ok(match.events.every((e,i)=>e.sequence===i+1));
+  assert.equal(match.rngDraws,270);
+  assert.equal(verify(input,policy,[],[],[departure,arrival],match),true);
+  assert.equal(simulate(input,policy,[],[],[
+    departure,{...arrival,elapsedSeconds:220}]).ok,false);
+});
+
 test('v103 combines verified 300s source transitions with new 100s actions',()=>{
   const source=simulateM1V101PhysicalIntraphase(
     input,policy,[checkpointRed],[checkpointExit,checkpointReturn]);
@@ -125,6 +144,10 @@ test('v103 rejects malformed, early or unauthorized medical transitions',()=>{
   assert.equal(simulate(input,policy,[],[],[returning,exit]).ok,false);
   assert.equal(simulate(input,policy,[],[],[
     {...exit,elapsedSeconds:99}]).ok,false);
+  assert.equal(simulate(input,policy,[],[],[
+    {...exit,elapsedSeconds:199}]).ok,false);
+  assert.equal(simulate(input,policy,[],[],[
+    {...exit,elapsedSeconds:299}]).ok,false);
   assert.equal(simulate(input,policy,[],[],[
     {...exit,elapsedSeconds:300}]).ok,false);
   assert.equal(simulate(input,policy,[],[],[

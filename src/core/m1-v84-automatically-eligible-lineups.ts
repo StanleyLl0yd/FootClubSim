@@ -34,12 +34,14 @@ const fail=(error:Extract<M1V84SafeLineupProposal,{ok:false}>['error'],
 const RULES={starterCount:11,maxBench:12,maxForeignersOnField:7} as const;
 type Denied=Extract<M1V56DisciplineGateRun,{ok:false}>;
 function validRegisteredLineup(
-  club:Club,allowed:MatchLineup,players:ReadonlyMap<string,Player>,
-  banned:ReadonlySet<string>,
+  club:Club,players:ReadonlyMap<string,Player>,
+  medical:ReadonlySet<string>,banned:ReadonlySet<string>,
 ):MatchLineup|null {
-  const registered=new Set(club.registeredPlayerIds);
-  const eligible=[...allowed.starters,...allowed.bench].filter(id=>
-    !banned.has(id)&&registered.has(id));
+  // v82 lists up to twelve bench players. When a later v56 ban removes
+  // someone, do not lose other eligible players registered beyond that
+  // initial bench window. Both exclusions come from fully replayed gates.
+  const eligible=club.registeredPlayerIds.filter(id=>
+    !medical.has(id)&&!banned.has(id));
   const goalkeeper=eligible.find(id=>players.get(id)?.primaryPosition==='GK');
   if(!goalkeeper)return null;
   const field=eligible.filter(id=>players.get(id)?.primaryPosition!=='GK');
@@ -69,6 +71,11 @@ export function proposeM1V84MedicallyAndAutomaticallyEligibleLineups(
   const away=clubs.get(input.fixture.awayClubId);
   if(!home||!away)return fail('INVALID_INPUT');
   const removed={home:new Set<string>(),away:new Set<string>()};
+  const held={home:new Set<string>(),away:new Set<string>()};
+  for(const entry of medical.excludedMedicalPlayers){
+    if(entry.teamId===home.id)held.home.add(entry.playerId);
+    else if(entry.teamId===away.id)held.away.add(entry.playerId);
+  }
   let homeLineup=medical.homeLineup,awayLineup=medical.awayLineup;
   for(let attempt=0;attempt<=home.registeredPlayerIds.length+
     away.registeredPlayerIds.length;attempt++){
@@ -113,10 +120,10 @@ export function proposeM1V84MedicallyAndAutomaticallyEligibleLineups(
       if(!foundNew)return fail('DISCIPLINE_NOT_RESOLVABLE',
         'NO_BAN_PROGRESS',club.id);
     }
-    const newerHome=validRegisteredLineup(home,medical.homeLineup,
-      players,removed.home);
-    const newerAway=validRegisteredLineup(away,medical.awayLineup,
-      players,removed.away);
+    const newerHome=validRegisteredLineup(home,players,
+      held.home,removed.home);
+    const newerAway=validRegisteredLineup(away,players,
+      held.away,removed.away);
     if(!newerHome||!newerAway)
       return fail('NOT_ENOUGH_REGISTERED_PLAYERS',undefined,
         !newerHome?home.id:away.id);

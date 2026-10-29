@@ -1,0 +1,76 @@
+name: M1 P5 v68 observed open-play shot goal budget
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-v68-shot-goal-budget.mjs'
+      - 'tests/m1-p5-v68-shot-goal-budget.test.mjs'
+      - 'docs/M1_P5_V68_SHOT_GOAL_BUDGET.md'
+      - '.github/workflows/m1-p5-v68-shot-budget.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-shot-goal-budget:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'm1/p5-v68-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Build
+        run: |
+          npm ci --ignore-scripts
+          npm run build:core
+      - name: Measure exact 256 seeded full-replay shot and goal budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          node scripts/m1-v29-causal-corpus.mjs \
+            --start=1 --count=32 --fixtures=8 > "$tmp/cohort.json"
+          node --input-type=module - "$tmp/cohort.json" <<'NODE'
+          import {readFileSync,appendFileSync} from 'node:fs';
+          import {observeM1V29ShotGoalBudget as inspect}
+            from './scripts/m1-p5-v68-shot-goal-budget.mjs';
+          const cohort=JSON.parse(readFileSync(process.argv[2],'utf8'));
+          const x=inspect(cohort);
+          if(x.attempted!==256||x.accepted+x.rejected!==256||
+              !x.realizedOpenPlayGoals.exactArithmeticIdentity||
+              x.structure.maximumSourceShotsPerMatch!==18||
+              x.shotOpportunities.used>18*x.accepted||
+              x.realizedOpenPlayGoals.count>x.shotOpportunities.used||
+              x.tuningPerformed!==false||
+              x.calibrationPassed!==false||x.holdout2024_25Used!==false){
+            throw Error('V68_SHOT_GOAL_CONSERVATION_FAILED');
+          }
+          const lines=[
+            '# M1 P5 v68 observed synthetic open-play shot/goal budget',
+            '',
+            '- Scenarios attempted: '+x.attempted,
+            '- Accepted full source replays: '+x.accepted,
+            '- Rejected: '+x.rejected,
+            '- Source replay SHA-256: '+x.sourceReplayDigestSha256,
+            '- Modelled shots: '+x.shotOpportunities.used,
+            '- Theoretical 18-phase shot-event slots: '+x.shotOpportunities.theoreticalMax,
+            '- Phase slot occupancy: '+x.shotOpportunities.occupancy,
+            '- Shots per accepted match: '+x.shotOpportunities.shotsPerAcceptedMatch,
+            '- Open-play goals: '+x.realizedOpenPlayGoals.count,
+            '- Open-play goals per accepted match: '+x.realizedOpenPlayGoals.perAcceptedMatch,
+            '- Realized goals/source shot: '+x.realizedOpenPlayGoals.goalsPerSourceShot,
+            '- Score identity proven: '+x.realizedOpenPlayGoals.exactArithmeticIdentity,
+            '- No source-compatible RPL shot/xG reference or clinical evidence',
+            '- No special-goal generator, tuning, or realism acceptance',
+          ];
+          const result=lines.join('\n')+'\n';
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY,result);
+          process.stdout.write(result);
+          NODE

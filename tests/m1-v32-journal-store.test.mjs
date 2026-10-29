@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createM1V32PersistedJournal, loadM1V32PersistedJournal,
-  commitM1V32PersistedBatch,
+  commitM1V32PersistedBatch, commitM1V76PersistedMedicallyGatedFixture,
 } from '../dist/browser/m1-v32-journal-store.js';
 import { saveNewInitialCareer, loadInitialCareer }
   from '../dist/browser/initial-career-store.js';
@@ -581,5 +581,99 @@ test('v42 malformed preflight still rejects before any write transaction', async
       [matchRequest(fixtures[0], 0, 'v42-corrupted')]), {code:'CORRUPTED'});
     assert.equal(writeInvoked, false);
     assert.deepEqual(entries.get(career.careerId), damaged);
+  });
+});
+
+test('v76 persisted admission commits once, rejects result forgery and stale CAS',async()=>{
+  await withStorage(async()=>{
+    const before=await createM1V32PersistedJournal(career.careerId);
+    const request=matchRequest(fixtures[0],0,'v76-first');
+    const altered=structuredClone(request);
+    altered.result.fixtureId='forged-fixture';
+    await assert.rejects(commitM1V76PersistedMedicallyGatedFixture(
+      career.careerId,0,altered),{
+      code:'DOMAIN_REJECTED',domainError:'INVALID_MATCH_RESULT',
+    });
+    assert.deepEqual(await loadM1V32PersistedJournal(career.careerId),before);
+    const accepted=await commitM1V76PersistedMedicallyGatedFixture(
+      career.careerId,0,request);
+    assert.equal(accepted.revision,1);
+    assert.deepEqual(await loadM1V32PersistedJournal(career.careerId),accepted);
+    await assert.rejects(commitM1V76PersistedMedicallyGatedFixture(
+      career.careerId,0,request),{code:'STALE_REVISION'});
+  });
+});
+
+test('v76 concurrent admissions serialize and exactly one wins native CAS',async()=>{
+  await withStorage(async()=>{
+    await createM1V32PersistedJournal(career.careerId);
+    const reqA=matchRequest(fixtures[0],0,'v76-writer-a');
+    const reqB=matchRequest(fixtures[1],0,'v76-writer-b');
+    const settled=await Promise.allSettled([reqA,reqB].map(req=>
+      commitM1V76PersistedMedicallyGatedFixture(career.careerId,0,req)));
+    assert.equal(settled.filter(x=>x.status==='fulfilled').length,1);
+    assert.equal(settled.find(x=>x.status==='rejected').reason.code,
+      'STALE_REVISION');
+    const saved=await loadM1V32PersistedJournal(career.careerId);
+    assert.equal(saved.revision,1);
+    assert.equal(saved.results.length,1);
+    assert.ok(['v76-writer-a','v76-writer-b'].includes(saved.results[0].commandId));
+  });
+});
+
+test('v76 same-revision payload tamper and quota abort never alter stored data',async()=>{
+  await withStorage(async mock=>{
+    const baseline=await createM1V32PersistedJournal(career.careerId);
+    const request=matchRequest(fixtures[0],0,'v76-tamper');
+    mock.beforeNextSchema6WriteStart(entries=>{
+      const changed=structuredClone(entries.get(career.careerId));
+      changed.controlledClubId='forged-club';
+      entries.set(career.careerId,changed);
+    });
+    await assert.rejects(commitM1V76PersistedMedicallyGatedFixture(
+      career.careerId,0,request),{code:'CORRUPTED'});
+    const damaged=mock.entries('footclubsim-m1-v32','result-journals')
+      .get(career.careerId);
+    assert.equal(damaged.controlledClubId,'forged-club');
+    assert.equal(damaged.revision,0);
+    mock.entries('footclubsim-m1-v32','result-journals')
+      .set(career.careerId,structuredClone(baseline));
+    mock.setQuotaPut(true);
+    await assert.rejects(commitM1V76PersistedMedicallyGatedFixture(
+      career.careerId,0,request),{code:'QUOTA_EXCEEDED'});
+    assert.deepEqual(await loadM1V32PersistedJournal(career.careerId),baseline);
+    mock.setQuotaPut(false);
+    assert.equal((await commitM1V76PersistedMedicallyGatedFixture(
+      career.careerId,0,request)).revision,1);
+  });
+});
+
+test('v76 rejects source-replayed medical hold before persistent append',async()=>{
+  await withStorage(async()=>{
+    await createM1V32PersistedJournal(career.careerId);
+    const later=fixtures.find(f=>f.round===2);
+    assert.ok(later);
+    const previous=fixtures.find(f=>f.round===1&&(
+      f.homeClubId===later.homeClubId||f.awayClubId===later.homeClubId));
+    assert.ok(previous);
+    let past=null;
+    for(let seed=1;seed<=128;seed++){
+      const req=matchRequest(previous,0,'v76-prior-injury');
+      req.prematch.rngSeed=seed;
+      req.result=deriveM1V31CausalPhysicalExposure(req.prematch,policy,[],[]);
+      if(req.result.ok&&req.result.physical.playerRows.some(row=>
+        row.teamId===later.homeClubId&&row.permanentInjuryWithdrawals===1)){
+        past=req;break;
+      }
+    }
+    assert.ok(past,'Need source-replayed deterministic medical withdrawal');
+    const history=await commitM1V32PersistedBatch(career.careerId,0,[past]);
+    assert.equal(history.revision,1);
+    const laterReq=matchRequest(later,1,'v76-medically-held');
+    await assert.rejects(commitM1V76PersistedMedicallyGatedFixture(
+      career.careerId,1,laterReq),{
+      code:'ADMISSION_DENIED',gateError:'CURRENT_MODELLED_MEDICAL_HOLD',
+    });
+    assert.deepEqual(await loadM1V32PersistedJournal(career.careerId),history);
   });
 });

@@ -98,3 +98,19 @@ test('v107 signed bytes do not override invalid v105 source',async()=>{
   assert.deepEqual(await verify(keys.publicKey,context,envelope,bad,result),
     {ok:false,error:'V105_SOURCE_REJECTED'});
 });
+test('v107 replays an immutable signed snapshot across asynchronous verification',async()=>{
+  const keys=await webcrypto.subtle.generateKey({name:'Ed25519'},true,
+    ['sign','verify']);
+  const mutableSource=structuredClone(source);
+  const mutableContext={...context};
+  const envelope=await sign(keys.privateKey,mutableSource,mutableContext);
+  const pending=verify(keys.publicKey,mutableContext,envelope,mutableSource,result);
+  mutableSource[5].push({unrecognized:true});
+  mutableContext.careerId='modified-after-submission';
+  const actual=await pending;
+  assert.equal(actual.ok,true,JSON.stringify(actual).slice(0,200));
+  assert.deepEqual(actual.result,result);
+  assert.equal(actual.careerId,context.careerId);
+  assert.equal(actual.sourceSha256,
+    createHash('sha256').update(JSON.stringify(source)).digest('hex'));
+});

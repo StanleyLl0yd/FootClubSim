@@ -121,7 +121,9 @@
     check(results.filter(x=>x.status==='fulfilled').length===1,
       'concurrent native writers did not serialize');
     const loser=results.find(x=>x.status==='rejected');
-    check(loser?.reason?.code==='STALE_REVISION',
+    check(loser?.reason?.code==='STALE_REVISION'||
+      (loser?.reason?.code==='DOMAIN_REJECTED'&&
+        loser.reason.domainError==='STALE_REVISION'),
       'concurrent loser not rejected as stale revision');
     const updated=await load(career.careerId,publicKey,'native-test-key');
     check(updated.revision===2&&updated.entries.length===2,

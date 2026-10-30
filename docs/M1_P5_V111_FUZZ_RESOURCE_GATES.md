@@ -38,3 +38,31 @@ Run the four-shard `M1 P5 v111 independent fuzz and resource limits`
 GitHub Actions workflow on exact HEAD. Do not claim successful evidence
 before the jobs complete and report observed outputs. P5 #31, P3 #29,
 exit audit #3 and M1 remain OPEN; P4 #30 deferred; M2 prohibited.
+
+## Pinned first observed exact-source run
+
+The [four-shard GitHub Actions run #41035823871](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/41035823871)
+completed 4/4 SUCCESS at exact source HEAD
+`76109ebc49055fae21a8e885cbd7214e56b8dacc`.
+The original source job IDs, SHA-256 result digests, per-shard counts and
+runner-measured wall/RSS values are pinned in
+`data/m1-p5-v111-fuzz-observed.json` and checked independently by
+`scripts/m1-p5-v111-verify-observed.mjs`.
+
+| Experimental case | Games | Shots | On target | Open-play goals | Model xG |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| v99 baseline | 256 | 5399 | 2731 | 983 | 1006.536 |
+| v104 candidate A | 256 | 5887 | 2168 | 668 | 681.858 |
+| v104 candidate B | 256 | 5887 | 2076 | 652 | 659.827 |
+
+Observed per-shard wall-clock range: **3458.47–3551.65 ms**;
+peak RSS range: **98.43–100.77 MiB** on that Linux runner.
+These measurements include the independent verifier, are not
+production match-latency estimates, and do **not** establish a
+performance acceptance threshold. All 16 forged-event negative checks
+rejected as required. The cohort remains too small to replace broad
+season calibration or source taxonomy harmonization.
+
+```bash
+node --test tests/m1-p5-v111-verify-observed.test.mjs
+```

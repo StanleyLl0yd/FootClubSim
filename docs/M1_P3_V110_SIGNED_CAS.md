@@ -30,9 +30,11 @@ node --test tests/m1-v110-signed-journal-store.test.mjs
 This DOES NOT establish real-world referee/physician authority or
 host-issued challenge namespace, globally prevent rollback against
 malicious local-storage rewriting, implement an authenticated external
-signer registry, or fill missing legal exceptional rulings. Native
-Safari and Windows Chromium v110-specific smoke tests are still needed
-before full acceptance; v7 browser smoke is not v110 evidence.
+signer registry, or fill missing legal exceptional rulings. Native v110-specific smoke fixtures are now wired into Linux Chromium,
+Windows Chrome/Edge and macOS Safari CI. They test a real navigation,
+Ed25519 replay and competing IndexedDB writers. Those checks must finish
+successfully on the exact PR HEAD before they count as browser evidence;
+v7-only smoke results do not validate v110.
 
 P3 #29 and P5 #31 stay OPEN, M1 and exit audit #3 OPEN.
 P4 #30 deferred; M2 prohibited.

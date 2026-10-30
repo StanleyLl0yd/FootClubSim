@@ -110,13 +110,13 @@ test('v109 validates all historical signed entries and rejects tampering',async(
 });
 test('v109 rejects a signed alternate catalog and unknown canonical fixture',async()=>{
   const j=start(initial,'research-key').journal;
-  const changed=caseFor(fixtures[0],0);
+  const changed=structuredClone(caseFor(fixtures[0],0));
   changed.source[0].catalog.packVersion='altered';
   const env=await sign(keys,changed);
   assert.deepEqual(await append(initial,keys.publicKey,'research-key',j,
     changed.context,env,changed.source,changed.result),
     {ok:false,error:'UNTRUSTED_PACK'});
-  const changedFixture=caseFor(fixtures[0],0);
+  const changedFixture=structuredClone(caseFor(fixtures[0],0));
   changedFixture.source[0].fixture.round++;
   const env2=await sign(keys,changedFixture);
   assert.deepEqual(await append(initial,keys.publicKey,'research-key',j,

@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "status": "P5_V111_OBSERVED_INDEPENDENT_FUZZ_NOT_RELEASE_ACCEPTANCE",
+  "source": {
+    "headSha": "76109ebc49055fae21a8e885cbd7214e56b8dacc",
+    "workflowRunId": 41035823871,
+    "seedDomain": "footclubsim-v111-fuzz-v1",
+    "fixtureGroups": 4,
+    "fixturesPerGroup": 4,
+    "seedsPerFixture": 16,
+    "modelCandidates": 3
+  },
+  "shards": [
+    {
+      "group": 0,
+      "jobId": 123996266757,
+      "distinctSeeds": 64,
+      "negativeChecks": 4,
+      "resultSha256": "f685cdea41b7ed76de4bbd8eb2feb7e83d60eb8de838c076732e5b827f3ce1ac",
+      "timing": {
+        "observedWallMs": 3551.652983,
+        "observedPeakRssMiB": 99.65234375
+      },
+      "totals": {
+        "baseline": {
+          "matches": 64,
+          "shots": 1393,
+          "onTarget": 728,
+          "goals": 270,
+          "xgMilli": 257827
+        },
+        "candidateA": {
+          "matches": 64,
+          "shots": 1532,
+          "onTarget": 581,
+          "goals": 188,
+          "xgMilli": 176112
+        },
+        "candidateB": {
+          "matches": 64,
+          "shots": 1532,
+          "onTarget": 561,
+          "goals": 183,
+          "xgMilli": 170419
+        }
+      }
+    },
+    {
+      "group": 1,
+      "jobId": 123996266630,
+      "distinctSeeds": 64,
+      "negativeChecks": 4,
+      "resultSha256": "521b137337e7ea779ad7867540358535209d9dbd4e1ee51c13872fc4253573af",
+      "timing": {
+        "observedWallMs": 3520.665603,
+        "observedPeakRssMiB": 100.765625
+      },
+      "totals": {
+        "baseline": {
+          "matches": 64,
+          "shots": 1333,
+          "onTarget": 677,
+          "goals": 235,
+          "xgMilli": 252096
+        },
+        "candidateA": {
+          "matches": 64,
+          "shots": 1457,
+          "onTarget": 519,
+          "goals": 154,
+          "xgMilli": 170686
+        },
+        "candidateB": {
+          "matches": 64,
+          "shots": 1457,
+          "onTarget": 496,
+          "goals": 151,
+          "xgMilli": 165199
+        }
+      }
+    },
+    {
+      "group": 2,
+      "jobId": 123996266692,
+      "distinctSeeds": 64,
+      "negativeChecks": 4,
+      "resultSha256": "0a45ba79fe327f66a49dc9390b5bd2b0f07ccbd2ed4ec4a3eeaff8b0e527a0d2",
+      "timing": {
+        "observedWallMs": 3458.473141,
+        "observedPeakRssMiB": 100.66796875
+      },
+      "totals": {
+        "baseline": {
+          "matches": 64,
+          "shots": 1338,
+          "onTarget": 670,
+          "goals": 254,
+          "xgMilli": 248624
+        },
+        "candidateA": {
+          "matches": 64,
+          "shots": 1441,
+          "onTarget": 547,
+          "goals": 174,
+          "xgMilli": 166109
+        },
+        "candidateB": {
+          "matches": 64,
+          "shots": 1441,
+          "onTarget": 523,
+          "goals": 167,
+          "xgMilli": 160752
+        }
+      }
+    },
+    {
+      "group": 3,
+      "jobId": 123996266781,
+      "distinctSeeds": 64,
+      "negativeChecks": 4,
+      "resultSha256": "2403666d13c1aee4fac6849fa368c8c01e20ce48d33dba15d8725ed0ee042091",
+      "timing": {
+        "observedWallMs": 3529.5628580000002,
+        "observedPeakRssMiB": 98.4296875
+      },
+      "totals": {
+        "baseline": {
+          "matches": 64,
+          "shots": 1335,
+          "onTarget": 656,
+          "goals": 224,
+          "xgMilli": 247989
+        },
+        "candidateA": {
+          "matches": 64,
+          "shots": 1457,
+          "onTarget": 521,
+          "goals": 152,
+          "xgMilli": 168951
+        },
+        "candidateB": {
+          "matches": 64,
+          "shots": 1457,
+          "onTarget": 496,
+          "goals": 151,
+          "xgMilli": 163457
+        }
+      }
+    }
+  ],
+  "observedTotals": {
+    "baseline": {
+      "matches": 256,
+      "shots": 5399,
+      "onTarget": 2731,
+      "goals": 983,
+      "xgMilli": 1006536
+    },
+    "candidateA": {
+      "matches": 256,
+      "shots": 5887,
+      "onTarget": 2168,
+      "goals": 668,
+      "xgMilli": 681858
+    },
+    "candidateB": {
+      "matches": 256,
+      "shots": 5887,
+      "onTarget": 2076,
+      "goals": 652,
+      "xgMilli": 659827
+    }
+  },
+  "interpretation": {
+    "candidateGamesEach": 256,
+    "modelSimulations": 768,
+    "negativeChecks": 16,
+    "holdout2024_25Used": false,
+    "providerTaxonomyAligned": false,
+    "productionPerformanceAccepted": false,
+    "releaseCalibrationAccepted": false
+  }
+}

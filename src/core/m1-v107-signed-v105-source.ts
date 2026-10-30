@@ -53,7 +53,7 @@ function parseEnvelope(raw:unknown):{payload:Record<string,unknown>;
   payloadBytes:Uint8Array;signatureBytes:Uint8Array}|null{
   if(!isPlainJsonTree(raw)||!rec(raw)||!exact(raw,ENVELOPE)||
       raw.schemaVersion!==107||typeof raw.payload!=='string'||
-      typeof raw.signature!=='string'||
+      raw.payload.length>4096||typeof raw.signature!=='string'||
       !/^[A-Za-z0-9_-]{86}$/.test(raw.signature))return null;
   try{
     const payload=JSON.parse(raw.payload) as unknown;

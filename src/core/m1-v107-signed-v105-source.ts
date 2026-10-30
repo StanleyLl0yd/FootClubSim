@@ -89,10 +89,6 @@ export async function verifyM1V107SignedV105Source(
       source[2].length>24||source[3].length>36||
       source[4].length>36||source[5].length>18)
     return fail('INVALID_SOURCE');
-  const prematch=source[0];
-  if(!rec(prematch)||!rec(prematch.fixture)||
-      prematch.fixture.id!==trustedContext.fixtureId)
-    return fail('SCOPE_MISMATCH');
   const envelope=parseEnvelope(signedEnvelope);
   if(!envelope)return fail('INVALID_ENVELOPE');
   if(CONTEXT.some(k=>envelope.payload[k]!==trustedContext[k]))
@@ -100,11 +96,18 @@ export async function verifyM1V107SignedV105Source(
   if(!keyValid(trustedPublicKey)||typeof crypto==='undefined'||
       !crypto.subtle)return fail('TRUST_ANCHOR_UNAVAILABLE');
   let bytes:Uint8Array;
+  let sourceSnapshot:unknown[];
   try{
-    bytes=new TextEncoder().encode(JSON.stringify(source));
+    const serialized=JSON.stringify(source);
+    bytes=new TextEncoder().encode(serialized);
     if(bytes.length===0||bytes.length>MAX_SOURCE_BYTES)
       return fail('INVALID_SOURCE');
+    sourceSnapshot=JSON.parse(serialized) as unknown[];
   }catch{return fail('INVALID_SOURCE');}
+  const prematch=sourceSnapshot[0];
+  if(!rec(prematch)||!rec(prematch.fixture)||
+      prematch.fixture.id!==envelope.payload.fixtureId)
+    return fail('SCOPE_MISMATCH');
   try{
     const digest=await crypto.subtle.digest('SHA-256',bytes);
     const hex=Array.from(new Uint8Array(digest),
@@ -114,17 +117,18 @@ export async function verifyM1V107SignedV105Source(
       envelope.signatureBytes,envelope.payloadBytes))
       return fail('INVALID_SIGNATURE');
     const result=simulateM1V105SpecialGoalChronology(
-      source[0],source[1],source[2],source[3],source[4],source[5]);
+      sourceSnapshot[0],sourceSnapshot[1],sourceSnapshot[2],
+      sourceSnapshot[3],sourceSnapshot[4],sourceSnapshot[5]);
     if(!result.ok)return fail('V105_SOURCE_REJECTED');
     if(!isPlainJsonTree(claimedResult)||
         !sameCanonicalValue(result,claimedResult))
       return fail('CLAIMED_RESULT_MISMATCH');
     return {ok:true,schemaVersion:107,
       status:'EXTERNALLY_SIGNED_V105_SOURCE_REPLAY_GATED',
-      careerId:trustedContext.careerId as string,
-      fixtureId:trustedContext.fixtureId as string,
-      expectedRevision:trustedContext.expectedRevision as number,
-      challengeId:trustedContext.challengeId as string,
+      careerId:envelope.payload.careerId as string,
+      fixtureId:envelope.payload.fixtureId as string,
+      expectedRevision:envelope.payload.expectedRevision as number,
+      challengeId:envelope.payload.challengeId as string,
       sourceSha256:hex,result,
       signedByProvidedTrustAnchor:true,
       officialRefereeAndPhysicianIdentityEstablished:false,

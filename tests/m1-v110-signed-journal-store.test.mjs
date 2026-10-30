@@ -22,7 +22,7 @@ import {defaultTacticalPlan} from '../dist/core/tactics.js';
 // A minimal serialized IDB mock with staged writes; success means commit.
 function fakeIndexedDB(){
   const dbs=new Map(),pending=new Map();
-  let quotaPut=false;
+  let quotaPut=false,beforeWrite=null;
   function space(name,store){
     if(!dbs.has(name))dbs.set(name,new Map());
     const stores=dbs.get(name);
@@ -40,6 +40,11 @@ function fakeIndexedDB(){
       },
       close(){},
       transaction(store,mode){
+        if(mode==='readwrite'&&name==='footclubsim-m1-v110'&&beforeWrite){
+          const hook=beforeWrite;
+          beforeWrite=null;
+          hook(space(name,store));
+        }
         const queue=pending.get(name)??[];
         pending.set(name,queue);
         const ops=[];
@@ -103,6 +108,7 @@ function fakeIndexedDB(){
   return {
     entries(name,store){return space(name,store);},
     setQuotaPut(x){quotaPut=x;},
+    setBeforeWrite(fn){beforeWrite=fn;},
     indexedDB:{open(name){
       const r={result:database(name),error:null,onupgradeneeded:null,
         onerror:null,onblocked:null,onsuccess:null};
@@ -226,6 +232,20 @@ test('v110 fails closed on tamper, stale snapshot and untrusted authority',async
       {code:'CORRUPTED'});
     await assert.rejects(write(x,0),
       {code:'DOMAIN_REJECTED',domainError:'STALE_REVISION'});
+  });
+});
+test('v110 rejects same-revision replacement after prevalidation',async()=>{
+  await withStore(async db=>{
+    await create(initial.careerId,'research-key');
+    const initialEntry=await signed(fixtures[0],0,'original');
+    const committed=await write(initialEntry,0);
+    const proposed=await signed(fixtures[1],1,'next');
+    const forged=structuredClone(committed);
+    forged.entries[0].context.challengeId='tampered-after-verification';
+    db.setBeforeWrite(store=>store.set(initial.careerId,forged));
+    await assert.rejects(write(proposed,1),{code:'STALE_SNAPSHOT'});
+    assert.deepEqual(db.entries('footclubsim-m1-v110',
+      'signed-v105-journals').get(initial.careerId),forged);
   });
 });
 test('v110 does not accept missing IDB or invalid career ID',async()=>{

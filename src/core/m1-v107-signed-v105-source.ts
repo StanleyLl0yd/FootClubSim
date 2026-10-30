@@ -65,7 +65,7 @@ function parseEnvelope(raw:unknown):{payload:Record<string,unknown>;
         !/^[a-f0-9]{64}$/.test(payload.sourceSha256))return null;
     const binary=atob(raw.signature.replace(/-/g,'+').replace(/_/g,'/')+'==');
     if(binary.length!==64||
-        btoa(binary).replace(/\\+/g,'-').replace(/\\//g,'_')
+        btoa(binary).split('+').join('-').split('/').join('_')
           .replace(/=+$/g,'')!==raw.signature)return null;
     return {payload,payloadBytes:new TextEncoder().encode(raw.payload),
       signatureBytes:Uint8Array.from(binary,c=>c.charCodeAt(0))};

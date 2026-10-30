@@ -1,6 +1,12 @@
 name: M1 P5 v111 independent fuzz and resource limits
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/m1-p5-v111-fuzz-performance.yml'
+      - 'scripts/m1-p5-v111-fuzz-performance.mjs'
+      - 'tests/m1-p5-v111-fuzz-performance.test.mjs'
+      - 'docs/M1_P5_V111_FUZZ_RESOURCE_GATES.md'
   workflow_dispatch:
 
 permissions: {}

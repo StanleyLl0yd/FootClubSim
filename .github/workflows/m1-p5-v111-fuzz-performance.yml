@@ -1,0 +1,30 @@
+name: M1 P5 v111 independent fuzz and resource limits
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  independent-fuzz:
+    name: v111 independently replayed fuzz shard ${{ matrix.group }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [0, 1, 2, 3]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build:core
+      - run: node --test tests/m1-p5-v111-fuzz-performance.test.mjs
+      - run: node scripts/m1-p5-v111-fuzz-performance.mjs ${{ matrix.group }}

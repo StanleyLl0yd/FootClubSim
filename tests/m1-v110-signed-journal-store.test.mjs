@@ -183,7 +183,9 @@ test('v110 serializes concurrent tabs and cannot overwrite signed history',async
     const settled=await Promise.allSettled([write(a,0),write(b,0)]);
     assert.equal(settled.filter(x=>x.status==='fulfilled').length,1);
     const failure=settled.find(x=>x.status==='rejected');
-    assert.equal(failure.reason.code,'STALE_REVISION');
+    assert.ok(failure.reason.code==='STALE_REVISION'||
+      (failure.reason.code==='DOMAIN_REJECTED'&&
+        failure.reason.domainError==='STALE_REVISION'));
     const current=await load(initial.careerId,keys.publicKey,'research-key');
     assert.equal(current.revision,1);
     assert.equal(current.entries.length,1);

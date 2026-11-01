@@ -1,6 +1,8 @@
 import { generateDoubleRoundRobin, type Fixture } from './fixtures.js';
 import type { M1V8MatchJournal } from './m1-v8-result-journal.js';
 import type { InitialCareerSave } from './save.js';
+import { deriveM1V118InternalRecovery, M1_V118_MODELLED_RECOVERY_SCHEMA,
+  type M1V118ModelledRecovery } from './m1-v118-modelled-recovery.js';
 
 export const M1_V115_ELIGIBILITY_SCHEMA = 115 as const;
 export type M1V115ExclusionReason =
@@ -25,6 +27,17 @@ export type M1V115Eligibility =
     opponentFullHistoryVerified: false;
     externalRecoveryOrKdkDecisionAuthenticated: false }>;
 
+export type M1V118Eligibility =
+  | Extract<M1V115Eligibility, { ok: false }>
+  | Readonly<{ ok: true; schemaVersion: typeof M1_V118_MODELLED_RECOVERY_SCHEMA;
+      exclusions: readonly M1V115Exclusion[];
+      modelledRecoveries: readonly M1V118ModelledRecovery[];
+      allKnownNonModelledMedicalAndDirectRedHoldsEnforced: true;
+      selectedClubAutomaticBansVerified: true;
+      opponentFullHistoryVerified: false;
+      fictionalRecoveryNotClinicalClearance: true;
+      externalRecoveryOrKdkDecisionAuthenticated: false }>;
+
 type Pending = Readonly<{
   sourceFixtureId: string;
   reason: Extract<M1V115ExclusionReason,
@@ -39,10 +52,10 @@ type Pending = Readonly<{
  * second-yellow/four-caution sanctions to expire after the next club match.
  * Opponent fixture histories are incomplete in this controlled-club playtest.
  */
-export function projectM1V115KnownEligibility(
+function deriveKnownEligibility(
   initial: InitialCareerSave, journal: M1V8MatchJournal,
-  fixture: Fixture,
-): M1V115Eligibility {
+  fixture: Fixture, internalRecovery: boolean,
+): M1V115Eligibility | M1V118Eligibility {
   const all = generateDoubleRoundRobin(initial.catalog.clubs.map(c => c.id))
     .flatMap(round => round.fixtures);
   const byId = new Map(journal.results.map(item => [item.fixtureId, item]));
@@ -59,10 +72,32 @@ export function projectM1V115KnownEligibility(
   const exclusions = new Map<string, M1V115Exclusion>();
   const pending = new Map<string, Pending>();
   const cautions = new Map<string, number>();
+  const recoveryDue = new Map<string, Readonly<{
+    releaseAtIndex: number; recovery: M1V118ModelledRecovery;
+  }>>();
+  const modelledRecoveries: M1V118ModelledRecovery[] = [];
   const excludedKey = (clubId: string, playerId: string) =>
     JSON.stringify([clubId, playerId]);
-  for (const past of selectedHistory) {
+  const releaseModelled = (index: number): void => {
+    for (const [playerId, due] of recoveryDue) {
+      if (index < due.releaseAtIndex) continue;
+      const key = excludedKey(selectedId, playerId);
+      const hold = exclusions.get(key);
+      if (hold?.reason === 'unresolved-medical-withdrawal' &&
+          hold.sourceFixtureId === due.recovery.sourceFixtureId) {
+        exclusions.delete(key);
+        modelledRecoveries.push(due.recovery);
+      }
+      recoveryDue.delete(playerId);
+    }
+  };
+  for (let index = 0; index < selectedHistory.length; index++) {
+    const past = selectedHistory[index]!;
+    releaseModelled(index);
     const item = byId.get(past.id)!;
+    const internal = internalRecovery ?
+      deriveM1V118InternalRecovery(initial, item).filter(entry =>
+        entry.clubId === selectedId) : [];
     const side = past.homeClubId === selectedId ? 'home' : 'away';
     const own = item.source.prematch[side + 'Lineup'] as
       { starters: readonly string[]; bench: readonly string[] };
@@ -89,6 +124,12 @@ export function projectM1V115KnownEligibility(
           clubId: selectedId, playerId: row.playerId,
           sourceFixtureId: past.id, reason: 'unresolved-medical-withdrawal',
         });
+        const generated = internal.find(entry => entry.playerId === row.playerId);
+        if (generated) recoveryDue.set(row.playerId, {
+          releaseAtIndex: index + 1 + generated.missedCompleteClubFixtures,
+          recovery: generated,
+        });
+        else recoveryDue.delete(row.playerId);
       }
       if (row.dismissal === 'straight-red') {
         exclusions.set(excludedKey(selectedId, row.playerId), {
@@ -113,6 +154,8 @@ export function projectM1V115KnownEligibility(
       }
     }
   }
+
+  releaseModelled(selectedHistory.length);
 
   // Known adverse events involving an opponent are still excluded on the
   // next encounter, but we cannot infer that opponent's missing club matches
@@ -142,13 +185,35 @@ export function projectM1V115KnownEligibility(
       sourceFixtureId: ban.sourceFixtureId, reason: ban.reason,
     });
   }
-  return {
-    ok: true, schemaVersion: M1_V115_ELIGIBILITY_SCHEMA,
+  const validRecoveries = modelledRecoveries.filter(entry =>
+    !exclusions.has(excludedKey(entry.clubId, entry.playerId)));
+  const common = {
+    ok: true as const,
     exclusions: [...exclusions.values()].sort((a, b) =>
       a.clubId.localeCompare(b.clubId) || a.playerId.localeCompare(b.playerId)),
-    allKnownMedicalAndDirectRedHoldsEnforced: true,
-    selectedClubAutomaticBansVerified: true,
-    opponentFullHistoryVerified: false,
-    externalRecoveryOrKdkDecisionAuthenticated: false,
+    selectedClubAutomaticBansVerified: true as const,
+    opponentFullHistoryVerified: false as const,
+    externalRecoveryOrKdkDecisionAuthenticated: false as const,
   };
+  return internalRecovery ? {
+    ...common, schemaVersion: M1_V118_MODELLED_RECOVERY_SCHEMA,
+    modelledRecoveries: validRecoveries,
+    allKnownNonModelledMedicalAndDirectRedHoldsEnforced: true,
+    fictionalRecoveryNotClinicalClearance: true,
+  } : {
+    ...common, schemaVersion: M1_V115_ELIGIBILITY_SCHEMA,
+    allKnownMedicalAndDirectRedHoldsEnforced: true,
+  };
+}
+export function projectM1V115KnownEligibility(
+  initial: InitialCareerSave, journal: M1V8MatchJournal, fixture: Fixture,
+): M1V115Eligibility {
+  return deriveKnownEligibility(initial, journal, fixture, false) as
+    M1V115Eligibility;
+}
+export function projectM1V118FictionalRecoveryEligibility(
+  initial: InitialCareerSave, journal: M1V8MatchJournal, fixture: Fixture,
+): M1V118Eligibility {
+  return deriveKnownEligibility(initial, journal, fixture, true) as
+    M1V118Eligibility;
 }

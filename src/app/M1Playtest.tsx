@@ -197,6 +197,17 @@ export function M1Playtest({ career, disabled }: {
             </li>)}
           </ul>
         </div>}
+        {next?.ok && next.modelledRecoveries.length > 0 && <div>
+          <strong>Возвращение после вымышленной модельной травмы</strong>
+          <ul>
+            {next.modelledRecoveries.map(item =>
+              <li key={item.sourceFixtureId + item.playerId}>
+                {players.get(item.playerId)?.displayName ?? item.playerId}
+                {' '}— после {item.missedCompleteClubFixtures} матчей
+                (внутренняя симуляция, не медицинское заключение)
+              </li>)}
+          </ul>
+        </div>}
         {next && !next.ok && <p role="alert">
           Дальнейшее участие заблокировано: {next.error}.
           Нужна проверка медицинских/дисциплинарных решений P3.

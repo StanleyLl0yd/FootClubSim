@@ -812,6 +812,48 @@ async function run() {
       await assertNondefaultCareer('v136 two substitutions source-CAS/restart');
       console.log('PASS: double substitution source-replayed after native browser restart');
 
+      // Commit a third named change and verify native journal source identity.
+      const thirdChoice=await evaluate(`(() => {
+        const out=document.querySelector('#m1-dense-multi-out-3');
+        const incoming=document.querySelector('#m1-dense-multi-in-3');
+        const time=document.querySelector('#m1-dense-multi-time-3');
+        if(!out?.value||!incoming?.value||!time?.value)return null;
+        return {out:out.value,incoming:incoming.value,time:Number(time.value)};
+      })()`);
+      if(!thirdChoice)throw new Error('Dense five-substitution chooser missing');
+      await click('Провести 3–5 выбранных замен в плотном матче');
+      await waitText('v120: от трёх до пяти замен, плотный матч атомарно записан, 270 PRNG draws, ревизия 8 из 30.');
+      const multiStored=await evaluate(`new Promise((resolve,reject)=>{
+        const opening=indexedDB.open('footclubsim-m1-v120',1);
+        opening.onerror=()=>reject(opening.error);
+        opening.onsuccess=()=>{
+          const db=opening.result;
+          const tx=db.transaction('dense-result-journals','readonly');
+          const get=tx.objectStore('dense-result-journals').get('m0-ui-initial-career');
+          let commands=null;
+          get.onsuccess=()=>{
+            const journal=get.result;
+            if(journal?.revision===8)
+              commands=journal.entries[7]?.source.plannedCommands;
+          };
+          tx.oncomplete=()=>{db.close();resolve(commands);};
+          tx.onabort=()=>{db.close();reject(tx.error);};
+        };
+      })`);
+      if(!Array.isArray(multiStored)||multiStored.length!==3||
+          multiStored[2].outPlayerId!==thirdChoice.out||
+          multiStored[2].inPlayerId!==thirdChoice.incoming||
+          multiStored[2].elapsedSeconds!==thirdChoice.time)
+        throw new Error('Dense third substitution source-CAS identity mismatch');
+      await send('Page.reload',{ignoreCache:true});
+      await waitText('Выберите вымышленный клуб');
+      await click('Восстановить из браузера');
+      await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+      await click('Создать или загрузить отдельный v120');
+      await waitText('v120: проверен и загружен отдельный журнал, матчей: 8.');
+      await assertNondefaultCareer('v138 third substitution CAS/restart');
+      console.log('PASS: up-to-five normal substitution source-CAS/restart');
+
 
     }
     console.log('PASS: v124 virtual referee CAS/reload, source commands=' +

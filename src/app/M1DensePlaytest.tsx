@@ -12,6 +12,10 @@ import {prepareM1V132DenseManagerSubstitution}
   from '../core/m1-v132-dense-manager-substitution.js';
 import {prepareM1V136DenseDoubleSubstitution}
   from '../core/m1-v136-dense-double-substitution.js';
+import {prepareM1V138DenseFiveSubstitutions}
+  from '../core/m1-v138-dense-five-substitutions.js';
+import type {M1V132SubstitutionSelection}
+  from '../core/m1-v132-dense-manager-substitution.js';
 import type {M1PrematchInput} from '../core/m1-clock.js';
 import { prepareM1V122DenseOrdinaryMatch }
   from '../core/m1-v122-dense-ordinary-season.js';
@@ -36,6 +40,9 @@ export function M1DensePlaytest({career,disabled}:{
   const [secondOutId,setSecondOutId]=useState('');
   const [secondInId,setSecondInId]=useState('');
   const [secondCheckpoint,setSecondCheckpoint]=useState(2700);
+  const [multiCount,setMultiCount]=useState(3);
+  const [extraChoices,setExtraChoices]=useState<
+    readonly M1V132SubstitutionSelection[]>([]);
   const nextCandidate=useMemo(()=>journal&&holdReview?.ok&&journal.revision<30?
     prepareM1V128ManualFictionalContinuation(career,journal):null,
   [career,journal,holdReview]);
@@ -66,6 +73,46 @@ export function M1DensePlaytest({career,disabled}:{
   const actualSecondIn=availableSecondIn.includes(secondInId)?
     secondInId:availableSecondIn[0]??'';
   const actualSecondCheckpoint=Math.max(checkpoint,secondCheckpoint);
+  const substitutions:M1V132SubstitutionSelection[]=[
+    {outPlayerId:actualOut,inPlayerId:actualIn,elapsedSeconds:checkpoint},
+    {outPlayerId:actualSecondOut,inPlayerId:actualSecondIn,
+      elapsedSeconds:actualSecondCheckpoint},
+  ];
+  const extraOptions:Array<{index:number;outOptions:string[];
+    inOptions:string[];choice:M1V132SubstitutionSelection}>=[];
+  const usedOut=new Set(substitutions.map(x=>x.outPlayerId));
+  const usedIn=new Set(substitutions.map(x=>x.inPlayerId));
+  const catalogById=new Map(career.catalog.players.map(p=>[p.id,p]));
+  for(let index=2;index<multiCount;index++){
+    const candidateOut=outOptions.filter(id=>!usedOut.has(id)&&
+      (clubLineup?.bench??[]).some(reserve=>!usedIn.has(reserve)&&
+        (catalogById.get(id)?.primaryPosition==='GK')===
+        (catalogById.get(reserve)?.primaryPosition==='GK')));
+    const saved=extraChoices[index-2];
+    const out=candidateOut.includes(saved?.outPlayerId??'')?
+      saved!.outPlayerId:candidateOut[0]??'';
+    const candidateIn=(clubLineup?.bench??[]).filter(id=>
+      !usedIn.has(id)&&
+      (catalogById.get(id)?.primaryPosition==='GK')===
+        (catalogById.get(out)?.primaryPosition==='GK'));
+    const incoming=candidateIn.includes(saved?.inPlayerId??'')?
+      saved!.inPlayerId:candidateIn[0]??'';
+    const previous=substitutions.at(-1)!.elapsedSeconds;
+    const time=Math.max(previous,saved?.elapsedSeconds??
+      (index===2?2700:index===3?3300:3900));
+    const choice={outPlayerId:out,inPlayerId:incoming,elapsedSeconds:time};
+    extraOptions.push({index,outOptions:candidateOut,inOptions:candidateIn,
+      choice});
+    substitutions.push(choice);
+    usedOut.add(out);usedIn.add(incoming);
+  }
+  function updateExtra(index:number,choice:M1V132SubstitutionSelection){
+    setExtraChoices(previous=>{
+      const result=[...previous];
+      result[index-2]=choice;
+      return result;
+    });
+  }
   async function connect(){
     if(busy||disabled)return;
     setBusy(true);
@@ -93,7 +140,7 @@ export function M1DensePlaytest({career,disabled}:{
     }finally{setBusy(false);}
   }
   async function playNext(mode:'ordinary'|'virtual'|'manual'|'manual-virtual'|
-    'substitution'|'double-substitution'='ordinary'){
+    'substitution'|'double-substitution'|'five-substitutions'='ordinary'){
     if(busy||disabled||!journal||!holdReview?.ok)return;
     setBusy(true);
     try{
@@ -114,6 +161,9 @@ export function M1DensePlaytest({career,disabled}:{
                 {outPlayerId:actualSecondOut,inPlayerId:actualSecondIn,
                   elapsedSeconds:actualSecondCheckpoint},
               ]):
+            mode==='five-substitutions'?
+              prepareM1V138DenseFiveSubstitutions(career,journal,
+                substitutions):
               prepareM1V122DenseOrdinaryMatch(career,journal);
       if(prepared===null){
         setMessage('v120: все 30 матчей выбранного клуба сохранены.');
@@ -134,7 +184,8 @@ export function M1DensePlaytest({career,disabled}:{
         mode==='manual'?'модельное продолжение, ':
         mode==='manual-virtual'?'повторный виртуальный арбитр, ':
         mode==='substitution'?'выбранная замена, ':
-        mode==='double-substitution'?'две выбранные замены, ':'')+
+        mode==='double-substitution'?'две выбранные замены, ':
+        mode==='five-substitutions'?'от трёх до пяти замен, ':'')+
         'плотный матч атомарно записан, 270 PRNG draws, ревизия '+
         persisted.revision+' из 30. Активных ограничений: '+
         reviewed.holds.filter(hold=>hold.activeForNextFixture).length+'.');
@@ -227,6 +278,55 @@ export function M1DensePlaytest({career,disabled}:{
           !actualSecondOut||!actualSecondIn}
           onClick={()=>void playNext('double-substitution')}>
           Провести две выбранные замены в плотном матче
+        </button>
+      </fieldset>
+      <fieldset disabled={busy||disabled||!nextCandidate?.ok}>
+        <legend>Полный лимит обычных замен: 3–5 за матч</legend>
+        <p className="subtle">Первые две замены выбираются выше.
+          Для остальных задайте игроков и время. Все замены проходят
+          исходный лимит пяти замен и трёх игровых окон; перерыв
+          не расходует окно.</p>
+        <label htmlFor="m1-dense-multi-count">Количество замен</label>
+        <select id="m1-dense-multi-count" value={multiCount}
+          onChange={event=>setMultiCount(Number(event.target.value))}>
+          {[3,4,5].map(n=><option key={n} value={n}>{n}</option>)}
+        </select>
+        {extraOptions.map(({index,outOptions:outs,inOptions:ins,choice})=>
+          <div key={index}>
+            <label htmlFor={'m1-dense-multi-out-'+(index+1)}>
+              {'Уходит игрок '+(index+1)}
+            </label>
+            <select id={'m1-dense-multi-out-'+(index+1)}
+              value={choice.outPlayerId}
+              onChange={event=>updateExtra(index,
+                {...choice,outPlayerId:event.target.value,inPlayerId:''})}>
+              {outs.map(id=><option key={id} value={id}>{id}</option>)}
+            </select>
+            <label htmlFor={'m1-dense-multi-in-'+(index+1)}>
+              {'Выходит игрок '+(index+1)}
+            </label>
+            <select id={'m1-dense-multi-in-'+(index+1)}
+              value={choice.inPlayerId}
+              onChange={event=>updateExtra(index,
+                {...choice,inPlayerId:event.target.value})}>
+              {ins.map(id=><option key={id} value={id}>{id}</option>)}
+            </select>
+            <label htmlFor={'m1-dense-multi-time-'+(index+1)}>
+              {'Виртуальная секунда '+(index+1)}
+            </label>
+            <select id={'m1-dense-multi-time-'+(index+1)}
+              value={choice.elapsedSeconds}
+              onChange={event=>updateExtra(index,
+                {...choice,elapsedSeconds:Number(event.target.value)})}>
+              {[300,900,1500,2100,2700,3300,3900,4500,5100]
+                .filter(t=>t>=substitutions[index-1]!.elapsedSeconds)
+                .map(t=><option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>)}
+        <button type="button" disabled={
+          substitutions.some(x=>!x.outPlayerId||!x.inPlayerId)}
+          onClick={()=>void playNext('five-substitutions')}>
+          Провести 3–5 выбранных замен в плотном матче
         </button>
       </fieldset>
     </div>

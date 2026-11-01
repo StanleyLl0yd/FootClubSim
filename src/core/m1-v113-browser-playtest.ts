@@ -9,7 +9,7 @@ import { simulateM1V8MedicalPhases, type M1V8Result }
 import { selectM1V96EligibleRegisteredLineup }
   from './m1-v96-cap-safe-lineup.js';
 import { RNG_VERSION } from './rng.js';
-import type { MatchRosterRules, Player } from './model.js';
+import type { MatchRosterRules } from './model.js';
 import type { InitialCareerSave } from './save.js';
 import { defaultTacticalPlan } from './tactics.js';
 

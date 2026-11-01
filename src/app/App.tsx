@@ -34,7 +34,7 @@ export function App() {
     try {
       const next = createInitialCareer(catalog, selectedClubId, 42, CAREER_ID);
       setCareer(next);
-      setMessage('Стартовая карьера M0 создана в памяти. Для матчей сохраните её и подключите тестовый M1.');
+      setMessage('Стартовая карьера создана в памяти браузера. Для матчей сохраните её и подключите тестовый M1.');
     } catch (error) {
       setMessage('Ошибка создания: ' + errorMessage(error));
     }

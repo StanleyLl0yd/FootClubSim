@@ -1,0 +1,61 @@
+name: M1 P5 v125 dense playable source observations
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/m1-p5-v125-dense-observed-shards.yml'
+      - 'scripts/m1-p5-v123-dense-cohort.mjs'
+      - 'tests/m1-p5-v123-dense-cohort.test.mjs'
+
+permissions: {}
+
+jobs:
+  dense-source:
+    name: dense v120 source seeds ${{ matrix.first_seed }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        first_seed: [1, 9, 17, 25, 33, 41, 49, 57]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Compile exact dense source
+        run: npm run build:core
+      - name: Verify reproducibility and malformed option boundaries
+        run: node --test tests/m1-p5-v123-dense-cohort.test.mjs
+      - name: Record disjoint fixed-seed dense match attempts
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'SOURCE_COMMIT=%s\n' "$(git rev-parse HEAD)"
+          node scripts/m1-p5-v123-dense-cohort.mjs \
+            --first-seed=${{ matrix.first_seed }} \
+            --seed-count=8 --fixtures=4 | tee v125-dense-observation.jsonl
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs";
+            const source=readFileSync("v125-dense-observation.jsonl","utf8").trim();
+            if(!source.startsWith("V123_DENSE_PLAYABLE="))throw Error("INVALID_PREFIX");
+            const report=JSON.parse(source.slice("V123_DENSE_PLAYABLE=".length));
+            if(report.schemaVersion!==123 || report.seedCount!==8 ||
+                report.fixturesPerCareer!==4 || report.seeds.length!==8 ||
+                report.attempted!==report.accepted+report.rejected ||
+                report.holdout2024_25Used!==false ||
+                report.releaseP5Accepted!==false)
+              throw Error("INVALID_COHORT_DENOMINATOR_OR_HOLDOUT");
+          '
+          sha256sum v125-dense-observation.jsonl

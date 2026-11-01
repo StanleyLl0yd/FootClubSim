@@ -263,3 +263,19 @@ test('v110 does not accept missing IDB or invalid career ID',async()=>{
     }finally{globalThis.indexedDB=old;}
   });
 });
+
+test('v110 pins signed caller input before asynchronous initial-store load',async()=>{
+  await withStore(async()=>{
+    await create(initial.careerId,'research-key');
+    const candidate=await signed(fixtures[0],0,'original-challenge');
+    const pending=write(candidate,0);
+    candidate.context.challengeId='changed-after-call';
+    candidate.source[5].push({forged:true});
+    const stored=await pending;
+    assert.equal(stored.revision,1);
+    assert.equal(stored.entries[0].context.challengeId,'original-challenge');
+    assert.equal(stored.entries[0].source[5].length,0);
+    assert.deepEqual(await load(initial.careerId,keys.publicKey,'research-key'),
+      stored);
+  });
+});

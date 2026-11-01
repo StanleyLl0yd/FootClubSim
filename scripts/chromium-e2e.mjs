@@ -854,6 +854,63 @@ async function run() {
       await assertNondefaultCareer('v138 third substitution CAS/restart');
       console.log('PASS: up-to-five normal substitution source-CAS/restart');
 
+      // A previously introduced outfield substitute may legally be replaced.
+      const substitutedSubstitute=await evaluate(`(() => {
+        const secondIn=document.querySelector('#m1-dense-sub-in-2');
+        const thirdOut=document.querySelector('#m1-dense-multi-out-3');
+        const thirdTime=document.querySelector('#m1-dense-multi-time-3');
+        if(!secondIn?.value||!thirdOut||!thirdTime||
+            !Array.from(thirdOut.options).some(o=>o.value===secondIn.value)||
+            !Array.from(thirdTime.options).some(o=>o.value==='3300'))
+          return null;
+        const setter=Object.getOwnPropertyDescriptor(
+          HTMLSelectElement.prototype,'value').set;
+        setter.call(thirdOut,secondIn.value);
+        thirdOut.dispatchEvent(new Event('change',{bubbles:true}));
+        setter.call(thirdTime,'3300');
+        thirdTime.dispatchEvent(new Event('change',{bubbles:true}));
+        return secondIn.value;
+      })()`);
+      if(!substitutedSubstitute)
+        throw new Error('Incoming substitute not available for later replacement');
+      await until(async()=>await evaluate(`(() => {
+        return document.querySelector('#m1-dense-multi-out-3')?.value===
+          ${JSON.stringify(substitutedSubstitute)} &&
+          document.querySelector('#m1-dense-multi-time-3')?.value==='3300';
+      })()`),'substitute-of-substitute selector state');
+      await click('Провести 3–5 выбранных замен в плотном матче');
+      await waitText('v120: от трёх до пяти замен, плотный матч атомарно записан, 270 PRNG draws, ревизия 9 из 30.');
+      const reSubbed=await evaluate(`new Promise((resolve,reject)=>{
+        const opening=indexedDB.open('footclubsim-m1-v120',1);
+        opening.onerror=()=>reject(opening.error);
+        opening.onsuccess=()=>{
+          const db=opening.result;
+          const tx=db.transaction('dense-result-journals','readonly');
+          const get=tx.objectStore('dense-result-journals').get('m0-ui-initial-career');
+          get.onsuccess=()=>{
+            const journal=get.result;
+            resolve(journal?.revision===9?journal.entries[8]?.source.plannedCommands:null);
+          };
+          get.onerror=()=>reject(get.error);
+          tx.oncomplete=()=>db.close();
+          tx.onabort=()=>{db.close();reject(tx.error);};
+        };
+      })`);
+      if(!Array.isArray(reSubbed)||reSubbed.length!==3||
+          reSubbed[1].inPlayerId!==substitutedSubstitute||
+          reSubbed[2].outPlayerId!==substitutedSubstitute||
+          reSubbed[2].elapsedSeconds!==3300)
+        throw new Error('Substitute-of-substitute source was not committed');
+      await send('Page.reload',{ignoreCache:true});
+      await waitText('Выберите вымышленный клуб');
+      await click('Восстановить из браузера');
+      await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+      await click('Создать или загрузить отдельный v120');
+      await waitText('v120: проверен и загружен отдельный журнал, матчей: 9.');
+      await assertNondefaultCareer('replacement of previous substitute CAS/reload');
+      console.log('PASS: substitute-of-substitute source CAS/reload');
+
+
 
     }
     console.log('PASS: v124 virtual referee CAS/reload, source commands=' +

@@ -84,7 +84,9 @@ export function M1DensePlaytest({career,disabled}:{
   const usedIn=new Set(substitutions.map(x=>x.inPlayerId));
   const catalogById=new Map(career.catalog.players.map(p=>[p.id,p]));
   for(let index=2;index<multiCount;index++){
-    const candidateOut=outOptions.filter(id=>!usedOut.has(id)&&
+    const candidateOut=[...outOptions,
+      ...substitutions.map(change=>change.inPlayerId)].filter(
+      id=>id&&!usedOut.has(id)&&
       (clubLineup?.bench??[]).some(reserve=>!usedIn.has(reserve)&&
         (catalogById.get(id)?.primaryPosition==='GK')===
         (catalogById.get(reserve)?.primaryPosition==='GK')));

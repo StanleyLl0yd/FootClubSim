@@ -65,12 +65,16 @@ export function prepareM1V138DenseFiveSubstitutions(
   const own=base.fixture.homeClubId===initial.selectedClubId?
     prematch.homeLineup:prematch.awayLineup;
   const players=new Map(initial.catalog.players.map(p=>[p.id,p]));
+  const active=new Set(own.starters),available=new Set(own.bench);
   for(const choice of selected as M1V132SubstitutionSelection[]){
-    if(!own.starters.includes(choice.outPlayerId)||
-        !own.bench.includes(choice.inPlayerId)||
+    if(!active.has(choice.outPlayerId)||
+        !available.has(choice.inPlayerId)||
         (players.get(choice.outPlayerId)?.primaryPosition==='GK')!==(
           players.get(choice.inPlayerId)?.primaryPosition==='GK'))
       return {ok:false,error:'INVALID_SELECTION'};
+    active.delete(choice.outPlayerId);
+    active.add(choice.inPlayerId);
+    available.delete(choice.inPlayerId);
   }
   const fixture=base.fixture;
   const commands=(selected as M1V132SubstitutionSelection[]).map((c,i)=>({

@@ -6,6 +6,8 @@ import { validateM1V8MatchJournal, applyM1V8MatchResult,
   from './m1-v8-result-journal.js';
 import { simulateM1V8MedicalPhases, type M1V8Result }
   from './m1-v8-medical-phases.js';
+import { simulateM1V19InternalReferee }
+  from './m1-v19-internal-foul-injury.js';
 import { selectM1V96EligibleRegisteredLineup }
   from './m1-v96-cap-safe-lineup.js';
 import { projectM1V115KnownEligibility, type M1V115Exclusion }
@@ -22,7 +24,7 @@ import { defaultTacticalPlan } from './tactics.js';
  */
 export const M1_V113_PLAYTEST_SCHEMA = 1 as const;
 export type M1V113Scenario = 'ordinary' | 'temporary-treatment' |
-  'normal-substitution' | 'combined';
+  'normal-substitution' | 'combined' | 'internal-referee';
 export interface M1V114SubstitutionSelection {
   readonly outPlayerId: string;
   readonly inPlayerId: string;
@@ -85,8 +87,8 @@ export function prepareM1V113PlayableMatch(
       return { ok: false, error: 'INVALID_SUBSTITUTION_SELECTION' };
     }
   }
-  if (!['ordinary', 'temporary-treatment', 'normal-substitution', 'combined']
-    .includes(scenario)) return { ok: false, error: 'INVALID_SCENARIO' };
+  if (!['ordinary', 'temporary-treatment', 'normal-substitution', 'combined',
+    'internal-referee'].includes(scenario)) return { ok: false, error: 'INVALID_SCENARIO' };
   const checked = validateM1V8MatchJournal(initial, prior);
   if (!checked.ok) return { ok: false, error: 'INVALID_JOURNAL' };
   const journal = checked.journal;
@@ -166,6 +168,21 @@ export function prepareM1V113PlayableMatch(
       actor: { kind: 'player' }, stoppage: 'referee-authorized',
       outPlayerId: selectedOut, inPlayerId: selectedIn,
     });
+  }
+  if (scenario === 'internal-referee') {
+    const modelled = simulateM1V19InternalReferee(prematch, POLICY);
+    if (!modelled.ok) return { ok: false, error: 'INVALID_SIMULATION' };
+    for (const incident of modelled.generatedIncidents) {
+      plannedCommands.push({
+        schemaVersion: 1, id: incident.decisionId,
+        fixtureId: fixture.id, teamId: incident.teamId,
+        playerId: incident.playerId,
+        elapsedSeconds: incident.elapsedSeconds,
+        kind: incident.sanction,
+        origin: incident.sanction === 'injury-withdrawal' ?
+          'trusted-medical' : 'trusted-referee',
+      });
+    }
   }
   const result = simulateM1V8MedicalPhases(
     prematch, POLICY, plannedCommands, [], medicalActions);

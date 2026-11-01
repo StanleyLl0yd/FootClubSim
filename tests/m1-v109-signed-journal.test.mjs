@@ -136,3 +136,24 @@ test('v109 captures pre-await entry snapshot despite caller mutation',async()=>{
   assert.equal(actual.journal.entries[0].context.challengeId,'challenge-0');
   assert.equal(actual.journal.entries[0].source[5].length,0);
 });
+
+test('v109 pins the trusted M0 snapshot across asynchronous replay',async()=>{
+  const input=structuredClone(initial);
+  const first=caseFor(fixtures[0],0), second=caseFor(fixtures[1],1);
+  const started=start(input,'research-key').journal;
+  const firstAdded=await append(input,keys.publicKey,'research-key',started,
+    first.context,await sign(keys,first),first.source,first.result);
+  assert.equal(firstAdded.ok,true);
+  const pending=append(input,keys.publicKey,'research-key',firstAdded.journal,
+    second.context,await sign(keys,second),second.source,second.result);
+  input.catalog.clubs[0].name='changed-after-append';
+  const appended=await pending;
+  assert.equal(appended.ok,true,JSON.stringify(appended).slice(0,200));
+  const importedInput=structuredClone(initial);
+  const loading=validate(importedInput,keys.publicKey,'research-key',
+    appended.journal);
+  importedInput.catalog.clubs[0].name='changed-after-validate';
+  const loaded=await loading;
+  assert.equal(loaded.ok,true,JSON.stringify(loaded).slice(0,200));
+  assert.deepEqual(loaded.journal,appended.journal);
+});

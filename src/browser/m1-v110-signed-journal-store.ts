@@ -134,11 +134,18 @@ export async function commitM1V110PersistedSignedSource(
     throw fail('INVALID_ID');
   if(!Number.isSafeInteger(expectedRevision)||expectedRevision<0||
       expectedRevision>240)throw fail('DOMAIN_REJECTED','STALE_REVISION');
+  // Freeze caller-owned signed material before the first storage await.
+  const supplied={context,envelope,source,result};
+  if(!isPlainJsonTree(supplied))
+    throw fail('DOMAIN_REJECTED','INVALID_ENTRY');
+  let pinned:typeof supplied;
+  try{pinned=structuredClone(supplied);}
+  catch{throw fail('DOMAIN_REJECTED','INVALID_ENTRY');}
   const initial=await loadInitialCareer(careerId);
   const previous=await loadRaw(careerId);
   const proposed=await appendM1V109SignedSource(
     initial,trustedPublicKey,trustedKeyId,
-    previous,context,envelope,source,result);
+    previous,pinned.context,pinned.envelope,pinned.source,pinned.result);
   if(!proposed.ok)throw fail('DOMAIN_REJECTED',proposed.error);
   if(proposed.journal.revision!==expectedRevision+1)
     throw fail('STALE_REVISION');

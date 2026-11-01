@@ -170,6 +170,22 @@ export function M1Playtest({ career, disabled }: {
           Следующий матч (тур {next.fixture.round}):{' '}
           <strong>{clubs.get(next.fixture.homeClubId)} — {clubs.get(next.fixture.awayClubId)}</strong>
         </p>}
+        {next?.ok && next.exclusions.length > 0 && <div className="m1-exclusions">
+          <strong>Игроки вне заявки по подтверждённым игровым событиям</strong>
+          <ul>
+            {next.exclusions.map(entry => <li key={entry.clubId + entry.playerId}>
+              {players.get(entry.playerId)?.displayName ?? entry.playerId} — {
+                entry.reason === 'unresolved-medical-withdrawal' ?
+                  'медицинский допуск не подтверждён' :
+                entry.reason === 'unresolved-direct-red' ?
+                  'решение по прямому удалению не подтверждено' :
+                entry.reason === 'second-yellow-one-fixture' ?
+                  'одноматчевая дисквалификация (две жёлтые)' :
+                  'одноматчевая дисквалификация (четыре предупреждения)'
+              }
+            </li>)}
+          </ul>
+        </div>}
         {next && !next.ok && <p role="alert">
           Дальнейшее участие заблокировано: {next.error}.
           Нужна проверка медицинских/дисциплинарных решений P3.

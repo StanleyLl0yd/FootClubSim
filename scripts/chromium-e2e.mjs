@@ -697,6 +697,78 @@ async function run() {
       await assertNondefaultCareer('v130 repeated virtual referee restart');
       console.log('PASS: second virtual referee source verified after injury/discipline holds');
 
+      // The human manager chooses an actual named outfield player, reserve,
+      // and virtual time on the dense 100-second source, preserving both
+      // the historic referee holds and exact v120 source-CAS identity.
+      const denseOut=await evaluate(`(() => {
+        const select=document.querySelector('#m1-dense-sub-out');
+        if(!select||select.options.length<3)return null;
+        const setter=Object.getOwnPropertyDescriptor(
+          HTMLSelectElement.prototype,'value').set;
+        setter.call(select,select.options[select.options.length-1].value);
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+        return select.value;
+      })()`);
+      if(!denseOut)throw new Error('Dense manager outfield chooser missing');
+      const denseIn=await until(async()=>{
+        const id=await evaluate(`(() => {
+          const select=document.querySelector('#m1-dense-sub-in');
+          if(!select||!select.options.length)return '';
+          const setter=Object.getOwnPropertyDescriptor(
+            HTMLSelectElement.prototype,'value').set;
+          setter.call(select,select.options[select.options.length-1].value);
+          select.dispatchEvent(new Event('change',{bubbles:true}));
+          return select.value;
+        })()`);
+        return id||null;
+      },'eligible dense selected reserve');
+      const checkpointChosen=await evaluate(`(() => {
+        const select=document.querySelector('#m1-dense-sub-time');
+        if(!select||!Array.from(select.options).some(o=>o.value==='900'))
+          return false;
+        const setter=Object.getOwnPropertyDescriptor(
+          HTMLSelectElement.prototype,'value').set;
+        setter.call(select,'900');
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+        return select.value==='900';
+      })()`);
+      if(!checkpointChosen)throw new Error('Dense substitution clock missing');
+      await click('Провести выбранную замену в плотном матче');
+      await waitText('v120: выбранная замена, плотный матч атомарно записан, 270 PRNG draws, ревизия 6 из 30.');
+      const denseSub=await evaluate(`new Promise((resolve,reject)=>{
+        const opening=indexedDB.open('footclubsim-m1-v120',1);
+        opening.onerror=()=>reject(opening.error);
+        opening.onsuccess=()=>{
+          const db=opening.result;
+          const tx=db.transaction('dense-result-journals','readonly');
+          const get=tx.objectStore('dense-result-journals').get('m0-ui-initial-career');
+          let command=null;
+          get.onsuccess=()=>{
+            const journal=get.result;
+            command=journal?.revision===6?
+              journal.entries[5]?.source.plannedCommands[0]:null;
+          };
+          tx.oncomplete=()=>{db.close();resolve(command);};
+          tx.onabort=()=>{db.close();reject(tx.error);};
+        };
+      })`);
+      if(denseSub?.kind!=='substitute-normal'||
+          denseSub?.outPlayerId!==denseOut||
+          denseSub?.inPlayerId!==denseIn||
+          denseSub?.elapsedSeconds!==900||
+          denseSub?.actor?.kind!=='player'||
+          denseSub?.stoppage!=='referee-authorized')
+        throw new Error('Dense CAS lost manager-selected substitution participants/time');
+      await send('Page.reload',{ignoreCache:true});
+      await waitText('Выберите вымышленный клуб');
+      await click('Восстановить из браузера');
+      await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+      await click('Создать или загрузить отдельный v120');
+      await waitText('v120: проверен и загружен отдельный журнал, матчей: 6.');
+      await assertNondefaultCareer('v132 manager substitution with earlier holds');
+      console.log('PASS: dense manager-selected legal substitute/time through source-CAS/restart');
+
+
     }
     console.log('PASS: v124 virtual referee CAS/reload, source commands=' +
       virtualDenseEvidence.commands.length + ', verified v126 hold UI');

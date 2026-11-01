@@ -68,6 +68,29 @@ export function reviewM1V126DenseSourceHolds(
        source.trustedDecisions.length!==0)
       return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
     if(source.plannedCommands.length===0)continue;
+    // A user-requested v132 normal substitution is already checked for
+    // physical legality by the full v120/v105 source replay above. It is not
+    // a modelled referee sanction and must not mint or discharge any hold.
+    if(entry.commandId==='v132-sub-'+entry.fixtureId){
+      const cmd=source.plannedCommands[0] as Record<string,unknown>|undefined;
+      if(source.plannedCommands.length!==1||!cmd||
+         Reflect.ownKeys(cmd).length!==10||
+         cmd.schemaVersion!==1||cmd.kind!=='substitute-normal'||
+         cmd.commandId!==entry.commandId||
+         cmd.fixtureId!==entry.fixtureId||
+         cmd.teamId!==initial.selectedClubId||
+         !cmd.actor||typeof cmd.actor!=='object'||
+         Array.isArray(cmd.actor)||
+         (cmd.actor as Record<string,unknown>).kind!=='player'||
+         !Number.isSafeInteger(cmd.elapsedSeconds)||
+         (cmd.elapsedSeconds as number)<300||
+         (cmd.elapsedSeconds as number)>5100||
+         (cmd.elapsedSeconds as number)%300!==0||
+         cmd.stoppage!==
+           (cmd.elapsedSeconds===2700?'half-time':'referee-authorized'))
+        return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
+      continue;
+    }
     if(!verifyM1V124DenseVirtualRefereeSource(
       initial,journal,entry.fixtureId))
       return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};

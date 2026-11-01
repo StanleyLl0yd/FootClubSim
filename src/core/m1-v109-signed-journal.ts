@@ -94,10 +94,10 @@ export function startM1V109SignedJournal(initial:unknown,keyId:unknown):M1V109Re
  * All historical signatures and v105 results are independently replayed.
  * The public key and issuer key ID must be provisioned OUTSIDE editable saves.
  */
-export async function validateM1V109SignedJournal(
-  initial:unknown,trustedPublicKey:unknown,trustedKeyId:unknown,raw:unknown,
+async function validatePinnedM1V109SignedJournal(
+  initial:InitialCareerSave,trustedPublicKey:unknown,trustedKeyId:unknown,
+  raw:unknown,
 ):Promise<M1V109Result>{
-  if(!initialValid(initial))return fail('INVALID_INITIAL_CAREER');
   if(!isStableId(trustedKeyId))return fail('INVALID_KEY_ID');
   const copy=snapshot(raw);
   const journal=readJournal(initial,trustedKeyId,copy);
@@ -124,6 +124,16 @@ export async function validateM1V109SignedJournal(
   }
   return {ok:true,journal};
 }
+/** Pin the immutable M0 source before any asynchronous signature checks. */
+export async function validateM1V109SignedJournal(
+  initial:unknown,trustedPublicKey:unknown,trustedKeyId:unknown,raw:unknown,
+):Promise<M1V109Result>{
+  const pinnedInitial=snapshot(initial);
+  if(!initialValid(pinnedInitial))return fail('INVALID_INITIAL_CAREER');
+  return validatePinnedM1V109SignedJournal(
+    pinnedInitial,trustedPublicKey,trustedKeyId,raw);
+}
+
 /** A pure, copy-on-write proposal. It does not persist or authenticate issuer roles. */
 export async function appendM1V109SignedSource(
   initial:unknown,trustedPublicKey:unknown,trustedKeyId:unknown,
@@ -135,10 +145,12 @@ export async function appendM1V109SignedSource(
   if(!rec(copied)||!rec(copied.context)||!rec(copied.envelope)||
       !Array.isArray(copied.source)||!rec(copied.result))
     return fail('INVALID_ENTRY');
-  const before=await validateM1V109SignedJournal(
-    initial,trustedPublicKey,trustedKeyId,journalCandidate);
+  const pinnedInitial=snapshot(initial);
+  if(!initialValid(pinnedInitial))return fail('INVALID_INITIAL_CAREER');
+  const before=await validatePinnedM1V109SignedJournal(
+    pinnedInitial,trustedPublicKey,trustedKeyId,journalCandidate);
   if(!before.ok)return before;
-  const original=initial as InitialCareerSave, journal=before.journal;
+  const original=pinnedInitial, journal=before.journal;
   if(journal.revision>=240)return fail('REVISION_LIMIT');
   const context=copied.context;
   if(!exact(context,CONTEXT_KEYS)||!isStableId(context.careerId)||

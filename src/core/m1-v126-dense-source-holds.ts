@@ -72,7 +72,8 @@ export function reviewM1V126DenseSourceHolds(
     if(source.plannedCommands.length===0&&
        entry.commandId!=='v124-virtual-referee-'+entry.fixtureId&&
        entry.commandId!=='v132-sub-'+entry.fixtureId&&
-       entry.commandId!=='v136-double-'+entry.fixtureId)continue;
+       entry.commandId!=='v136-double-'+entry.fixtureId&&
+       entry.commandId!=='v138-multi-'+entry.fixtureId)continue;
     // A user-requested v132 normal substitution is already checked for
     // physical legality by the full v120/v105 source replay above. It is not
     // a modelled referee sanction and must not mint or discharge any hold.
@@ -124,6 +125,42 @@ export function reviewM1V126DenseSourceHolds(
            (c.elapsedSeconds as number)<previous||
            c.stoppage!==
              (c.elapsedSeconds===2700?'half-time':'referee-authorized'))
+          return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
+        out.add(c.outPlayerId);incoming.add(c.inPlayerId);
+        previous=c.elapsedSeconds as number;
+      }
+      continue;
+    }
+    // Manager-selected normal changes never mint a modelled referee
+    // incident. The exact physical source was already replayed in v120.
+    if(entry.commandId==='v138-multi-'+entry.fixtureId){
+      const commands=source.plannedCommands;
+      if(commands.length<3||commands.length>5)
+        return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
+      const out=new Set<string>(),incoming=new Set<string>();
+      let previous=-1;
+      for(let i=0;i<commands.length;i++){
+        const c=commands[i] as Record<string,unknown>|undefined;
+        if(!c||typeof c!=='object'||Array.isArray(c)||
+           Reflect.ownKeys(c).length!==10||
+           c.schemaVersion!==1||c.kind!=='substitute-normal'||
+           c.commandId!=='v138-sub-'+entry.fixtureId+'-'+i||
+           c.fixtureId!==entry.fixtureId||
+           c.teamId!==initial.selectedClubId||
+           !c.actor||typeof c.actor!=='object'||
+           Array.isArray(c.actor)||
+           Reflect.ownKeys(c.actor).length!==1||
+           (c.actor as Record<string,unknown>).kind!=='player'||
+           typeof c.outPlayerId!=='string'||
+           typeof c.inPlayerId!=='string'||
+           out.has(c.outPlayerId)||incoming.has(c.inPlayerId)||
+           !Number.isSafeInteger(c.elapsedSeconds)||
+           (c.elapsedSeconds as number)<300||
+           (c.elapsedSeconds as number)>5100||
+           (c.elapsedSeconds as number)%300!==0||
+           (c.elapsedSeconds as number)<previous||
+           c.stoppage!==(
+             c.elapsedSeconds===2700?'half-time':'referee-authorized'))
           return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
         out.add(c.outPlayerId);incoming.add(c.inPlayerId);
         previous=c.elapsedSeconds as number;

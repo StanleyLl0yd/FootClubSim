@@ -548,6 +548,63 @@ async function run() {
     await waitText('v120: проверен и загружен отдельный журнал, матчей: 2.');
     console.log('PASS: separate v120 dense career advances and replays successive fixtures');
 
+    // Commit a real generated v124 virtual-referee fixture through the React
+    // button and verify its separate v120 CAS journal across a browser reload.
+    await click('Рассчитать следующий матч с виртуальным арбитром');
+    await waitText('v120: виртуальный арбитр, плотный матч атомарно записан, 270 PRNG draws, ревизия 3 из 30.');
+    const virtualDenseEvidence = await evaluate(`new Promise((resolve, reject) => {
+      const opening = indexedDB.open('footclubsim-m1-v120', 1);
+      opening.onerror = () => reject(opening.error);
+      opening.onsuccess = () => {
+        const db = opening.result;
+        const tx = db.transaction('dense-result-journals', 'readonly');
+        const req = tx.objectStore('dense-result-journals').get('m0-ui-initial-career');
+        let evidence = null;
+        req.onsuccess = () => {
+          const journal = req.result;
+          const entry = journal?.entries?.[2];
+          evidence = journal?.revision === 3 && entry ? {
+            commandId: entry.commandId, fixtureId: entry.fixtureId,
+            commands: entry.source.plannedCommands,
+            rngDraws: entry.result.rngDraws,
+          } : null;
+        };
+        tx.oncomplete = () => { db.close(); resolve(evidence); };
+        tx.onabort = () => { db.close(); reject(tx.error); };
+      };
+    })`);
+    if (!virtualDenseEvidence ||
+        virtualDenseEvidence.commandId !==
+          'v124-virtual-referee-' + virtualDenseEvidence.fixtureId ||
+        virtualDenseEvidence.rngDraws !== 270 ||
+        !Array.isArray(virtualDenseEvidence.commands) ||
+        virtualDenseEvidence.commands.some(command =>
+          !['caution','direct-red','injury-withdrawal'].includes(command.kind) ||
+          !['trusted-referee','trusted-medical'].includes(command.origin))) {
+      throw new Error('Native v120 CAS did not preserve exact virtual referee source');
+    }
+    await send('Page.reload', { ignoreCache: true });
+    await waitText('Выберите вымышленный клуб');
+    await click('Восстановить из браузера');
+    await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+    await click('Создать или загрузить отдельный v120');
+    await waitText('v120: проверен и загружен отдельный журнал, матчей: 3.');
+    const holdView = await evaluate(
+      "document.querySelector('[aria-label=\"Вымышленные межматчевые ограничения\"]')?.innerText ?? ''");
+    if (!holdView.includes('Проверено вымышленных событий: ' +
+        virtualDenseEvidence.commands.length) ||
+        !holdView.includes('Активных ограничений:')) {
+      throw new Error('v126 hold projection missing after native browser restart');
+    }
+    await assertNondefaultCareer('v124 fictional referee dense journal browser restart');
+    if (virtualDenseEvidence.commands.length > 0) {
+      await click('Рассчитать и сохранить следующий матч v120');
+      await waitText('v120: сохранение отклонено: PREVIOUS_EXCEPTION_NOT_SUPPORTED');
+    }
+    console.log('PASS: v124 virtual referee CAS/reload, source commands=' +
+      virtualDenseEvidence.commands.length + ', verified v126 hold UI');
+
+
     // Recover a valid initial career after clearing IndexedDB in a disposable
     // browser profile. Clearing site data is NOT organic eviction or real quota.
     const savedJson = await evaluate(`new Promise((resolve, reject) => {

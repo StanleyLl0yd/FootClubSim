@@ -111,3 +111,71 @@ test('invalid scenario, corrupted source and stale CAS cannot advance history', 
   });
   assert.equal(JSON.stringify(career), original);
 });
+
+test('manager chooses a different legal outgoing starter and incoming bench player', () => {
+  const initial = empty();
+  const baseline = preview(initial, 'normal-substitution');
+  const ownSide = baseline.fixture.homeClubId === career.selectedClubId ?
+    'home' : 'away';
+  const lineup = ownSide === 'home' ? baseline.request.prematch.homeLineup :
+    baseline.request.prematch.awayLineup;
+  const player = new Map(catalog.players.map(p => [p.id, p]));
+  const out = lineup.starters.filter(id => player.get(id)?.primaryPosition !== 'GK')[6];
+  const incoming = lineup.bench.filter(id =>
+    player.get(id)?.primaryPosition !== 'GK').at(-1);
+  const chosen = prepareM1V113PlayableMatch(career, initial,
+    'normal-substitution', { outPlayerId: out, inPlayerId: incoming });
+  assert.equal(chosen?.ok, true, JSON.stringify(chosen));
+  const cmd = chosen.request.plannedCommands[0];
+  assert.equal(cmd.outPlayerId, out);
+  assert.equal(cmd.inPlayerId, incoming);
+  assert.notEqual(cmd.outPlayerId, baseline.request.plannedCommands[0].outPlayerId);
+  assert.ok(chosen.request.result.onFieldAtFullTime[ownSide].includes(incoming));
+  assert.ok(!chosen.request.result.onFieldAtFullTime[ownSide].includes(out));
+  const committed = commit(initial, chosen);
+  assert.equal(committed.results[0].source.plannedCommands[0].outPlayerId, out);
+  assert.equal(JSON.stringify(career), original);
+});
+
+test('forged substitution participants cannot modify the match or source history', () => {
+  const initial = empty();
+  const baseline = preview(initial, 'combined');
+  const ownSide = baseline.fixture.homeClubId === career.selectedClubId ?
+    'home' : 'away';
+  const lineup = ownSide === 'home' ? baseline.request.prematch.homeLineup :
+    baseline.request.prematch.awayLineup;
+  const originalPlayer = baseline.request.plannedCommands[0].outPlayerId;
+  const incoming = baseline.request.plannedCommands[0].inPlayerId;
+  const cases = [
+    { outPlayerId: lineup.bench[0], inPlayerId: incoming },
+    { outPlayerId: originalPlayer, inPlayerId: lineup.starters[0] },
+    { outPlayerId: lineup.starters[0], inPlayerId: incoming },
+    { outPlayerId: baseline.request.medicalActions[0].playerId,
+      inPlayerId: incoming },
+    { outPlayerId: originalPlayer, inPlayerId: 'unknown-player' },
+    { outPlayerId: originalPlayer, inPlayerId: incoming, extra: true },
+  ];
+  for (const selection of cases) {
+    assert.deepEqual(prepareM1V113PlayableMatch(
+      career, initial, 'combined', selection), {
+      ok: false, error: 'INVALID_SUBSTITUTION_SELECTION',
+    });
+  }
+  assert.deepEqual(prepareM1V113PlayableMatch(
+    career, initial, 'ordinary', { outPlayerId: originalPlayer,
+      inPlayerId: incoming }), {
+    ok: false, error: 'INVALID_SUBSTITUTION_SELECTION',
+  });
+  let accessed = 0;
+  const malicious = { inPlayerId: incoming };
+  Object.defineProperty(malicious, 'outPlayerId', {
+    enumerable: true, get() { accessed++; throw Error('unexpected getter'); },
+  });
+  assert.deepEqual(prepareM1V113PlayableMatch(
+    career, initial, 'normal-substitution', malicious), {
+    ok: false, error: 'INVALID_SUBSTITUTION_SELECTION',
+  });
+  assert.equal(accessed, 0);
+  assert.equal(JSON.stringify(initial), JSON.stringify(empty()));
+  assert.equal(JSON.stringify(career), original);
+});

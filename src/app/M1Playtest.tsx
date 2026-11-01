@@ -27,6 +27,8 @@ export function M1Playtest({ career, disabled }: {
 }) {
   const [journal, setJournal] = useState<M1V8MatchJournal | null>(null);
   const [scenario, setScenario] = useState<M1V113Scenario>('ordinary');
+  const [outPlayerId, setOutPlayerId] = useState('');
+  const [inPlayerId, setInPlayerId] = useState('');
   const [preview, setPreview] = useState<Ready | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(
@@ -80,7 +82,10 @@ export function M1Playtest({ career, disabled }: {
   function simulate(): void {
     if (busy || disabled || !journal) return;
     setPreview(null);
-    const nextMatch = prepareM1V113PlayableMatch(career, journal, scenario);
+    const nextMatch = prepareM1V113PlayableMatch(career, journal, scenario,
+      substitutionScenario ? {
+        outPlayerId: selectedOut, inPlayerId: selectedIn,
+      } : undefined);
     if (nextMatch === null) {
       setStatus('Матчи выбранного клуба в тестовом календаре завершены.');
     } else if (!nextMatch.ok) {
@@ -120,6 +125,22 @@ export function M1Playtest({ career, disabled }: {
   }
 
   const clubs = new Map(career.catalog.clubs.map(c => [c.id, c.displayName]));
+  const players = new Map(career.catalog.players.map(p => [p.id, p]));
+  const substitutionScenario = scenario === 'normal-substitution' || scenario === 'combined';
+  const ownLineup = next?.ok ? (
+    next.fixture.homeClubId === career.selectedClubId ?
+      next.request.prematch.homeLineup : next.request.prematch.awayLineup
+  ) : null;
+  const availableOut = ownLineup?.starters.filter(id =>
+    players.get(id)?.primaryPosition !== 'GK' &&
+    (scenario !== 'combined' || id !== ownLineup.starters.find(player =>
+      players.get(player)?.primaryPosition !== 'GK'))) ?? [];
+  const availableIn = ownLineup?.bench.filter(id =>
+    players.get(id)?.primaryPosition !== 'GK') ?? [];
+  const selectedOut = outPlayerId && availableOut.includes(outPlayerId) ?
+    outPlayerId : (availableOut[scenario === 'combined' ? 0 : 1] ?? availableOut[0] ?? '');
+  const selectedIn = inPlayerId && availableIn.includes(inPlayerId) ?
+    inPlayerId : (availableIn[0] ?? '');
   const latest = journal?.results.at(-1);
   return (
     <section className="panel" aria-labelledby="m1-playtest-title">
@@ -164,6 +185,20 @@ export function M1Playtest({ career, disabled }: {
             {OPTIONS.map(option => <option key={option.value}
               value={option.value}>{option.label}</option>)}
           </select>
+          {substitutionScenario && <div className="m1-substitution-controls">
+            <label htmlFor="m1-player-out">Уходит с поля</label>
+            <select id="m1-player-out" value={selectedOut} disabled={disabled || busy}
+              onChange={event => { setOutPlayerId(event.target.value); setPreview(null); }}>
+              {availableOut.map(id => <option key={id} value={id}>
+                {players.get(id)?.displayName}</option>)}
+            </select>
+            <label htmlFor="m1-player-in">Выходит на поле</label>
+            <select id="m1-player-in" value={selectedIn} disabled={disabled || busy}
+              onChange={event => { setInPlayerId(event.target.value); setPreview(null); }}>
+              {availableIn.map(id => <option key={id} value={id}>
+                {players.get(id)?.displayName}</option>)}
+            </select>
+          </div>}
           <div className="button-stack m1-actions">
             <button type="button" onClick={simulate}
               disabled={disabled || busy}>Рассчитать матч</button>

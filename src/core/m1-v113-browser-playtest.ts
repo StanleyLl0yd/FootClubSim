@@ -9,6 +9,7 @@ import { simulateM1V8MedicalPhases, type M1V8Result }
 import { selectM1V96EligibleRegisteredLineup }
   from './m1-v96-cap-safe-lineup.js';
 import { RNG_VERSION } from './rng.js';
+import { isPlainJsonTree } from './plain-json-tree.js';
 import type { MatchRosterRules } from './model.js';
 import type { InitialCareerSave } from './save.js';
 import { defaultTacticalPlan } from './tactics.js';
@@ -20,6 +21,10 @@ import { defaultTacticalPlan } from './tactics.js';
 export const M1_V113_PLAYTEST_SCHEMA = 1 as const;
 export type M1V113Scenario = 'ordinary' | 'temporary-treatment' |
   'normal-substitution' | 'combined';
+export interface M1V114SubstitutionSelection {
+  readonly outPlayerId: string;
+  readonly inPlayerId: string;
+}
 const RULES: MatchRosterRules = {
   starterCount: 11, maxBench: 12, maxForeignersOnField: 7,
 };
@@ -42,7 +47,8 @@ export interface M1V113PlaytestRequest {
 export type M1V113Playtest =
   | Readonly<{ ok: false; error: 'INVALID_JOURNAL' | 'INVALID_SCENARIO' |
       'UNRESOLVED_MEDICAL_OR_DISCIPLINE' | 'NO_LEGAL_LINEUP' |
-      'INVALID_SIMULATION' | 'SOURCE_REPLAY_REJECTED' }>
+      'INVALID_SIMULATION' | 'SOURCE_REPLAY_REJECTED' |
+      'INVALID_SUBSTITUTION_SELECTION' }>
   | Readonly<{ ok: true; schemaVersion: typeof M1_V113_PLAYTEST_SCHEMA;
       status: 'SYNTHETIC_LOCAL_PLAYTEST_NOT_OFFICIAL_CAREER';
       fixture: Fixture; request: M1V113PlaytestRequest;
@@ -59,7 +65,22 @@ function deriveSeed(base: number, fixtureId: string): number {
 export function prepareM1V113PlayableMatch(
   initial: InitialCareerSave, prior: M1V8MatchJournal,
   scenario: M1V113Scenario,
+  substitution?: M1V114SubstitutionSelection,
 ): M1V113Playtest | null {
+  const substituteScenario = scenario === 'normal-substitution' ||
+    scenario === 'combined';
+  if (substitution !== undefined) {
+    if (!substituteScenario || !isPlainJsonTree(substitution) ||
+        substitution === null || typeof substitution !== 'object' ||
+        Array.isArray(substitution) ||
+        Object.keys(substitution).length !== 2 ||
+        !Object.hasOwn(substitution, 'outPlayerId') ||
+        !Object.hasOwn(substitution, 'inPlayerId') ||
+        typeof substitution.outPlayerId !== 'string' ||
+        typeof substitution.inPlayerId !== 'string') {
+      return { ok: false, error: 'INVALID_SUBSTITUTION_SELECTION' };
+    }
+  }
   if (!['ordinary', 'temporary-treatment', 'normal-substitution', 'combined']
     .includes(scenario)) return { ok: false, error: 'INVALID_SCENARIO' };
   const checked = validateM1V8MatchJournal(initial, prior);
@@ -112,6 +133,15 @@ export function prepareM1V113PlayableMatch(
     return { ok: false, error: 'NO_LEGAL_LINEUP' };
   }
 
+  const selectedOut = substitution?.outPlayerId ?? substitutedPlayer;
+  const selectedIn = substitution?.inPlayerId ?? replacement;
+  if (substituteScenario && (!outfield.includes(selectedOut) ||
+      !ownLineup.bench.includes(selectedIn) ||
+      players.get(selectedIn)?.primaryPosition === 'GK' ||
+      (scenario === 'combined' && selectedOut === treatmentPlayer))) {
+    return { ok: false, error: 'INVALID_SUBSTITUTION_SELECTION' };
+  }
+
   const plannedCommands: unknown[] = [];
   const medicalActions: unknown[] = [];
   if (scenario === 'temporary-treatment' || scenario === 'combined') {
@@ -136,7 +166,7 @@ export function prepareM1V113PlayableMatch(
       fixtureId: fixture.id, teamId: initial.selectedClubId,
       elapsedSeconds: 300, kind: 'substitute-normal',
       actor: { kind: 'player' }, stoppage: 'referee-authorized',
-      outPlayerId: substitutedPlayer, inPlayerId: replacement,
+      outPlayerId: selectedOut, inPlayerId: selectedIn,
     });
   }
   const result = simulateM1V8MedicalPhases(

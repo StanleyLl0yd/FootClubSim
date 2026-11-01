@@ -287,6 +287,70 @@ async function run() {
     await assertNondefaultCareer('M1 browser revision-1 restart');
     console.log('PASS: native browser played, committed and restored M1 without rewriting M0');
 
+    // A second real browser match uses manager-selected substitute IDs,
+    // not the previously fixed synthetic participants.
+    const changedScenario = await evaluate(`(() => {
+      const select = document.querySelector('#m1-playtest-scenario');
+      if (!select) return false;
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLSelectElement.prototype, 'value').set;
+      setter.call(select, 'normal-substitution');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    })()`);
+    if (!changedScenario) throw new Error('Missing M1 substitution scenario control');
+    await waitText('Уходит с поля');
+    const participants = await evaluate(`(() => {
+      const outgoing = document.querySelector('#m1-player-out');
+      const incoming = document.querySelector('#m1-player-in');
+      if (!outgoing || !incoming || outgoing.options.length < 3 ||
+          incoming.options.length < 3) return null;
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLSelectElement.prototype, 'value').set;
+      setter.call(outgoing, outgoing.options[outgoing.options.length - 1].value);
+      outgoing.dispatchEvent(new Event('change', { bubbles: true }));
+      setter.call(incoming, incoming.options[incoming.options.length - 1].value);
+      incoming.dispatchEvent(new Event('change', { bubbles: true }));
+      return { out: outgoing.value, in: incoming.value };
+    })()`);
+    if (!participants?.out || !participants?.in) {
+      throw new Error('M1 chosen substitution participants unavailable');
+    }
+    await click('Рассчитать матч');
+    await waitText('Матч рассчитан. Результат пока не записан.');
+    await click('Подтвердить и сохранить матч');
+    await waitText('Матч подтверждён, независимо перепроверен и сохранён');
+    const applied = await evaluate(`new Promise((resolve, reject) => {
+      const opening = indexedDB.open('footclubsim-m1-v8', 1);
+      opening.onerror = () => reject(opening.error);
+      opening.onsuccess = () => {
+        const db = opening.result;
+        const tx = db.transaction('result-journals', 'readonly');
+        const request = tx.objectStore('result-journals').get('m0-ui-initial-career');
+        let command = null;
+        request.onsuccess = () => {
+          const journal = request.result;
+          command = journal?.revision === 2 ?
+            journal.results[1]?.source.plannedCommands[0] : null;
+        };
+        tx.oncomplete = () => { db.close(); resolve(command); };
+        tx.onabort = () => { db.close(); reject(tx.error); };
+      };
+    })`);
+    if (applied?.outPlayerId !== participants.out ||
+        applied?.inPlayerId !== participants.in) {
+      throw new Error('Browser CAS did not preserve the user-selected substitution');
+    }
+    await send('Page.reload', { ignoreCache: true });
+    await waitText('Выберите вымышленный клуб');
+    await click('Восстановить из браузера');
+    await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+    await click('Начать или продолжить M1');
+    await waitText('Сохранено матчей выбранного клуба: 2 из 30.');
+    await assertNondefaultCareer('M1 selected substitute browser restart');
+    console.log('PASS: browser selected two specific substitution players and restored source CAS');
+
+
 
     // Recover a valid initial career after clearing IndexedDB in a disposable
     // browser profile. Clearing site data is NOT organic eviction or real quota.

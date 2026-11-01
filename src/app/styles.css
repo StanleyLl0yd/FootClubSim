@@ -63,3 +63,7 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
 .m1-actions { margin-top: 1rem; }
 .m1-preview { border: 1px solid #cadccc; border-radius: .8rem; padding: 1rem; margin-top: 1rem; }
 .m1-preview p { margin: .65rem 0; }
+.m1-substitution-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .55rem 1rem; margin-top: 1rem; }
+.m1-substitution-controls label { margin: 0; }
+.m1-substitution-controls select { min-width: 0; }
+@media (max-width: 550px) { .m1-substitution-controls { grid-template-columns: 1fr; } }

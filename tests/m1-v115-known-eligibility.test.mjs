@@ -4,6 +4,8 @@ import { createSyntheticRplScaleCatalog } from '../dist/core/synthetic.js';
 import { createInitialCareer } from '../dist/core/save.js';
 import { simulateM1V8MedicalPhases }
   from '../dist/core/m1-v8-medical-phases.js';
+import { simulateM1V19InternalReferee }
+  from '../dist/core/m1-v19-internal-foul-injury.js';
 import { prepareM1V113PlayableMatch }
   from '../dist/core/m1-v113-browser-playtest.js';
 import {
@@ -118,3 +120,27 @@ test('four distinct simple cautions cause one automatic suspension in controlled
   assert.ok(named(prepare(journal)).includes(player));
 });
 
+
+test('seeded in-game referee replays the same physical score and journals all modelled events', () => {
+  const journal = start();
+  const a = prepareM1V113PlayableMatch(initial, journal, 'internal-referee');
+  assert.equal(a?.ok, true, JSON.stringify(a).slice(0, 350));
+  const b = prepareM1V113PlayableMatch(initial, journal, 'internal-referee');
+  assert.deepEqual(a, b);
+  const generated = simulateM1V19InternalReferee(
+    a.request.prematch, a.request.policy);
+  assert.equal(generated.ok, true, JSON.stringify(generated).slice(0, 350));
+  assert.deepEqual(a.request.plannedCommands.map(x => x.id),
+    generated.generatedIncidents.map(x => x.decisionId));
+  assert.deepEqual({
+    home: a.request.result.report.home.goals,
+    away: a.request.result.report.away.goals,
+  }, generated.match.finalScore);
+  assert.equal(a.request.result.rngState, generated.match.rngState);
+  const next = commit(journal, a, a.request.plannedCommands);
+  assert.equal(next.results[0].source.plannedCommands.length,
+    generated.generatedIncidents.length);
+  const subsequent = prepareM1V113PlayableMatch(initial, next, 'ordinary');
+  assert.equal(subsequent?.ok, true, JSON.stringify(subsequent).slice(0, 350));
+  assert.equal(JSON.stringify(initial), sourceM0);
+});

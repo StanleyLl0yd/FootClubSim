@@ -653,6 +653,50 @@ async function run() {
       await waitText('v120: проверен и загружен отдельный журнал, матчей: 4.');
       await assertNondefaultCareer('v128 source-held manual continuation restart');
       console.log('PASS: manual v128 next-match XI/bench excludes verified holds');
+
+      // A second generated virtual-referee fixture must use the same exact
+      // v124 source namespace after source-verified v128 held-player admission.
+      await click('Следующий матч с виртуальным арбитром и ограничениями');
+      await waitText('v120: повторный виртуальный арбитр, плотный матч атомарно записан, 270 PRNG draws, ревизия 5 из 30.');
+      const secondVirtual=await evaluate(`new Promise((resolve,reject)=>{
+        const opening=indexedDB.open('footclubsim-m1-v120',1);
+        opening.onerror=()=>reject(opening.error);
+        opening.onsuccess=()=>{
+          const db=opening.result,tx=db.transaction('dense-result-journals','readonly');
+          const get=tx.objectStore('dense-result-journals').get('m0-ui-initial-career');
+          let evidence=null;
+          get.onsuccess=()=>{
+            const journal=get.result,entry=journal?.entries?.[4];
+            if(journal?.revision===5&&entry){
+              const source=entry.source.prematch;
+              evidence={revision:5,fixtureId:entry.fixtureId,
+                commandId:entry.commandId,commands:entry.source.plannedCommands,
+                rngDraws:entry.result.rngDraws,
+                lineup:source.fixture.homeClubId==='fictional-2'?
+                  source.homeLineup:source.awayLineup};
+            }
+          };
+          tx.oncomplete=()=>{db.close();resolve(evidence);};
+          tx.onabort=()=>{db.close();reject(tx.error);};
+        };
+      })`);
+      if(!secondVirtual||
+          secondVirtual.commandId!=='v124-virtual-referee-'+secondVirtual.fixtureId||
+          secondVirtual.rngDraws!==270||
+          !Array.isArray(secondVirtual.commands)||
+          [...held].some(id=>secondVirtual.lineup.starters.includes(id)||
+            secondVirtual.lineup.bench.includes(id))){
+        throw new Error('Repeated virtual referee bypassed historical hold or source namespace');
+      }
+      await send('Page.reload',{ignoreCache:true});
+      await waitText('Выберите вымышленный клуб');
+      await click('Восстановить из браузера');
+      await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+      await click('Создать или загрузить отдельный v120');
+      await waitText('v120: проверен и загружен отдельный журнал, матчей: 5.');
+      await assertNondefaultCareer('v130 repeated virtual referee restart');
+      console.log('PASS: second virtual referee source verified after injury/discipline holds');
+
     }
     console.log('PASS: v124 virtual referee CAS/reload, source commands=' +
       virtualDenseEvidence.commands.length + ', verified v126 hold UI');

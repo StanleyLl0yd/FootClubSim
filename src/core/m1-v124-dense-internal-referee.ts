@@ -41,6 +41,15 @@ export function prepareM1V124DenseVirtualRefereeMatch(
   const base=prepareM1V122DenseOrdinaryMatch(initial,journal);
   if(base===null)return null;
   if(!base.ok)return base;
+  return buildM1V124VirtualRefereeFromVerifiedBase(base);
+}
+
+/** Use only a validated, source-replayed per-fixture base. The returned
+ * request still requires the existing v120 replay/CAS admission gate.
+ */
+export function buildM1V124VirtualRefereeFromVerifiedBase(
+  base:Pick<Extract<M1V122DenseProposal,{ok:true}>,'fixture'|'request'>,
+):M1V124DenseRefereeProposal {
   const source=base.request;
   const generated=simulateM1V19InternalReferee(
     source.prematch,source.policy);

@@ -6,6 +6,8 @@ import { reviewM1V126DenseSourceHolds,
   from '../core/m1-v126-dense-source-holds.js';
 import {prepareM1V128ManualFictionalContinuation}
   from '../core/m1-v128-manual-fictional-continuation.js';
+import {prepareM1V130ManualVirtualRefereeContinuation}
+  from '../core/m1-v130-manual-virtual-referee.js';
 import { prepareM1V122DenseOrdinaryMatch }
   from '../core/m1-v122-dense-ordinary-season.js';
 import type { InitialCareerSave } from '../core/save.js';
@@ -49,7 +51,7 @@ export function M1DensePlaytest({career,disabled}:{
         (error instanceof Error?error.message:String(error)));
     }finally{setBusy(false);}
   }
-  async function playNext(mode:'ordinary'|'virtual'|'manual'='ordinary'){
+  async function playNext(mode:'ordinary'|'virtual'|'manual'|'manual-virtual'='ordinary'){
     if(busy||disabled||!journal||!holdReview?.ok)return;
     setBusy(true);
     try{
@@ -57,7 +59,9 @@ export function M1DensePlaytest({career,disabled}:{
         prepareM1V124DenseVirtualRefereeMatch(career,journal):
         mode==='manual'?
           prepareM1V128ManualFictionalContinuation(career,journal):
-          prepareM1V122DenseOrdinaryMatch(career,journal);
+          mode==='manual-virtual'?
+            prepareM1V130ManualVirtualRefereeContinuation(career,journal):
+            prepareM1V122DenseOrdinaryMatch(career,journal);
       if(prepared===null){
         setMessage('v120: все 30 матчей выбранного клуба сохранены.');
         return;
@@ -74,7 +78,8 @@ export function M1DensePlaytest({career,disabled}:{
         return;
       }
       setMessage('v120: '+(mode==='virtual'?'виртуальный арбитр, ':
-        mode==='manual'?'модельное продолжение, ':'')+
+        mode==='manual'?'модельное продолжение, ':
+        mode==='manual-virtual'?'повторный виртуальный арбитр, ':'')+
         'плотный матч атомарно записан, 270 PRNG draws, ревизия '+
         persisted.revision+' из 30. Активных ограничений: '+
         reviewed.holds.filter(hold=>hold.activeForNextFixture).length+'.');
@@ -110,6 +115,12 @@ export function M1DensePlaytest({career,disabled}:{
           entry.source.plannedCommands.length!==0)}
         onClick={()=>void playNext('manual')}>
         Продолжить с вымышленными ограничениями
+      </button>
+      <button type="button" disabled={busy||disabled||!journal||journal.revision>=30||
+        !holdReview?.ok||!journal.entries.some(entry=>
+          entry.source.plannedCommands.length!==0)}
+        onClick={()=>void playNext('manual-virtual')}>
+        Следующий матч с виртуальным арбитром и ограничениями
       </button>
     </div>
     <p role="status">{message}</p>

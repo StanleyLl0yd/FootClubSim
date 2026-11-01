@@ -134,14 +134,18 @@ export function M1Playtest({ career, disabled }: {
     next.fixture.homeClubId === career.selectedClubId ?
       next.request.prematch.homeLineup : next.request.prematch.awayLineup
   ) : null;
+  const firstOutfield = ownLineup?.starters.find(id =>
+    players.get(id)?.primaryPosition !== 'GK');
+  const defaultOutfield = ownLineup?.starters.filter(id =>
+    players.get(id)?.primaryPosition !== 'GK')[1];
   const availableOut = ownLineup?.starters.filter(id =>
-    players.get(id)?.primaryPosition !== 'GK' &&
-    (scenario !== 'combined' || id !== ownLineup.starters.find(player =>
-      players.get(player)?.primaryPosition !== 'GK'))) ?? [];
-  const availableIn = ownLineup?.bench.filter(id =>
-    players.get(id)?.primaryPosition !== 'GK') ?? [];
+    scenario !== 'combined' || id !== firstOutfield) ?? [];
   const selectedOut = outPlayerId && availableOut.includes(outPlayerId) ?
-    outPlayerId : (availableOut[scenario === 'combined' ? 0 : 1] ?? availableOut[0] ?? '');
+    outPlayerId : (defaultOutfield && availableOut.includes(defaultOutfield) ?
+      defaultOutfield : (availableOut[0] ?? ''));
+  const outgoingIsKeeper = players.get(selectedOut)?.primaryPosition === 'GK';
+  const availableIn = ownLineup?.bench.filter(id =>
+    (players.get(id)?.primaryPosition === 'GK') === outgoingIsKeeper) ?? [];
   const selectedIn = inPlayerId && availableIn.includes(inPlayerId) ?
     inPlayerId : (availableIn[0] ?? '');
   const latest = journal?.results.at(-1);

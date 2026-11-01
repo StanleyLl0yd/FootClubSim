@@ -419,6 +419,82 @@ async function run() {
     await assertNondefaultCareer('M1 seeded internal referee browser restart');
     console.log('PASS: browser persisted modelled in-game referee source in CAS revision 3');
 
+    // Verify a goalkeeper can be legally replaced by a named reserve keeper
+    // with the same v8 replay, virtual clock and browser CAS path.
+    const goalkeeperScenario = await evaluate(`(() => {
+      const select = document.querySelector('#m1-playtest-scenario');
+      if (!select) return false;
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLSelectElement.prototype, 'value').set;
+      setter.call(select, 'normal-substitution');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      return select.value === 'normal-substitution';
+    })()`);
+    if (!goalkeeperScenario) throw new Error('Goalkeeper substitution scenario unavailable');
+    await waitText('Уходит с поля');
+    const oldBench = await evaluate(
+      "document.querySelector('#m1-player-in')?.options[0]?.value ?? ''");
+    const keeperOut = await evaluate(`(() => {
+      const out = document.querySelector('#m1-player-out');
+      if (!out || !out.options.length) return null;
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLSelectElement.prototype, 'value').set;
+      setter.call(out, out.options[0].value);
+      out.dispatchEvent(new Event('change', { bubbles: true }));
+      return out.value;
+    })()`);
+    if (!keeperOut) throw new Error('Starting goalkeeper not selectable');
+    const keeperIn = await until(async () => {
+      const candidate = await evaluate(
+        "document.querySelector('#m1-player-in')?.options[0]?.value ?? ''");
+      return candidate && candidate !== oldBench ? candidate : null;
+    }, 'reserve goalkeeper in the named bench');
+    const keeperTime = await evaluate(`(() => {
+      const select = document.querySelector('#m1-substitution-checkpoint');
+      if (!select) return false;
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLSelectElement.prototype, 'value').set;
+      setter.call(select, '2700');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      return select.value === '2700';
+    })()`);
+    if (!keeperTime) throw new Error('Goalkeeper half-time selector missing');
+    await click('Рассчитать матч');
+    await waitText('Матч рассчитан. Результат пока не записан.');
+    await click('Подтвердить и сохранить матч');
+    await waitText('Матч подтверждён, независимо перепроверен и сохранён');
+    const keeperSource = await evaluate(`new Promise((resolve, reject) => {
+      const opening = indexedDB.open('footclubsim-m1-v8', 1);
+      opening.onerror = () => reject(opening.error);
+      opening.onsuccess = () => {
+        const db = opening.result;
+        const tx = db.transaction('result-journals', 'readonly');
+        const request = tx.objectStore('result-journals').get('m0-ui-initial-career');
+        let result = null;
+        request.onsuccess = () => {
+          const journal = request.result;
+          result = journal?.revision === 4 ?
+            journal.results[3]?.source.plannedCommands[0] : null;
+        };
+        tx.oncomplete = () => { db.close(); resolve(result); };
+        tx.onabort = () => { db.close(); reject(tx.error); };
+      };
+    })`);
+    if (keeperSource?.outPlayerId !== keeperOut ||
+        keeperSource?.inPlayerId !== keeperIn ||
+        keeperSource?.elapsedSeconds !== 2700 ||
+        keeperSource?.stoppage !== 'half-time') {
+      throw new Error('Native CAS did not retain keeper substitution');
+    }
+    await send('Page.reload', { ignoreCache: true });
+    await waitText('Выберите вымышленный клуб');
+    await click('Восстановить из браузера');
+    await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+    await click('Начать или продолжить M1');
+    await waitText('Сохранено матчей выбранного клуба: 4 из 30.');
+    await assertNondefaultCareer('M1 keeper substitution browser restart');
+    console.log('PASS: keeper substitution retained through actual browser restart');
+
     // Recover a valid initial career after clearing IndexedDB in a disposable
     // browser profile. Clearing site data is NOT organic eviction or real quota.
     const savedJson = await evaluate(`new Promise((resolve, reject) => {

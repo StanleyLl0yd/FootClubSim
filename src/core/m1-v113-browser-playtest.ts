@@ -144,9 +144,10 @@ export function prepareM1V113PlayableMatch(
 
   const selectedOut = substitution?.outPlayerId ?? substitutedPlayer;
   const selectedIn = substitution?.inPlayerId ?? replacement;
-  if (substituteScenario && (!outfield.includes(selectedOut) ||
-      !ownLineup.bench.includes(selectedIn) ||
-      players.get(selectedIn)?.primaryPosition === 'GK' ||
+  const keeperOut = players.get(selectedOut)?.primaryPosition === 'GK';
+  const keeperIn = players.get(selectedIn)?.primaryPosition === 'GK';
+  if (substituteScenario && (!ownLineup.starters.includes(selectedOut) ||
+      !ownLineup.bench.includes(selectedIn) || keeperOut !== keeperIn ||
       (scenario === 'combined' && selectedOut === treatmentPlayer))) {
     return { ok: false, error: 'INVALID_SUBSTITUTION_SELECTION' };
   }

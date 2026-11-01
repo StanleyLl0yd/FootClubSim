@@ -137,6 +137,55 @@ test('manager chooses a different legal outgoing starter and incoming bench play
   assert.equal(JSON.stringify(career), original);
 });
 
+test('verified goalkeeper-for-goalkeeper replacement preserves exactly one active keeper', () => {
+  const initial = empty();
+  const baseline = preview(initial, 'normal-substitution');
+  const ownSide = baseline.fixture.homeClubId === career.selectedClubId ?
+    'home' : 'away';
+  const lineup = ownSide === 'home' ? baseline.request.prematch.homeLineup :
+    baseline.request.prematch.awayLineup;
+  const players = new Map(catalog.players.map(p => [p.id, p]));
+  const outgoing = lineup.starters.find(id => players.get(id)?.primaryPosition === 'GK');
+  const incoming = lineup.bench.find(id => players.get(id)?.primaryPosition === 'GK');
+  assert.ok(outgoing && incoming);
+  const proposed = prepareM1V113PlayableMatch(career, initial,
+    'normal-substitution', {
+      outPlayerId: outgoing, inPlayerId: incoming, elapsedSeconds: 2700,
+    });
+  assert.equal(proposed?.ok, true, JSON.stringify(proposed).slice(0, 350));
+  const source = proposed.request.plannedCommands[0];
+  assert.equal(source.stoppage, 'half-time');
+  assert.equal(source.outPlayerId, outgoing);
+  assert.equal(source.inPlayerId, incoming);
+  const finalXi = proposed.request.result.onFieldAtFullTime[ownSide];
+  assert.equal(finalXi.filter(id => players.get(id)?.primaryPosition === 'GK').length, 1);
+  assert.ok(finalXi.includes(incoming));
+  assert.ok(!finalXi.includes(outgoing));
+  const persisted = commit(initial, proposed);
+  assert.equal(persisted.results[0].source.plannedCommands[0].inPlayerId, incoming);
+  assert.equal(JSON.stringify(career), original);
+});
+
+test('goalkeeper and outfield substitutes cannot be interchanged', () => {
+  const initial = empty();
+  const baseline = preview(initial, 'normal-substitution');
+  const lineup = baseline.fixture.homeClubId === career.selectedClubId ?
+    baseline.request.prematch.homeLineup : baseline.request.prematch.awayLineup;
+  const players = new Map(catalog.players.map(p => [p.id, p]));
+  const keeperOut = lineup.starters.find(id => players.get(id)?.primaryPosition === 'GK');
+  const fieldOut = lineup.starters.find(id => players.get(id)?.primaryPosition !== 'GK');
+  const keeperIn = lineup.bench.find(id => players.get(id)?.primaryPosition === 'GK');
+  const fieldIn = lineup.bench.find(id => players.get(id)?.primaryPosition !== 'GK');
+  assert.ok(keeperOut && fieldOut && keeperIn && fieldIn);
+  for (const pair of [[keeperOut, fieldIn], [fieldOut, keeperIn]]) {
+    assert.deepEqual(prepareM1V113PlayableMatch(career, initial,
+      'normal-substitution', { outPlayerId: pair[0], inPlayerId: pair[1] }), {
+      ok: false, error: 'INVALID_SUBSTITUTION_SELECTION',
+    });
+  }
+  assert.equal(JSON.stringify(career), original);
+});
+
 test('selected substitution checkpoints replay at minute 15 and half-time', () => {
   const initial = empty();
   const baseline = preview(initial, 'normal-substitution');

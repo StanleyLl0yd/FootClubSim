@@ -263,6 +263,31 @@ async function run() {
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await assertNondefaultCareer('normal profile restore');
 
+    // Exercise the actual M1 UI against native IndexedDB, then reload.
+    // M0 identity/revision must remain unchanged while M1 advances independently.
+    await click('Начать или продолжить M1');
+    await waitText('Проверен исходный M0 и весь сохранённый журнал M1.');
+    await click('Рассчитать матч');
+    await waitText('Матч рассчитан. Результат пока не записан.');
+    const previewScore = await evaluate(
+      "document.querySelector('.m1-preview')?.innerText ?? ''");
+    if (!previewScore.includes('Результат')) {
+      throw new Error('M1 fixture simulation did not render a preview');
+    }
+    await click('Подтвердить и сохранить матч');
+    await waitText('Матч подтверждён, независимо перепроверен и сохранён');
+    await assertNondefaultCareer('M1 result CAS commit');
+    await send('Page.reload', { ignoreCache: true });
+    await waitText('Выберите вымышленный клуб');
+    await click('Восстановить из браузера');
+    await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+    await click('Начать или продолжить M1');
+    await waitText('Проверен исходный M0 и весь сохранённый журнал M1.');
+    await waitText('Сохранено матчей выбранного клуба: 1 из 30.');
+    await assertNondefaultCareer('M1 browser revision-1 restart');
+    console.log('PASS: native browser played, committed and restored M1 without rewriting M0');
+
+
     // Recover a valid initial career after clearing IndexedDB in a disposable
     // browser profile. Clearing site data is NOT organic eviction or real quota.
     const savedJson = await evaluate(`new Promise((resolve, reject) => {

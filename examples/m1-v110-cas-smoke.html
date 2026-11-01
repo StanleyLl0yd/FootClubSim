@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v110 signed-source CAS smoke</title></head>
+<body>
+<h1>M1 v110 signed v105 journal (native browser test only)</h1>
+<pre id="status">M1_V110_BROWSER_CAS_RUNNING</pre>
+<script type="module">
+  import {createSyntheticRplScaleCatalog,defaultSyntheticLineup}
+    from '../dist/core/synthetic.js';
+  import {createInitialCareer,} from '../dist/core/save.js';
+  import {saveNewInitialCareer,loadInitialCareer}
+    from '../dist/browser/initial-career-store.js';
+  import {createM1V110PersistedSignedJournal as create,
+    loadM1V110PersistedSignedJournal as load,
+    commitM1V110PersistedSignedSource as commit}
+    from '../dist/browser/m1-v110-signed-journal-store.js';
+  import {M1_V107_PURPOSE} from '../dist/core/m1-v107-signed-v105-source.js';
+  import {simulateM1V105SpecialGoalChronology as simulate}
+    from '../dist/core/m1-v105-special-goal-chronology.js';
+  import {generateDoubleRoundRobin} from '../dist/core/fixtures.js';
+  import {MATCH_LEDGER_VERSION,M0_RULES_PACK_ID,M0_RULES_PACK_VERSION}
+    from '../dist/core/match-contracts.js';
+  import {M1_ENGINE_VERSION} from '../dist/core/m1-clock.js';
+  import {RNG_VERSION} from '../dist/core/rng.js';
+  import {defaultTacticalPlan} from '../dist/core/tactics.js';
+
+  const status=document.getElementById('status');
+  const check=(ok,why)=>{if(!ok)throw Error(why);};
+  const catalog=createSyntheticRplScaleCatalog(77);
+  const career=createInitialCareer(catalog,catalog.clubs[0].id,71,'m1-v110-native');
+  const fixtures=generateDoubleRoundRobin(catalog.clubs.map(c=>c.id))
+    .flatMap(r=>r.fixtures);
+  const clubs=new Map(catalog.clubs.map(c=>[c.id,c]));
+  const policy={home:{assignedActor:{kind:'player'},availableStaffIds:[]},
+    away:{assignedActor:{kind:'player'},availableStaffIds:[]}};
+  function prematch(fixture,seed){
+    return {schemaVersion:MATCH_LEDGER_VERSION,engineVersion:M1_ENGINE_VERSION,
+      rulesPackId:M0_RULES_PACK_ID,rulesPackVersion:M0_RULES_PACK_VERSION,
+      fixture,catalog,
+      homeLineup:defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+      awayLineup:defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+      homeTactics:defaultTacticalPlan(fixture.homeClubId),
+      awayTactics:defaultTacticalPlan(fixture.awayClubId),
+      rosterRules:{starterCount:11,maxBench:12,maxForeignersOnField:7},
+      rngAlgorithmVersion:RNG_VERSION,rngSeed:seed};
+  }
+  const b64=bytes=>btoa(String.fromCharCode(...new Uint8Array(bytes)));
+  const raw=value=>Uint8Array.from(atob(value),c=>c.charCodeAt(0));
+  async function sign(keys,fixture,revision,challengeId){
+    const source=[prematch(fixture,42+revision),policy,[],[],[],[]];
+    const result=simulate(...source);
+    check(result.ok,'v105 simulation invalid');
+    const context={careerId:career.careerId,fixtureId:fixture.id,
+      expectedRevision:revision,challengeId};
+    const digest=await crypto.subtle.digest('SHA-256',
+      new TextEncoder().encode(JSON.stringify(source)));
+    const sourceSha256=Array.from(new Uint8Array(digest),
+      x=>x.toString(16).padStart(2,'0')).join('');
+    const payload=JSON.stringify({schemaVersion:107,purpose:M1_V107_PURPOSE,
+      ...context,sourceSha256});
+    const signature=await crypto.subtle.sign('Ed25519',keys.privateKey,
+      new TextEncoder().encode(payload));
+    const envelope={schemaVersion:107,payload,
+      signature:b64(signature).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')};
+    return {context,envelope,source,result};
+  }
+  async function commitSigned(keys,fixture,revision,challengeId){
+    const x=await sign(keys,fixture,revision,challengeId);
+    return commit(career.careerId,keys.publicKey,'native-test-key',
+      revision,x.context,x.envelope,x.source,x.result);
+  }
+  async function errorCode(promise,code){
+    try{await promise;}
+    catch(error){
+      check(error?.code===code,'expected '+code+', got '+String(error));
+      return;
+    }
+    throw Error('expected '+code);
+  }
+  async function run(){
+    const stage=new URL(location.href).searchParams.get('stage');
+    if(stage===null){
+      const keys=await crypto.subtle.generateKey({name:'Ed25519'},true,
+        ['sign','verify']);
+      sessionStorage.setItem('m1-v110-test-public',
+        b64(await crypto.subtle.exportKey('spki',keys.publicKey)));
+      sessionStorage.setItem('m1-v110-test-private',
+        b64(await crypto.subtle.exportKey('pkcs8',keys.privateKey)));
+      await saveNewInitialCareer(career);
+      const initial=await create(career.careerId,'native-test-key');
+      check(initial.revision===0,'journal was not empty');
+      const committed=await commitSigned(keys,fixtures[0],0,'native-first');
+      check(committed.revision===1,'first signed source not committed');
+      const url=new URL(location.href);
+      url.searchParams.set('stage','verify');
+      location.replace(url.href);
+      return;
+    }
+    check(stage==='verify','unexpected stage');
+    const publicKey=await crypto.subtle.importKey('spki',
+      raw(sessionStorage.getItem('m1-v110-test-public')),
+      {name:'Ed25519'},true,['verify']);
+    const privateKey=await crypto.subtle.importKey('pkcs8',
+      raw(sessionStorage.getItem('m1-v110-test-private')),
+      {name:'Ed25519'},true,['sign']);
+    const keys={publicKey,privateKey};
+    const sourceCareer=await loadInitialCareer(career.careerId);
+    check(sourceCareer.selectedClubId===career.selectedClubId,
+      'immutable M0 career drifted');
+    const recovered=await load(career.careerId,publicKey,'native-test-key');
+    check(recovered.revision===1&&recovered.entries.length===1,
+      'signed source not durable across real navigation');
+    check(recovered.entries[0].context.challengeId==='native-first',
+      'first signed challenge missing');
+    await errorCode(create(career.careerId,'native-test-key'),'ALREADY_EXISTS');
+    await errorCode(commitSigned(keys,fixtures[1],0,'stale-test'),'DOMAIN_REJECTED');
+    const results=await Promise.allSettled([
+      commitSigned(keys,fixtures[1],1,'native-writer-a'),
+      commitSigned(keys,fixtures[2],1,'native-writer-b'),
+    ]);
+    check(results.filter(x=>x.status==='fulfilled').length===1,
+      'concurrent native writers did not serialize');
+    const loser=results.find(x=>x.status==='rejected');
+    check(loser?.reason?.code==='STALE_REVISION'||
+      (loser?.reason?.code==='DOMAIN_REJECTED'&&
+        loser.reason.domainError==='STALE_REVISION'),
+      'concurrent loser not rejected as stale revision');
+    const updated=await load(career.careerId,publicKey,'native-test-key');
+    check(updated.revision===2&&updated.entries.length===2,
+      'concurrent source journal is not exactly revision two');
+    check(updated.entries[0].context.challengeId==='native-first',
+      'concurrent writer overwrote first source');
+    status.textContent='M1_V110_BROWSER_CAS_PASS';
+  }
+  run().catch(e=>{
+    status.textContent='M1_V110_BROWSER_CAS_FAIL: '+String(e?.stack??e);
+  });
+</script>
+</body>
+</html>

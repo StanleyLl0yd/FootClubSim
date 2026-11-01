@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import {argv} from 'node:process';
-import {readFileSync} from 'node:fs';
+import {readFileSync,statSync} from 'node:fs';
 
 export const M1_P5_V142_CLUSTER_INTERVAL_SCHEMA=142;
 const fields=['goals','shots','onTarget','openPlayXgMilli',
@@ -23,6 +23,8 @@ export function analyzeM1P5V142ClusterIntervals(shards){
   for(const shard of shards){
     if(!shard||typeof shard!=='object'||Array.isArray(shard)||
        shard.schemaVersion!==141||
+       shard.status!=='PER_CAREER_FICTIONAL_SOURCE_CLUSTERS_NOT_CALIBRATION'||
+       shard.source!=='v131-v19-v124-v130-v120-replayed-per-seed'||
        shard.independentUnit!=='SEED_CAREER_NOT_FIXTURE'||
        shard.holdout2024_25Used!==false||
        shard.releaseP5Accepted!==false||
@@ -31,6 +33,10 @@ export function analyzeM1P5V142ClusterIntervals(shards){
        shard.fixturesPerCareer<1||shard.fixturesPerCareer>6||
        !Array.isArray(shard.careers)||shard.careers.length<1||
        !Number.isSafeInteger(shard.seedCount)||
+       shard.seedCount<1||shard.seedCount>8||
+       !Number.isSafeInteger(shard.firstSeed)||
+       shard.firstSeed<1||
+       shard.firstSeed+shard.seedCount-1>0xffffffff||
        shard.seedCount!==shard.careers.length)
       fail('UNVERIFIED_SHARD');
     if(fixturesPerCareer!==null&&fixturesPerCareer!==shard.fixturesPerCareer)
@@ -53,7 +59,10 @@ export function analyzeM1P5V142ClusterIntervals(shards){
          fields.some(f=>!nonnegative(row.totals[f]))||
          row.totals.homeWins+row.totals.draws+
            row.totals.awayWins!==row.accepted||
-         row.totals.onTarget>row.totals.shots)
+         row.totals.onTarget>row.totals.shots||
+         row.totals.fixturesWithEvents>row.accepted||
+         row.totals.secondYellowDismissals>
+           Math.floor(row.totals.cautions/2))
         fail('UNVERIFIED_CAREER');
       seen.add(row.seed);
       careers.push(row);
@@ -102,7 +111,7 @@ export function analyzeM1P5V142ClusterIntervals(shards){
     intervalMethod:'EXPLORATORY_CLUSTER_SANDWICH_MULTIPLIER_2_1',
     clusters:n,fixturesPerCareer,attempted,accepted,rejected,metrics,
     intervalEligible:sufficientlyIndependentClusters,
-    sourceReportsVerified:true,
+    recordConsistencyChecked:true,
     referenceCategoryAligned:false,
     releaseP5Accepted:false,holdout2024_25Used:false};
 }
@@ -111,6 +120,7 @@ function run(){
   const files=argv.slice(2);
   if(files.length>64||files.some(s=>s.startsWith('-')))fail('INVALID_FILES');
   const shards=files.map(path=>{
+    if(statSync(path).size>1_048_576)fail('INPUT_TOO_LARGE');
     const raw=readFileSync(path,'utf8').trim();
     const prefix='V141_CAREER_CLUSTERS=';
     if(!raw.startsWith(prefix)||raw.includes('\n'))fail('INVALID_RECORD');

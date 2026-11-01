@@ -16,7 +16,10 @@ function source(firstSeed,n,goalsFor=()=>2){
   });
   const totals=Object.fromEntries(Object.keys(careers[0].totals)
     .map(k=>[k,careers.reduce((s,r)=>s+r.totals[k],0)]));
-  return {schemaVersion:141,independentUnit:'SEED_CAREER_NOT_FIXTURE',
+  return {schemaVersion:141,
+    status:'PER_CAREER_FICTIONAL_SOURCE_CLUSTERS_NOT_CALIBRATION',
+    source:'v131-v19-v124-v130-v120-replayed-per-seed',
+    independentUnit:'SEED_CAREER_NOT_FIXTURE',
     firstSeed,seedCount:n,fixturesPerCareer:4,
     careers,totals,attempted:n*4,accepted:n*4,rejected:0,
     factualProviderMetricDefinitionsAligned:false,
@@ -45,6 +48,7 @@ test('v142 only enables exploratory intervals for enough career clusters',()=>{
     source(25,8,(_,seed)=>seed%2?2:6),
   ]));
   assert.equal(large.metrics.openPlayXgMilli.perAcceptedFixture,2);
+  assert.equal(large.recordConsistencyChecked,true);
   assert.equal(large.holdout2024_25Used,false);
   assert.equal(large.releaseP5Accepted,false);
 });
@@ -67,6 +71,14 @@ test('v142 fails closed on overlap, unverified rows and drift',()=>{
   const forged=structuredClone(a);
   forged.careers[0].replayedJournals=0;
   assert.throws(()=>analyzeM1P5V142ClusterIntervals([forged]),
+    /V142_UNVERIFIED_CAREER/);
+  const wrongSource=structuredClone(a);
+  wrongSource.source='untrusted-v131-mimic';
+  assert.throws(()=>analyzeM1P5V142ClusterIntervals([wrongSource]),
+    /V142_UNVERIFIED_SHARD/);
+  const implausible=structuredClone(a);
+  implausible.careers[0].totals.fixturesWithEvents=5;
+  assert.throws(()=>analyzeM1P5V142ClusterIntervals([implausible]),
     /V142_UNVERIFIED_CAREER/);
   const noRights=structuredClone(a);
   noRights.holdout2024_25Used=true;

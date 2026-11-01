@@ -7,8 +7,11 @@ career is the sampling unit and can contribute up to four correlated games.
 `node scripts/m1-p5-v142-cluster-intervals.mjs shard-1.txt ... shard-8.txt`
 reads lines with `V141_CAREER_CLUSTERS=` from recorded CI output and
 emits one `V142_CLUSTER_INTERVALS=` JSON line. Shard conservation,
-unique seeds, replay-count claims and source flags are checked before
-computing any rates. The tool does not generate matches, change PRNG,
+unique seeds, replay-count claims, declared source identity and row-level
+count conservation are checked before computing any rates. Input files are
+bounded to 1 MiB each. Structural checks do **not** authenticate log origin:
+compare each original v141 job record with its separately independently
+recomputed SHA-256 and exact GitHub workflow commit before using this tool. The tool does not generate matches, change PRNG,
 write back saves, or access 2024/25 holdout.
 
 Rates use aggregate totals / accepted fixtures. For at least 30 distinct

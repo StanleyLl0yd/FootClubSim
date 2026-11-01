@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import {useMemo,useState} from 'react';
 import { prepareM1V124DenseVirtualRefereeMatch }
   from '../core/m1-v124-dense-internal-referee.js';
 import { reviewM1V126DenseSourceHolds,
@@ -8,6 +8,9 @@ import {prepareM1V128ManualFictionalContinuation}
   from '../core/m1-v128-manual-fictional-continuation.js';
 import {prepareM1V130ManualVirtualRefereeContinuation}
   from '../core/m1-v130-manual-virtual-referee.js';
+import {prepareM1V132DenseManagerSubstitution}
+  from '../core/m1-v132-dense-manager-substitution.js';
+import type {M1PrematchInput} from '../core/m1-clock.js';
 import { prepareM1V122DenseOrdinaryMatch }
   from '../core/m1-v122-dense-ordinary-season.js';
 import type { InitialCareerSave } from '../core/save.js';
@@ -25,6 +28,26 @@ export function M1DensePlaytest({career,disabled}:{
   const [message,setMessage]=useState('Пробный плотный движок v120 пока не подключён.');
   const [busy,setBusy]=useState(false);
   const [holdReview,setHoldReview]=useState<M1V126DenseHoldReview|null>(null);
+  const [outId,setOutId]=useState('');
+  const [inId,setInId]=useState('');
+  const [checkpoint,setCheckpoint]=useState(900);
+  const nextCandidate=useMemo(()=>journal&&holdReview?.ok&&journal.revision<30?
+    prepareM1V128ManualFictionalContinuation(career,journal):null,
+  [career,journal,holdReview]);
+  const prematch=nextCandidate?.ok?
+    nextCandidate.request.prematch as M1PrematchInput:null;
+  const clubLineup=prematch?
+    prematch.fixture.homeClubId===career.selectedClubId?
+      prematch.homeLineup:prematch.awayLineup:null;
+  const outOptions=clubLineup?.starters??[];
+  const actualOut=outOptions.includes(outId)?outId:outOptions[0]??'';
+  const availableIn=(clubLineup?.bench??[]).filter(id=>{
+    const outgoing=career.catalog.players.find(p=>p.id===actualOut);
+    const incoming=career.catalog.players.find(p=>p.id===id);
+    return (outgoing?.primaryPosition==='GK')===
+      (incoming?.primaryPosition==='GK');
+  });
+  const actualIn=availableIn.includes(inId)?inId:availableIn[0]??'';
   async function connect(){
     if(busy||disabled)return;
     setBusy(true);
@@ -51,7 +74,8 @@ export function M1DensePlaytest({career,disabled}:{
         (error instanceof Error?error.message:String(error)));
     }finally{setBusy(false);}
   }
-  async function playNext(mode:'ordinary'|'virtual'|'manual'|'manual-virtual'='ordinary'){
+  async function playNext(mode:'ordinary'|'virtual'|'manual'|'manual-virtual'|
+    'substitution'='ordinary'){
     if(busy||disabled||!journal||!holdReview?.ok)return;
     setBusy(true);
     try{
@@ -61,7 +85,11 @@ export function M1DensePlaytest({career,disabled}:{
           prepareM1V128ManualFictionalContinuation(career,journal):
           mode==='manual-virtual'?
             prepareM1V130ManualVirtualRefereeContinuation(career,journal):
-            prepareM1V122DenseOrdinaryMatch(career,journal);
+            mode==='substitution'?
+              prepareM1V132DenseManagerSubstitution(career,journal,{
+                outPlayerId:actualOut,inPlayerId:actualIn,
+                elapsedSeconds:checkpoint}):
+              prepareM1V122DenseOrdinaryMatch(career,journal);
       if(prepared===null){
         setMessage('v120: все 30 матчей выбранного клуба сохранены.');
         return;
@@ -79,7 +107,8 @@ export function M1DensePlaytest({career,disabled}:{
       }
       setMessage('v120: '+(mode==='virtual'?'виртуальный арбитр, ':
         mode==='manual'?'модельное продолжение, ':
-        mode==='manual-virtual'?'повторный виртуальный арбитр, ':'')+
+        mode==='manual-virtual'?'повторный виртуальный арбитр, ':
+        mode==='substitution'?'выбранная замена, ':'')+
         'плотный матч атомарно записан, 270 PRNG draws, ревизия '+
         persisted.revision+' из 30. Активных ограничений: '+
         reviewed.holds.filter(hold=>hold.activeForNextFixture).length+'.');
@@ -122,6 +151,29 @@ export function M1DensePlaytest({career,disabled}:{
         onClick={()=>void playNext('manual-virtual')}>
         Следующий матч с виртуальным арбитром и ограничениями
       </button>
+      <fieldset disabled={busy||disabled||!nextCandidate?.ok}>
+        <legend>Замена игрока в плотном матче</legend>
+        <label htmlFor="m1-dense-sub-out">Уходит с поля</label>
+        <select id="m1-dense-sub-out" value={actualOut}
+          onChange={event=>{setOutId(event.target.value);setInId('');}}>
+          {outOptions.map(id=><option key={id} value={id}>{id}</option>)}
+        </select>
+        <label htmlFor="m1-dense-sub-in">Выходит на поле</label>
+        <select id="m1-dense-sub-in" value={actualIn}
+          onChange={event=>setInId(event.target.value)}>
+          {availableIn.map(id=><option key={id} value={id}>{id}</option>)}
+        </select>
+        <label htmlFor="m1-dense-sub-time">Виртуальная игровая секунда</label>
+        <select id="m1-dense-sub-time" value={checkpoint}
+          onChange={event=>setCheckpoint(Number(event.target.value))}>
+          {[300,900,2700,5100].map(second=><option key={second}
+            value={second}>{second}</option>)}
+        </select>
+        <button type="button" disabled={!actualOut||!actualIn}
+          onClick={()=>void playNext('substitution')}>
+          Провести выбранную замену в плотном матче
+        </button>
+      </fieldset>
     </div>
     <p role="status">{message}</p>
     {journal&&<p>v120 ревизия: {journal.revision} · отдельный IndexedDB CAS</p>}

@@ -57,6 +57,16 @@ export function prepareM1V122DenseOrdinaryMatch(
     entry.source.intraphaseMedical.length!==0||
     entry.source.trustedDecisions.length!==0))
     return {ok:false,error:'PREVIOUS_EXCEPTION_NOT_SUPPORTED'};
+  return buildM1V122NextOrdinaryFromVerified(initial,prior,new Set());
+}
+
+/** Only builds a candidate; caller must separately verify the full source
+ * journal and all intermatch holds. Never an authority or admission gate.
+ */
+export function buildM1V122NextOrdinaryFromVerified(
+  initial:InitialCareerSave,prior:M1V120Journal,
+  controlledExcluded:ReadonlySet<string>,
+):M1V122DenseProposal|null {
   const schedule=generateDoubleRoundRobin(initial.catalog.clubs.map(c=>c.id))
     .flatMap(round=>round.fixtures)
     .filter(f=>f.homeClubId===initial.selectedClubId||
@@ -67,11 +77,14 @@ export function prepareM1V122DenseOrdinaryMatch(
   const players=new Map(initial.catalog.players.map(p=>[p.id,p]));
   const home=clubs.get(fixture.homeClubId),away=clubs.get(fixture.awayClubId);
   if(!home||!away)return {ok:false,error:'NO_LEGAL_LINEUP'};
-  const excluded=new Set<string>();
+  const excludedHome=fixture.homeClubId===initial.selectedClubId?
+    controlledExcluded:new Set<string>();
+  const excludedAway=fixture.awayClubId===initial.selectedClubId?
+    controlledExcluded:new Set<string>();
   const homeLineup=selectM1V96EligibleRegisteredLineup(
-    home,players,excluded,RULES);
+    home,players,excludedHome,RULES);
   const awayLineup=selectM1V96EligibleRegisteredLineup(
-    away,players,excluded,RULES);
+    away,players,excludedAway,RULES);
   if(!homeLineup||!awayLineup)
     return {ok:false,error:'NO_LEGAL_LINEUP'};
   const prematch:M1PrematchInput={

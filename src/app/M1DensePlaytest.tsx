@@ -10,6 +10,8 @@ import {prepareM1V130ManualVirtualRefereeContinuation}
   from '../core/m1-v130-manual-virtual-referee.js';
 import {prepareM1V132DenseManagerSubstitution}
   from '../core/m1-v132-dense-manager-substitution.js';
+import {prepareM1V136DenseDoubleSubstitution}
+  from '../core/m1-v136-dense-double-substitution.js';
 import type {M1PrematchInput} from '../core/m1-clock.js';
 import { prepareM1V122DenseOrdinaryMatch }
   from '../core/m1-v122-dense-ordinary-season.js';
@@ -31,6 +33,9 @@ export function M1DensePlaytest({career,disabled}:{
   const [outId,setOutId]=useState('');
   const [inId,setInId]=useState('');
   const [checkpoint,setCheckpoint]=useState(900);
+  const [secondOutId,setSecondOutId]=useState('');
+  const [secondInId,setSecondInId]=useState('');
+  const [secondCheckpoint,setSecondCheckpoint]=useState(2700);
   const nextCandidate=useMemo(()=>journal&&holdReview?.ok&&journal.revision<30?
     prepareM1V128ManualFictionalContinuation(career,journal):null,
   [career,journal,holdReview]);
@@ -48,6 +53,19 @@ export function M1DensePlaytest({career,disabled}:{
       (incoming?.primaryPosition==='GK');
   });
   const actualIn=availableIn.includes(inId)?inId:availableIn[0]??'';
+  const secondOutOptions=outOptions.filter(id=>id!==actualOut);
+  const actualSecondOut=secondOutOptions.includes(secondOutId)?
+    secondOutId:secondOutOptions[0]??'';
+  const availableSecondIn=(clubLineup?.bench??[]).filter(id=>{
+    if(id===actualIn)return false;
+    const outgoing=career.catalog.players.find(p=>p.id===actualSecondOut);
+    const incoming=career.catalog.players.find(p=>p.id===id);
+    return (outgoing?.primaryPosition==='GK')===
+      (incoming?.primaryPosition==='GK');
+  });
+  const actualSecondIn=availableSecondIn.includes(secondInId)?
+    secondInId:availableSecondIn[0]??'';
+  const actualSecondCheckpoint=Math.max(checkpoint,secondCheckpoint);
   async function connect(){
     if(busy||disabled)return;
     setBusy(true);
@@ -75,7 +93,7 @@ export function M1DensePlaytest({career,disabled}:{
     }finally{setBusy(false);}
   }
   async function playNext(mode:'ordinary'|'virtual'|'manual'|'manual-virtual'|
-    'substitution'='ordinary'){
+    'substitution'|'double-substitution'='ordinary'){
     if(busy||disabled||!journal||!holdReview?.ok)return;
     setBusy(true);
     try{
@@ -89,6 +107,13 @@ export function M1DensePlaytest({career,disabled}:{
               prepareM1V132DenseManagerSubstitution(career,journal,{
                 outPlayerId:actualOut,inPlayerId:actualIn,
                 elapsedSeconds:checkpoint}):
+            mode==='double-substitution'?
+              prepareM1V136DenseDoubleSubstitution(career,journal,[
+                {outPlayerId:actualOut,inPlayerId:actualIn,
+                  elapsedSeconds:checkpoint},
+                {outPlayerId:actualSecondOut,inPlayerId:actualSecondIn,
+                  elapsedSeconds:actualSecondCheckpoint},
+              ]):
               prepareM1V122DenseOrdinaryMatch(career,journal);
       if(prepared===null){
         setMessage('v120: все 30 матчей выбранного клуба сохранены.');
@@ -108,7 +133,8 @@ export function M1DensePlaytest({career,disabled}:{
       setMessage('v120: '+(mode==='virtual'?'виртуальный арбитр, ':
         mode==='manual'?'модельное продолжение, ':
         mode==='manual-virtual'?'повторный виртуальный арбитр, ':
-        mode==='substitution'?'выбранная замена, ':'')+
+        mode==='substitution'?'выбранная замена, ':
+        mode==='double-substitution'?'две выбранные замены, ':'')+
         'плотный матч атомарно записан, 270 PRNG draws, ревизия '+
         persisted.revision+' из 30. Активных ограничений: '+
         reviewed.holds.filter(hold=>hold.activeForNextFixture).length+'.');
@@ -172,6 +198,35 @@ export function M1DensePlaytest({career,disabled}:{
         <button type="button" disabled={!actualOut||!actualIn}
           onClick={()=>void playNext('substitution')}>
           Провести выбранную замену в плотном матче
+        </button>
+      </fieldset>
+      <fieldset disabled={busy||disabled||!nextCandidate?.ok}>
+        <legend>Две замены в одном матче (два окна или общее окно)</legend>
+        <p className="subtle">Первая замена выбирается выше. Вторая
+          выполняется не раньше первой; обе проходят исходный проверенный
+          движок лимитов замен и игровых окон.</p>
+        <label htmlFor="m1-dense-sub-out-2">Второй уходящий игрок</label>
+        <select id="m1-dense-sub-out-2" value={actualSecondOut}
+          onChange={event=>{
+            setSecondOutId(event.target.value);setSecondInId('');
+          }}>
+          {secondOutOptions.map(id=><option key={id} value={id}>{id}</option>)}
+        </select>
+        <label htmlFor="m1-dense-sub-in-2">Второй запасной</label>
+        <select id="m1-dense-sub-in-2" value={actualSecondIn}
+          onChange={event=>setSecondInId(event.target.value)}>
+          {availableSecondIn.map(id=><option key={id} value={id}>{id}</option>)}
+        </select>
+        <label htmlFor="m1-dense-sub-time-2">Секунда второй замены</label>
+        <select id="m1-dense-sub-time-2" value={actualSecondCheckpoint}
+          onChange={event=>setSecondCheckpoint(Number(event.target.value))}>
+          {[300,900,2700,5100].filter(t=>t>=checkpoint).map(t=>
+            <option key={t} value={t}>{t}</option>)}
+        </select>
+        <button type="button" disabled={!actualOut||!actualIn||
+          !actualSecondOut||!actualSecondIn}
+          onClick={()=>void playNext('double-substitution')}>
+          Провести две выбранные замены в плотном матче
         </button>
       </fieldset>
     </div>

@@ -70,7 +70,9 @@ export function reviewM1V126DenseSourceHolds(
     // A v124 claim is source-verified even if it carries zero incidents:
     // an empty command list must not masquerade as a modelled clean match.
     if(source.plannedCommands.length===0&&
-       entry.commandId!=='v124-virtual-referee-'+entry.fixtureId)continue;
+       entry.commandId!=='v124-virtual-referee-'+entry.fixtureId&&
+       entry.commandId!=='v132-sub-'+entry.fixtureId&&
+       entry.commandId!=='v136-double-'+entry.fixtureId)continue;
     // A user-requested v132 normal substitution is already checked for
     // physical legality by the full v120/v105 source replay above. It is not
     // a modelled referee sanction and must not mint or discharge any hold.
@@ -92,6 +94,40 @@ export function reviewM1V126DenseSourceHolds(
          cmd.stoppage!==
            (cmd.elapsedSeconds===2700?'half-time':'referee-authorized'))
         return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
+      continue;
+    }
+    // Multi-window manager commands are legal only if their exact in-match
+    // source replay passed above and the namespace matches both commands.
+    if(entry.commandId==='v136-double-'+entry.fixtureId){
+      if(source.plannedCommands.length!==2)
+        return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
+      const out=new Set<string>(),incoming=new Set<string>();
+      let previous=-1;
+      for(let i=0;i<2;i++){
+        const c=source.plannedCommands[i] as Record<string,unknown>|undefined;
+        if(!c||typeof c!=='object'||Array.isArray(c)||
+           Reflect.ownKeys(c).length!==10||
+           c.schemaVersion!==1||c.kind!=='substitute-normal'||
+           c.commandId!=='v136-sub-'+entry.fixtureId+'-'+(i+1)||
+           c.fixtureId!==entry.fixtureId||
+           c.teamId!==initial.selectedClubId||
+           !c.actor||typeof c.actor!=='object'||
+           Array.isArray(c.actor)||
+           (c.actor as Record<string,unknown>).kind!=='player'||
+           typeof c.outPlayerId!=='string'||
+           typeof c.inPlayerId!=='string'||
+           out.has(c.outPlayerId)||incoming.has(c.inPlayerId)||
+           !Number.isSafeInteger(c.elapsedSeconds)||
+           (c.elapsedSeconds as number)<300||
+           (c.elapsedSeconds as number)>5100||
+           (c.elapsedSeconds as number)%300!==0||
+           (c.elapsedSeconds as number)<previous||
+           c.stoppage!==
+             (c.elapsedSeconds===2700?'half-time':'referee-authorized'))
+          return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
+        out.add(c.outPlayerId);incoming.add(c.inPlayerId);
+        previous=c.elapsedSeconds as number;
+      }
       continue;
     }
     if(!verifyM1V124DenseVirtualRefereeSource(

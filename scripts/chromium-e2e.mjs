@@ -767,6 +767,50 @@ async function run() {
       await waitText('v120: проверен и загружен отдельный журнал, матчей: 6.');
       await assertNondefaultCareer('v132 manager substitution with earlier holds');
       console.log('PASS: dense manager-selected legal substitute/time through source-CAS/restart');
+      // Commit two distinct selected substitutions using the same native v120 CAS.
+      const doubleChoice=await evaluate(`(() => {
+        const a=document.querySelector('#m1-dense-sub-out');
+        const b=document.querySelector('#m1-dense-sub-in');
+        const c=document.querySelector('#m1-dense-sub-out-2');
+        const d=document.querySelector('#m1-dense-sub-in-2');
+        if(!a?.value||!b?.value||!c?.value||!d?.value)return null;
+        if(a.value===c.value||b.value===d.value)return null;
+        return {out1:a.value,in1:b.value,out2:c.value,in2:d.value};
+      })()`);
+      if(!doubleChoice)throw new Error('Second dense substitution chooser missing');
+      await click('Провести две выбранные замены в плотном матче');
+      await waitText('v120: две выбранные замены, плотный матч атомарно записан, 270 PRNG draws, ревизия 7 из 30.');
+      const doubleStored=await evaluate(`new Promise((resolve,reject)=>{
+        const opening=indexedDB.open('footclubsim-m1-v120',1);
+        opening.onerror=()=>reject(opening.error);
+        opening.onsuccess=()=>{
+          const db=opening.result;
+          const tx=db.transaction('dense-result-journals','readonly');
+          const get=tx.objectStore('dense-result-journals').get('m0-ui-initial-career');
+          let value=null;
+          get.onsuccess=()=>{
+            const journal=get.result;
+            if(journal?.revision===7)value=journal.entries[6]?.source.plannedCommands;
+          };
+          tx.oncomplete=()=>{db.close();resolve(value);};
+          tx.onabort=()=>{db.close();reject(tx.error);};
+        };
+      })`);
+      if(!Array.isArray(doubleStored)||doubleStored.length!==2||
+          doubleStored[0].outPlayerId!==doubleChoice.out1||
+          doubleStored[0].inPlayerId!==doubleChoice.in1||
+          doubleStored[1].outPlayerId!==doubleChoice.out2||
+          doubleStored[1].inPlayerId!==doubleChoice.in2||
+          doubleStored[0].commandId===doubleStored[1].commandId)
+        throw new Error('Dense double-substitution source-CAS identity mismatch');
+      await send('Page.reload',{ignoreCache:true});
+      await waitText('Выберите вымышленный клуб');
+      await click('Восстановить из браузера');
+      await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+      await click('Создать или загрузить отдельный v120');
+      await waitText('v120: проверен и загружен отдельный журнал, матчей: 7.');
+      await assertNondefaultCareer('v136 two substitutions source-CAS/restart');
+      console.log('PASS: double substitution source-replayed after native browser restart');
 
 
     }

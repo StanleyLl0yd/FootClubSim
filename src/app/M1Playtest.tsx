@@ -17,6 +17,7 @@ const OPTIONS: ReadonlyArray<{ value: M1V113Scenario; label: string }> = [
   { value: 'temporary-treatment', label: 'Временная медицинская помощь' },
   { value: 'normal-substitution', label: 'Замена на 5-й минуте' },
   { value: 'combined', label: 'Медицинская помощь и замена' },
+  { value: 'internal-referee', label: 'Виртуальный судья: карточки и травмы' },
 ];
 const errorText = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -142,6 +143,10 @@ export function M1Playtest({ career, disabled }: {
   const selectedIn = inPlayerId && availableIn.includes(inPlayerId) ?
     inPlayerId : (availableIn[0] ?? '');
   const latest = journal?.results.at(-1);
+  const matchCommands = preview?.request.plannedCommands ?? [];
+  const kindCount = (kind: string) => matchCommands.filter(value =>
+    typeof value === 'object' && value !== null && !Array.isArray(value) &&
+    'kind' in value && value.kind === kind).length;
   return (
     <section className="panel" aria-labelledby="m1-playtest-title">
       <h2 id="m1-playtest-title">M1 · тестовая карьера с матчами</h2>
@@ -232,7 +237,10 @@ export function M1Playtest({ career, disabled }: {
             в створ: {preview.request.result.report.home.shotsOnTarget} —{' '}
             {preview.request.result.report.away.shotsOnTarget}.
             Медицинских событий: {preview.request.medicalActions.length};
-            замен: {preview.request.plannedCommands.length}.
+            замен: {kindCount('substitute-normal')};
+            предупреждений: {kindCount('caution')};
+            прямых удалений: {kindCount('direct-red')};
+            травм с уходом с поля: {kindCount('injury-withdrawal')}.
           </p>
           <div className="button-stack">
             <button type="button" onClick={() => void commit()}

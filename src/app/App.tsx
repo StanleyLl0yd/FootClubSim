@@ -1,6 +1,7 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { LIGA_PRIKOLOV_IDENTITIES } from '../branding/identities.js';
 import { ClubBadge } from './ClubBadge.js';
+import { M1Playtest } from './M1Playtest.js';
 import { createSyntheticRplScaleCatalog } from '../core/synthetic.js';
 import { generateDoubleRoundRobin } from '../core/fixtures.js';
 import { validateDoubleRoundRobin } from '../core/fixture-validation.js';
@@ -33,7 +34,7 @@ export function App() {
     try {
       const next = createInitialCareer(catalog, selectedClubId, 42, CAREER_ID);
       setCareer(next);
-      setMessage('Стартовая карьера создана в памяти браузера. Матчи пока не рассчитываются.');
+      setMessage('Стартовая карьера M0 создана в памяти. Для матчей сохраните её и подключите тестовый M1.');
     } catch (error) {
       setMessage('Ошибка создания: ' + errorMessage(error));
     }
@@ -140,13 +141,13 @@ export function App() {
       <header className="masthead">
         <div className="brand"><span className="brand-mark" aria-hidden="true">FC</span>
           <span>FootClubSim</span></div>
-        <span className="edition">Версия 0.0.0 · M0</span>
+        <span className="edition">Версия 0.0.0 · M0 / M1 playtest</span>
       </header>
 
       <section className="hero" aria-labelledby="welcome">
         <p className="eyebrow">Футбольный клуб под вашим руководством</p>
         <h1 id="welcome">Начало карьеры</h1>
-        <p>Первый технический прототип будущего футбольного менеджера. Выберите клуб и проверьте сохранение. Все команды и футболисты пока вымышленные.</p>
+        <p>Технический прототип футбольного менеджера. Начальная карьера M0 и отдельный тестовый матчевый цикл M1. Все команды и футболисты вымышленные.</p>
       </section>
 
       <section className="metrics" aria-label="Тестовая лига">
@@ -200,6 +201,8 @@ export function App() {
         </section>
       </div>
 
+      {career && <M1Playtest key={career.selectedClubId} career={career} disabled={working} />}
+
       <section className="panel" aria-labelledby="schedule-title">
         <h2 id="schedule-title">Календарь · тур {firstRound.number}</h2>
         <p className="subtle">Тестовое двухкруговое расписание. Это не официальный календарь РПЛ.</p>
@@ -214,7 +217,7 @@ export function App() {
 
       <p className="status" role="status" aria-live="polite">{fixtureErrors.length ?
         'Календарь некорректен: ' + fixtureErrors[0]!.code : message}</p>
-      <footer>В M0 ещё нет матчевого движка, трансферов, финансов и многосезонной карьеры. Разработка ведётся локально, без обязательного сервера.</footer>
+      <footer>M0 хранит только исходную карьеру. Тестовый M1 рассчитывает и сохраняет отдельные синтетические матчи, но пока не является официальной карьерой или полностью принятой моделью футбола. Трансферы и финансы не реализованы. Сервер не требуется.</footer>
     </main>
   );
 }

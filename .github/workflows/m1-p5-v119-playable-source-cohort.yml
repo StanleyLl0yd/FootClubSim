@@ -1,0 +1,50 @@
+name: M1 P5 v119 playable source distribution observation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/m1-p5-v119-playable-source-cohort.yml'
+      - 'scripts/m1-p5-v119-playable-source.mjs'
+      - 'tests/m1-p5-v119-playable-source.test.mjs'
+
+permissions: {}
+
+jobs:
+  playable-source:
+    name: playable v8 ${{ matrix.scenario }} seeds ${{ matrix.first_seed }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [ordinary, internal-referee]
+        first_seed: [1, 3, 5, 7]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build exact playable core
+        run: npm run build:core
+      - name: Source equality and negative input verification
+        run: node --test tests/m1-p5-v119-playable-source.test.mjs
+      - name: Record actual played fixtures and exact SHA-256 cohort evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/m1-p5-v119-playable-source.mjs \
+            --first-seed=${{ matrix.first_seed }} \
+            --seed-count=2 --fixtures=4 \
+            --scenario=${{ matrix.scenario }} | tee v119-observation.jsonl
+          sha256sum v119-observation.jsonl

@@ -11,8 +11,10 @@ import { simulateM1V19InternalReferee }
   from './m1-v19-internal-foul-injury.js';
 import { selectM1V96EligibleRegisteredLineup }
   from './m1-v96-cap-safe-lineup.js';
-import { projectM1V115KnownEligibility, type M1V115Exclusion }
+import { projectM1V118FictionalRecoveryEligibility, type M1V115Exclusion }
   from './m1-v115-known-eligibility.js';
+import type { M1V118ModelledRecovery }
+  from './m1-v118-modelled-recovery.js';
 import { RNG_VERSION } from './rng.js';
 import { isPlainJsonTree } from './plain-json-tree.js';
 import type { MatchRosterRules } from './model.js';
@@ -60,6 +62,7 @@ export type M1V113Playtest =
       status: 'SYNTHETIC_LOCAL_PLAYTEST_NOT_OFFICIAL_CAREER';
       fixture: Fixture; request: M1V113PlaytestRequest;
       exclusions: readonly M1V115Exclusion[];
+      modelledRecoveries: readonly M1V118ModelledRecovery[];
       remainingControlledClubFixtures: number }>;
 
 function deriveSeed(base: number, fixtureId: string): number {
@@ -109,7 +112,8 @@ export function prepareM1V113PlayableMatch(
   const fixture = remaining[0];
   if (!fixture) return null;
 
-  const projected = projectM1V115KnownEligibility(initial, journal, fixture);
+  const projected = projectM1V118FictionalRecoveryEligibility(
+    initial, journal, fixture);
   if (!projected.ok) return { ok: false, error: projected.error };
   const excluded = new Set(projected.exclusions.map(entry => entry.playerId));
 
@@ -212,6 +216,7 @@ export function prepareM1V113PlayableMatch(
     ok: true, schemaVersion: M1_V113_PLAYTEST_SCHEMA,
     status: 'SYNTHETIC_LOCAL_PLAYTEST_NOT_OFFICIAL_CAREER',
     fixture, request, exclusions: projected.exclusions,
+    modelledRecoveries: projected.modelledRecoveries,
     remainingControlledClubFixtures: remaining.length,
   };
 }

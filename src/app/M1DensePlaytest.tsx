@@ -1,11 +1,8 @@
 import { useState } from 'react';
-import { startM1V8MatchJournal } from '../core/m1-v8-result-journal.js';
-import { prepareM1V113PlayableMatch }
-  from '../core/m1-v113-browser-playtest.js';
-import { simulateM1V105SpecialGoalChronology }
-  from '../core/m1-v105-special-goal-chronology.js';
+import { prepareM1V122DenseOrdinaryMatch }
+  from '../core/m1-v122-dense-ordinary-season.js';
 import type { InitialCareerSave } from '../core/save.js';
-import type { M1V120Journal, M1V120Apply }
+import type { M1V120Journal }
   from '../core/m1-v120-playable-journal.js';
 import { createM1V120PersistedJournal, loadM1V120PersistedJournal,
   commitM1V120PersistedSource, M1V120StorageError }
@@ -37,33 +34,21 @@ export function M1DensePlaytest({career,disabled}:{
         (error instanceof Error?error.message:String(error)));
     }finally{setBusy(false);}
   }
-  async function playFirst(){
+  async function playNext(){
     if(busy||disabled||!journal)return;
-    if(journal.revision!==0){
-      setMessage('v120: первый матч уже записан. Продолжение всей карьеры пока не подключено.');
-      return;
-    }
     setBusy(true);
     try{
-      const empty=startM1V8MatchJournal(career);
-      if(!empty.ok)throw Error('INVALID_INITIAL_SOURCE');
-      const prepared=prepareM1V113PlayableMatch(career,empty.journal,'ordinary');
-      if(!prepared?.ok)throw Error('INVALID_PREMATCH_SOURCE');
-      const prematch=prepared.request.prematch;
-      const policy=prepared.request.policy;
-      const computed=simulateM1V105SpecialGoalChronology(prematch,policy);
-      if(!computed.ok)throw Error('INVALID_DENSE_MATCH_SOURCE');
-      const request:M1V120Apply={
-        schemaVersion:120,commandId:'v120-dense-'+prepared.fixture.id,
-        careerId:career.careerId,expectedRevision:journal.revision,
-        prematch,policy,plannedCommands:[],checkpointMedical:[],
-        intraphaseMedical:[],trustedDecisions:[],result:computed,
-      };
+      const prepared=prepareM1V122DenseOrdinaryMatch(career,journal);
+      if(prepared===null){
+        setMessage('v120: все 30 матчей выбранного клуба сохранены.');
+        return;
+      }
+      if(!prepared.ok)throw Error(prepared.error);
       const persisted=await commitM1V120PersistedSource(
-        career.careerId,journal.revision,request);
+        career.careerId,journal.revision,prepared.request);
       setJournal(persisted);
-      setMessage('v120: первый плотный матч атомарно записан, 270 PRNG draws, '+
-        'ревизия '+persisted.revision+'.');
+      setMessage('v120: плотный матч атомарно записан, 270 PRNG draws, '+
+        'ревизия '+persisted.revision+' из 30.');
     }catch(error){
       setMessage('v120: сохранение отклонено: '+
         (error instanceof Error?error.message:String(error)));
@@ -74,12 +59,12 @@ export function M1DensePlaytest({career,disabled}:{
     <p className="subtle">Отдельная тестовая ветка карьеры: 100-секундные слоты
       ударов, медицинские ограничения и проверка полного исходного источника.
       Никаких миграций из v8; события не являются официальными судейскими
-      или медицинскими решениями. Пока доступен только первый матч.</p>
+      или медицинскими решениями. Доступны последовательные матчи в обычном режиме без медицинских или судейских исключений.</p>
     <div className="button-stack">
       <button type="button" disabled={busy||disabled}
         onClick={()=>void connect()}>Создать или загрузить отдельный v120</button>
-      <button type="button" disabled={busy||disabled||!journal||journal.revision!==0}
-        onClick={()=>void playFirst()}>Рассчитать и сохранить первый матч v120</button>
+      <button type="button" disabled={busy||disabled||!journal||journal.revision>=30}
+        onClick={()=>void playNext()}>Рассчитать и сохранить следующий матч v120</button>
     </div>
     <p role="status">{message}</p>
     {journal&&<p>v120 ревизия: {journal.revision} · отдельный IndexedDB CAS</p>}

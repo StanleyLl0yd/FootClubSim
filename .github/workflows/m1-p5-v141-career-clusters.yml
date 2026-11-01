@@ -1,0 +1,72 @@
+name: M1 P5 v141 per-career source clusters
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/m1-p5-v141-career-clusters.yml'
+      - 'scripts/m1-p5-v141-career-clusters.mjs'
+      - 'tests/m1-p5-v141-career-clusters.test.mjs'
+      - 'scripts/m1-p5-v131-incident-cohort.mjs'
+      - 'src/core/m1-v130-manual-virtual-referee.ts'
+      - 'src/core/m1-v126-dense-source-holds.ts'
+
+permissions: {}
+
+jobs:
+  per-career-source:
+    name: career-cluster seeds ${{ matrix.first_seed }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        first_seed: [1, 9, 17, 25, 33, 41, 49, 57]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Compile exact model
+        run: npm run build:core
+      - name: Test cluster conservation
+        run: node --test tests/m1-p5-v141-career-clusters.test.mjs
+      - name: Record actual correlated seed-career source observations
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'SOURCE_COMMIT=%s\n' "$(git rev-parse HEAD)"
+          node scripts/m1-p5-v141-career-clusters.mjs \
+            --first-seed=${{ matrix.first_seed }} \
+            --seed-count=8 --fixtures=4 | tee v141-career-clusters.jsonl
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs";
+            const raw=readFileSync("v141-career-clusters.jsonl","utf8").trim();
+            const tag="V141_CAREER_CLUSTERS=";
+            if(!raw.startsWith(tag))throw Error("INVALID_PREFIX");
+            const result=JSON.parse(raw.slice(tag.length));
+            if(result.schemaVersion!==141||
+                result.independentUnit!=="SEED_CAREER_NOT_FIXTURE"||
+                result.seedCount!==8||result.fixturesPerCareer!==4||
+                result.careers.length!==8||
+                result.attempted!==result.accepted+result.rejected||
+                result.careers.reduce((s,c)=>s+c.accepted,0)!==result.accepted||
+                result.careers.reduce((s,c)=>s+c.replayedJournals,0)!==8||
+                result.totals.homeWins+result.totals.draws+
+                  result.totals.awayWins!==result.accepted||
+                result.holdout2024_25Used!==false||
+                result.releaseP5Accepted!==false||
+                result.factualProviderMetricDefinitionsAligned!==false)
+              throw Error("INVALID_CAREER_CLUSTER_REPORT");
+          '
+          sha256sum v141-career-clusters.jsonl

@@ -6,8 +6,12 @@ import { validateM1V8MatchJournal, applyM1V8MatchResult,
   from './m1-v8-result-journal.js';
 import { simulateM1V8MedicalPhases, type M1V8Result }
   from './m1-v8-medical-phases.js';
+import { simulateM1V19InternalReferee }
+  from './m1-v19-internal-foul-injury.js';
 import { selectM1V96EligibleRegisteredLineup }
   from './m1-v96-cap-safe-lineup.js';
+import { projectM1V115KnownEligibility, type M1V115Exclusion }
+  from './m1-v115-known-eligibility.js';
 import { RNG_VERSION } from './rng.js';
 import { isPlainJsonTree } from './plain-json-tree.js';
 import type { MatchRosterRules } from './model.js';
@@ -20,7 +24,7 @@ import { defaultTacticalPlan } from './tactics.js';
  */
 export const M1_V113_PLAYTEST_SCHEMA = 1 as const;
 export type M1V113Scenario = 'ordinary' | 'temporary-treatment' |
-  'normal-substitution' | 'combined';
+  'normal-substitution' | 'combined' | 'internal-referee';
 export interface M1V114SubstitutionSelection {
   readonly outPlayerId: string;
   readonly inPlayerId: string;
@@ -48,10 +52,12 @@ export type M1V113Playtest =
   | Readonly<{ ok: false; error: 'INVALID_JOURNAL' | 'INVALID_SCENARIO' |
       'UNRESOLVED_MEDICAL_OR_DISCIPLINE' | 'NO_LEGAL_LINEUP' |
       'INVALID_SIMULATION' | 'SOURCE_REPLAY_REJECTED' |
-      'INVALID_SUBSTITUTION_SELECTION' }>
+      'INVALID_SUBSTITUTION_SELECTION' | 'MISSING_CONTROLLED_CLUB_HISTORY' |
+      'HISTORICAL_ELIGIBILITY_CONFLICT' }>
   | Readonly<{ ok: true; schemaVersion: typeof M1_V113_PLAYTEST_SCHEMA;
       status: 'SYNTHETIC_LOCAL_PLAYTEST_NOT_OFFICIAL_CAREER';
       fixture: Fixture; request: M1V113PlaytestRequest;
+      exclusions: readonly M1V115Exclusion[];
       remainingControlledClubFixtures: number }>;
 
 function deriveSeed(base: number, fixtureId: string): number {
@@ -81,8 +87,8 @@ export function prepareM1V113PlayableMatch(
       return { ok: false, error: 'INVALID_SUBSTITUTION_SELECTION' };
     }
   }
-  if (!['ordinary', 'temporary-treatment', 'normal-substitution', 'combined']
-    .includes(scenario)) return { ok: false, error: 'INVALID_SCENARIO' };
+  if (!['ordinary', 'temporary-treatment', 'normal-substitution', 'combined',
+    'internal-referee'].includes(scenario)) return { ok: false, error: 'INVALID_SCENARIO' };
   const checked = validateM1V8MatchJournal(initial, prior);
   if (!checked.ok) return { ok: false, error: 'INVALID_JOURNAL' };
   const journal = checked.journal;
@@ -94,24 +100,18 @@ export function prepareM1V113PlayableMatch(
   const fixture = remaining[0];
   if (!fixture) return null;
 
-  // No implicit recovery or automatic ban clearance. Any prior unresolved
-  // medical withdrawal or dismissal must be routed through P3 authority.
-  if (journal.results.some(entry =>
-    [entry.dossier.teams.home, entry.dossier.teams.away]
-      .some(team => (team.teamId === fixture.homeClubId ||
-        team.teamId === fixture.awayClubId) &&
-        (team.permanentMedicalWithdrawals > 0 || team.dismissals > 0)))) {
-    return { ok: false, error: 'UNRESOLVED_MEDICAL_OR_DISCIPLINE' };
-  }
+  const projected = projectM1V115KnownEligibility(initial, journal, fixture);
+  if (!projected.ok) return { ok: false, error: projected.error };
+  const excluded = new Set(projected.exclusions.map(entry => entry.playerId));
 
   const clubs = new Map(initial.catalog.clubs.map(c => [c.id, c]));
   const players = new Map(initial.catalog.players.map(p => [p.id, p]));
   const home = clubs.get(fixture.homeClubId), away = clubs.get(fixture.awayClubId);
   if (!home || !away) return { ok: false, error: 'NO_LEGAL_LINEUP' };
   const homeLineup = selectM1V96EligibleRegisteredLineup(home, players,
-    new Set<string>(), RULES);
+    excluded, RULES);
   const awayLineup = selectM1V96EligibleRegisteredLineup(away, players,
-    new Set<string>(), RULES);
+    excluded, RULES);
   if (!homeLineup || !awayLineup) return { ok: false, error: 'NO_LEGAL_LINEUP' };
   const prematch: M1PrematchInput = {
     schemaVersion: MATCH_LEDGER_VERSION, engineVersion: M1_ENGINE_VERSION,
@@ -169,6 +169,21 @@ export function prepareM1V113PlayableMatch(
       outPlayerId: selectedOut, inPlayerId: selectedIn,
     });
   }
+  if (scenario === 'internal-referee') {
+    const modelled = simulateM1V19InternalReferee(prematch, POLICY);
+    if (!modelled.ok) return { ok: false, error: 'INVALID_SIMULATION' };
+    for (const incident of modelled.generatedIncidents) {
+      plannedCommands.push({
+        schemaVersion: 1, id: incident.decisionId,
+        fixtureId: fixture.id, teamId: incident.teamId,
+        playerId: incident.playerId,
+        elapsedSeconds: incident.elapsedSeconds,
+        kind: incident.sanction,
+        origin: incident.sanction === 'injury-withdrawal' ?
+          'trusted-medical' : 'trusted-referee',
+      });
+    }
+  }
   const result = simulateM1V8MedicalPhases(
     prematch, POLICY, plannedCommands, [], medicalActions);
   if (!result.ok) return { ok: false, error: 'INVALID_SIMULATION' };
@@ -184,6 +199,7 @@ export function prepareM1V113PlayableMatch(
   return {
     ok: true, schemaVersion: M1_V113_PLAYTEST_SCHEMA,
     status: 'SYNTHETIC_LOCAL_PLAYTEST_NOT_OFFICIAL_CAREER',
-    fixture, request, remainingControlledClubFixtures: remaining.length,
+    fixture, request, exclusions: projected.exclusions,
+    remainingControlledClubFixtures: remaining.length,
   };
 }

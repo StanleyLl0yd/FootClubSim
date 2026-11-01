@@ -352,6 +352,59 @@ async function run() {
 
 
 
+    // The seeded in-game referee feeds the very same v8 CAS journal; its
+    // result must survive a native browser restart without M0 mutation.
+    const refereeSelected = await evaluate(`(() => {
+      const select = document.querySelector('#m1-playtest-scenario');
+      if (!select) return false;
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLSelectElement.prototype, 'value').set;
+      setter.call(select, 'internal-referee');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      return select.value === 'internal-referee';
+    })()`);
+    if (!refereeSelected) throw new Error('Missing seeded internal referee scenario');
+    await click('Рассчитать матч');
+    await waitText('Матч рассчитан. Результат пока не записан.');
+    await click('Подтвердить и сохранить матч');
+    await waitText('Матч подтверждён, независимо перепроверен и сохранён');
+    const refereeEvidence = await evaluate(`new Promise((resolve, reject) => {
+      const opening = indexedDB.open('footclubsim-m1-v8', 1);
+      opening.onerror = () => reject(opening.error);
+      opening.onsuccess = () => {
+        const db = opening.result;
+        const tx = db.transaction('result-journals', 'readonly');
+        const request = tx.objectStore('result-journals').get('m0-ui-initial-career');
+        let result = null;
+        request.onsuccess = () => {
+          const journal = request.result;
+          result = journal?.revision === 3 ? {
+            revision: journal.revision,
+            commands: journal.results[2]?.source.plannedCommands,
+            medical: journal.results[2]?.source.medicalActions,
+          } : null;
+        };
+        tx.oncomplete = () => { db.close(); resolve(result); };
+        tx.onabort = () => { db.close(); reject(tx.error); };
+      };
+    })`);
+    if (refereeEvidence?.revision !== 3 ||
+        !Array.isArray(refereeEvidence.commands) ||
+        !Array.isArray(refereeEvidence.medical) ||
+        refereeEvidence.medical.length !== 0 ||
+        refereeEvidence.commands.some(cmd =>
+          !['caution', 'direct-red', 'injury-withdrawal'].includes(cmd.kind))) {
+      throw new Error('Native CAS did not preserve a valid internal referee event source');
+    }
+    await send('Page.reload', { ignoreCache: true });
+    await waitText('Выберите вымышленный клуб');
+    await click('Восстановить из браузера');
+    await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+    await click('Начать или продолжить M1');
+    await waitText('Сохранено матчей выбранного клуба: 3 из 30.');
+    await assertNondefaultCareer('M1 seeded internal referee browser restart');
+    console.log('PASS: browser persisted modelled in-game referee source in CAS revision 3');
+
     // Recover a valid initial career after clearing IndexedDB in a disposable
     // browser profile. Clearing site data is NOT organic eviction or real quota.
     const savedJson = await evaluate(`new Promise((resolve, reject) => {

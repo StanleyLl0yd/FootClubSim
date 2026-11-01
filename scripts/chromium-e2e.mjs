@@ -495,6 +495,49 @@ async function run() {
     await assertNondefaultCareer('M1 keeper substitution browser restart');
     console.log('PASS: keeper substitution retained through actual browser restart');
 
+    // Separate v120 namespace: actual native transaction + restart replay.
+    await click('Создать или загрузить отдельный v120');
+    await waitText('v120: проверен и загружен отдельный журнал, матчей: 0.');
+    await click('Рассчитать и сохранить первый матч v120');
+    await waitText('v120: первый плотный матч атомарно записан, 270 PRNG draws, ревизия 1.');
+    const denseEvidence = await evaluate(`new Promise((resolve, reject) => {
+      const opening = indexedDB.open('footclubsim-m1-v120', 1);
+      opening.onerror = () => reject(opening.error);
+      opening.onsuccess = () => {
+        const db = opening.result;
+        const tx = db.transaction('dense-result-journals', 'readonly');
+        const get = tx.objectStore('dense-result-journals').get('m0-ui-initial-career');
+        let evidence = null;
+        get.onsuccess = () => {
+          const journal = get.result;
+          evidence = journal ? {
+            schemaVersion: journal.schemaVersion, revision: journal.revision,
+            draws: journal.entries[0]?.result?.rngDraws,
+            denseEvents: journal.entries[0]?.result?.events?.length,
+            v8Independent: journal.entries[0]?.source?.prematch?.catalog === undefined,
+          } : null;
+        };
+        tx.oncomplete = () => { db.close(); resolve(evidence); };
+        tx.onabort = () => { db.close(); reject(tx.error); };
+      };
+    })`);
+    if (denseEvidence?.schemaVersion !== 120 ||
+        denseEvidence?.revision !== 1 ||
+        denseEvidence?.draws !== 270 ||
+        !Number.isSafeInteger(denseEvidence?.denseEvents) ||
+        denseEvidence.denseEvents < 1 ||
+        denseEvidence?.v8Independent !== true) {
+      throw new Error('v120 dense native journal not atomically stored');
+    }
+    await send('Page.reload', { ignoreCache: true });
+    await waitText('Выберите вымышленный клуб');
+    await click('Восстановить из браузера');
+    await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+    await click('Создать или загрузить отдельный v120');
+    await waitText('v120: проверен и загружен отдельный журнал, матчей: 1.');
+    await assertNondefaultCareer('v120 independent dense journal browser restart');
+    console.log('PASS: native v120 replay-CAS survives browser restart without mutating v8');
+
     // Recover a valid initial career after clearing IndexedDB in a disposable
     // browser profile. Clearing site data is NOT organic eviction or real quota.
     const savedJson = await evaluate(`new Promise((resolve, reject) => {

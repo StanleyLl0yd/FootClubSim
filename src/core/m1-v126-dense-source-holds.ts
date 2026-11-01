@@ -67,7 +67,10 @@ export function reviewM1V126DenseSourceHolds(
        source.intraphaseMedical.length!==0||
        source.trustedDecisions.length!==0)
       return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
-    if(source.plannedCommands.length===0)continue;
+    // A v124 claim is source-verified even if it carries zero incidents:
+    // an empty command list must not masquerade as a modelled clean match.
+    if(source.plannedCommands.length===0&&
+       entry.commandId!=='v124-virtual-referee-'+entry.fixtureId)continue;
     // A user-requested v132 normal substitution is already checked for
     // physical legality by the full v120/v105 source replay above. It is not
     // a modelled referee sanction and must not mint or discharge any hold.

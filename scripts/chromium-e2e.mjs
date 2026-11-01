@@ -600,6 +600,59 @@ async function run() {
     if (virtualDenseEvidence.commands.length > 0) {
       await click('Рассчитать и сохранить следующий матч v120');
       await waitText('v120: сохранение отклонено: PREVIOUS_EXCEPTION_NOT_SUPPORTED');
+
+      // Manual fictional continuation retains source-verified controlled-club
+      // bans and withdrawals, never inferring real opponent medical history.
+      const held=new Set(),yellows=new Map();
+      for(const command of virtualDenseEvidence.commands){
+        if(command.teamId!=='fictional-2')continue;
+        if(command.kind==='direct-red'||command.kind==='injury-withdrawal')
+          held.add(command.playerId);
+        if(command.kind==='caution'){
+          const count=(yellows.get(command.playerId)??0)+1;
+          yellows.set(command.playerId,count);
+          if(count===2)held.add(command.playerId);
+        }
+      }
+      await click('Продолжить с вымышленными ограничениями');
+      await waitText('v120: модельное продолжение, плотный матч атомарно записан, 270 PRNG draws, ревизия 4 из 30.');
+      const continued=await evaluate(`new Promise((resolve,reject)=>{
+        const opening=indexedDB.open('footclubsim-m1-v120',1);
+        opening.onerror=()=>reject(opening.error);
+        opening.onsuccess=()=>{
+          const db=opening.result;
+          const tx=db.transaction('dense-result-journals','readonly');
+          const get=tx.objectStore('dense-result-journals').get('m0-ui-initial-career');
+          let result=null;
+          get.onsuccess=()=>{
+            const journal=get.result,entry=journal?.entries?.[3];
+            if(journal?.revision===4&&entry){
+              const source=entry.source.prematch;
+              result={revision:4,commandId:entry.commandId,fixtureId:entry.fixtureId,
+                lineup:source.fixture.homeClubId==='fictional-2'?
+                  source.homeLineup:source.awayLineup};
+            }
+          };
+          tx.oncomplete=()=>{db.close();resolve(result);};
+          tx.onabort=()=>{db.close();reject(tx.error);};
+        };
+      })`);
+      if(!continued||continued.commandId!==
+          'v128-fictional-continuation-'+continued.fixtureId||
+          !Array.isArray(continued.lineup?.starters)||
+          !Array.isArray(continued.lineup?.bench)||
+          [...held].some(id=>continued.lineup.starters.includes(id)||
+            continued.lineup.bench.includes(id))){
+        throw new Error('Manual v128 continuation bypassed a source-verified hold');
+      }
+      await send('Page.reload',{ignoreCache:true});
+      await waitText('Выберите вымышленный клуб');
+      await click('Восстановить из браузера');
+      await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+      await click('Создать или загрузить отдельный v120');
+      await waitText('v120: проверен и загружен отдельный журнал, матчей: 4.');
+      await assertNondefaultCareer('v128 source-held manual continuation restart');
+      console.log('PASS: manual v128 next-match XI/bench excludes verified holds');
     }
     console.log('PASS: v124 virtual referee CAS/reload, source commands=' +
       virtualDenseEvidence.commands.length + ', verified v126 hold UI');

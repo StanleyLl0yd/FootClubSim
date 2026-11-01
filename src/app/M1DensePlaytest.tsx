@@ -4,6 +4,8 @@ import { prepareM1V124DenseVirtualRefereeMatch }
 import { reviewM1V126DenseSourceHolds,
   type M1V126DenseHoldReview }
   from '../core/m1-v126-dense-source-holds.js';
+import {prepareM1V128ManualFictionalContinuation}
+  from '../core/m1-v128-manual-fictional-continuation.js';
 import { prepareM1V122DenseOrdinaryMatch }
   from '../core/m1-v122-dense-ordinary-season.js';
 import type { InitialCareerSave } from '../core/save.js';
@@ -47,13 +49,15 @@ export function M1DensePlaytest({career,disabled}:{
         (error instanceof Error?error.message:String(error)));
     }finally{setBusy(false);}
   }
-  async function playNext(mode:'ordinary'|'virtual'='ordinary'){
+  async function playNext(mode:'ordinary'|'virtual'|'manual'='ordinary'){
     if(busy||disabled||!journal||!holdReview?.ok)return;
     setBusy(true);
     try{
       const prepared=mode==='virtual'?
         prepareM1V124DenseVirtualRefereeMatch(career,journal):
-        prepareM1V122DenseOrdinaryMatch(career,journal);
+        mode==='manual'?
+          prepareM1V128ManualFictionalContinuation(career,journal):
+          prepareM1V122DenseOrdinaryMatch(career,journal);
       if(prepared===null){
         setMessage('v120: все 30 матчей выбранного клуба сохранены.');
         return;
@@ -69,7 +73,8 @@ export function M1DensePlaytest({career,disabled}:{
           reviewed.error+'. Продолжение заблокировано.');
         return;
       }
-      setMessage('v120: '+(mode==='virtual'?'виртуальный арбитр, ':'')+
+      setMessage('v120: '+(mode==='virtual'?'виртуальный арбитр, ':
+        mode==='manual'?'модельное продолжение, ':'')+
         'плотный матч атомарно записан, 270 PRNG draws, ревизия '+
         persisted.revision+' из 30. Активных ограничений: '+
         reviewed.holds.filter(hold=>hold.activeForNextFixture).length+'.');
@@ -84,7 +89,8 @@ export function M1DensePlaytest({career,disabled}:{
       ударов и независимая проверка исходного источника. Виртуальный арбитр
       создаёт только вымышленные карточки и травмы, но не медицинские или
       дисциплинарные решения реальных органов. После исключительного события
-      дальнейший матч блокируется до реализации полного межматчевого цикла.</p>
+      обычный сценарий блокируется; ручное продолжение применяет только
+      проверенные модельные ограничения своего клуба, без истории соперников.</p>
     <div className="button-stack">
       <button type="button" disabled={busy||disabled}
         onClick={()=>void connect()}>Создать или загрузить отдельный v120</button>
@@ -98,6 +104,12 @@ export function M1DensePlaytest({career,disabled}:{
           entry.source.trustedDecisions.length!==0)}
         onClick={()=>void playNext('virtual')}>
         Рассчитать следующий матч с виртуальным арбитром
+      </button>
+      <button type="button" disabled={busy||disabled||!journal||journal.revision>=30||
+        !holdReview?.ok||!journal.entries.some(entry=>
+          entry.source.plannedCommands.length!==0)}
+        onClick={()=>void playNext('manual')}>
+        Продолжить с вымышленными ограничениями
       </button>
     </div>
     <p role="status">{message}</p>
@@ -113,7 +125,8 @@ export function M1DensePlaytest({career,disabled}:{
           ' осталось матчей: '+h.remainingModelledFixtures}
       </li>)}</ul>
       <p className="subtle">Это только проверенная игровая проекция,
-        не разрешение автоматически продолжать карьеру.</p>
+        не официальное разрешение на возвращение. Продолжение требует
+        отдельного ручного действия и не учитывает полную историю соперников.</p>
     </div>}
   </section>;
 }

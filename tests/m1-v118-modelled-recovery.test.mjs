@@ -4,6 +4,8 @@ import { createSyntheticRplScaleCatalog } from '../dist/core/synthetic.js';
 import { createInitialCareer } from '../dist/core/save.js';
 import { prepareM1V113PlayableMatch }
   from '../dist/core/m1-v113-browser-playtest.js';
+import { simulateM1V8MedicalPhases }
+  from '../dist/core/m1-v8-medical-phases.js';
 import { deriveM1V118InternalRecovery }
   from '../dist/core/m1-v118-modelled-recovery.js';
 import {
@@ -88,11 +90,21 @@ test('forged internal-referee identifiers cannot create medical return evidence'
     elapsedSeconds: 600, kind: 'injury-withdrawal',
     origin: 'trusted-medical',
   };
+  const source = simulateM1V8MedicalPhases(
+    prepared.request.prematch, prepared.request.policy, [forged], [], []);
+  assert.equal(source.ok, true, JSON.stringify(source).slice(0, 400));
   const fake = { ...prepared.request,
-    plannedCommands: [forged] };
-  // An invented event without a matching full deterministic source is never
-  // accepted as a previously recorded match result.
-  const result = applyM1V8MatchResult(career, journal, fake);
-  assert.equal(result.ok, false);
-  assert.equal(journal.revision, 0);
+    plannedCommands: [forged], result: source };
+  // A self-consistent fictional user-supplied medical source may enter
+  // the v8 journal, but the v118 recovery projector must not mistake
+  // its matching-looking ID for an independently generated v19 event.
+  journal = commit(career, journal, { request: fake });
+  assert.deepEqual(deriveM1V118InternalRecovery(career, journal.results[0]), []);
+  for (let i = 0; i < 5; i++) {
+    const next = prepareM1V113PlayableMatch(career, journal, 'ordinary');
+    assert.equal(next?.ok, true, JSON.stringify(next).slice(0, 400));
+    assert.ok(!named(next, career).includes(firstOutfield));
+    assert.ok(!next.modelledRecoveries.some(row => row.playerId === firstOutfield));
+    journal = commit(career, journal, next);
+  }
 });

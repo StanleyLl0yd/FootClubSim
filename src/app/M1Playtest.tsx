@@ -15,7 +15,7 @@ type Ready = Extract<M1V113Playtest, { ok: true }>;
 const OPTIONS: ReadonlyArray<{ value: M1V113Scenario; label: string }> = [
   { value: 'ordinary', label: 'Обычный матч' },
   { value: 'temporary-treatment', label: 'Временная медицинская помощь' },
-  { value: 'normal-substitution', label: 'Замена на 5-й минуте' },
+  { value: 'normal-substitution', label: 'Замена выбранных игроков' },
   { value: 'combined', label: 'Медицинская помощь и замена' },
   { value: 'internal-referee', label: 'Виртуальный судья: карточки и травмы' },
 ];
@@ -30,6 +30,7 @@ export function M1Playtest({ career, disabled }: {
   const [scenario, setScenario] = useState<M1V113Scenario>('ordinary');
   const [outPlayerId, setOutPlayerId] = useState('');
   const [inPlayerId, setInPlayerId] = useState('');
+  const [substitutionSeconds, setSubstitutionSeconds] = useState(300);
   const [preview, setPreview] = useState<Ready | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(
@@ -86,6 +87,7 @@ export function M1Playtest({ career, disabled }: {
     const nextMatch = prepareM1V113PlayableMatch(career, journal, scenario,
       substitutionScenario ? {
         outPlayerId: selectedOut, inPlayerId: selectedIn,
+        elapsedSeconds: substitutionSeconds,
       } : undefined);
     if (nextMatch === null) {
       setStatus('Матчи выбранного клуба в тестовом календаре завершены.');
@@ -219,6 +221,23 @@ export function M1Playtest({ career, disabled }: {
               {availableIn.map(id => <option key={id} value={id}>
                 {players.get(id)?.displayName}</option>)}
             </select>
+            <label htmlFor="m1-substitution-checkpoint">Время замены</label>
+            <select id="m1-substitution-checkpoint" value={substitutionSeconds}
+              disabled={disabled || busy}
+              onChange={event => {
+                setSubstitutionSeconds(Number(event.target.value));
+                setPreview(null);
+              }}>
+              {Array.from({ length: 17 }, (_, index) => (index + 1) * 300)
+                .map(seconds => <option key={seconds} value={seconds}>
+                  {seconds === 2700 ? 'Перерыв (45-я минута)' :
+                    `${seconds / 60}-я минута`}
+                </option>)}
+            </select>
+            <p className="subtle">
+              Виртуальная остановка разрешена только для тестового сценария;
+              реальные судейские сигналы не подтверждены.
+            </p>
           </div>}
           <div className="button-stack m1-actions">
             <button type="button" onClick={simulate}

@@ -137,6 +137,42 @@ test('manager chooses a different legal outgoing starter and incoming bench play
   assert.equal(JSON.stringify(career), original);
 });
 
+test('selected substitution checkpoints replay at minute 15 and half-time', () => {
+  const initial = empty();
+  const baseline = preview(initial, 'normal-substitution');
+  const command = baseline.request.plannedCommands[0];
+  for (const seconds of [900, 2700]) {
+    const selected = prepareM1V113PlayableMatch(career, initial,
+      'normal-substitution', {
+        outPlayerId: command.outPlayerId,
+        inPlayerId: command.inPlayerId,
+        elapsedSeconds: seconds,
+      });
+    assert.equal(selected?.ok, true, JSON.stringify(selected).slice(0, 400));
+    const source = selected.request.plannedCommands[0];
+    assert.equal(source.elapsedSeconds, seconds);
+    assert.equal(source.stoppage,
+      seconds === 2700 ? 'half-time' : 'referee-authorized');
+    const stored = commit(initial, selected);
+    assert.equal(stored.results[0].source.plannedCommands[0].elapsedSeconds, seconds);
+    assert.equal(JSON.stringify(career), original);
+  }
+});
+
+test('off-grid, full-time and forged substitution checkpoint inputs fail closed', () => {
+  const initial = empty();
+  const first = preview(initial, 'normal-substitution');
+  const source = first.request.plannedCommands[0];
+  for (const value of [0, 299, 301, 5400, -300, 900.5, '900', null, true]) {
+    assert.deepEqual(prepareM1V113PlayableMatch(career, initial,
+      'normal-substitution', {
+        outPlayerId: source.outPlayerId, inPlayerId: source.inPlayerId,
+        elapsedSeconds: value,
+      }), { ok: false, error: 'INVALID_SUBSTITUTION_SELECTION' });
+  }
+  assert.equal(JSON.stringify(career), original);
+});
+
 test('forged substitution participants cannot modify the match or source history', () => {
   const initial = empty();
   const baseline = preview(initial, 'combined');

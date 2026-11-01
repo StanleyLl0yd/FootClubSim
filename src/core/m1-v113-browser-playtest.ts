@@ -1,6 +1,7 @@
 import { generateDoubleRoundRobin, type Fixture } from './fixtures.js';
 import { MATCH_LEDGER_VERSION, M0_RULES_PACK_ID, M0_RULES_PACK_VERSION } from './match-contracts.js';
-import { M1_ENGINE_VERSION, type M1PrematchInput } from './m1-clock.js';
+import { M1_ENGINE_VERSION, M1_CLOCK_STEP_SECONDS,
+  M1_CLOCK_END_SECONDS, type M1PrematchInput } from './m1-clock.js';
 import { validateM1V8MatchJournal, applyM1V8MatchResult,
   M1_V8_APPLY_SCHEMA_VERSION, type M1V8MatchJournal }
   from './m1-v8-result-journal.js';
@@ -28,6 +29,7 @@ export type M1V113Scenario = 'ordinary' | 'temporary-treatment' |
 export interface M1V114SubstitutionSelection {
   readonly outPlayerId: string;
   readonly inPlayerId: string;
+  readonly elapsedSeconds?: number;
 }
 const RULES: MatchRosterRules = {
   starterCount: 11, maxBench: 12, maxForeignersOnField: 7,
@@ -79,11 +81,18 @@ export function prepareM1V113PlayableMatch(
     if (!substituteScenario || !isPlainJsonTree(substitution) ||
         substitution === null || typeof substitution !== 'object' ||
         Array.isArray(substitution) ||
-        Object.keys(substitution).length !== 2 ||
+        ![2, 3].includes(Object.keys(substitution).length) ||
         !Object.hasOwn(substitution, 'outPlayerId') ||
         !Object.hasOwn(substitution, 'inPlayerId') ||
+        (Object.keys(substitution).length === 3 &&
+          !Object.hasOwn(substitution, 'elapsedSeconds')) ||
         typeof substitution.outPlayerId !== 'string' ||
-        typeof substitution.inPlayerId !== 'string') {
+        typeof substitution.inPlayerId !== 'string' ||
+        (Object.hasOwn(substitution, 'elapsedSeconds') &&
+          (!Number.isInteger(substitution.elapsedSeconds) ||
+            substitution.elapsedSeconds! < M1_CLOCK_STEP_SECONDS ||
+            substitution.elapsedSeconds! >= M1_CLOCK_END_SECONDS ||
+            substitution.elapsedSeconds! % M1_CLOCK_STEP_SECONDS !== 0))) {
       return { ok: false, error: 'INVALID_SUBSTITUTION_SELECTION' };
     }
   }
@@ -161,11 +170,13 @@ export function prepareM1V113PlayableMatch(
     });
   }
   if (scenario === 'normal-substitution' || scenario === 'combined') {
+    const elapsedSeconds = substitution?.elapsedSeconds ?? M1_CLOCK_STEP_SECONDS;
     plannedCommands.push({
       schemaVersion: 1, commandId: 'v113-sub-' + fixture.id,
       fixtureId: fixture.id, teamId: initial.selectedClubId,
-      elapsedSeconds: 300, kind: 'substitute-normal',
-      actor: { kind: 'player' }, stoppage: 'referee-authorized',
+      elapsedSeconds, kind: 'substitute-normal',
+      actor: { kind: 'player' },
+      stoppage: elapsedSeconds === 2700 ? 'half-time' : 'referee-authorized',
       outPlayerId: selectedOut, inPlayerId: selectedIn,
     });
   }

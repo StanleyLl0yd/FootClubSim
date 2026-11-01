@@ -316,6 +316,18 @@ async function run() {
     if (!participants?.out || !participants?.in) {
       throw new Error('M1 chosen substitution participants unavailable');
     }
+    const selectedTime = await evaluate(`(() => {
+      const select = document.querySelector('#m1-substitution-checkpoint');
+      if (!select || !Array.from(select.options).some(option => option.value === '900')) {
+        return false;
+      }
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLSelectElement.prototype, 'value').set;
+      setter.call(select, '900');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      return select.value === '900';
+    })()`);
+    if (!selectedTime) throw new Error('Missing virtual substitution time selector');
     await click('Рассчитать матч');
     await waitText('Матч рассчитан. Результат пока не записан.');
     await click('Подтвердить и сохранить матч');
@@ -338,7 +350,9 @@ async function run() {
       };
     })`);
     if (applied?.outPlayerId !== participants.out ||
-        applied?.inPlayerId !== participants.in) {
+        applied?.inPlayerId !== participants.in ||
+        applied?.elapsedSeconds !== 900 ||
+        applied?.stoppage !== 'referee-authorized') {
       throw new Error('Browser CAS did not preserve the user-selected substitution');
     }
     await send('Page.reload', { ignoreCache: true });

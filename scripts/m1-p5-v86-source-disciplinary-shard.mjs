@@ -3,6 +3,16 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {performance} from 'node:perf_hooks';
+export function researchFixtureSeedV87(fixtureId,index){
+  if(typeof fixtureId!=='string'||!/^([ab]-[0-9]+-[0-9]+)$/.test(fixtureId)||
+      !Number.isSafeInteger(index)||index<1||index>V87_FIXTURE_SEEDS)
+    throw Error('INVALID_V87_FIXTURE_SEED');
+  const hash=createHash('sha256').update(
+    'FootClubSim-P5-v87-referee-fixture-separated-seed:'+fixtureId+':'+index
+  ).digest();
+  return hash.readUInt32BE(0)||1;
+}
+
 import {researchSeedFromIndex} from './m1-p5-v73-seed-coverage.mjs';
 import {deriveM1V31CausalPhysicalExposure}
   from '../dist/core/m1-v24-physical-exposure.js';
@@ -19,6 +29,7 @@ import reference from '../data/rpl-2025-26-p5-shot-discipline-reference.json'
   with {type:'json'};
 
 const SHARDS=16,PER_SHARD=15,SEEDS=8;
+export const V87_FIXTURE_SEEDS=16;
 const empty=()=>({attempted:0,accepted:0,rejected:0,shotEvents:0,
   openPlayGoals:0,sourceFirstYellows:0,sourceSecondYellowReds:0,
   sourceDirectReds:0,sourceGeneratedFoulStoppages:0,
@@ -31,7 +42,11 @@ export function v86Plans(){
     seedsPerFixture:SEEDS,
   }));
 }
-export function runM1V86DisciplineSourceShard(group){
+export function runM1V86DisciplineSourceShard(group,mode='shared'){
+  if(mode!=='shared'&&mode!=='fixture-domain-v87')
+    throw Error('V87_INVALID_RESEARCH_MODE');
+  const fixtureSeedMode=mode==='fixture-domain-v87';
+  const seedCount=fixtureSeedMode?V87_FIXTURE_SEEDS:SEEDS;
   if(!Number.isSafeInteger(group)||group<0||group>=SHARDS)
     throw Error('V86_INVALID_GROUP');
   if(reference.regularSeason.matches!==240||
@@ -47,8 +62,8 @@ export function runM1V86DisciplineSourceShard(group){
   if(all.length!==240)throw Error('V86_INCOMPLETE_SYNTHETIC_CALENDAR');
   const fixtures=all.slice(group*PER_SHARD,(group+1)*PER_SHARD);
   if(fixtures.length!==PER_SHARD)throw Error('V86_BAD_FIXTURE_GROUP');
-  const seeds=Array.from({length:SEEDS},(_,i)=>researchSeedFromIndex(i+1));
-  if(new Set(seeds).size!==SEEDS)throw Error('V86_SEED_COLLISION');
+  const seeds=Array.from({length:seedCount},(_,i)=>researchSeedFromIndex(i+1));
+  if(new Set(seeds).size!==seedCount)throw Error('V86_SEED_COLLISION');
   const policy={home:{assignedActor:{kind:'player'},availableStaffIds:[]},
     away:{assignedActor:{kind:'player'},availableStaffIds:[]}};
   const total=empty(),perFixture=[],digest=createHash('sha256');
@@ -66,8 +81,9 @@ export function runM1V86DisciplineSourceShard(group){
       rngAlgorithmVersion:RNG_VERSION,
     };
     const row=empty(),reasons={};
-    for(let index=0;index<SEEDS;index++){
-      const seed=seeds[index];
+    for(let index=0;index<seedCount;index++){
+      const seed=fixtureSeedMode?researchFixtureSeedV87(fixture.id,index+1):
+        seeds[index];
       const replay=deriveM1V31CausalPhysicalExposure(
         {...base,rngSeed:seed},policy,[],[]);
       row.attempted++;total.attempted++;
@@ -118,13 +134,13 @@ export function runM1V86DisciplineSourceShard(group){
       digest.update(JSON.stringify({fixture:fixture.id,index:index+1,
         seed,...counters})+'\n');
     }
-    if(row.attempted!==SEEDS||row.accepted+row.rejected!==SEEDS)
+    if(row.attempted!==seedCount||row.accepted+row.rejected!==seedCount)
       throw Error('V86_FIXTURE_CONSERVATION');
     perFixture.push({fixtureId:fixture.id,
       homeClubId:fixture.homeClubId,awayClubId:fixture.awayClubId,
       round:fixture.round,...row,rejectionReasons:reasons});
   }
-  if(total.attempted!==PER_SHARD*SEEDS||
+  if(total.attempted!==PER_SHARD*seedCount||
       total.accepted+total.rejected!==total.attempted||
       perFixture.length!==15)
     throw Error('V86_SHARD_CONSERVATION');
@@ -132,7 +148,8 @@ export function runM1V86DisciplineSourceShard(group){
     schemaVersion:1,
     status:'P5_V86_GENERATED_DISCIPLINE_AND_FOUL_STOPPAGE_RESEARCH',
     fixtureGroup:group,firstFixture:group*PER_SHARD+1,
-    fixtureCount:PER_SHARD,seedsPerFixture:SEEDS,
+    fixtureCount:PER_SHARD,seedsPerFixture:seedCount,
+    researchSeedStrategy:mode,
     modelEngineVersion:M1_ENGINE_VERSION,modelRngVersion:RNG_VERSION,
     modelScoreIncludesOnlyGeneratedOpenPlayGoals:true,
     independentlyGeneratedPenaltiesInThisDefaultPath:false,

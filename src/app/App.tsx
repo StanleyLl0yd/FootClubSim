@@ -2,6 +2,7 @@ import { useMemo, useState, type ChangeEvent } from 'react';
 import { LIGA_PRIKOLOV_IDENTITIES } from '../branding/identities.js';
 import { ClubBadge } from './ClubBadge.js';
 import { M1Playtest } from './M1Playtest.js';
+import { M1DensePlaytest } from './M1DensePlaytest.js';
 import { createSyntheticRplScaleCatalog } from '../core/synthetic.js';
 import { generateDoubleRoundRobin } from '../core/fixtures.js';
 import { validateDoubleRoundRobin } from '../core/fixture-validation.js';
@@ -202,6 +203,7 @@ export function App() {
       </div>
 
       {career && <M1Playtest key={career.selectedClubId} career={career} disabled={working} />}
+      {career && <M1DensePlaytest key={career.selectedClubId} career={career} disabled={working} />}
 
       <section className="panel" aria-labelledby="schedule-title">
         <h2 id="schedule-title">Календарь · тур {firstRound.number}</h2>

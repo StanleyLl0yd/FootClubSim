@@ -34,3 +34,14 @@ and reject altered earlier results. A 30-match workload/performance
 SLA has not been demonstrated by these four fixtures.
 
 P3/P5/M1 OPEN, P4 deferred, M2 prohibited, exit #3 0/2 full audits.
+
+## Canonical ordinary source admission (v164 hardening)
+
+Both v120 journal admission and complete historical replay require the
+`v122-ordinary-<fixture>` namespace to carry the exact canonical fixture
+seed derived from the immutable career RNG. Ordinary requests must also
+contain no referee, substitution, medical or adjudication commands.
+An otherwise fully replayable simulation with a changed seed is rejected;
+legacy namespaces are not implicitly authenticated. This check does not
+prove that an externally supplied referee/medical claim is genuine, certify
+all lineup/tactics fields or change saved journal versions.

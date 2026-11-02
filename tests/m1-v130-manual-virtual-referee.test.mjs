@@ -83,7 +83,7 @@ test('v130 rejects forged prior virtual event source and altered match result',(
     const forged=structuredClone(accepted.journal);
     forged.entries[0].commandId='v122-ordinary-'+first.fixtureId;
     assert.deepEqual(prepareM1V130ManualVirtualRefereeContinuation(
-      initial,forged),{ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'});
+      initial,forged),{ok:false,error:'INVALID_JOURNAL'});
   }
   const damaged=structuredClone(accepted.journal);
   damaged.entries[0].result.report.home.goals++;

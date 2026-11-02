@@ -59,9 +59,9 @@ test('v126 source-verified virtual incidents and forged command namespace',()=>{
       h.modelledMissedCompleteClubFixtures<=4),true);
   const renamed=structuredClone(journal);
   renamed.entries[0].commandId='v122-ordinary-'+proposal.fixtureId;
-  assert.equal(validateM1V120Journal(career,renamed).ok,true);
+  assert.equal(validateM1V120Journal(career,renamed).ok,false);
   assert.deepEqual(reviewM1V126DenseSourceHolds(career,renamed),
-    {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'});
+    {ok:false,error:'INVALID_JOURNAL'});
   const corrupt=structuredClone(journal);
   corrupt.entries[0].source.plannedCommands[0].origin='forged';
   assert.deepEqual(reviewM1V126DenseSourceHolds(career,corrupt),

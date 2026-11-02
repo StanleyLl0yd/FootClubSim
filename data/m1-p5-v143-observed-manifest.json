@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 143,
+  "kind": "OBSERVED_V141_CAREER_CLUSTERS_EXACT_SOURCE_RECORDS",
+  "sourceCommit": "66c71880e0bddd32f91503f91cff0030a79103ac",
+  "workflowRun": 41353522380,
+  "independentUnit": "SEED_CAREER_NOT_FIXTURE",
+  "sourceLineCount": 8,
+  "records": [
+    {
+      "firstSeed": 1,
+      "jobId": 124988602528,
+      "sha256": "2414a133db086486e77014d809c5d64b67eed775132f00560a62654e4472e698"
+    },
+    {
+      "firstSeed": 9,
+      "jobId": 124988602428,
+      "sha256": "b9246b467ca8eef516d3481f8ca9d546028ce884055b4b21471be392219c2c69"
+    },
+    {
+      "firstSeed": 17,
+      "jobId": 124988602500,
+      "sha256": "91a38ea61c1a64854cb73e22ec9e8c86899390e6aee40baea7950253ef156eee"
+    },
+    {
+      "firstSeed": 25,
+      "jobId": 124988602301,
+      "sha256": "1fe8143720161fc34c4320f7055ade1cec7566b3810aac9676916490c1b4175e"
+    },
+    {
+      "firstSeed": 33,
+      "jobId": 124988602337,
+      "sha256": "8f370f62975be23c63123356efa97b80ef26a9b8749c00e3822f44bcb9bc127c"
+    },
+    {
+      "firstSeed": 41,
+      "jobId": 124988602358,
+      "sha256": "721ad36bec98887022b89021f20483d4d320abdea29edc362522879e96a01e44"
+    },
+    {
+      "firstSeed": 49,
+      "jobId": 124988602492,
+      "sha256": "7700bf46ab1d66b793c5453cdc36684a4c66bd4620d83547e3229af236061c8c"
+    },
+    {
+      "firstSeed": 57,
+      "jobId": 124988602456,
+      "sha256": "1a04c240ca237463c68b9073914e0b7ea38b118431a4824bd00a2e5656d4e8d4"
+    }
+  ],
+  "holdout2024_25Used": false,
+  "releaseP5Accepted": false
+}

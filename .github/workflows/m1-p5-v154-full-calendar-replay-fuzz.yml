@@ -1,0 +1,38 @@
+name: M1 P5 v154 full calendar independent replay fuzz
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-p5-v154-full-calendar-replay-fuzz.mjs'
+      - 'tests/m1-p5-v154-full-calendar-replay-fuzz.test.mjs'
+      - '.github/workflows/m1-p5-v154-full-calendar-replay-fuzz.yml'
+      - 'docs/M1_P5_V154_FULL_CALENDAR_REPLAY_FUZZ.md'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  full-calendar-fuzz:
+    name: v154 full calendar shard ${{ matrix.group }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run build:core
+      - run: node --test tests/m1-p5-v154-full-calendar-replay-fuzz.test.mjs
+      - name: Record entire 15-fixture shard with 48 seeds per fixture
+        run: node scripts/m1-p5-v154-full-calendar-replay-fuzz.mjs ${{ matrix.group }}

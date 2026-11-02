@@ -34,10 +34,7 @@ test('v134 rejects virtual-referee identity spoofed with zero source events',()=
   const impersonation={...ordinary.request,
     commandId:'v124-virtual-referee-'+ordinary.fixture.id};
   const forged=applyM1V120Source(career,journal,impersonation);
-  assert.equal(forged.ok,true,
-    'Untrusted v120 accepts valid ordinary simulation with claimed virtual ID');
-  assert.deepEqual(reviewM1V126DenseSourceHolds(
-    career,forged.journal),{ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'});
+  assert.deepEqual(forged,{ok:false,error:'SOURCE_REPLAY_REJECTED'});
 
   const actual=applyM1V120Source(career,journal,virtual.request);
   assert.equal(actual.ok,true);

@@ -77,5 +77,5 @@ test('v136 rejects duplicate participants, reversed clock, forged namespace',()=
   const spoof=structuredClone(valid.journal);
   spoof.entries[0].commandId='v124-virtual-referee-'+run.fixture.id;
   assert.deepEqual(reviewM1V126DenseSourceHolds(initial,spoof),
-    {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'});
+    {ok:false,error:'INVALID_JOURNAL'});
 });

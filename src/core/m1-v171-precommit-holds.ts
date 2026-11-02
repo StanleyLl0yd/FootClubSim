@@ -1,6 +1,7 @@
 import {sameCanonicalValue} from './canonical-value.js';
 import {deriveM1FixtureSeed} from './m1-fixture-seed.js';
-import {prepareM1V122DenseOrdinaryMatch}
+import {buildM1V122NextOrdinaryFromVerified,
+  prepareM1V122DenseOrdinaryMatch}
   from './m1-v122-dense-ordinary-season.js';
 import {prepareM1V128ManualFictionalContinuation}
   from './m1-v128-manual-fictional-continuation.js';
@@ -8,7 +9,8 @@ import {prepareM1V176DenseMedicalMatch}
   from './m1-v176-dense-medical.js';
 import {applyM1V120Source,type M1V120Gate}
   from './m1-v120-playable-journal.js';
-import {reviewM1V126DenseSourceHolds}
+import {reviewM1V126DenseSourceHolds,
+  type M1V126DenseHold}
   from './m1-v126-dense-source-holds.js';
 import type {InitialCareerSave} from './save.js';
 import type {M1V120Journal} from './m1-v120-playable-journal.js';
@@ -26,12 +28,39 @@ const ADMITTED_COMMAND_PREFIXES=[
  */
 function verifiedSourceOrigins(
   initial:InitialCareerSave,journal:M1V120Journal,
+  holds:readonly M1V126DenseHold[],
 ):boolean{
-  return journal.entries.every(entry=>
-    ADMITTED_COMMAND_PREFIXES.some(prefix=>
-      entry.commandId===prefix+entry.fixtureId)&&
-    entry.source.prematch.rngSeed===
-      deriveM1FixtureSeed(initial.rngState,entry.fixtureId));
+  for(let index=0;index<journal.entries.length;index++){
+    const entry=journal.entries[index]!;
+    if(!ADMITTED_COMMAND_PREFIXES.some(prefix=>
+         entry.commandId===prefix+entry.fixtureId)||
+       entry.source.prematch.rngSeed!==
+         deriveM1FixtureSeed(initial.rngState,entry.fixtureId))
+      return false;
+    const ordinary=entry.commandId==='v122-ordinary-'+entry.fixtureId;
+    if(ordinary&&journal.entries.slice(0,index).some(prior=>
+      prior.source.plannedCommands.length!==0||
+      prior.source.checkpointMedical.length!==0||
+      prior.source.intraphaseMedical.length!==0||
+      prior.source.trustedDecisions.length!==0))return false;
+    const excluded=new Set(holds.filter(hold=>
+      hold.sourceIndex<index&&
+      (hold.modelledMissedCompleteClubFixtures===null||
+       index<=hold.sourceIndex+hold.modelledMissedCompleteClubFixtures))
+      .map(hold=>hold.playerId));
+    const prior:M1V120Journal={...journal,revision:index,
+      entries:journal.entries.slice(0,index)};
+    const canonical=buildM1V122NextOrdinaryFromVerified(
+      initial,prior,ordinary?new Set<string>():excluded);
+    if(!canonical?.ok)return false;
+    const prematch={
+      ...(canonical.request.prematch as Record<string,unknown>)};
+    delete prematch.catalog;
+    if(!sameCanonicalValue(entry.source.prematch,prematch)||
+       !sameCanonicalValue(entry.source.policy,canonical.request.policy))
+      return false;
+  }
+  return true;
 }
 
 export const M1_V171_PRECOMMIT_HOLDS_SCHEMA=171 as const;
@@ -47,7 +76,9 @@ export function admitM1V171SourceWithHolds(
 ):M1V171Admission{
   const accepted=applyM1V120Source(initial,journal,request);
   if(!accepted.ok)return accepted;
-  if(!verifiedSourceOrigins(initial,accepted.journal))
+  const holds=reviewM1V126DenseSourceHolds(initial,accepted.journal);
+  if(!holds.ok)return {ok:false,error:holds.error};
+  if(!verifiedSourceOrigins(initial,accepted.journal,holds.holds))
     return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
   // A valid prefix and fixture seed cannot replace the actual selected
   // source generator. Neither mode accepts caller-invented tactics or XI.
@@ -67,7 +98,5 @@ export function admitM1V171SourceWithHolds(
     if(!expected?.ok||!sameCanonicalValue(expected.request,request))
       return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
   }
-  const holds=reviewM1V126DenseSourceHolds(initial,accepted.journal);
-  if(!holds.ok)return {ok:false,error:holds.error};
   return accepted;
 }

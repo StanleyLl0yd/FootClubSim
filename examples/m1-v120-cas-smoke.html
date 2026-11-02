@@ -15,8 +15,14 @@
     loadM1V120PersistedJournal as load,
     commitM1V120PersistedSource as commit}
     from '../dist/browser/m1-v120-journal-store.js';
-  import {startM1V120Journal}
+  import {startM1V120Journal,applyM1V120Source}
     from '../dist/core/m1-v120-playable-journal.js';
+  import {reviewM1V126DenseSourceHolds}
+    from '../dist/core/m1-v126-dense-source-holds.js';
+  import {simulateM1V19InternalReferee}
+    from '../dist/core/m1-v19-internal-foul-injury.js';
+  import {buildM1V124GeneratedCommands}
+    from '../dist/core/m1-v124-generated-source.js';
   import {admitM1V171SourceWithHolds}
     from '../dist/core/m1-v171-precommit-holds.js';
   import {buildM1V122NextOrdinaryFromVerified}
@@ -83,6 +89,24 @@
         'ELIGIBILITY_REJECTED');
       check((await load(career.careerId)).revision===0,
         'source refusals unexpectedly wrote to IndexedDB');
+      const tactical=structuredClone(first.request);
+      tactical.prematch.homeTactics.tempo=
+        tactical.prematch.homeTactics.tempo===51?52:51;
+      const referee=simulateM1V19InternalReferee(
+        tactical.prematch,tactical.policy);
+      check(referee.ok,'no replayable altered-tactics referee');
+      tactical.plannedCommands=buildM1V124GeneratedCommands(
+        referee.generatedIncidents,first.fixture.id);
+      tactical.result=simulateM1V105SpecialGoalChronology(
+        tactical.prematch,tactical.policy,tactical.plannedCommands,[],[],[]);
+      check(tactical.result.ok,'no replayable altered-tactics match');
+      const legacy=applyM1V120Source(career,zero,tactical);
+      check(legacy.ok&&reviewM1V126DenseSourceHolds(
+        career,legacy.journal).ok,'old source boundary did not admit forgery');
+      await rejected(commit(career.careerId,0,tactical),
+        'ELIGIBILITY_REJECTED');
+      check((await load(career.careerId)).revision===0,
+        'altered-tactics claim advanced native journal');
       const one=await commit(career.careerId,0,first.request);
       check(one.revision===1&&one.entries.length===1&&
         one.entries[0].commandId.startsWith('v166-combined-'),

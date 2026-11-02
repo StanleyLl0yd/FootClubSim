@@ -78,3 +78,61 @@ test('v171 denies source-valid historical hold bypass before write',()=>{
   assert.equal(accepted.journal.revision,before.revision+1);
   assert.equal(JSON.stringify(before),original);
 });
+test('v171 refuses unidentified source and impersonated canonical-seed claims',()=>{
+  const catalog=createSyntheticRplScaleCatalog(2026);
+  const career=createInitialCareer(catalog,catalog.clubs[0].id,
+    42,'v174-uncertified-source');
+  const started=startM1V120Journal(career);
+  assert.equal(started.ok,true);
+  const base=buildM1V122NextOrdinaryFromVerified(
+    career,started.journal,new Set());
+  assert.equal(base?.ok,true);
+  const pristine=JSON.stringify(started.journal);
+
+  // Existing v120 replay accepts an unknown no-command namespace.
+  // The old v126 hold projector skips it instead of certifying origin.
+  const unknown={...base.request,
+    commandId:'unverified-'+base.fixture.id};
+  const oldAccepted=applyM1V120Source(
+    career,started.journal,unknown);
+  assert.equal(oldAccepted.ok,true);
+  assert.equal(reviewM1V126DenseSourceHolds(
+    career,oldAccepted.journal).ok,true);
+  assert.deepEqual(admitM1V171SourceWithHolds(
+    career,started.journal,unknown),
+    {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'});
+
+  // A recognized legacy continuation command ID also cannot certify a
+  // different caller-chosen fixture RNG seed and self-replayed score.
+  const prematch={...base.request.prematch,rngSeed:
+    base.request.prematch.rngSeed===1?2:1};
+  const result=simulateM1V105SpecialGoalChronology(
+    prematch,base.request.policy,[],[],[],[]);
+  assert.equal(result.ok,true);
+  const impersonated={...base.request,
+    commandId:'v128-fictional-continuation-'+base.fixture.id,
+    prematch,result};
+  assert.equal(applyM1V120Source(
+    career,started.journal,impersonated).ok,true);
+  assert.deepEqual(admitM1V171SourceWithHolds(
+    career,started.journal,impersonated),
+    {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'});
+
+  const legal=admitM1V171SourceWithHolds(
+    career,started.journal,base.request);
+  assert.equal(legal.ok,true);
+  const canonicalManual=admitM1V171SourceWithHolds(
+    career,started.journal,{...base.request,
+      commandId:'v128-fictional-continuation-'+base.fixture.id});
+  assert.equal(canonicalManual.ok,true);
+
+  // Backward-compatible v120 replay is read-only for uncertified history,
+  // but it can never be silently promoted to an authoritative CAS write.
+  const next=buildM1V122NextOrdinaryFromVerified(
+    career,oldAccepted.journal,new Set());
+  assert.equal(next?.ok,true);
+  assert.deepEqual(admitM1V171SourceWithHolds(
+    career,oldAccepted.journal,next.request),
+    {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'});
+  assert.equal(JSON.stringify(started.journal),pristine);
+});

@@ -8,12 +8,6 @@ import {prepareM1V128ManualFictionalContinuation}
   from '../core/m1-v128-manual-fictional-continuation.js';
 import {prepareM1V130ManualVirtualRefereeContinuation}
   from '../core/m1-v130-manual-virtual-referee.js';
-import {prepareM1V132DenseManagerSubstitution}
-  from '../core/m1-v132-dense-manager-substitution.js';
-import {prepareM1V136DenseDoubleSubstitution}
-  from '../core/m1-v136-dense-double-substitution.js';
-import {prepareM1V138DenseFiveSubstitutions}
-  from '../core/m1-v138-dense-five-substitutions.js';
 import {prepareM1V158GeneratedGoalSubstitutions}
   from '../core/m1-v158-dense-goal-substitutions.js';
 import {prepareM1V166CombinedMatch}
@@ -42,7 +36,7 @@ export function M1DensePlaytest({career,disabled}:{
   const [holdReview,setHoldReview]=useState<M1V126DenseHoldReview|null>(null);
   const [outId,setOutId]=useState('');
   const [inId,setInId]=useState('');
-  const [checkpoint,setCheckpoint]=useState(900);
+  const [checkpoint,setCheckpoint]=useState(2700);
   const [secondOutId,setSecondOutId]=useState('');
   const [secondInId,setSecondInId]=useState('');
   const [secondCheckpoint,setSecondCheckpoint]=useState(2700);
@@ -167,18 +161,18 @@ export function M1DensePlaytest({career,disabled}:{
           mode==='manual-virtual'?
             prepareM1V130ManualVirtualRefereeContinuation(career,journal):
             mode==='substitution'?
-              prepareM1V132DenseManagerSubstitution(career,journal,{
+              prepareM1V158GeneratedGoalSubstitutions(career,journal,[{
                 outPlayerId:actualOut,inPlayerId:actualIn,
-                elapsedSeconds:checkpoint}):
+                elapsedSeconds:checkpoint}]):
             mode==='double-substitution'?
-              prepareM1V136DenseDoubleSubstitution(career,journal,[
+              prepareM1V158GeneratedGoalSubstitutions(career,journal,[
                 {outPlayerId:actualOut,inPlayerId:actualIn,
                   elapsedSeconds:checkpoint},
                 {outPlayerId:actualSecondOut,inPlayerId:actualSecondIn,
                   elapsedSeconds:actualSecondCheckpoint},
               ]):
             mode==='five-substitutions'?
-              prepareM1V138DenseFiveSubstitutions(career,journal,
+              prepareM1V158GeneratedGoalSubstitutions(career,journal,
                 substitutions):
             mode==='generated-goal-substitutions'?
               prepareM1V158GeneratedGoalSubstitutions(

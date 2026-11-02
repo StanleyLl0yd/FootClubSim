@@ -37,6 +37,7 @@ function verifiedSourceOrigins(
        entry.source.prematch.rngSeed!==
          deriveM1FixtureSeed(initial.rngState,entry.fixtureId))
       return false;
+    if(!verifiedManagerWhistle(entry))return false;
     const ordinary=entry.commandId==='v122-ordinary-'+entry.fixtureId;
     if(ordinary&&journal.entries.slice(0,index).some(prior=>
       prior.source.plannedCommands.length!==0||
@@ -61,6 +62,28 @@ function verifiedSourceOrigins(
       return false;
   }
   return true;
+}
+
+/** A text-only referee-authorized flag is not whistle evidence.
+ * Only the verified source goal immediately before a checkpoint, or
+ * half-time, can authorize a legacy manual in-play substitution.
+ * The v120 result is already fully replayed before this check.
+ */
+function verifiedManagerWhistle(entry:M1V120Journal['entries'][number]):boolean{
+  const id=entry.commandId;
+  if(!['v132-sub-','v136-double-','v138-multi-'].some(prefix=>
+      id===prefix+entry.fixtureId))return true;
+  const stops=new Set<number>([2700]);
+  for(const event of entry.result.events){
+    if(event.type==='source'&&event.source.type==='shot'&&
+        event.source.outcome==='goal'&&
+        event.elapsedSeconds+1<5400)
+      stops.add(event.elapsedSeconds+1);
+  }
+  return entry.source.plannedCommands.every(command=>
+    command!==null&&typeof command==='object'&&
+    !Array.isArray(command)&&
+    stops.has((command as {elapsedSeconds:number}).elapsedSeconds));
 }
 
 export const M1_V171_PRECOMMIT_HOLDS_SCHEMA=171 as const;

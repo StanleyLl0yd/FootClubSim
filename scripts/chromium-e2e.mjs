@@ -724,13 +724,13 @@ async function run() {
       },'eligible dense selected reserve');
       const checkpointChosen=await evaluate(`(() => {
         const select=document.querySelector('#m1-dense-sub-time');
-        if(!select||!Array.from(select.options).some(o=>o.value==='900'))
+        if(!select||!Array.from(select.options).some(o=>o.value==='2700'))
           return false;
         const setter=Object.getOwnPropertyDescriptor(
           HTMLSelectElement.prototype,'value').set;
-        setter.call(select,'900');
+        setter.call(select,'2700');
         select.dispatchEvent(new Event('change',{bubbles:true}));
-        return select.value==='900';
+        return select.value==='2700';
       })()`);
       if(!checkpointChosen)throw new Error('Dense substitution clock missing');
       await click('Провести выбранную замену в плотном матче');
@@ -755,9 +755,9 @@ async function run() {
       if(denseSub?.kind!=='substitute-normal'||
           denseSub?.outPlayerId!==denseOut||
           denseSub?.inPlayerId!==denseIn||
-          denseSub?.elapsedSeconds!==900||
+          denseSub?.elapsedSeconds!==2700||
           denseSub?.actor?.kind!=='player'||
-          denseSub?.stoppage!=='referee-authorized')
+          denseSub?.stoppage!=='half-time')
         throw new Error('Dense CAS lost manager-selected substitution participants/time');
       await send('Page.reload',{ignoreCache:true});
       await waitText('Выберите вымышленный клуб');
@@ -861,13 +861,13 @@ async function run() {
         const thirdTime=document.querySelector('#m1-dense-multi-time-3');
         if(!secondIn?.value||!thirdOut||!thirdTime||
             !Array.from(thirdOut.options).some(o=>o.value===secondIn.value)||
-            !Array.from(thirdTime.options).some(o=>o.value==='3300'))
+            !Array.from(thirdTime.options).some(o=>o.value==='2700'))
           return null;
         const setter=Object.getOwnPropertyDescriptor(
           HTMLSelectElement.prototype,'value').set;
         setter.call(thirdOut,secondIn.value);
         thirdOut.dispatchEvent(new Event('change',{bubbles:true}));
-        setter.call(thirdTime,'3300');
+        setter.call(thirdTime,'2700');
         thirdTime.dispatchEvent(new Event('change',{bubbles:true}));
         return secondIn.value;
       })()`);
@@ -876,7 +876,7 @@ async function run() {
       await until(async()=>await evaluate(`(() => {
         return document.querySelector('#m1-dense-multi-out-3')?.value===
           ${JSON.stringify(substitutedSubstitute)} &&
-          document.querySelector('#m1-dense-multi-time-3')?.value==='3300';
+          document.querySelector('#m1-dense-multi-time-3')?.value==='2700';
       })()`),'substitute-of-substitute selector state');
       await click('Провести 3–5 выбранных замен в плотном матче');
       await waitText('v120: от трёх до пяти замен, плотный матч атомарно записан, 270 PRNG draws, ревизия 9 из 30.');
@@ -899,7 +899,7 @@ async function run() {
       if(!Array.isArray(reSubbed)||reSubbed.length!==3||
           reSubbed[1].inPlayerId!==substitutedSubstitute||
           reSubbed[2].outPlayerId!==substitutedSubstitute||
-          reSubbed[2].elapsedSeconds!==3300)
+          reSubbed[2].elapsedSeconds!==2700)
         throw new Error('Substitute-of-substitute source was not committed');
       await send('Page.reload',{ignoreCache:true});
       await waitText('Выберите вымышленный клуб');

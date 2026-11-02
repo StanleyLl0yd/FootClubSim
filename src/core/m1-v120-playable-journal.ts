@@ -5,6 +5,7 @@ import {verifyM1V124GeneratedSourceClaim}
   from './m1-v124-generated-source.js';
 import { generateDoubleRoundRobin } from './fixtures.js';
 import { isStableId } from './identifiers.js';
+import {deriveM1FixtureSeed} from './m1-fixture-seed.js';
 import { isPlainJsonTree } from './plain-json-tree.js';
 import { startM1MatchResultJournal } from './m1-result-journal.js';
 import { simulateM1V105SpecialGoalChronology,
@@ -101,6 +102,18 @@ function controlledSchedule(initial:InitialCareerSave) {
     .filter(f=>f.homeClubId===initial.selectedClubId ||
       f.awayClubId===initial.selectedClubId);
 }
+/** v122 ordinary commands are generated from the immutable career seed.
+ * Other experimental namespaces are not silently authenticated here.
+ */
+function canonicalOrdinarySeed(commandId:string,fixtureId:string,
+  prematch:Readonly<Record<string,unknown>>,careerSeed:number,
+  commands:readonly unknown[],checkpoint:readonly unknown[],
+  intraphase:readonly unknown[],decisions:readonly unknown[]):boolean{
+  return commandId==='v122-ordinary-'+fixtureId&&
+    prematch.rngSeed===deriveM1FixtureSeed(careerSeed,fixtureId)&&
+    commands.length===0&&checkpoint.length===0&&
+    intraphase.length===0&&decisions.length===0;
+}
 function baseJournal(initial:InitialCareerSave):M1V120Journal {
   return {schemaVersion:120,careerId:initial.careerId,
     selectedClubId:initial.selectedClubId,basePackId:initial.basePackId,
@@ -130,6 +143,11 @@ function replay(initial:InitialCareerSave,entry:M1V120Entry,
   const source=entry.source;
   if (!sameCanonicalValue(source.prematch.fixture,scheduled)) return false;
   const prematch={...source.prematch,catalog:initial.catalog};
+  if(entry.commandId.startsWith('v122-ordinary-')&&
+      !canonicalOrdinarySeed(entry.commandId,scheduled.id,
+        prematch,initial.rngState,source.plannedCommands,
+        source.checkpointMedical,source.intraphaseMedical,
+        source.trustedDecisions))return false;
   if(entry.commandId.startsWith('v124-virtual-referee-')&&
       (entry.commandId!=='v124-virtual-referee-'+scheduled.id||
        source.checkpointMedical.length!==0||
@@ -216,6 +234,12 @@ export function applyM1V120Source(
     return fail('WRONG_FIXTURE');
   if(!sameCanonicalValue(raw.prematch.catalog,initial.catalog))
     return fail('UNTRUSTED_CATALOG');
+  if((raw.commandId as string).startsWith('v122-ordinary-')&&
+      !canonicalOrdinarySeed(raw.commandId as string,fixture.id,
+        raw.prematch,initial.rngState,raw.plannedCommands,
+        raw.checkpointMedical,raw.intraphaseMedical,
+        raw.trustedDecisions))
+    return fail('SOURCE_REPLAY_REJECTED');
   if((raw.commandId as string).startsWith('v124-virtual-referee-')&&
       (raw.commandId!=='v124-virtual-referee-'+fixture.id||
        raw.checkpointMedical.length!==0||

@@ -96,7 +96,7 @@ test('v128 never treats a forged virtual namespace or damaged result as trusted'
     const forged=structuredClone(accepted.journal);
     forged.entries[0].commandId='v122-ordinary-'+virtual.fixtureId;
     assert.deepEqual(prepareM1V128ManualFictionalContinuation(
-      career,forged),{ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'});
+      career,forged),{ok:false,error:'INVALID_JOURNAL'});
   }
   const corrupt=structuredClone(accepted.journal);
   corrupt.entries[0].result.report.home.goals++;

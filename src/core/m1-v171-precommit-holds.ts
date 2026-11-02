@@ -1,4 +1,6 @@
 import {sameCanonicalValue} from './canonical-value.js';
+import {projectM1V179MatchClock}
+  from './m1-v179-source-clock.js';
 import {deriveM1FixtureSeed} from './m1-fixture-seed.js';
 import {buildM1V122NextOrdinaryFromVerified,
   prepareM1V122DenseOrdinaryMatch}
@@ -37,6 +39,8 @@ function verifiedSourceOrigins(
        entry.source.prematch.rngSeed!==
          deriveM1FixtureSeed(initial.rngState,entry.fixtureId))
       return false;
+    if(!projectM1V179MatchClock(
+        entry.source.prematch,entry.result).ok)return false;
     if(!verifiedManagerWhistle(entry))return false;
     const ordinary=entry.commandId==='v122-ordinary-'+entry.fixtureId;
     if(ordinary&&journal.entries.slice(0,index).some(prior=>

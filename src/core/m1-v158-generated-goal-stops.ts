@@ -11,7 +11,7 @@ export function verifyM1V158GeneratedGoalStops(
   prematch:unknown,policy:unknown,commands:unknown,
 ):boolean{
   if(![prematch,policy,commands].every(isPlainJsonTree)||
-      !Array.isArray(commands)||commands.length<3||
+      !Array.isArray(commands)||commands.length<1||
       commands.length>5)return false;
   const changes=commands as unknown[];
   const times=new Set<number>();

@@ -1,3 +1,7 @@
+import {prepareM1V132DenseManagerSubstitution}
+  from './m1-v132-dense-manager-substitution.js';
+import {prepareM1V136DenseDoubleSubstitution}
+  from './m1-v136-dense-double-substitution.js';
 import {prepareM1V138DenseFiveSubstitutions}
   from './m1-v138-dense-five-substitutions.js';
 import {simulateM1V105SpecialGoalChronology}
@@ -15,8 +19,12 @@ export const M1_V158_GOAL_STOP_SCHEMA=158 as const;
 export function prepareM1V158GeneratedGoalSubstitutions(
   initial:InitialCareerSave,journal:M1V120Journal,choices:unknown,
 ){
-  const base=prepareM1V138DenseFiveSubstitutions(
-    initial,journal,choices);
+  const list=Array.isArray(choices)?choices:[];
+  const base=list.length===1?
+    prepareM1V132DenseManagerSubstitution(initial,journal,list[0]):
+    list.length===2?
+      prepareM1V136DenseDoubleSubstitution(initial,journal,choices):
+      prepareM1V138DenseFiveSubstitutions(initial,journal,choices);
   if(!base||!base.ok)return base;
   const fixtureId=base.fixture.id;
   const plannedCommands=base.request.plannedCommands.map((raw,i)=>({
@@ -33,6 +41,7 @@ export function prepareM1V158GeneratedGoalSubstitutions(
   if(!result.ok)
     return {ok:false as const,error:'SOURCE_REPLAY_REJECTED' as const};
   return {...base,schemaVersion:M1_V158_GOAL_STOP_SCHEMA,
+    substitutionCount:plannedCommands.length,
     status:'SOURCE_REPLAYED_FICTIONAL_GOAL_STOP_SUBSTITUTIONS' as const,
     internalGeneratedGoalStopsVerified:true as const,
     request:{...base.request,

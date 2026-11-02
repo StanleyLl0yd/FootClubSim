@@ -150,3 +150,39 @@ test('v158 generic CAS rejects forged goal-source authority',()=>{
     {ok:false,error:'SOURCE_REPLAY_REJECTED'});
   assert.equal(journal.revision,0);
 });
+
+test('v158 source-verified goals admit one or two physical replacements',()=>{
+  const s=locateGeneratedGoal();
+  for(const n of [1,2]){
+    const subset=s.chosen.slice(0,n);
+    const prepared=prepareM1V158GeneratedGoalSubstitutions(
+      s.initial,s.journal,subset);
+    assert.equal(prepared?.ok,true,JSON.stringify(prepared).slice(0,450));
+    assert.equal(prepared.substitutionCount,n);
+    const saved=applyM1V120Source(
+      s.initial,s.journal,prepared.request);
+    assert.equal(saved.ok,true,JSON.stringify(saved).slice(0,450));
+    const review=reviewM1V126DenseSourceHolds(s.initial,saved.journal);
+    assert.equal(review.ok,true,JSON.stringify(review).slice(0,450));
+    const next=prepareM1V128ManualFictionalContinuation(
+      s.initial,saved.journal);
+    assert.equal(next?.ok,true,JSON.stringify(next).slice(0,450));
+  }
+});
+test('v158 one and two changes cannot invent a source goal restart',()=>{
+  const s=locateGeneratedGoal();
+  const goals=new Set(s.replay.events.filter(e=>
+    e.type==='source'&&e.source.type==='shot'&&
+    e.source.outcome==='goal').map(e=>e.elapsedSeconds+1));
+  const noGoal=Array.from({length:17},(_,i)=>(i+1)*300)
+    .find(time=>time!==2700&&!goals.has(time));
+  assert.ok(noGoal);
+  for(const n of [1,2]){
+    const forged=s.chosen.slice(0,n).map(c=>({
+      ...c,elapsedSeconds:noGoal,
+    }));
+    assert.deepEqual(prepareM1V158GeneratedGoalSubstitutions(
+      s.initial,s.journal,forged),
+      {ok:false,error:'NO_GENERATED_GOAL_STOP'});
+  }
+});

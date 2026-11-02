@@ -16,6 +16,8 @@ import {prepareM1V138DenseFiveSubstitutions}
   from '../core/m1-v138-dense-five-substitutions.js';
 import {prepareM1V158GeneratedGoalSubstitutions}
   from '../core/m1-v158-dense-goal-substitutions.js';
+import {prepareM1V166CombinedMatch}
+  from '../core/m1-v166-combined-playable.js';
 import type {M1V132SubstitutionSelection}
   from '../core/m1-v132-dense-manager-substitution.js';
 import type {M1PrematchInput} from '../core/m1-clock.js';
@@ -146,7 +148,8 @@ export function M1DensePlaytest({career,disabled}:{
   }
   async function playNext(mode:'ordinary'|'virtual'|'manual'|'manual-virtual'|
     'substitution'|'double-substitution'|'five-substitutions'|
-    'generated-goal-substitutions'='ordinary',count=0){
+    'generated-goal-substitutions'|'combined-referee-substitutions'=
+      'ordinary',count=0){
     if(busy||disabled||!journal||!holdReview?.ok)return;
     setBusy(true);
     try{
@@ -173,6 +176,9 @@ export function M1DensePlaytest({career,disabled}:{
             mode==='generated-goal-substitutions'?
               prepareM1V158GeneratedGoalSubstitutions(
                 career,journal,substitutions.slice(0,count)):
+            mode==='combined-referee-substitutions'?
+              prepareM1V166CombinedMatch(
+                career,journal,substitutions.slice(0,count)):
               prepareM1V122DenseOrdinaryMatch(career,journal);
       if(prepared===null){
         setMessage('v120: все 30 матчей выбранного клуба сохранены.');
@@ -181,6 +187,8 @@ export function M1DensePlaytest({career,disabled}:{
       if(!prepared.ok)throw Error(
         prepared.error==='NO_GENERATED_GOAL_STOP'?
           'Нет подтверждённой остановки после гола: выберите перерыв или реальный голевой рестарт симуляции.':
+        prepared.error==='COMBINED_SOURCE_REJECTED'?
+          'Совместная хронология судьи и замен недопустима: выберите другое законное окно или игроков.':
           prepared.error);
       const persisted=await commitM1V120PersistedSource(
         career.careerId,journal.revision,prepared.request);
@@ -199,8 +207,14 @@ export function M1DensePlaytest({career,disabled}:{
         mode==='double-substitution'?'две выбранные замены, ':
         mode==='five-substitutions'?'от трёх до пяти замен, ':
         mode==='generated-goal-substitutions'?
-          '1–5 замен на подтверждённой игровым источником остановке, ':'')+
-        'плотный матч атомарно записан, 270 PRNG draws, ревизия '+
+          '1–5 замен на подтверждённой игровым источником остановке, ':
+        mode==='combined-referee-substitutions'?
+          'вымышленный арбитр и выбранные замены в одной хронологии, ':'')+
+        'плотный матч атомарно записан, '+
+        (mode==='combined-referee-substitutions'?
+          '270 базовых PRNG draws + независимый поток вымышленного арбитра':
+          '270 PRNG draws')+
+        ', ревизия '+
         persisted.revision+' из 30. Активных ограничений: '+
         reviewed.holds.filter(hold=>hold.activeForNextFixture).length+'.');
     }catch(error){
@@ -268,6 +282,10 @@ export function M1DensePlaytest({career,disabled}:{
           onClick={()=>void playNext('generated-goal-substitutions',1)}>
           Провести одну замену только на подтверждённой остановке
         </button>
+        <button type="button" disabled={!actualOut||!actualIn}
+          onClick={()=>void playNext('combined-referee-substitutions',1)}>
+          Вымышленный арбитр и одна замена в одной игре
+        </button>
       </fieldset>
       <fieldset disabled={busy||disabled||!nextCandidate?.ok}>
         <legend>Две замены в одном матче (два окна или общее окно)</legend>
@@ -301,6 +319,11 @@ export function M1DensePlaytest({career,disabled}:{
           !actualSecondOut||!actualSecondIn}
           onClick={()=>void playNext('generated-goal-substitutions',2)}>
           Провести две замены только на подтверждённых остановках
+        </button>
+        <button type="button" disabled={!actualOut||!actualIn||
+          !actualSecondOut||!actualSecondIn}
+          onClick={()=>void playNext('combined-referee-substitutions',2)}>
+          Вымышленный арбитр и две замены в одной игре
         </button>
       </fieldset>
       <fieldset disabled={busy||disabled||!nextCandidate?.ok}>
@@ -355,6 +378,11 @@ export function M1DensePlaytest({career,disabled}:{
           substitutions.some(x=>!x.outPlayerId||!x.inPlayerId)}
           onClick={()=>void playNext('generated-goal-substitutions',multiCount)}>
           Провести 3–5 замен только на подтверждённых остановках
+        </button>
+        <button type="button" disabled={
+          substitutions.some(x=>!x.outPlayerId||!x.inPlayerId)}
+          onClick={()=>void playNext('combined-referee-substitutions',multiCount)}>
+          Вымышленный арбитр и 3–5 замен в одной игре
         </button>
       </fieldset>
     </div>

@@ -22,3 +22,13 @@ medical clearance, KDK sanction authority, automatic season progression,
 opponent-wide history, calibrated randomness or a P3-1 gate acceptance.
 The 2024/25 holdout remains sealed; original M0/v8/v120 schemas and
 game RNG probabilities are unchanged. P3 0/4, P5 0/5, M1 OPEN, M2 forbidden.
+
+## Separate experimental browser action
+
+The dense v120 browser panel can offer explicit combined-source actions for
+one, two, or three-to-five manager-selected substitutions, reusing the
+existing player/time selectors. Each one-shot action submits a full
+source-checked match and atomic CAS proposal, not an interactive live clock.
+The older ordinary, virtual-only, manager-only and verified-goal-stop actions
+remain distinct. If combined source replay cannot prove an allowed action,
+the UI displays a rejection instead of committing an unverified match.

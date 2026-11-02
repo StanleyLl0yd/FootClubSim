@@ -18,6 +18,8 @@
 
 ## Milestone gates
 
+M1 P3/P5 priorities are tracked in the [nine-block functional closure matrix](docs/M1_P3_P5_ACCEPTANCE_MATRIX.md). Its nine tracked groups are **not** a substitute for P1/P2/P4 or the two mandatory repository-wide M1 exit audits.
+
 **After functional work and acceptance for M0 and every subsequent M stage**, perform a full two-pass whole-repository audit, safe refactor and code review per [AGENTS.md](AGENTS.md). A milestone is not complete until its exit issue contains the report and available CI/test/security evidence. Do not equate a green PR with passing the exit gate.
 
 | Stage | Planned result | Mandatory exit |

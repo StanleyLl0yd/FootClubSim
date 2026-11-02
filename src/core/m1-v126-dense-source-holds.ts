@@ -1,6 +1,8 @@
 import {simulateM1V19InternalReferee} from './m1-v19-internal-foul-injury.js';
 import {verifyM1V158SourceClaim}
   from './m1-v158-generated-goal-stops.js';
+import {verifyM1V166CombinedSourceClaim}
+  from './m1-v166-combined-source.js';
 import type {M1PrematchInput} from './m1-clock.js';
 import {verifyM1V124DenseVirtualRefereeSource}
   from './m1-v124-dense-internal-referee.js';
@@ -180,8 +182,13 @@ export function reviewM1V126DenseSourceHolds(
         return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
       continue;
     }
-    if(!verifyM1V124DenseVirtualRefereeSource(
-      initial,journal,entry.fixtureId))
+    const combined=entry.commandId==='v166-combined-'+entry.fixtureId;
+    const sourceVerified=combined?verifyM1V166CombinedSourceClaim(
+      {...source.prematch,catalog:initial.catalog},source.policy,
+      source.plannedCommands,entry.fixtureId,initial.selectedClubId,
+      initial.rngState):verifyM1V124DenseVirtualRefereeSource(
+        initial,journal,entry.fixtureId);
+    if(!sourceVerified)
       return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
     const prematch={...source.prematch,
       catalog:initial.catalog} as M1PrematchInput;

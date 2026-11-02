@@ -1,4 +1,9 @@
+import {sameCanonicalValue} from './canonical-value.js';
 import {deriveM1FixtureSeed} from './m1-fixture-seed.js';
+import {prepareM1V122DenseOrdinaryMatch}
+  from './m1-v122-dense-ordinary-season.js';
+import {prepareM1V128ManualFictionalContinuation}
+  from './m1-v128-manual-fictional-continuation.js';
 import {applyM1V120Source,type M1V120Gate}
   from './m1-v120-playable-journal.js';
 import {reviewM1V126DenseSourceHolds}
@@ -41,6 +46,19 @@ export function admitM1V171SourceWithHolds(
   if(!accepted.ok)return accepted;
   if(!verifiedSourceOrigins(initial,accepted.journal))
     return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
+  // A valid prefix and fixture seed cannot replace the actual selected
+  // source generator. Neither mode accepts caller-invented tactics or XI.
+  const last=accepted.journal.entries.at(-1)!;
+  if(last.commandId==='v122-ordinary-'+last.fixtureId){
+    const expected=prepareM1V122DenseOrdinaryMatch(initial,journal);
+    if(!expected?.ok||!sameCanonicalValue(expected.request,request))
+      return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
+  }
+  if(last.commandId==='v128-fictional-continuation-'+last.fixtureId){
+    const expected=prepareM1V128ManualFictionalContinuation(initial,journal);
+    if(!expected?.ok||!sameCanonicalValue(expected.request,request))
+      return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
+  }
   const holds=reviewM1V126DenseSourceHolds(initial,accepted.journal);
   if(!holds.ok)return {ok:false,error:holds.error};
   return accepted;

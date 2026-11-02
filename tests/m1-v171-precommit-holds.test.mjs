@@ -136,3 +136,43 @@ test('v171 refuses unidentified source and impersonated canonical-seed claims',(
     {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'});
   assert.equal(JSON.stringify(started.journal),pristine);
 });
+test('v175 denies changed tactics under valid v122/v128 source labels',()=>{
+  const catalog=createSyntheticRplScaleCatalog(2026);
+  const career=createInitialCareer(catalog,catalog.clubs[0].id,
+    42,'v175-fake-generated-source');
+  const started=startM1V120Journal(career);
+  assert.equal(started.ok,true);
+  const base=buildM1V122NextOrdinaryFromVerified(
+    career,started.journal,new Set());
+  assert.equal(base?.ok,true);
+  const original=JSON.stringify(started.journal);
+  for(const commandId of [
+    'v122-ordinary-'+base.fixture.id,
+    'v128-fictional-continuation-'+base.fixture.id,
+  ]){
+    const prematch=structuredClone(base.request.prematch);
+    prematch.homeTactics.tempo=51;
+    const result=simulateM1V105SpecialGoalChronology(
+      prematch,base.request.policy,[],[],[],[]);
+    assert.equal(result.ok,true);
+    const forged={...base.request,commandId,prematch,result};
+    // Previously, the full physical replay and canonical-seed checks were
+    // satisfied but the request did not originate from either generator.
+    assert.equal(applyM1V120Source(
+      career,started.journal,forged).ok,true);
+    assert.equal(reviewM1V126DenseSourceHolds(
+      career,applyM1V120Source(
+        career,started.journal,forged).journal).ok,true);
+    assert.deepEqual(admitM1V171SourceWithHolds(
+      career,started.journal,forged),
+      {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'});
+  }
+  const ordinary=admitM1V171SourceWithHolds(
+    career,started.journal,base.request);
+  assert.equal(ordinary.ok,true);
+  const manual=admitM1V171SourceWithHolds(
+    career,started.journal,{...base.request,
+      commandId:'v128-fictional-continuation-'+base.fixture.id});
+  assert.equal(manual.ok,true);
+  assert.equal(JSON.stringify(started.journal),original);
+});

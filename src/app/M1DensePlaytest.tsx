@@ -14,6 +14,8 @@ import {prepareM1V136DenseDoubleSubstitution}
   from '../core/m1-v136-dense-double-substitution.js';
 import {prepareM1V138DenseFiveSubstitutions}
   from '../core/m1-v138-dense-five-substitutions.js';
+import {prepareM1V158GeneratedGoalSubstitutions}
+  from '../core/m1-v158-dense-goal-substitutions.js';
 import type {M1V132SubstitutionSelection}
   from '../core/m1-v132-dense-manager-substitution.js';
 import type {M1PrematchInput} from '../core/m1-clock.js';
@@ -143,7 +145,8 @@ export function M1DensePlaytest({career,disabled}:{
     }finally{setBusy(false);}
   }
   async function playNext(mode:'ordinary'|'virtual'|'manual'|'manual-virtual'|
-    'substitution'|'double-substitution'|'five-substitutions'='ordinary'){
+    'substitution'|'double-substitution'|'five-substitutions'|
+    'generated-goal-substitutions'='ordinary',count=0){
     if(busy||disabled||!journal||!holdReview?.ok)return;
     setBusy(true);
     try{
@@ -167,12 +170,18 @@ export function M1DensePlaytest({career,disabled}:{
             mode==='five-substitutions'?
               prepareM1V138DenseFiveSubstitutions(career,journal,
                 substitutions):
+            mode==='generated-goal-substitutions'?
+              prepareM1V158GeneratedGoalSubstitutions(
+                career,journal,substitutions.slice(0,count)):
               prepareM1V122DenseOrdinaryMatch(career,journal);
       if(prepared===null){
         setMessage('v120: все 30 матчей выбранного клуба сохранены.');
         return;
       }
-      if(!prepared.ok)throw Error(prepared.error);
+      if(!prepared.ok)throw Error(
+        prepared.error==='NO_GENERATED_GOAL_STOP'?
+          'Нет подтверждённой остановки после гола: выберите перерыв или реальный голевой рестарт симуляции.':
+          prepared.error);
       const persisted=await commitM1V120PersistedSource(
         career.careerId,journal.revision,prepared.request);
       const reviewed=reviewM1V126DenseSourceHolds(career,persisted);
@@ -188,7 +197,9 @@ export function M1DensePlaytest({career,disabled}:{
         mode==='manual-virtual'?'повторный виртуальный арбитр, ':
         mode==='substitution'?'выбранная замена, ':
         mode==='double-substitution'?'две выбранные замены, ':
-        mode==='five-substitutions'?'от трёх до пяти замен, ':'')+
+        mode==='five-substitutions'?'от трёх до пяти замен, ':
+        mode==='generated-goal-substitutions'?
+          '1–5 замен на подтверждённой игровым источником остановке, ':'')+
         'плотный матч атомарно записан, 270 PRNG draws, ревизия '+
         persisted.revision+' из 30. Активных ограничений: '+
         reviewed.holds.filter(hold=>hold.activeForNextFixture).length+'.');
@@ -253,6 +264,10 @@ export function M1DensePlaytest({career,disabled}:{
           onClick={()=>void playNext('substitution')}>
           Провести выбранную замену в плотном матче
         </button>
+        <button type="button" disabled={!actualOut||!actualIn}
+          onClick={()=>void playNext('generated-goal-substitutions',1)}>
+          Провести одну замену только на подтверждённой остановке
+        </button>
       </fieldset>
       <fieldset disabled={busy||disabled||!nextCandidate?.ok}>
         <legend>Две замены в одном матче (два окна или общее окно)</legend>
@@ -281,6 +296,11 @@ export function M1DensePlaytest({career,disabled}:{
           !actualSecondOut||!actualSecondIn}
           onClick={()=>void playNext('double-substitution')}>
           Провести две выбранные замены в плотном матче
+        </button>
+        <button type="button" disabled={!actualOut||!actualIn||
+          !actualSecondOut||!actualSecondIn}
+          onClick={()=>void playNext('generated-goal-substitutions',2)}>
+          Провести две замены только на подтверждённых остановках
         </button>
       </fieldset>
       <fieldset disabled={busy||disabled||!nextCandidate?.ok}>
@@ -330,6 +350,11 @@ export function M1DensePlaytest({career,disabled}:{
           substitutions.some(x=>!x.outPlayerId||!x.inPlayerId)}
           onClick={()=>void playNext('five-substitutions')}>
           Провести 3–5 выбранных замен в плотном матче
+        </button>
+        <button type="button" disabled={
+          substitutions.some(x=>!x.outPlayerId||!x.inPlayerId)}
+          onClick={()=>void playNext('generated-goal-substitutions',multiCount)}>
+          Провести 3–5 замен только на подтверждённых остановках
         </button>
       </fieldset>
     </div>

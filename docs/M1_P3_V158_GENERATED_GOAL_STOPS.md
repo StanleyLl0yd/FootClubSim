@@ -33,6 +33,13 @@ existing v132 and v136 legal player/bench admission paths; batches of
 source-generated stoppage proof, v120 CAS and v126 historical recheck,
 with no new save format or hidden change to earlier v132/v136/v138 claims.
 
+The experimental browser v120 playtest offers separate user actions for
+**1, 2, or 3–5 manager-selected substitutions** through the same opt-in
+v158 source-certified path. It does not silently upgrade the older
+unverified v132/v136/v138 actions: users see a refusal when the selected
+virtual checkpoint has no replayed goal restart. All actions still use
+the existing browser CAS/reload journal, with no M0 UI or save change.
+
 Only source-replayed fictional **goal/halftime** stops are admitted.
 Fouls, out-of-play, timed departure, fourth-official procedures,
 100-second substitutions, real referee/medical/KDK authority and full

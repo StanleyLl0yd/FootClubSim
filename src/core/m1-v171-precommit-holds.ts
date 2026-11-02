@@ -4,6 +4,8 @@ import {prepareM1V122DenseOrdinaryMatch}
   from './m1-v122-dense-ordinary-season.js';
 import {prepareM1V128ManualFictionalContinuation}
   from './m1-v128-manual-fictional-continuation.js';
+import {prepareM1V176DenseMedicalMatch}
+  from './m1-v176-dense-medical.js';
 import {applyM1V120Source,type M1V120Gate}
   from './m1-v120-playable-journal.js';
 import {reviewM1V126DenseSourceHolds}
@@ -15,6 +17,7 @@ const ADMITTED_COMMAND_PREFIXES=[
   'v122-ordinary-','v124-virtual-referee-',
   'v128-fictional-continuation-','v132-sub-','v136-double-',
   'v138-multi-','v158-goal-multi-','v166-combined-',
+  'v176-medical-',
 ] as const;
 
 /** Validate origins on the whole prospective persisted history, not only
@@ -56,6 +59,11 @@ export function admitM1V171SourceWithHolds(
   }
   if(last.commandId==='v128-fictional-continuation-'+last.fixtureId){
     const expected=prepareM1V128ManualFictionalContinuation(initial,journal);
+    if(!expected?.ok||!sameCanonicalValue(expected.request,request))
+      return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
+  }
+  if(last.commandId==='v176-medical-'+last.fixtureId){
+    const expected=prepareM1V176DenseMedicalMatch(initial,journal);
     if(!expected?.ok||!sameCanonicalValue(expected.request,request))
       return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
   }

@@ -5,6 +5,8 @@ import {verifyM1V124GeneratedSourceClaim}
   from './m1-v124-generated-source.js';
 import {verifyM1V166CombinedSourceClaim}
   from './m1-v166-combined-source.js';
+import {verifyM1V176MedicalSourceClaim}
+  from './m1-v176-dense-medical.js';
 import { generateDoubleRoundRobin } from './fixtures.js';
 import { isStableId } from './identifiers.js';
 import {deriveM1FixtureSeed} from './m1-fixture-seed.js';
@@ -175,6 +177,14 @@ function replay(initial:InitialCareerSave,entry:M1V120Entry,
          source.plannedCommands,scheduled.id,initial.selectedClubId,
          initial.rngState)))
     return false;
+  if(entry.commandId.startsWith('v176-medical-')&&
+      (entry.commandId!=='v176-medical-'+scheduled.id||
+       source.intraphaseMedical.length!==0||
+       source.trustedDecisions.length!==0||
+       !verifyM1V176MedicalSourceClaim(
+         prematch,source.policy,source.plannedCommands,
+         source.checkpointMedical,scheduled.id,initial.rngState)))
+    return false;
   const simulation=simulateM1V105SpecialGoalChronology(
     prematch,source.policy,source.plannedCommands,
     source.checkpointMedical,source.intraphaseMedical,source.trustedDecisions);
@@ -276,6 +286,14 @@ export function applyM1V120Source(
        !verifyM1V158SourceClaim(raw.prematch,raw.policy,
          raw.plannedCommands,fixture.id,initial.selectedClubId,
          initial.rngState)))
+    return fail('SOURCE_REPLAY_REJECTED');
+  if((raw.commandId as string).startsWith('v176-medical-')&&
+      (raw.commandId!=='v176-medical-'+fixture.id||
+       raw.intraphaseMedical.length!==0||
+       raw.trustedDecisions.length!==0||
+       !verifyM1V176MedicalSourceClaim(
+         raw.prematch,raw.policy,raw.plannedCommands,
+         raw.checkpointMedical,fixture.id,initial.rngState)))
     return fail('SOURCE_REPLAY_REJECTED');
   const simulation=simulateM1V105SpecialGoalChronology(
     raw.prematch,raw.policy,raw.plannedCommands,

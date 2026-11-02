@@ -18,6 +18,8 @@ import {prepareM1V158GeneratedGoalSubstitutions}
   from '../core/m1-v158-dense-goal-substitutions.js';
 import {prepareM1V166CombinedMatch}
   from '../core/m1-v166-combined-playable.js';
+import {prepareM1V176DenseMedicalMatch}
+  from '../core/m1-v176-dense-medical.js';
 import type {M1V132SubstitutionSelection}
   from '../core/m1-v132-dense-manager-substitution.js';
 import type {M1PrematchInput} from '../core/m1-clock.js';
@@ -148,13 +150,15 @@ export function M1DensePlaytest({career,disabled}:{
   }
   async function playNext(mode:'ordinary'|'virtual'|'manual'|'manual-virtual'|
     'substitution'|'double-substitution'|'five-substitutions'|
-    'generated-goal-substitutions'|'combined-referee-substitutions'|
+    'generated-goal-substitutions'|'medical'|'combined-referee-substitutions'|
     'combined-referee-automatic'=
       'ordinary',count=0){
     if(busy||disabled||!journal||!holdReview?.ok)return;
     setBusy(true);
     try{
-      const prepared=mode==='combined-referee-automatic'?
+      const prepared=mode==='medical'?
+        prepareM1V176DenseMedicalMatch(career,journal):
+        mode==='combined-referee-automatic'?
         prepareM1V166CombinedMatch(career,journal,[]):
         mode==='virtual'?
         prepareM1V124DenseVirtualRefereeMatch(career,journal):
@@ -204,6 +208,7 @@ export function M1DensePlaytest({career,disabled}:{
         return;
       }
       setMessage('v120: '+(mode==='virtual'?'виртуальный арбитр, ':
+        mode==='medical'?'вымышленный арбитр и временное лечение, ':
         mode==='manual'?'модельное продолжение, ':
         mode==='manual-virtual'?'повторный виртуальный арбитр, ':
         mode==='substitution'?'выбранная замена, ':
@@ -249,6 +254,10 @@ export function M1DensePlaytest({career,disabled}:{
           entry.source.trustedDecisions.length!==0)}
         onClick={()=>void playNext('virtual')}>
         Рассчитать следующий матч с виртуальным арбитром
+      </button>
+      <button type="button" disabled={busy||disabled||!nextCandidate?.ok}
+        onClick={()=>void playNext('medical')}>
+        Единая хронология: вымышленный арбитр, уход и возвращение после лечения
       </button>
       <button type="button" disabled={busy||disabled||!nextCandidate?.ok}
         onClick={()=>void playNext('combined-referee-automatic')}>

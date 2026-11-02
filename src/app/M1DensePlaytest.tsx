@@ -148,12 +148,15 @@ export function M1DensePlaytest({career,disabled}:{
   }
   async function playNext(mode:'ordinary'|'virtual'|'manual'|'manual-virtual'|
     'substitution'|'double-substitution'|'five-substitutions'|
-    'generated-goal-substitutions'|'combined-referee-substitutions'=
+    'generated-goal-substitutions'|'combined-referee-substitutions'|
+    'combined-referee-automatic'=
       'ordinary',count=0){
     if(busy||disabled||!journal||!holdReview?.ok)return;
     setBusy(true);
     try{
-      const prepared=mode==='virtual'?
+      const prepared=mode==='combined-referee-automatic'?
+        prepareM1V166CombinedMatch(career,journal,[]):
+        mode==='virtual'?
         prepareM1V124DenseVirtualRefereeMatch(career,journal):
         mode==='manual'?
           prepareM1V128ManualFictionalContinuation(career,journal):
@@ -209,9 +212,12 @@ export function M1DensePlaytest({career,disabled}:{
         mode==='generated-goal-substitutions'?
           '1–5 замен на подтверждённой игровым источником остановке, ':
         mode==='combined-referee-substitutions'?
-          'вымышленный арбитр и выбранные замены в одной хронологии, ':'')+
+          'вымышленный арбитр и выбранные замены в одной хронологии, ':
+        mode==='combined-referee-automatic'?
+          'вымышленный арбитр и модельные ограничения в одной хронологии, ':'')+
         'плотный матч атомарно записан, '+
-        (mode==='combined-referee-substitutions'?
+        (mode==='combined-referee-substitutions'||
+         mode==='combined-referee-automatic'?
           '270 базовых PRNG draws + независимый поток вымышленного арбитра':
           '270 PRNG draws')+
         ', ревизия '+
@@ -243,6 +249,10 @@ export function M1DensePlaytest({career,disabled}:{
           entry.source.trustedDecisions.length!==0)}
         onClick={()=>void playNext('virtual')}>
         Рассчитать следующий матч с виртуальным арбитром
+      </button>
+      <button type="button" disabled={busy||disabled||!nextCandidate?.ok}
+        onClick={()=>void playNext('combined-referee-automatic')}>
+        Единая хронология: виртуальный арбитр и модельные ограничения
       </button>
       <button type="button" disabled={busy||disabled||!journal||journal.revision>=30||
         !holdReview?.ok||!journal.entries.some(entry=>

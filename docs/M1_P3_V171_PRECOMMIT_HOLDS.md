@@ -23,3 +23,10 @@ canonical fixture-derived RNG seeds across the **entire** proposed journal.
 Legacy v120 journals retain read-only validation but unverifiable earlier entries
 cannot authorize subsequent CAS writes. This does not authenticate external
 referee, medical or KDK evidence and does not close P3-1.
+
+The v122 ordinary and v128 fictional-manual modes also require exact
+regeneration of the complete source request from their supported preparation
+paths; a valid command namespace plus canonical seed cannot authorize a
+caller-invented tactical plan or starting XI. This affects only new admission:
+legacy replay and saved formats remain unchanged. Other manager substitution
+and combined referee modes retain their independent source validators.

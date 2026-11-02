@@ -1,4 +1,6 @@
 import {simulateM1V19InternalReferee} from './m1-v19-internal-foul-injury.js';
+import {verifyM1V158SourceClaim}
+  from './m1-v158-generated-goal-stops.js';
 import type {M1PrematchInput} from './m1-clock.js';
 import {verifyM1V124DenseVirtualRefereeSource}
   from './m1-v124-dense-internal-referee.js';
@@ -73,7 +75,8 @@ export function reviewM1V126DenseSourceHolds(
        entry.commandId!=='v124-virtual-referee-'+entry.fixtureId&&
        entry.commandId!=='v132-sub-'+entry.fixtureId&&
        entry.commandId!=='v136-double-'+entry.fixtureId&&
-       entry.commandId!=='v138-multi-'+entry.fixtureId)continue;
+       entry.commandId!=='v138-multi-'+entry.fixtureId&&
+       entry.commandId!=='v158-goal-multi-'+entry.fixtureId)continue;
     // A user-requested v132 normal substitution is already checked for
     // physical legality by the full v120/v105 source replay above. It is not
     // a modelled referee sanction and must not mint or discharge any hold.
@@ -133,7 +136,10 @@ export function reviewM1V126DenseSourceHolds(
     }
     // Manager-selected normal changes never mint a modelled referee
     // incident. The exact physical source was already replayed in v120.
-    if(entry.commandId==='v138-multi-'+entry.fixtureId){
+    const generatedGoalStop=
+      entry.commandId==='v158-goal-multi-'+entry.fixtureId;
+    if(entry.commandId==='v138-multi-'+entry.fixtureId||
+       generatedGoalStop){
       const commands=source.plannedCommands;
       if(commands.length<3||commands.length>5)
         return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
@@ -144,7 +150,8 @@ export function reviewM1V126DenseSourceHolds(
         if(!c||typeof c!=='object'||Array.isArray(c)||
            Reflect.ownKeys(c).length!==10||
            c.schemaVersion!==1||c.kind!=='substitute-normal'||
-           c.commandId!=='v138-sub-'+entry.fixtureId+'-'+i||
+           c.commandId!==(generatedGoalStop?'v158-sub-':'v138-sub-')+
+             entry.fixtureId+'-'+i||
            c.fixtureId!==entry.fixtureId||
            c.teamId!==initial.selectedClubId||
            !c.actor||typeof c.actor!=='object'||
@@ -165,6 +172,11 @@ export function reviewM1V126DenseSourceHolds(
         out.add(c.outPlayerId);incoming.add(c.inPlayerId);
         previous=c.elapsedSeconds as number;
       }
+      if(generatedGoalStop&&!verifyM1V158SourceClaim(
+        {...source.prematch,catalog:initial.catalog},
+        source.policy,commands,entry.fixtureId,initial.selectedClubId,
+        initial.rngState))
+        return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
       continue;
     }
     if(!verifyM1V124DenseVirtualRefereeSource(

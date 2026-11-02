@@ -3,6 +3,8 @@ import {verifyM1V158SourceClaim}
   from './m1-v158-generated-goal-stops.js';
 import {verifyM1V124GeneratedSourceClaim}
   from './m1-v124-generated-source.js';
+import {verifyM1V166CombinedSourceClaim}
+  from './m1-v166-combined-source.js';
 import { generateDoubleRoundRobin } from './fixtures.js';
 import { isStableId } from './identifiers.js';
 import {deriveM1FixtureSeed} from './m1-fixture-seed.js';
@@ -156,6 +158,14 @@ function replay(initial:InitialCareerSave,entry:M1V120Entry,
        !verifyM1V124GeneratedSourceClaim(
          prematch,source.policy,source.plannedCommands,
          scheduled.id,initial.rngState)))return false;
+  if(entry.commandId.startsWith('v166-combined-')&&
+      (entry.commandId!=='v166-combined-'+scheduled.id||
+       source.checkpointMedical.length!==0||
+       source.intraphaseMedical.length!==0||
+       source.trustedDecisions.length!==0||
+       !verifyM1V166CombinedSourceClaim(prematch,source.policy,
+         source.plannedCommands,scheduled.id,initial.selectedClubId,
+         initial.rngState)))return false;
   if(entry.commandId.startsWith('v158-goal-multi-')&&
       (entry.commandId!=='v158-goal-multi-'+scheduled.id||
        source.checkpointMedical.length!==0||
@@ -248,6 +258,15 @@ export function applyM1V120Source(
        !verifyM1V124GeneratedSourceClaim(
          raw.prematch,raw.policy,raw.plannedCommands,
          fixture.id,initial.rngState)))
+    return fail('SOURCE_REPLAY_REJECTED');
+  if((raw.commandId as string).startsWith('v166-combined-')&&
+      (raw.commandId!=='v166-combined-'+fixture.id||
+       raw.checkpointMedical.length!==0||
+       raw.intraphaseMedical.length!==0||
+       raw.trustedDecisions.length!==0||
+       !verifyM1V166CombinedSourceClaim(raw.prematch,raw.policy,
+         raw.plannedCommands,fixture.id,initial.selectedClubId,
+         initial.rngState)))
     return fail('SOURCE_REPLAY_REJECTED');
   if((raw.commandId as string).startsWith('v158-goal-multi-')&&
       (raw.commandId!=='v158-goal-multi-'+fixture.id||

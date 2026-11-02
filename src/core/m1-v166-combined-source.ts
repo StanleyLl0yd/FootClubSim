@@ -1,0 +1,58 @@
+import {sameCanonicalValue} from './canonical-value.js';
+import {isPlainJsonTree} from './plain-json-tree.js';
+import {simulateM1V19InternalReferee} from './m1-v19-internal-foul-injury.js';
+import {buildM1V124GeneratedCommands}
+  from './m1-v124-generated-source.js';
+import {verifyM1V158SourceClaim}
+  from './m1-v158-generated-goal-stops.js';
+import {simulateM1V105SpecialGoalChronology}
+  from './m1-v105-special-goal-chronology.js';
+
+type Command=Readonly<Record<string,unknown>>;
+
+/** The referee orders at a shared second precede manager changes.
+ * Stable manager command order is retained for same-window substitutions.
+ */
+export function orderM1V166CombinedCommands(
+  referee:readonly Command[],substitutions:readonly Command[],
+):Command[]{
+  return [...referee,...substitutions].sort((a,b)=>
+    (a.elapsedSeconds as number)-(b.elapsedSeconds as number)||
+    Number(a.kind==='substitute-normal')-
+      Number(b.kind==='substitute-normal'));
+}
+
+/** One fictional referee + manager source, never official evidence.
+ * Every simulated whistle is checked against prior combined actions.
+ */
+export function verifyM1V166CombinedSourceClaim(
+  prematch:unknown,policy:unknown,commands:unknown,
+  fixtureId:string,selectedClubId:string,careerSeed:number,
+):boolean{
+  if(!isPlainJsonTree(prematch)||!isPlainJsonTree(policy)||
+     !isPlainJsonTree(commands)||!Array.isArray(commands)||
+     commands.length<1||commands.length>275||
+     typeof fixtureId!=='string'||!fixtureId)return false;
+  const generated=simulateM1V19InternalReferee(prematch,policy);
+  if(!generated.ok||generated.fixtureId!==fixtureId)return false;
+  const referee=buildM1V124GeneratedCommands(
+    generated.generatedIncidents,fixtureId);
+  const substitutions=(commands as Command[]).filter(
+    c=>c?.kind==='substitute-normal');
+  if(!verifyM1V158SourceClaim(prematch,policy,substitutions,
+      fixtureId,selectedClubId,careerSeed))return false;
+  const expected=orderM1V166CombinedCommands(referee,substitutions);
+  if(!sameCanonicalValue(commands,expected))return false;
+  for(const stop of new Set(substitutions.map(c=>
+    c.elapsedSeconds as number).filter(t=>t!==2700))){
+    const prior=expected.filter(c=>(c.elapsedSeconds as number)<stop);
+    const replay=simulateM1V105SpecialGoalChronology(
+      prematch,policy,prior,[],[],[]);
+    if(!replay.ok||!replay.events.some(e=>
+      e.type==='source'&&e.source.type==='shot'&&
+      e.source.outcome==='goal'&&e.elapsedSeconds===stop-1))
+      return false;
+  }
+  return simulateM1V105SpecialGoalChronology(
+    prematch,policy,expected,[],[],[]).ok;
+}

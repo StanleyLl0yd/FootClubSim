@@ -17,3 +17,9 @@ before commit and accepts a legal hold-excluding continuation.
 No saved format changes, no external medical or KDK authority and no
 automatic season progression. This is P3-1 supporting security work, not
 a closed block. P3 0/4, P5 0/5, exit audit #3 0/2. M2 forbidden.
+
+Source-origin admission additionally requires exact known command namespaces and
+canonical fixture-derived RNG seeds across the **entire** proposed journal.
+Legacy v120 journals retain read-only validation but unverifiable earlier entries
+cannot authorize subsequent CAS writes. This does not authenticate external
+referee, medical or KDK evidence and does not close P3-1.

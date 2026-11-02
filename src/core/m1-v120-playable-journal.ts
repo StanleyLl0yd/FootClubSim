@@ -1,4 +1,6 @@
 import { sameCanonicalValue } from './canonical-value.js';
+import {verifyM1V158SourceClaim}
+  from './m1-v158-generated-goal-stops.js';
 import { generateDoubleRoundRobin } from './fixtures.js';
 import { isStableId } from './identifiers.js';
 import { isPlainJsonTree } from './plain-json-tree.js';
@@ -126,6 +128,15 @@ function replay(initial:InitialCareerSave,entry:M1V120Entry,
   const source=entry.source;
   if (!sameCanonicalValue(source.prematch.fixture,scheduled)) return false;
   const prematch={...source.prematch,catalog:initial.catalog};
+  if(entry.commandId.startsWith('v158-goal-multi-')&&
+      (entry.commandId!=='v158-goal-multi-'+scheduled.id||
+       source.checkpointMedical.length!==0||
+       source.intraphaseMedical.length!==0||
+       source.trustedDecisions.length!==0||
+       !verifyM1V158SourceClaim(prematch,source.policy,
+         source.plannedCommands,scheduled.id,initial.selectedClubId,
+         initial.rngState)))
+    return false;
   const simulation=simulateM1V105SpecialGoalChronology(
     prematch,source.policy,source.plannedCommands,
     source.checkpointMedical,source.intraphaseMedical,source.trustedDecisions);
@@ -195,6 +206,15 @@ export function applyM1V120Source(
     return fail('WRONG_FIXTURE');
   if(!sameCanonicalValue(raw.prematch.catalog,initial.catalog))
     return fail('UNTRUSTED_CATALOG');
+  if((raw.commandId as string).startsWith('v158-goal-multi-')&&
+      (raw.commandId!=='v158-goal-multi-'+fixture.id||
+       raw.checkpointMedical.length!==0||
+       raw.intraphaseMedical.length!==0||
+       raw.trustedDecisions.length!==0||
+       !verifyM1V158SourceClaim(raw.prematch,raw.policy,
+         raw.plannedCommands,fixture.id,initial.selectedClubId,
+         initial.rngState)))
+    return fail('SOURCE_REPLAY_REJECTED');
   const simulation=simulateM1V105SpecialGoalChronology(
     raw.prematch,raw.policy,raw.plannedCommands,
     raw.checkpointMedical,raw.intraphaseMedical,raw.trustedDecisions);

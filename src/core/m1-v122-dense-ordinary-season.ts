@@ -8,6 +8,7 @@ import {simulateM1V105SpecialGoalChronology}
   from './m1-v105-special-goal-chronology.js';
 import {validateM1V120Journal,type M1V120Journal,type M1V120Apply}
   from './m1-v120-playable-journal.js';
+import {deriveM1FixtureSeed} from './m1-fixture-seed.js';
 import {RNG_VERSION} from './rng.js';
 import type {MatchRosterRules} from './model.js';
 import type {InitialCareerSave} from './save.js';
@@ -31,13 +32,6 @@ const POLICY={
   home:{assignedActor:{kind:'player'},availableStaffIds:[]},
   away:{assignedActor:{kind:'player'},availableStaffIds:[]},
 };
-function derivedSeed(base:number,fixtureId:string):number {
-  let value=base>>>0;
-  for(const character of fixtureId){
-    value=Math.imul(value^character.charCodeAt(0),16777619)>>>0;
-  }
-  return value||1;
-}
 
 /**
  * A deliberately narrow continuation of an ordinary-only v120 career.
@@ -94,7 +88,7 @@ export function buildM1V122NextOrdinaryFromVerified(
     homeTactics:defaultTacticalPlan(fixture.homeClubId),
     awayTactics:defaultTacticalPlan(fixture.awayClubId),
     rosterRules:RULES,rngAlgorithmVersion:RNG_VERSION,
-    rngSeed:derivedSeed(initial.rngState,fixture.id),
+    rngSeed:deriveM1FixtureSeed(initial.rngState,fixture.id),
   };
   const result=simulateM1V105SpecialGoalChronology(prematch,POLICY);
   if(!result.ok)return {ok:false,error:'SOURCE_GENERATION_REJECTED'};

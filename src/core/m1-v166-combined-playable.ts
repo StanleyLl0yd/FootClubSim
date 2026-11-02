@@ -4,6 +4,8 @@ import {buildM1V124GeneratedCommands}
   from './m1-v124-generated-source.js';
 import {prepareM1V158GeneratedGoalSubstitutions}
   from './m1-v158-dense-goal-substitutions.js';
+import {prepareM1V128ManualFictionalContinuation}
+  from './m1-v128-manual-fictional-continuation.js';
 import {orderM1V166CombinedCommands,
   verifyM1V166CombinedSourceClaim}
   from './m1-v166-combined-source.js';
@@ -20,8 +22,10 @@ export const M1_V166_COMBINED_SCHEMA=166 as const;
 export function prepareM1V166CombinedMatch(
   initial:InitialCareerSave,journal:M1V120Journal,choices:unknown,
 ){
-  const base=prepareM1V158GeneratedGoalSubstitutions(
-    initial,journal,choices);
+  const automatic=Array.isArray(choices)&&choices.length===0;
+  const base=automatic?
+    prepareM1V128ManualFictionalContinuation(initial,journal):
+    prepareM1V158GeneratedGoalSubstitutions(initial,journal,choices);
   if(!base||!base.ok)return base;
   const source=base.request;
   const generated=simulateM1V19InternalReferee(
@@ -41,7 +45,9 @@ export function prepareM1V166CombinedMatch(
   if(!result.ok)
     return {ok:false as const,error:'COMBINED_SOURCE_REJECTED' as const};
   return {...base,schemaVersion:M1_V166_COMBINED_SCHEMA,
-    status:'REPLAY_VERIFIED_FICTIONAL_REFEREE_AND_MANAGER' as const,
+    status:automatic?
+      'REPLAY_VERIFIED_FICTIONAL_REFEREE_AUTOMATIC' as const:
+      'REPLAY_VERIFIED_FICTIONAL_REFEREE_AND_MANAGER' as const,
     fictionalIncidentCount:generated.generatedIncidents.length,
     refereeAndMedicalAuthorityAuthenticated:false as const,
     fullOpponentHistoryAvailable:false as const,

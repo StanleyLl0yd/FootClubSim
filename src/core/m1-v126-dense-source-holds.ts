@@ -78,7 +78,8 @@ export function reviewM1V126DenseSourceHolds(
        entry.commandId!=='v132-sub-'+entry.fixtureId&&
        entry.commandId!=='v136-double-'+entry.fixtureId&&
        entry.commandId!=='v138-multi-'+entry.fixtureId&&
-       entry.commandId!=='v158-goal-multi-'+entry.fixtureId)continue;
+       entry.commandId!=='v158-goal-multi-'+entry.fixtureId&&
+       entry.commandId!=='v166-combined-'+entry.fixtureId)continue;
     // A user-requested v132 normal substitution is already checked for
     // physical legality by the full v120/v105 source replay above. It is not
     // a modelled referee sanction and must not mint or discharge any hold.

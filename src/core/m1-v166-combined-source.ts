@@ -5,6 +5,8 @@ import {buildM1V124GeneratedCommands}
   from './m1-v124-generated-source.js';
 import {verifyM1V158SourceClaim}
   from './m1-v158-generated-goal-stops.js';
+import {verifyM1V124GeneratedSourceClaim}
+  from './m1-v124-generated-source.js';
 import {simulateM1V105SpecialGoalChronology}
   from './m1-v105-special-goal-chronology.js';
 
@@ -31,7 +33,7 @@ export function verifyM1V166CombinedSourceClaim(
 ):boolean{
   if(!isPlainJsonTree(prematch)||!isPlainJsonTree(policy)||
      !isPlainJsonTree(commands)||!Array.isArray(commands)||
-     commands.length<1||commands.length>275||
+     commands.length>275||
      typeof fixtureId!=='string'||!fixtureId)return false;
   const generated=simulateM1V19InternalReferee(prematch,policy);
   if(!generated.ok||generated.fixtureId!==fixtureId)return false;
@@ -39,8 +41,12 @@ export function verifyM1V166CombinedSourceClaim(
     generated.generatedIncidents,fixtureId);
   const substitutions=(commands as Command[]).filter(
     c=>c?.kind==='substitute-normal');
-  if(!verifyM1V158SourceClaim(prematch,policy,substitutions,
-      fixtureId,selectedClubId,careerSeed))return false;
+  const identityOk=substitutions.length===0?
+    verifyM1V124GeneratedSourceClaim(prematch,policy,referee,
+      fixtureId,careerSeed):
+    verifyM1V158SourceClaim(prematch,policy,substitutions,
+      fixtureId,selectedClubId,careerSeed);
+  if(!identityOk)return false;
   const expected=orderM1V166CombinedCommands(referee,substitutions);
   if(!sameCanonicalValue(commands,expected))return false;
   for(const stop of new Set(substitutions.map(c=>

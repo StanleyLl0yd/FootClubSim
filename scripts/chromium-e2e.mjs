@@ -910,6 +910,132 @@ async function run() {
       await assertNondefaultCareer('replacement of previous substitute CAS/reload');
       console.log('PASS: substitute-of-substitute source CAS/reload');
 
+      // Select two legal outfield reserves with the outgoing starter's
+      // competition foreigner status; no mid-chain cap violations.
+      const byPlayer=new Map(JSON.parse(JSON.parse(downloadedJson).payload)
+        .catalog.players.map(p=>[p.id,p]));
+      const firstCandidates=await evaluate(`Array.from(
+        document.querySelector('#m1-dense-sub-out')?.options??[]
+      ).map(option=>option.value)`);
+      let firstIncoming=null,secondIncoming=null;
+      for(const outgoing of firstCandidates){
+        const starter=byPlayer.get(outgoing);
+        if(!starter||starter.primaryPosition==='GK')continue;
+        await evaluate(`(() => {
+          const el=document.querySelector('#m1-dense-sub-out');
+          const setter=Object.getOwnPropertyDescriptor(
+            HTMLSelectElement.prototype,'value').set;
+          setter.call(el,${JSON.stringify(outgoing)});
+          el.dispatchEvent(new Event('change',{bubbles:true}));
+        })()`);
+        await delay(150);
+        const options=await evaluate(`Array.from(
+          document.querySelector('#m1-dense-sub-in')?.options??[]
+        ).map(option=>option.value)`);
+        const matching=options.filter(id=>{
+          const p=byPlayer.get(id);
+          return p?.primaryPosition!=='GK'&&
+            p?.foreignerForCompetition===starter.foreignerForCompetition;
+        });
+        if(matching.length>=2){
+          [firstIncoming,secondIncoming]=matching;
+          break;
+        }
+      }
+      if(!firstIncoming||!secondIncoming)
+        throw new Error('No foreigner-cap-safe double-change candidate');
+      const choseFirst=await evaluate(`(() => {
+        const el=document.querySelector('#m1-dense-sub-in');
+        if(!Array.from(el?.options??[])
+          .some(x=>x.value===${JSON.stringify(firstIncoming)}))return false;
+        const setter=Object.getOwnPropertyDescriptor(
+          HTMLSelectElement.prototype,'value').set;
+        setter.call(el,${JSON.stringify(firstIncoming)});
+        el.dispatchEvent(new Event('change',{bubbles:true}));
+        return true;
+      })()`);
+      if(!choseFirst)throw new Error('First legal reserve not selectable');
+      await until(async()=>await evaluate(`(() => {
+        const second=document.querySelector('#m1-dense-sub-out-2');
+        return document.querySelector('#m1-dense-sub-in')?.value===
+          ${JSON.stringify(firstIncoming)}&&
+          Array.from(second?.options??[])
+            .some(x=>x.value===${JSON.stringify(firstIncoming)});
+      })()`),'first incoming becomes second outgoing option');
+      await evaluate(`(() => {
+        const second=document.querySelector('#m1-dense-sub-out-2');
+        const setter=Object.getOwnPropertyDescriptor(
+          HTMLSelectElement.prototype,'value').set;
+        setter.call(second,${JSON.stringify(firstIncoming)});
+        second.dispatchEvent(new Event('change',{bubbles:true}));
+      })()`);
+      await until(async()=>await evaluate(`(() => {
+        const second=document.querySelector('#m1-dense-sub-out-2');
+        const reserve=document.querySelector('#m1-dense-sub-in-2');
+        return second?.value===${JSON.stringify(firstIncoming)}&&
+          Array.from(reserve?.options??[])
+            .some(x=>x.value===${JSON.stringify(secondIncoming)});
+      })()`),'second same-status reserve selectable');
+      await evaluate(`(() => {
+        const el=document.querySelector('#m1-dense-sub-in-2');
+        const setter=Object.getOwnPropertyDescriptor(
+          HTMLSelectElement.prototype,'value').set;
+        setter.call(el,${JSON.stringify(secondIncoming)});
+        el.dispatchEvent(new Event('change',{bubbles:true}));
+      })()`);
+      await until(async()=>await evaluate(`(() => {
+        return document.querySelector('#m1-dense-sub-out-2')?.value===
+          ${JSON.stringify(firstIncoming)}&&
+          document.querySelector('#m1-dense-sub-in-2')?.value===
+          ${JSON.stringify(secondIncoming)};
+      })()`),'double substitute-of-substitute selector');
+      await click('Провести две выбранные замены в плотном матче');
+      try{
+        await waitText('v120: две выбранные замены, плотный матч атомарно записан, 270 PRNG draws, ревизия 10 из 30.');
+      }catch(error){
+        const detail=await evaluate(`(() => ({
+          status:document.querySelector('#m1-dense-title')?.closest('.panel')?.querySelector('[role="status"]')?.textContent,
+          buttonDisabled:document.querySelector('#m1-dense-sub-out-2')?.closest('fieldset')?.querySelector('button')?.disabled,
+          out1:document.querySelector('#m1-dense-sub-out')?.value,
+          in1:document.querySelector('#m1-dense-sub-in')?.value,
+          out2:document.querySelector('#m1-dense-sub-out-2')?.value,
+          in2:document.querySelector('#m1-dense-sub-in-2')?.value,
+          time1:document.querySelector('#m1-dense-sub-time')?.value,
+          time2:document.querySelector('#m1-dense-sub-time-2')?.value
+        }))()`);
+        throw new Error('Double-chain browser result: '+
+          JSON.stringify(detail)+'; '+String(error));
+      }
+      const chainStored=await evaluate(`new Promise((resolve,reject)=>{
+        const req=indexedDB.open('footclubsim-m1-v120',1);
+        req.onerror=()=>reject(req.error);
+        req.onsuccess=()=>{
+          const db=req.result;
+          const tx=db.transaction('dense-result-journals','readonly');
+          const get=tx.objectStore('dense-result-journals').get('m0-ui-initial-career');
+          get.onsuccess=()=>{
+            const journal=get.result;
+            resolve(journal?.revision===10?journal.entries[9]?.source.plannedCommands:null);
+          };
+          get.onerror=()=>reject(get.error);
+          tx.oncomplete=()=>db.close();
+          tx.onabort=()=>{db.close();reject(tx.error);};
+        };
+      })`);
+      if(!Array.isArray(chainStored)||chainStored.length!==2||
+          chainStored[0].inPlayerId!==firstIncoming||
+          chainStored[1].outPlayerId!==firstIncoming)
+        throw new Error('Double substitute-of-substitute source-CAS mismatch');
+      await send('Page.reload',{ignoreCache:true});
+      await waitText('Выберите вымышленный клуб');
+      await click('Восстановить из браузера');
+      await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+      await click('Создать или загрузить отдельный v120');
+      await waitText('v120: проверен и загружен отдельный журнал, матчей: 10.');
+      await assertNondefaultCareer('double substitute-of-substitute CAS/reload');
+      console.log('PASS: exactly two chained normal changes source-CAS/reload');
+
+
 
 
     }

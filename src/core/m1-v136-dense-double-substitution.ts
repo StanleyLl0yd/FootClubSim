@@ -7,6 +7,7 @@ import {simulateM1V105SpecialGoalChronology}
 import type {M1V120Journal,M1V120Apply}
   from './m1-v120-playable-journal.js';
 import type {Fixture} from './fixtures.js';
+import type {M1PrematchInput} from './m1-clock.js';
 import type {InitialCareerSave} from './save.js';
 
 export const M1_V136_DENSE_DOUBLE_SUBSTITUTION_SCHEMA=136 as const;
@@ -31,20 +32,48 @@ export function prepareM1V136DenseDoubleSubstitution(
   if(!isPlainJsonTree(choices)||!Array.isArray(choices)||
       choices.length!==2)return {ok:false,error:'INVALID_SELECTION'};
   const [a,b]=choices as M1V132SubstitutionSelection[];
+  if(!b)return {ok:false,error:'INVALID_SELECTION'};
   const first=prepareM1V132DenseManagerSubstitution(initial,journal,a);
   if(!first)return null;
   if(!first.ok)return {ok:false,error:first.error};
-  const second=prepareM1V132DenseManagerSubstitution(initial,journal,b);
-  if(!second)return null;
-  if(!second.ok)return {ok:false,error:second.error};
-  if(first.fixture.id!==second.fixture.id||
-      b!.elapsedSeconds<a!.elapsedSeconds||
-      a!.outPlayerId===b!.outPlayerId||
-      a!.inPlayerId===b!.inPlayerId)
-    return {ok:false,error:'INVALID_SELECTION'};
   const firstCommand=first.request.plannedCommands[0] as Record<string,unknown>;
-  const secondCommand=second.request.plannedCommands[0] as Record<string,unknown>;
   const fixtureId=first.fixture.id;
+  if(b.elapsedSeconds<a!.elapsedSeconds||
+      a!.outPlayerId===b.outPlayerId||
+      a!.inPlayerId===b.inPlayerId)
+    return {ok:false,error:'INVALID_SELECTION'};
+  let secondCommand:Record<string,unknown>;
+  if(b.outPlayerId===a!.inPlayerId){
+    // A prior incoming substitute is now active; it may later leave
+    // under the same original physical source and five-change rules.
+    if(!isPlainJsonTree(b)||!b||typeof b!=='object'||
+        Array.isArray(b)||Reflect.ownKeys(b).length!==3||
+        typeof b.inPlayerId!=='string'||
+        !Number.isSafeInteger(b.elapsedSeconds)||
+        b.elapsedSeconds<300||b.elapsedSeconds>5100||
+        b.elapsedSeconds%300!==0)
+      return {ok:false,error:'INVALID_SELECTION'};
+    const prematch=first.request.prematch as M1PrematchInput;
+    const own=first.fixture.homeClubId===initial.selectedClubId?
+      prematch.homeLineup:prematch.awayLineup;
+    const byId=new Map(initial.catalog.players.map(p=>[p.id,p]));
+    if(!own.bench.includes(b.inPlayerId)||
+        byId.get(a!.inPlayerId)?.primaryPosition==='GK' !==
+          (byId.get(b.inPlayerId)?.primaryPosition==='GK'))
+      return {ok:false,error:'INVALID_SELECTION'};
+    // Do not alias the first command's actor: source JSON must be a tree.
+    secondCommand={...firstCommand,actor:{kind:'player'},
+      elapsedSeconds:b.elapsedSeconds,
+      stoppage:b.elapsedSeconds===2700?'half-time':'referee-authorized',
+      outPlayerId:b.outPlayerId,inPlayerId:b.inPlayerId};
+  }else{
+    const second=prepareM1V132DenseManagerSubstitution(initial,journal,b);
+    if(!second)return null;
+    if(!second.ok)return {ok:false,error:second.error};
+    if(first.fixture.id!==second.fixture.id)
+      return {ok:false,error:'INVALID_SELECTION'};
+    secondCommand=second.request.plannedCommands[0] as Record<string,unknown>;
+  }
   const commands=[
     {...firstCommand,commandId:'v136-sub-'+fixtureId+'-1'},
     {...secondCommand,commandId:'v136-sub-'+fixtureId+'-2'},

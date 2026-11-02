@@ -60,7 +60,8 @@ export function M1DensePlaytest({career,disabled}:{
       (incoming?.primaryPosition==='GK');
   });
   const actualIn=availableIn.includes(inId)?inId:availableIn[0]??'';
-  const secondOutOptions=outOptions.filter(id=>id!==actualOut);
+  const secondOutOptions=[...outOptions.filter(id=>id!==actualOut),
+    ...(actualIn?[actualIn]:[])];
   const actualSecondOut=secondOutOptions.includes(secondOutId)?
     secondOutId:secondOutOptions[0]??'';
   const availableSecondIn=(clubLineup?.bench??[]).filter(id=>{

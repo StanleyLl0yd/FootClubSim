@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "milestone": "M1",
+  "policy": {
+    "holdout2024_25": "SEALED_UNTIL_PREDECLARED_FREEZE",
+    "historicalScoreMatchingRequired": false,
+    "fullRepositoryExitAuditsRequired": 2,
+    "m2Permitted": false
+  },
+  "blocks": [
+    {
+      "id": "P3-1",
+      "issue": 29,
+      "title": "Unified match authority and physical XI",
+      "dependsOn": [],
+      "criteria": [
+        "Running and stopped clocks, generated stoppages, live physical XI and shooter/keeper eligibility share one replayable authoritative source.",
+        "Automatic and manager-directed matches follow the same lawful command path; unimplemented exceptional decisions fail closed.",
+        "Goals, substitutions, discipline and temporary player absences change subsequent match actions rather than advisory-only views."
+      ],
+      "next": "Integrate currently separate v105/v138 and medical/referee paths; regression for 10-player restart and live shots.",
+      "state": "open",
+      "verification": null
+    },
+    {
+      "id": "P3-2",
+      "issue": 29,
+      "title": "Medical events and exceptions",
+      "dependsOn": [
+        "P3-1"
+      ],
+      "criteria": [
+        "Off-field treatment, return after running-time threshold, real-time player presence and all applicable 2026/27 Law 5 exceptions are represented coherently.",
+        "Fictional internal medical incidents are explicitly distinguished from external clinical clearance; unsupported diagnoses and evidence never authorize play.",
+        "Positive and forged-evidence scenarios cover goalkeeper, concussion, collision, severe injury and injured penalty taker."
+      ],
+      "next": "Complete source-driven medical/return transitions and executable exception coverage.",
+      "state": "open",
+      "verification": null
+    },
+    {
+      "id": "P3-3",
+      "issue": 29,
+      "title": "Discipline and match-specific suspensions",
+      "dependsOn": [
+        "P3-1"
+      ],
+      "criteria": [
+        "Cautions, second yellow, direct red, in-match numerical strength, next-match eligibility and duplicate events have one verified lifecycle.",
+        "Fictional game sanction policy and external KDK orders are separate; unresolved official rulings fail closed rather than silently assume an empty ban.",
+        "Cross-match, appeal/expiry and two-team cases have deterministic replay and typed refusals."
+      ],
+      "next": "Integrate card carryover and authority-bound disciplinary ledger into playable career.",
+      "state": "open",
+      "verification": null
+    },
+    {
+      "id": "P3-4",
+      "issue": 29,
+      "title": "Complete two-team career chronology",
+      "dependsOn": [
+        "P3-1",
+        "P3-2",
+        "P3-3"
+      ],
+      "criteria": [
+        "A coherent season source accounts for all 240 fixtures, both teams, rescheduling and known outstanding eligibility events without inventing missing opponent history.",
+        "Atomic journal apply, restart, duplicate/stale writes, out-of-order fixture claims and historical hold bypasses preserve replay and existing saves.",
+        "Full-season automatic and manual continuity agree on source events and never quietly re-enable ineligible players."
+      ],
+      "next": "Replace selected-club-only unknown opponent history with replay-verified two-team coverage and season gates.",
+      "state": "open",
+      "verification": null
+    },
+    {
+      "id": "P5-1",
+      "issue": 31,
+      "title": "Lawful comparable metric taxonomy",
+      "dependsOn": [],
+      "criteria": [
+        "Every selected real provider reference has documented event meaning, rights/provenance, version and frozen aggregate population.",
+        "Real all-type goals, open-play goals, saved/blocked/last-line attempts, xG, cards and injuries have compatible categories or explicit not-comparable exclusions.",
+        "Reference metrics and numerical tolerances are frozen before final model fitting; sealed 2024/25 holdout stays unopened."
+      ],
+      "next": "Reconcile provider-specific field definitions and unlicensed gaps; freeze development-only baselines.",
+      "state": "open",
+      "verification": null
+    },
+    {
+      "id": "P5-2",
+      "issue": 31,
+      "title": "Final playable-engine statistical calibration",
+      "dependsOn": [
+        "P3-1",
+        "P3-2",
+        "P3-3",
+        "P3-4",
+        "P5-1"
+      ],
+      "criteria": [
+        "Reproducible 10000-plus independently seeded balanced full-engine games with recorded versions and whole-career cluster uncertainty.",
+        "Goals, draws, home/away, shots, xG, cards and injuries are reported separately; missing or incompatible metrics cannot falsely pass.",
+        "Predeclared broad aggregate tolerance and tactical/player sensitivity gates pass on the exact playable engine, not an isolated research candidate."
+      ],
+      "next": "Freeze integrated engine, measure its actual output and tune only legitimate development references.",
+      "state": "open",
+      "verification": null
+    },
+    {
+      "id": "P5-3",
+      "issue": 31,
+      "title": "Independent held-out validation",
+      "dependsOn": [
+        "P5-2"
+      ],
+      "criteria": [
+        "Model, metrics, rights and thresholds are frozen before any 2024/25 holdout inspection.",
+        "One independent evaluation records exact source/hash, populations, intervals, deviations and failed/unsupported gates without retuning to held-out outcomes.",
+        "No fixture-by-fixture score or historical winner matching is required; approved aggregate behavior is tested."
+      ],
+      "next": "Execute one-time holdout protocol only after all prerequisites are evidence-verified.",
+      "state": "open",
+      "verification": null
+    },
+    {
+      "id": "P5-4",
+      "issue": 31,
+      "title": "Integrated property, fuzz and recovery gates",
+      "dependsOn": [
+        "P3-4"
+      ],
+      "criteria": [
+        "Versioned legal and invalid event sequences, property/fuzz seeds, replay, manual/automatic equivalence and source-tamper detection cover the final engine.",
+        "All failures preserve journal revisions and existing saves; native browser CAS/reload, duplicate and fault cases pass on exact commit.",
+        "Results include real sample denominators, failures and reproducible CI evidence without replacing repository-wide exit audit."
+      ],
+      "next": "Consolidate existing campaigns around the selected playable path; add missing cross-module and fault-injection cases.",
+      "state": "open",
+      "verification": null
+    },
+    {
+      "id": "P5-5",
+      "issue": 31,
+      "title": "Accepted real-platform performance budget",
+      "dependsOn": [
+        "P3-4"
+      ],
+      "criteria": [
+        "Predeclared full-season runtime, memory and journal-size budgets are documented with target desktop browser/platform conditions.",
+        "Real Chrome/Edge and Safari replay, 240-fixture persistence/reload, quota/eviction and interrupted operations are measured.",
+        "Published exact-head CI/runner logs prove accepted budgets without mislabeling research safety abort caps as user SLAs."
+      ],
+      "next": "Define measurable limits, profile full integrated season and optimize only proven bottlenecks.",
+      "state": "open",
+      "verification": null
+    }
+  ]
+}

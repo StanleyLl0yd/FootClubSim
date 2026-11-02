@@ -1,4 +1,6 @@
 import {useMemo,useState} from 'react';
+import {projectM1V179MatchClock}
+  from '../core/m1-v179-source-clock.js';
 import { prepareM1V124DenseVirtualRefereeMatch }
   from '../core/m1-v124-dense-internal-referee.js';
 import { reviewM1V126DenseSourceHolds,
@@ -43,6 +45,11 @@ export function M1DensePlaytest({career,disabled}:{
   const [multiCount,setMultiCount]=useState(3);
   const [extraChoices,setExtraChoices]=useState<
     readonly M1V132SubstitutionSelection[]>([]);
+  const latestClock=useMemo(()=>{
+    const entry=journal?.entries.at(-1);
+    return entry?projectM1V179MatchClock(
+      entry.source.prematch,entry.result):null;
+  },[journal]);
   const nextCandidate=useMemo(()=>journal&&holdReview?.ok&&journal.revision<30?
     prepareM1V128ManualFictionalContinuation(career,journal):null,
   [career,journal,holdReview]);
@@ -401,6 +408,12 @@ export function M1DensePlaytest({career,disabled}:{
     </div>
     <p role="status">{message}</p>
     {journal&&<p>v120 ревизия: {journal.revision} · отдельный IndexedDB CAS</p>}
+    {latestClock?.ok&&<p>Единые модельные часы: игровой ход 90:00,
+      включая остановки и перерыв — {Math.floor(latestClock.wallFullTimeSeconds/60)}:
+      {String(latestClock.wallFullTimeSeconds%60).padStart(2,'0')}.
+      На поле к завершению: {latestClock.snapshots.at(-1)!.homePresent.length} /
+      {latestClock.snapshots.at(-1)!.awayPresent.length}.
+      Длительности остановок вымышлены и не являются статистикой матчей.</p>}
     {holdReview?.ok&&<div aria-label="Вымышленные межматчевые ограничения">
       <p>Проверено вымышленных событий: {holdReview.modelledIncidentCount}.
         Активных ограничений: {holdReview.holds.filter(h=>h.activeForNextFixture).length}.</p>

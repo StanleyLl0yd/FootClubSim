@@ -90,7 +90,16 @@ try {
   const { send } = connection;
   await send('Page.enable');
   await send('Runtime.enable');
-  await send('Page.navigate', { url });
+  try {
+    await send('Page.navigate', { url });
+  } catch (error) {
+    // The browser can complete navigation while dropping its CDP ACK.
+    // Never retry navigation (which could replay page side effects).
+    // Only the actual page's precise post-reload _PASS marker admits success.
+    if (!(error instanceof Error) ||
+        error.message !== 'CDP request timed out: Page.navigate') throw error;
+    console.warn('Page.navigate ACK timed out; verifying actual page marker');
+  }
   const result = await until(async () => {
     // Navigation can briefly invalidate Runtime's execution context.
     const reply = await send('Runtime.evaluate', {

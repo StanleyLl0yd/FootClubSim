@@ -1149,10 +1149,26 @@ async function run() {
     // A real application-process restart with the SAME isolated profile must
     // preserve the committed revision-0 save. InPrivate mode is tested separately.
     void send('Browser.close').catch(() => {});
-    await until(
-      () => browser.exitCode !== null || browser.signalCode !== null,
-      'graceful Chrome/Edge process exit', 15_000,
-    );
+    try {
+      await until(
+        () => browser.exitCode !== null || browser.signalCode !== null,
+        'graceful Chrome/Edge process exit', 12_000,
+      );
+    } catch (error) {
+      // A stuck test-only browser shutdown must not prevent the crash-
+      // recovery check. Require the process to exit before reopening its
+      // profile; a failed restart or save restore still fails this test.
+      if (browser.exitCode === null && browser.signalCode === null) {
+        console.warn('Browser.close stalled; terminating isolated test browser before profile restart');
+        browser.kill();
+        await until(
+          () => browser.exitCode !== null || browser.signalCode !== null,
+          'forced isolated browser process exit', 15_000,
+        );
+      } else {
+        throw error;
+      }
+    }
     socket?.close();
     ({ browser, port } = await startBrowser(profile));
     const secondTarget = await until(async () => {

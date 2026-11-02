@@ -141,7 +141,8 @@ export function reviewM1V126DenseSourceHolds(
     if(entry.commandId==='v138-multi-'+entry.fixtureId||
        generatedGoalStop){
       const commands=source.plannedCommands;
-      if(commands.length<3||commands.length>5)
+      if(commands.length<(generatedGoalStop?1:3)||
+         commands.length>5)
         return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
       const out=new Set<string>(),incoming=new Set<string>();
       let previous=-1;

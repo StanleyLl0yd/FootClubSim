@@ -5,7 +5,7 @@ substitutions at 300-second boundaries, but its `referee-authorized`
 stoppage label is **not** authenticated. A self-declared label must
 not turn any arbitrary checkpoint into a generated fictional whistle.
 
-This opt-in **versioned** adapter admits 3–5 normal selected changes only
+This opt-in **versioned** adapter admits 1–5 normal selected changes only
 at halftime (the distinct lawful exemption) or at a 300-second boundary
 **immediately after a seed-generated open-play goal at second
 299, 599, ...**. Each distinct in-play window independently recomputes
@@ -26,6 +26,12 @@ RNG, shots and result. The same gate executes again on journal reload;
 invalid v158 claimed authority can neither be stored nor revived. Imaginary goal stops fail closed; old v138 sources
 are still separately recognized as **unverified referee-origin**
 manager changes, not silently upgraded.
+
+**v161 extension:** single and paired manager changes now reuse the
+existing v132 and v136 legal player/bench admission paths; batches of
+3–5 still use v138. All 1–5 changes converge on the same v158
+source-generated stoppage proof, v120 CAS and v126 historical recheck,
+with no new save format or hidden change to earlier v132/v136/v138 claims.
 
 Only source-replayed fictional **goal/halftime** stops are admitted.
 Fouls, out-of-play, timed departure, fourth-official procedures,

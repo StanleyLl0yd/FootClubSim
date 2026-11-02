@@ -1,6 +1,8 @@
-import {sameCanonicalValue} from './canonical-value.js';
-import {simulateM1V19InternalReferee,
-  type M1V19GeneratedIncident} from './m1-v19-internal-foul-injury.js';
+import {buildM1V124GeneratedCommands,
+  verifyM1V124GeneratedSourceClaim}
+  from './m1-v124-generated-source.js';
+import {simulateM1V19InternalReferee}
+  from './m1-v19-internal-foul-injury.js';
 import {simulateM1V105SpecialGoalChronology}
   from './m1-v105-special-goal-chronology.js';
 import {prepareM1V122DenseOrdinaryMatch,
@@ -22,16 +24,6 @@ export type M1V124DenseRefereeProposal=
       authorityAuthenticated:false;
       furtherExceptionalLifecycleSupported:false}>;
 
-function commands(incidents:readonly M1V19GeneratedIncident[],
-  fixtureId:string){
-  return incidents.map(incident=>({
-    schemaVersion:1 as const,id:incident.decisionId,
-    fixtureId,teamId:incident.teamId,playerId:incident.playerId,
-    elapsedSeconds:incident.elapsedSeconds,kind:incident.sanction,
-    origin:incident.sanction==='injury-withdrawal'?
-      'trusted-medical' as const:'trusted-referee' as const,
-  }));
-}
 /** One fictional v19 referee calculation, merged into the dense v105 source.
  * No external or client-supplied command list is trusted or accepted.
  */
@@ -55,7 +47,8 @@ export function buildM1V124VirtualRefereeFromVerifiedBase(
     source.prematch,source.policy);
   if(!generated.ok)
     return {ok:false,error:'REFEREE_REPLAY_REJECTED'};
-  const plannedCommands=commands(generated.generatedIncidents,base.fixture.id);
+  const plannedCommands=buildM1V124GeneratedCommands(
+    generated.generatedIncidents,base.fixture.id);
   const dense=simulateM1V105SpecialGoalChronology(
     source.prematch,source.policy,plannedCommands,[],[],[]);
   if(!dense.ok)return {ok:false,error:'SOURCE_GENERATION_REJECTED'};
@@ -84,8 +77,7 @@ export function verifyM1V124DenseVirtualRefereeSource(
       entry.source.intraphaseMedical.length!==0||
       entry.source.trustedDecisions.length!==0)return false;
   const prematch={...entry.source.prematch,catalog:initial.catalog};
-  const replay=simulateM1V19InternalReferee(prematch,entry.source.policy);
-  if(!replay.ok)return false;
-  return sameCanonicalValue(entry.source.plannedCommands,
-    commands(replay.generatedIncidents,fixtureId));
+  return verifyM1V124GeneratedSourceClaim(
+    prematch,entry.source.policy,entry.source.plannedCommands,
+    fixtureId,initial.rngState);
 }

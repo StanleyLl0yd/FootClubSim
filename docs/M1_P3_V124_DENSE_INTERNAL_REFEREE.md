@@ -11,6 +11,15 @@ effects, and returns a schema-120 request for the separate v120 career
 journal. The full journal and generator commands can be independently
 reconstructed and compared to reject fabricated incident identifiers.
 
+The source identity is now checked at **both v120 write and replay**:
+the virtual v124 namespace requires the exact canonical fixture seed
+from the immutable career, exact regenerated incident commands, and no
+unrelated medical or goal adjudication payload. Even an otherwise
+replayable event list with a substituted fixture RNG seed fails closed.
+Older unverified event namespaces do not become authenticated by this
+check. No original career RNG, save schema or generated football event
+probabilities are changed.
+
 The adapter **does not** accept clinical evidence or authenticate
 real-world referee/KDK decisions. A virtual injury is an uncalibrated
 fictional event, not a diagnosed condition or medical clearance.

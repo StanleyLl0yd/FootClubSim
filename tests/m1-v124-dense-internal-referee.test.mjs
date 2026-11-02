@@ -6,6 +6,10 @@ import {startM1V120Journal,applyM1V120Source,
   validateM1V120Journal} from '../dist/core/m1-v120-playable-journal.js';
 import {prepareM1V122DenseOrdinaryMatch}
   from '../dist/core/m1-v122-dense-ordinary-season.js';
+import {simulateM1V105SpecialGoalChronology}
+  from '../dist/core/m1-v105-special-goal-chronology.js';
+import {verifyM1V124GeneratedSourceClaim}
+  from '../dist/core/m1-v124-generated-source.js';
 import {prepareM1V124DenseVirtualRefereeMatch,
   verifyM1V124DenseVirtualRefereeSource}
   from '../dist/core/m1-v124-dense-internal-referee.js';
@@ -63,4 +67,43 @@ test('v124 validation denies unsupported historical state rather than clearing s
   assert.equal(commit.ok,true);
   assert.equal(verifyM1V124DenseVirtualRefereeSource(
     career,commit.journal,second.fixtureId),true);
+});
+
+test('v124 journal refuses independently replayable but noncanonical referee seed',()=>{
+  const catalog=createSyntheticRplScaleCatalog(2026);
+  let exercised=false;
+  for(let seed=1;seed<=40&&!exercised;seed++){
+    const career=createInitialCareer(catalog,catalog.clubs[0].id,seed,
+      'm1-v124-canonical-source-'+seed);
+    const started=startM1V120Journal(career);
+    assert.equal(started.ok,true);
+    const proposal=prepareM1V124DenseVirtualRefereeMatch(
+      career,started.journal);
+    if(!proposal?.ok||proposal.incidents===0)continue;
+    const forged=structuredClone(proposal.request);
+    forged.prematch.rngSeed=
+      (forged.prematch.rngSeed^0x9e3779b9)>>>0||1;
+    const alternate=simulateM1V105SpecialGoalChronology(
+      forged.prematch,forged.policy,forged.plannedCommands,[],[],[]);
+    if(!alternate.ok)continue;
+    forged.result=alternate;
+    assert.equal(verifyM1V124GeneratedSourceClaim(
+      forged.prematch,forged.policy,forged.plannedCommands,
+      proposal.fixtureId,career.rngState),false);
+    assert.deepEqual(applyM1V120Source(
+      career,started.journal,forged),
+      {ok:false,error:'SOURCE_REPLAY_REJECTED'});
+    const original=applyM1V120Source(
+      career,started.journal,proposal.request);
+    assert.equal(original.ok,true);
+    const tampered=structuredClone(original.journal);
+    tampered.entries[0].source.prematch.rngSeed=
+      forged.prematch.rngSeed;
+    tampered.entries[0].result=alternate;
+    assert.deepEqual(validateM1V120Journal(career,tampered),
+      {ok:false,error:'INVALID_JOURNAL'});
+    exercised=true;
+  }
+  assert.equal(exercised,true,
+    'A replayable noncanonical source must be rejected at write and read');
 });

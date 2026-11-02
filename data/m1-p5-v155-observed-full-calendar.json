@@ -1,0 +1,689 @@
+{
+  "schemaVersion": 155,
+  "status": "OBSERVED_FULL_SYNTHETIC_CALENDAR_NOT_CALIBRATED",
+  "sourceCommit": "034c74712cf9b23f5eec1a2829bdad9d1eabb166",
+  "sourceWorkflowRun": 41413788321,
+  "sourceWorkflowJobCount": 16,
+  "sourceJobOriginIndependentlyAuthenticated": false,
+  "independentInputUnit": "FIXTURE_SEED_PAIR_NOT_REAL_MATCH",
+  "syntheticFixtures": 240,
+  "seedsPerFixture": 48,
+  "uniqueFixtureSeedPairs": 11520,
+  "modelRunAttempts": 34560,
+  "forgedEventNegativeChecks": 240,
+  "sourceReplayVerified": true,
+  "referenceCategoryAligned": false,
+  "releaseP5Accepted": false,
+  "holdout2024_25Used": false,
+  "totals": {
+    "baseline": {
+      "attempted": 11520,
+      "accepted": 11520,
+      "rejected": 0,
+      "goals": 45105,
+      "shots": 246948,
+      "onTarget": 125905,
+      "xgMilli": 45198683
+    },
+    "candidateA": {
+      "attempted": 11520,
+      "accepted": 11520,
+      "rejected": 0,
+      "goals": 30154,
+      "shots": 266744,
+      "onTarget": 98572,
+      "xgMilli": 30265308
+    },
+    "candidateB": {
+      "attempted": 11520,
+      "accepted": 11520,
+      "rejected": 0,
+      "goals": 29133,
+      "shots": 266744,
+      "onTarget": 94070,
+      "xgMilli": 29289707
+    }
+  },
+  "shards": [
+    {
+      "group": 0,
+      "jobId": 125172643022,
+      "resultSha256": "f6f37557dee6d45bad9e6b4e5f656074c25ce7587649dd0b833bd683c9f8a045",
+      "negativeChecks": 15,
+      "observedWallMs": 35883.63192,
+      "observedPeakRssMiB": 133.69140625,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15539,
+          "onTarget": 7950,
+          "goals": 2856,
+          "xgMilli": 2836409,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16826,
+          "onTarget": 6277,
+          "goals": 1943,
+          "xgMilli": 1906226,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16826,
+          "onTarget": 5974,
+          "goals": 1866,
+          "xgMilli": 1844817,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 1,
+      "jobId": 125172642995,
+      "resultSha256": "927d104c7783257458778252a465beac50540835540cda8165d11df2ac6646d0",
+      "negativeChecks": 15,
+      "observedWallMs": 27725.111948,
+      "observedPeakRssMiB": 133.97265625,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15595,
+          "onTarget": 8003,
+          "goals": 2934,
+          "xgMilli": 2852559,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16859,
+          "onTarget": 6326,
+          "goals": 1985,
+          "xgMilli": 1912900,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16859,
+          "onTarget": 6017,
+          "goals": 1925,
+          "xgMilli": 1851250,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 2,
+      "jobId": 125172642983,
+      "resultSha256": "4bc7534aa12a55013b337118b36f25dfff690e22104b3f8e152f45c20f4213e3",
+      "negativeChecks": 15,
+      "observedWallMs": 35579.706748,
+      "observedPeakRssMiB": 134.828125,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15282,
+          "onTarget": 7739,
+          "goals": 2720,
+          "xgMilli": 2815845,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16453,
+          "onTarget": 5977,
+          "goals": 1781,
+          "xgMilli": 1877287,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16453,
+          "onTarget": 5722,
+          "goals": 1709,
+          "xgMilli": 1816722,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 3,
+      "jobId": 125172643007,
+      "resultSha256": "93d3b94adb433440e3d5853c58a07f6654cd636bb5a7fe275dc46e07519d5da9",
+      "negativeChecks": 15,
+      "observedWallMs": 35133.775786,
+      "observedPeakRssMiB": 132.79296875,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15392,
+          "onTarget": 7891,
+          "goals": 2865,
+          "xgMilli": 2829738,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16626,
+          "onTarget": 6159,
+          "goals": 1945,
+          "xgMilli": 1896051,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16626,
+          "onTarget": 5902,
+          "goals": 1868,
+          "xgMilli": 1834970,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 4,
+      "jobId": 125172643237,
+      "resultSha256": "5c586519acaf100f5d47ba8a189d1a9ff5ce0d2c67b78f2a00bd6b23a82e27a7",
+      "negativeChecks": 15,
+      "observedWallMs": 28395.623663,
+      "observedPeakRssMiB": 134.7265625,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15386,
+          "onTarget": 7900,
+          "goals": 2806,
+          "xgMilli": 2783901,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16602,
+          "onTarget": 6232,
+          "goals": 1851,
+          "xgMilli": 1862672,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16602,
+          "onTarget": 5947,
+          "goals": 1803,
+          "xgMilli": 1802643,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 5,
+      "jobId": 125172642922,
+      "resultSha256": "6c6a045f7ca521b74c684c3b2600bd1b43a9a356feb0840bb6072caad03c3f4e",
+      "negativeChecks": 15,
+      "observedWallMs": 36137.831159,
+      "observedPeakRssMiB": 134.7421875,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15320,
+          "onTarget": 7770,
+          "goals": 2812,
+          "xgMilli": 2814223,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16538,
+          "onTarget": 6074,
+          "goals": 1857,
+          "xgMilli": 1880424,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16538,
+          "onTarget": 5810,
+          "goals": 1795,
+          "xgMilli": 1819806,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 6,
+      "jobId": 125172643130,
+      "resultSha256": "c97fd0dad7c7d20fb0f990bae639a025fa0177c8f930267722a821c44baa7e27",
+      "negativeChecks": 15,
+      "observedWallMs": 36071.925568,
+      "observedPeakRssMiB": 134.265625,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15478,
+          "onTarget": 7958,
+          "goals": 2822,
+          "xgMilli": 2819530,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16724,
+          "onTarget": 6205,
+          "goals": 1881,
+          "xgMilli": 1887811,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16724,
+          "onTarget": 5909,
+          "goals": 1816,
+          "xgMilli": 1826958,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 7,
+      "jobId": 125172643115,
+      "resultSha256": "c409defb6724a371d54207daee3c9f714b475b210a34d16519c27742ed645743",
+      "negativeChecks": 15,
+      "observedWallMs": 35856.488001,
+      "observedPeakRssMiB": 135.40625,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15293,
+          "onTarget": 7848,
+          "goals": 2860,
+          "xgMilli": 2799114,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16521,
+          "onTarget": 6144,
+          "goals": 1891,
+          "xgMilli": 1874097,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16521,
+          "onTarget": 5861,
+          "goals": 1820,
+          "xgMilli": 1813604,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 8,
+      "jobId": 125172642956,
+      "resultSha256": "9573fead61c4e1c1649cfedff30b51f0db7d8a05ca4f34af1239f2c045910dc4",
+      "negativeChecks": 15,
+      "observedWallMs": 21850.028472,
+      "observedPeakRssMiB": 134.0078125,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15269,
+          "onTarget": 7787,
+          "goals": 2801,
+          "xgMilli": 2783696,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16469,
+          "onTarget": 6103,
+          "goals": 1883,
+          "xgMilli": 1860723,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16469,
+          "onTarget": 5828,
+          "goals": 1815,
+          "xgMilli": 1800791,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 9,
+      "jobId": 125172643094,
+      "resultSha256": "c8800b8960ba6d800f0933c62bab2954ebdfd5a75682cafa9094c124ca5ec102",
+      "negativeChecks": 15,
+      "observedWallMs": 35717.296497,
+      "observedPeakRssMiB": 134.50390625,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15685,
+          "onTarget": 7912,
+          "goals": 2838,
+          "xgMilli": 2888220,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16909,
+          "onTarget": 6190,
+          "goals": 1897,
+          "xgMilli": 1929758,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16909,
+          "onTarget": 5899,
+          "goals": 1843,
+          "xgMilli": 1867490,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 10,
+      "jobId": 125172643008,
+      "resultSha256": "555dfd0132d8cbd5a1ae8b5ba4d432537a47f6401264c0da611e7940261352d4",
+      "negativeChecks": 15,
+      "observedWallMs": 36090.028965,
+      "observedPeakRssMiB": 134.66796875,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15189,
+          "onTarget": 7727,
+          "goals": 2782,
+          "xgMilli": 2791680,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16421,
+          "onTarget": 6101,
+          "goals": 1846,
+          "xgMilli": 1871338,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16421,
+          "onTarget": 5827,
+          "goals": 1789,
+          "xgMilli": 1810993,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 11,
+      "jobId": 125172642975,
+      "resultSha256": "2eb07633d47fda1aadfdfaeee27d058a059e0da6483356ee2fcc0b4ac65933a3",
+      "negativeChecks": 15,
+      "observedWallMs": 27990.538912,
+      "observedPeakRssMiB": 134.5546875,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15542,
+          "onTarget": 7955,
+          "goals": 2843,
+          "xgMilli": 2860364,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16785,
+          "onTarget": 6152,
+          "goals": 1921,
+          "xgMilli": 1915716,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16785,
+          "onTarget": 5869,
+          "goals": 1864,
+          "xgMilli": 1853929,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 12,
+      "jobId": 125172643238,
+      "resultSha256": "62e6309cf5a612d18a03e581460d3b47f9e4efcfa173a6258684fe7460ec230c",
+      "negativeChecks": 15,
+      "observedWallMs": 27989.80257,
+      "observedPeakRssMiB": 134.8828125,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15548,
+          "onTarget": 7836,
+          "goals": 2799,
+          "xgMilli": 2814741,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16762,
+          "onTarget": 6203,
+          "goals": 1853,
+          "xgMilli": 1883545,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16762,
+          "onTarget": 5913,
+          "goals": 1799,
+          "xgMilli": 1822868,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 13,
+      "jobId": 125172642695,
+      "resultSha256": "624afaf3f503b62d83adf5a95577a44f96a88270a5686bd943ac892cd999dcb2",
+      "negativeChecks": 15,
+      "observedWallMs": 20239.500712,
+      "observedPeakRssMiB": 133.6484375,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15409,
+          "onTarget": 7894,
+          "goals": 2740,
+          "xgMilli": 2832782,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16656,
+          "onTarget": 6139,
+          "goals": 1840,
+          "xgMilli": 1897552,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16656,
+          "onTarget": 5841,
+          "goals": 1777,
+          "xgMilli": 1836450,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 14,
+      "jobId": 125172643041,
+      "resultSha256": "4dcd50f9dd39aca38765c350ae235459b2bba2d9d2d630042fe710ed047dfc77",
+      "negativeChecks": 15,
+      "observedWallMs": 28174.016440000003,
+      "observedPeakRssMiB": 134.16015625,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15650,
+          "onTarget": 7941,
+          "goals": 2796,
+          "xgMilli": 2861979,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16950,
+          "onTarget": 6174,
+          "goals": 1872,
+          "xgMilli": 1923004,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16950,
+          "onTarget": 5901,
+          "goals": 1805,
+          "xgMilli": 1860963,
+          "rejectionCodes": {}
+        }
+      }
+    },
+    {
+      "group": 15,
+      "jobId": 125172643053,
+      "resultSha256": "3c8b1b01d2ff40d2401bc1b96eebd3d4ad6066a8926cab1aa66e9c895fb2aafe",
+      "negativeChecks": 15,
+      "observedWallMs": 35724.794467,
+      "observedPeakRssMiB": 133.4140625,
+      "rows": {
+        "baseline": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 15371,
+          "onTarget": 7794,
+          "goals": 2831,
+          "xgMilli": 2813902,
+          "rejectionCodes": {}
+        },
+        "candidateA": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16643,
+          "onTarget": 6116,
+          "goals": 1908,
+          "xgMilli": 1886204,
+          "rejectionCodes": {}
+        },
+        "candidateB": {
+          "attempted": 720,
+          "accepted": 720,
+          "rejected": 0,
+          "shots": 16643,
+          "onTarget": 5850,
+          "goals": 1839,
+          "xgMilli": 1825453,
+          "rejectionCodes": {}
+        }
+      }
+    }
+  ]
+}

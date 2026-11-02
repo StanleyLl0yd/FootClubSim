@@ -60,6 +60,7 @@ function indexedDBStub() {
         });
         function write(operation,value,key) {
           assert.equal(mode,'readwrite');
+          if(operation==='put')stats.puts++;
           const request={error:null,onsuccess:null,onerror:null};
           pending++;
           queueMicrotask(()=>{
@@ -69,7 +70,6 @@ function indexedDBStub() {
               request.error={name:'ConstraintError'};
               request.onerror?.();fail();return;
             }
-            if(operation==='put')stats.puts++;
             writes.push([scoped,structuredClone(value)]);
             pending--;request.onsuccess?.();finish();
           });

@@ -1,8 +1,10 @@
 import { isStableId } from '../core/identifiers.js';
-import { applyM1V120Source, startM1V120Journal,
+import { startM1V120Journal,
   validateM1V120Journal, type M1V120Error,
   type M1V120Journal, type M1V120Apply }
   from '../core/m1-v120-playable-journal.js';
+import {admitM1V171SourceWithHolds}
+  from '../core/m1-v171-precommit-holds.js';
 import { loadInitialCareer } from './initial-career-store.js';
 
 /** Dedicated, independent v120 namespace. Never opens or upgrades v8. */
@@ -10,7 +12,8 @@ const DATABASE='footclubsim-m1-v120';
 const STORE='dense-result-journals';
 export type M1V120StorageCode='UNAVAILABLE'|'OPEN_FAILED'|'BLOCKED'|
   'STORAGE_FAILED'|'QUOTA_EXCEEDED'|'INVALID_ID'|'ALREADY_EXISTS'|
-  'NOT_FOUND'|'CORRUPTED'|'STALE_REVISION'|'DOMAIN_REJECTED';
+  'NOT_FOUND'|'CORRUPTED'|'STALE_REVISION'|'DOMAIN_REJECTED'|
+  'ELIGIBILITY_REJECTED';
 export class M1V120StorageError extends Error {
   constructor(readonly code:M1V120StorageCode,
     readonly domainError?:M1V120Error){
@@ -126,8 +129,13 @@ export async function commitM1V120PersistedSource(
       if(before.journal.revision!==expectedRevision){
         abort(fail('STALE_REVISION'));return;
       }
-      const proposed=applyM1V120Source(initial,before.journal,request);
+      const proposed=admitM1V171SourceWithHolds(
+        initial,before.journal,request);
       if(!proposed.ok){
+        if(proposed.error==='HISTORICAL_HOLD_BYPASS'||
+           proposed.error==='UNVERIFIED_VIRTUAL_SOURCE'){
+          abort(fail('ELIGIBILITY_REJECTED'));return;
+        }
         abort(fail('DOMAIN_REJECTED',proposed.error));return;
       }
       const write=store.put(proposed.journal,careerId);

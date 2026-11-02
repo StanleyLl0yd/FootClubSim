@@ -1,0 +1,76 @@
+name: M1 P5 v148 observed whole-career bootstrap evidence
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/m1-p5-v148-bootstrap-evidence.yml'
+      - 'scripts/m1-p5-v147-career-bootstrap.mjs'
+      - 'tests/m1-p5-v147-career-bootstrap.test.mjs'
+      - 'scripts/m1-p5-v142-cluster-intervals.mjs'
+      - 'data/m1-p5-v143-observed-careers.jsonl'
+      - 'data/m1-p5-v143-observed-manifest.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/m1-p5-v148-bootstrap-evidence.yml'
+      - 'scripts/m1-p5-v147-career-bootstrap.mjs'
+      - 'tests/m1-p5-v147-career-bootstrap.test.mjs'
+      - 'scripts/m1-p5-v142-cluster-intervals.mjs'
+      - 'data/m1-p5-v143-observed-careers.jsonl'
+      - 'data/m1-p5-v143-observed-manifest.json'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  observed-bootstrap:
+    name: 64 whole-career bootstrap evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Test pinned original source and bootstrap invariants
+        run: node --test tests/m1-p5-v143-observed-cluster-records.test.mjs tests/m1-p5-v147-career-bootstrap.test.mjs
+      - name: Run 4096 whole-career resamples and preserve exact digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'SOURCE_COMMIT=%s\n' "$(git rev-parse HEAD)"
+          node scripts/m1-p5-v147-career-bootstrap.mjs | tee v147-observed.jsonl
+          node --input-type=module -e '
+            import {readFileSync} from "node:fs";
+            const raw=readFileSync("v147-observed.jsonl","utf8");
+            const prefix="V147_CAREER_BOOTSTRAP=";
+            if(!raw.startsWith(prefix)||raw.split("\n").length!==2||
+                !raw.endsWith("\n"))throw Error("INVALID_OUTPUT_FRAMING");
+            const r=JSON.parse(raw.slice(prefix.length));
+            if(r.schemaVersion!==147||
+                r.status!=="OBSERVED_CAREER_BOOTSTRAP_RESEARCH_NOT_CALIBRATED"||
+                r.independentUnit!=="SEED_CAREER_NOT_FIXTURE"||
+                r.bootstrapReplicates!==4096||r.clusters!==64||
+                r.accepted!==256||r.rejected!==0||
+                r.sourceDigestsMatched!==true||
+                r.referenceCategoryAligned!==false||
+                r.sourceJobOriginIndependentlyAuthenticated!==false||
+                r.finiteSampleCoverageGuaranteed!==false||
+                r.releaseP5Accepted!==false||r.holdout2024_25Used!==false||
+                Object.keys(r.metrics).length!==12||
+                Object.values(r.metrics).some(m=>{
+                  const ci=m?.exploratoryBootstrapPercentile95;
+                  return !Number.isFinite(m?.perAcceptedFixture)||
+                    !Number.isFinite(ci?.lower)||!Number.isFinite(ci?.upper)||
+                    ci.lower<0||ci.upper<ci.lower;
+                }))
+              throw Error("INVALID_BOOTSTRAP_EVIDENCE");
+          '
+          sha256sum v147-observed.jsonl

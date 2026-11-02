@@ -38,7 +38,7 @@ export function deriveM1V118InternalRecovery(
   const recreated = simulateM1V19InternalReferee({
     ...source.prematch, catalog: initial.catalog,
   }, source.policy);
-  if (!recreated.ok) return [];
+  if (!recreated.ok || recreated.fixtureId !== item.fixtureId) return [];
   const expected = recreated.generatedIncidents.map(incident => ({
     schemaVersion: 1, id: incident.decisionId,
     fixtureId: item.fixtureId, teamId: incident.teamId,

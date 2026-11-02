@@ -49,11 +49,13 @@
       if(!admitted.ok)continue;
       const following=prepareM1V166CombinedMatch(
         career,admitted.journal,[]);
-      if(following?.ok)return {career,first};
+      if(following?.ok)return {career,first,seed};
     }
     throw Error('no deterministic two-fixture legal source');
   }
-  const {career,first}=sample();
+  const pageParams=new URL(location.href).searchParams;
+  const stage=pageParams.get('stage');
+  const firstSample=stage===null?sample():null;
   async function rejected(operation,expected){
     try{await operation;}
     catch(error){
@@ -64,8 +66,8 @@
     throw Error('expected '+expected+' rejection');
   }
   async function run(){
-    const stage=new URL(location.href).searchParams.get('stage');
     if(stage===null){
+      const {career,first,seed}=firstSample;
       await saveNewInitialCareer(career);
       const zero=await create(career.careerId);
       check(zero.revision===0,'new journal revision is not zero');
@@ -76,9 +78,9 @@
         {...ordinary.request,
           commandId:'unverified-'+ordinary.fixture.id}),
         'ELIGIBILITY_REJECTED');
-      const seed=ordinary.request.prematch.rngSeed;
+      const ordinarySeed=ordinary.request.prematch.rngSeed;
       const forgedPrematch={...ordinary.request.prematch,
-        rngSeed:seed===1?2:1};
+        rngSeed:ordinarySeed===1?2:1};
       const replay=simulateM1V105SpecialGoalChronology(
         forgedPrematch,ordinary.request.policy,[],[],[],[]);
       check(replay.ok,'forged but source-replayable seed not available');
@@ -113,16 +115,24 @@
         'valid fictional source was not committed');
       const next=new URL(location.href);
       next.searchParams.set('stage','verify');
+      next.searchParams.set('expectedSeed',String(seed));
+      next.searchParams.set('expectedCommandId',first.request.commandId);
       location.replace(next.href);
       return;
     }
     check(stage==='verify','unexpected navigation stage');
+    const expectedSeed=Number(pageParams.get('expectedSeed'));
+    check(Number.isSafeInteger(expectedSeed)&&expectedSeed>=1&&
+      expectedSeed<=24,'missing or invalid original fixture seed');
+    const career=createInitialCareer(catalog,catalog.clubs[0].id,
+      expectedSeed,'m1-v120-native-cas');
     const restored=await loadInitialCareer(career.careerId);
     check(restored.careerId===career.careerId&&
       restored.rngState===career.rngState,'immutable initial career drifted');
     const prior=await load(career.careerId);
     check(prior.revision===1&&prior.entries.length===1&&
-      prior.entries[0].commandId===first.request.commandId,
+      prior.entries[0].commandId===pageParams.get('expectedCommandId')&&
+      prior.entries[0].commandId.startsWith('v166-combined-'),
       'persisted source not recovered after real navigation');
     await rejected(create(career.careerId),'ALREADY_EXISTS');
     const prepared=prepareM1V166CombinedMatch(career,prior,[]);

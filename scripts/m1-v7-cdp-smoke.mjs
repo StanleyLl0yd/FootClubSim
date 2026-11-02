@@ -100,6 +100,7 @@ try {
         error.message !== 'CDP request timed out: Page.navigate') throw error;
     console.warn('Page.navigate ACK timed out; verifying actual page marker');
   }
+  let lastObservedStatus = '';
   const result = await until(async () => {
     // Navigation can briefly invalidate Runtime's execution context.
     const reply = await send('Runtime.evaluate', {
@@ -108,10 +109,15 @@ try {
     });
     const value = reply.result?.value;
     if (typeof value !== 'string') return null;
+    lastObservedStatus = value.slice(0, 350);
     if (value.startsWith(marker + '_FAIL')) throw new Error(value);
     return value === marker + '_PASS' ? value : null;
   }, marker + ' native IndexedDB post-navigation result',
-    marker === 'M1_V36_BROWSER_PROFILE' ? 240_000 : 90_000);
+    marker === 'M1_V36_BROWSER_PROFILE' ? 240_000 : 90_000)
+    .catch(error => {
+      throw new Error(String(error) +
+        '; last observed page status: ' + JSON.stringify(lastObservedStatus));
+    });
   if (marker === 'M1_V36_BROWSER_PROFILE') {
     const reply = await send('Runtime.evaluate', {
       expression: 'document.querySelector("#report")?.textContent ?? ""',

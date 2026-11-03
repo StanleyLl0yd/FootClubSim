@@ -98,6 +98,8 @@ export interface M1V29CausalAssessment {
   readonly transition: 'on-field-quick' | 'off-field-return';
   readonly goalkeeperExceptionSource?: true;
   readonly sameWhistleSecondPatient?: true;
+  readonly collisionOriginSource?: true;
+  readonly collisionEventId?: string;
   readonly medicalExitEventId: string | null;
   readonly medicalReturnEventId: string | null;
   readonly simulatedMedicalNeed: true;
@@ -114,6 +116,7 @@ type AssessmentDraft = Readonly<{
   transition: M1V29CausalAssessment['transition'];
   goalkeeperExceptionSource?: true;
   sameWhistleSecondPatient?: true;
+  collisionOriginSource?: true;
 }>;
 
 const fail = (error: M1V23CoachError):
@@ -138,10 +141,11 @@ export function simulateM1V29CausalMedicalSource(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown = [],
   inPlayCommands: unknown = [], denseShotSource=false,
   goalkeeperOnFieldSource=false,multiPatientSource=false,
+  collisionSource=false,
 ): M1V29CausalSourceRun {
   return simulateTreatmentCore(prematch, policy, halfTimeCommands,
     inPlayCommands, true, undefined, denseShotSource,
-    goalkeeperOnFieldSource,multiPatientSource);
+    goalkeeperOnFieldSource,multiPatientSource,collisionSource);
 }
 type M1V29InternalRejectionTrace={
   sourceError:Extract<M1V23RefereeRun,{ok:false}>['error']|null;
@@ -265,18 +269,21 @@ function simulateTreatmentCore(
   inPlayCommands: unknown, causalMode: false,
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
   goalkeeperOnFieldSource?:boolean,multiPatientSource?:boolean,
+  collisionSource?:boolean,
 ): M1V23CoachRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: true,
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
   goalkeeperOnFieldSource?:boolean,multiPatientSource?:boolean,
+  collisionSource?:boolean,
 ): M1V29CausalSourceRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: boolean,
   trace?:M1V29InternalRejectionTrace,denseShotSource=false,
   goalkeeperOnFieldSource=false,multiPatientSource=false,
+  collisionSource=false,
 ): M1V23CoachRun | M1V29CausalSourceRun {
   if (!isPlainJsonTree(prematch) || !isPlainJsonTree(policy) ||
       !isPlainJsonTree(halfTimeCommands) ||
@@ -300,6 +307,7 @@ function simulateTreatmentCore(
   } catch {
     return fail('INVALID_SOURCE');
   }
+  if(collisionSource&&!multiPatientSource)return fail('INVALID_SOURCE');
   const gate = startM1Clock(input);
   if (!gate.ok) return fail('INVALID_SOURCE');
   if (!Array.isArray(requested) || requested.length > 10 ||
@@ -379,6 +387,8 @@ function simulateTreatmentCore(
   const incidents: Omit<M1V23GeneratedIncident, 'sourceEventId'>[] = [];
   const foulTimes: number[] = [];
   const drafts: AssessmentDraft[] = [];
+  const collisionPairs:{elapsedSeconds:number;teamId:string;
+    firstPlayerId:string;secondPlayerId:string}[]=[];
   let acceptedInPlayCommands = 0;
   function applyGeneratedStopCommands(second:number):boolean{
     for(const action of extraByTime.get(second)??[]){
@@ -553,6 +563,14 @@ function simulateTreatmentCore(
                 const nextPatient=otherPatients[
                   Math.floor(pairedPlayerRoll*otherPatients.length)]!;
                 const secondKeeper=players.get(nextPatient)==='GK';
+                if(collisionSource){
+                  const current=drafts.at(-1)!;
+                  drafts[drafts.length-1]={
+                    ...current,collisionOriginSource:true};
+                  collisionPairs.push({
+                    elapsedSeconds:second,teamId:clubIds[victimSide],
+                    firstPlayerId:patient,secondPlayerId:nextPatient});
+                }
                 const secondCanLeave=!modelledOnField&&!secondKeeper&&
                   active[victimSide].size>7;
                 drafts.push({
@@ -561,6 +579,7 @@ function simulateTreatmentCore(
                   patientPlayerId:nextPatient,elapsedSeconds:second,
                   transition:secondCanLeave?'off-field-return':'on-field-quick',
                   sameWhistleSecondPatient:true,
+                  ...(collisionSource?{collisionOriginSource:true as const}:{}),
                   ...(secondKeeper?{goalkeeperExceptionSource:true as const}:{}),
                 });
                 if(secondCanLeave){
@@ -626,6 +645,7 @@ function simulateTreatmentCore(
     causalMode?M1_MODELLED_GOAL_STOP_SECONDS:0,
     M1_MODELLED_HALF_TIME_STOP_SECONDS,foulTimes,
     M1_MODELLED_FOUL_STOP_SECONDS,sourceTrace,denseShotSource,
+    collisionPairs,
   );
   if(trace){
     trace.sourceSubreason=sourceTrace.subreason;
@@ -677,6 +697,14 @@ function simulateTreatmentCore(
         e.sourceEventId === decision?.sourceEventId);
       const side = draft.patientTeamId === clubIds.home ? 'home' : 'away';
       const offenderSide = side === 'home' ? 'away' : 'home';
+      const collision=draft.collisionOriginSource?
+        match.events.find(e=>
+          e.kind==='synthetic-same-team-collision'&&
+          e.sourceEventId===decision?.sourceEventId&&
+          e.runningSeconds===draft.elapsedSeconds&&
+          e.teamId===draft.patientTeamId&&
+          (e.playerId===draft.patientPlayerId||
+            e.collisionPartnerPlayerId===draft.patientPlayerId)):undefined;
       const departure = match.events.find(e =>
         e.kind === 'treatment-exit' &&
         e.runningSeconds === draft.elapsedSeconds &&
@@ -688,6 +716,7 @@ function simulateTreatmentCore(
         e.playerId === draft.patientPlayerId &&
         e.teamId === draft.patientTeamId);
       if (!incident || !decision || !whistle || !restart ||
+          (draft.collisionOriginSource&&!collision) ||
           incident.sanction === 'injury-withdrawal' ||
           whistle.runningSeconds !== draft.elapsedSeconds ||
           decision.runningSeconds !== draft.elapsedSeconds ||
@@ -713,6 +742,7 @@ function simulateTreatmentCore(
         foulWhistleEventId: whistle.id, foulRestartEventId: restart.id,
         medicalExitEventId: departure?.id ?? null,
         medicalReturnEventId: returnEvent?.id ?? null,
+        ...(collision?{collisionEventId:collision.id}:{}),
         simulatedMedicalNeed: true,
         decisionSource: 'seeded-internal-medical-referee',
         externalMedicalAuthorityAuthenticated: false,

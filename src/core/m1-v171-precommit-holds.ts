@@ -22,6 +22,7 @@ const ADMITTED_COMMAND_PREFIXES=[
   'v128-fictional-continuation-','v132-sub-','v136-double-',
   'v138-multi-','v158-goal-multi-','v166-combined-',
   'v176-medical-','v180-ref-whistle-','v182-unified-',
+  'v184-causal-',
 ] as const;
 
 /** Validate origins on the whole prospective persisted history, not only

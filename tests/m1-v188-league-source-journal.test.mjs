@@ -205,3 +205,107 @@ test('v188 cached schedule is isolated from mutated returned fixture aliases',()
   assert.equal(validateM1V188LeagueJournal(
     career,valid.journal).ok,true);
 });
+
+test('P3-1: v188 publishes one source-replayed clock and live goalkeepers',()=>{
+  const sample=createInitialCareer(
+    catalog,catalog.clubs[0].id,7,'v188-p3-1-goalkeeper');
+  const start=startM1V188LeagueJournal(sample);
+  assert.equal(start.ok,true);
+  const prepared=prepareM1V188LeagueMatch(sample,start.journal);
+  assert.equal(prepared?.ok,true);
+  assert.equal(prepared.clock.sourceReplayRequired,true);
+  assert.equal(prepared.clock.runningFullTimeSeconds,5400);
+  assert.ok(prepared.clock.wallFullTimeSeconds>=6300);
+  assert.equal(prepared.clock.snapshots.length,
+    prepared.request.result.events.length);
+  const pos=new Map(catalog.players.map(p=>[p.id,p.primaryPosition]));
+  for(let n=0;n<prepared.request.result.events.length;n++){
+    const e=prepared.request.result.events[n];
+    if(e.type!=='source'||e.source.type!=='shot')continue;
+    const snap=prepared.clock.snapshots[n];
+    const own=e.source.teamId===prepared.fixture.homeClubId?
+      snap.homePresent:snap.awayPresent;
+    const opposite=e.source.teamId===prepared.fixture.homeClubId?
+      snap.awayPresent:snap.homePresent;
+    assert.ok(own.includes(e.source.playerId),
+      'source-attacker must remain physically present');
+    assert.equal(opposite.filter(id=>pos.get(id)==='GK').length,1,
+      'there must be exactly one physically present goalkeeper');
+  }
+  const applied=applyM1V188LeagueMatch(
+    sample,start.journal,prepared.request);
+  assert.equal(applied.ok,true);
+  assert.equal(validateM1V188LeagueJournal(
+    sample,applied.journal).ok,true);
+  const changed=structuredClone(prepared.request);
+  const index=changed.result.events.findIndex(e=>
+    e.type==='source'&&e.source.type==='shot');
+  assert.ok(index>=0);
+  changed.result.events[index].source.playerId='forged-absent-shooter';
+  assert.deepEqual(applyM1V188LeagueMatch(
+    sample,start.journal,changed),
+    {ok:false,error:'SOURCE_MISMATCH'});
+});
+
+test('P3-1: ten-player live restart and unsourced in-play stop fail closed',()=>{
+  let witness=null;
+  const positions=new Map(catalog.players.map(p=>[p.id,p.primaryPosition]));
+  for(let seed=1;seed<=80&&!witness;seed++){
+    const initial=createInitialCareer(
+      catalog,catalog.clubs[0].id,seed,'v188-p3-1-ten-'+seed);
+    const zero=startM1V188LeagueJournal(initial);
+    if(!zero.ok)continue;
+    const proposal=prepareM1V188LeagueMatch(initial,zero.journal);
+    if(!proposal?.ok)continue;
+    const events=proposal.request.result.events;
+    for(let n=1;n<events.length-1;n++){
+      const e=events[n];
+      if(e.type!=='source'||e.source.type!=='physical-transition'||
+          e.source.source.type!=='availability'||
+          e.source.source.source.entry.action.kind!=='direct-red')
+        continue;
+      const clubId=e.source.source.source.entry.action.teamId;
+      const side=clubId===proposal.fixture.homeClubId?
+        'homePresent':'awayPresent';
+      const before=proposal.clock.snapshots[n-1][side];
+      const after=proposal.clock.snapshots[n][side];
+      if(before.length!==11||after.length!==10)continue;
+      if(!events.slice(n+1).some(x=>
+          x.type==='source'&&x.source.type==='shot'))continue;
+      const offender=e.source.source.source.entry.action.playerId;
+      assert.ok(before.includes(offender));
+      assert.ok(!after.includes(offender));
+      for(let k=n+1;k<events.length;k++){
+        const shot=events[k];
+        if(shot.type!=='source'||shot.source.type!=='shot')continue;
+        const snap=proposal.clock.snapshots[k];
+        const attackers=shot.source.teamId===proposal.fixture.homeClubId?
+          snap.homePresent:snap.awayPresent;
+        const defenders=shot.source.teamId===proposal.fixture.homeClubId?
+          snap.awayPresent:snap.homePresent;
+        assert.ok(attackers.includes(shot.source.playerId));
+        assert.equal(defenders.filter(id=>
+          positions.get(id)==='GK').length,1);
+      }
+      witness={initial,zero,proposal};
+      break;
+    }
+  }
+  assert.ok(witness,'no generated 10-player restart with subsequent shot');
+  const {initial,zero,proposal}=witness;
+  const own=proposal.fixture.homeClubId===initial.selectedClubId?
+    proposal.request.prematch.homeLineup:
+    proposal.request.prematch.awayLineup;
+  const out=own.starters.find(id=>positions.get(id)!=='GK');
+  const incoming=own.bench.find(id=>positions.get(id)!=='GK');
+  assert.ok(out&&incoming);
+  const noWhistle=Array.from({length:17},(_,i)=>(i+1)*300)
+    .find(t=>t!==2700&&
+      !proposal.clock.managerStopsFromSource.includes(t));
+  assert.ok(noWhistle);
+  const forbidden=prepareM1V188LeagueMatch(
+    initial,zero.journal,[{outPlayerId:out,inPlayerId:incoming,
+      elapsedSeconds:noWhistle}]);
+  assert.equal(forbidden?.ok,false,
+    'user may not fabricate a referee-authorized substitution');
+});

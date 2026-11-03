@@ -6,6 +6,8 @@ import {MATCH_LEDGER_VERSION,M0_RULES_PACK_ID,M0_RULES_PACK_VERSION}
 import {M1_ENGINE_VERSION,type M1PrematchInput} from './m1-clock.js';
 import {regenerateM1V184CausalSource}
   from './m1-v182-unified-source.js';
+import {projectM1V179MatchClock,type M1V179ClockResult}
+  from './m1-v179-source-clock.js';
 import {verifyM1V158CommandShape}
   from './m1-v158-generated-goal-stops.js';
 import {startM1V120Journal} from './m1-v120-playable-journal.js';
@@ -26,6 +28,7 @@ const POLICY={
   away:{assignedActor:{kind:'player'},availableStaffIds:[]}};
 const LIMIT=240,MAX_BYTES=100_000_000,MAX_REQUEST=400_000;
 type Good=Extract<M1V105Run,{ok:true}>;
+type PhysicalClock=Extract<M1V179ClockResult,{ok:true}>;
 type Incident=Extract<
   ReturnType<typeof regenerateM1V184CausalSource>,
   {ok:true}>['generatedIncidents'][number];
@@ -59,7 +62,8 @@ export type M1V188Gate=
 export type M1V188Proposal=
   | Readonly<{ok:false;error:M1V188Error}>
   | Readonly<{ok:true;fixture:Fixture;request:M1V188Request;
-    remainingFixtures:number;selectedClubFixture:boolean}>;
+    clock:PhysicalClock;remainingFixtures:number;
+    selectedClubFixture:boolean}>;
 
 const rec=(v:unknown):v is Record<string,unknown>=>
   v!==null&&typeof v==='object'&&!Array.isArray(v);
@@ -208,6 +212,40 @@ function validManagerCommands(input:M1PrematchInput,
     input.fixture.id,selected,seed);
 }
 
+/** Derive authoritative fictional match time from the EXACT physically
+ * replayed v105 events. No separate score, roster, referee or wall clock.
+ * Unsupported goalkeeper-less shots and unsourced manager stops fail closed.
+ * This view is transient; legacy and v188 persisted bytes stay unchanged.
+ */
+function replayedPhysicalClock(input:M1PrematchInput,result:Good,
+  manager:readonly unknown[]):PhysicalClock|null{
+  const clock=projectM1V179MatchClock(input,result);
+  if(!clock.ok||clock.snapshots.length!==result.events.length)return null;
+  const positions=new Map(input.catalog.players.map(p=>
+    [p.id,p.primaryPosition]));
+  const home=input.fixture.homeClubId,away=input.fixture.awayClubId;
+  for(let n=0;n<result.events.length;n++){
+    const e=result.events[n]!;
+    let attacker:string;
+    if(e.type==='adjudication')attacker=e.decision.teamId;
+    else if(e.source.type==='shot')attacker=e.source.teamId;
+    else continue;
+    if(attacker!==home&&attacker!==away)return null;
+    const defenders=attacker===home?
+      clock.snapshots[n]!.awayPresent:
+      clock.snapshots[n]!.homePresent;
+    if(defenders.filter(id=>positions.get(id)==='GK').length!==1)
+      return null;
+  }
+  for(const raw of manager){
+    if(!rec(raw)||raw.kind!=='substitute-normal'||
+        !Number.isSafeInteger(raw.elapsedSeconds)||
+        !clock.managerStopsFromSource.includes(
+          raw.elapsedSeconds as number))return null;
+  }
+  return clock;
+}
+
 function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
   f:Fixture,index:number,holds:Hold[],schedule:readonly Fixture[]){
   if(!rec(e)||!exact(e,entryKeys)||
@@ -236,7 +274,8 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
         e.source.plannedCommands)||
       !sameCanonicalValue(replay.checkpointMedical,
         e.source.checkpointMedical)||
-      !sameCanonicalValue(replay.result,e.result))return false;
+      !sameCanonicalValue(replay.result,e.result)||
+      !replayedPhysicalClock(input,replay.result,manager))return false;
   addHolds(holds,replay.generatedIncidents,f,index);
   return true;
 }
@@ -339,7 +378,10 @@ export function prepareM1V188LeagueMatch(
   const generated=regenerateM1V184CausalSource(
     prematch,POLICY,managerCommandsForFixture);
   if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED'};
-  return{ok:true,fixture:f,request:{schemaVersion:188,
+  const clock=replayedPhysicalClock(
+    prematch,generated.result,managerCommandsForFixture);
+  if(!clock)return {ok:false,error:'GENERATOR_REJECTED'};
+  return{ok:true,fixture:f,clock,request:{schemaVersion:188,
     careerId:initial.careerId,expectedRevision:index,
     commandId:'v188-league-'+f.id,prematch,policy:POLICY,
     plannedCommands:generated.plannedCommands,

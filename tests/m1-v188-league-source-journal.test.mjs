@@ -11,6 +11,8 @@ import {simulateM1V29CausalMedicalSource}
   from '../dist/core/m1-v23-temporary-treatment.js';
 import {regenerateM1V184CausalSource}
   from '../dist/core/m1-v182-unified-source.js';
+import {deriveM1V186Law5FromCausalSource}
+  from '../dist/core/m1-v186-law5-causal.js';
 import {M1_MODELLED_GOAL_STOP_SECONDS,
   M1_MODELLED_FOUL_STOP_SECONDS,
   M1_MODELLED_HALF_TIME_STOP_SECONDS}
@@ -494,6 +496,105 @@ test('P3-1: old v188 source may be replayed but never mint new authority',()=>{
   const forged=structuredClone(request);
   forged.result.events[0].id='m1-v105-forged-old-referee';
   assert.deepEqual(applyM1V188LeagueMatch(career,zero.journal,forged),
+    {ok:false,error:'SOURCE_MISMATCH'});
+});
+
+test('P3-2: v188 opt-in keeper assessment is replay-bound and save compatible',()=>{
+  let witness=null;
+  for(let seed=1;seed<=128&&!witness;seed++){
+    const career=createInitialCareer(
+      catalog,catalog.clubs[0].id,seed,'v188-p3-2-keeper-'+seed);
+    const zero=startM1V188LeagueJournal(career);
+    if(!zero.ok)continue;
+    const proposal=prepareM1V188LeagueMatch(
+      career,zero.journal,[],undefined,2);
+    if(!proposal?.ok)continue;
+    const source=proposal.sourceLaw5Evidence?.find(e=>
+      e.exception==='goalkeeper-on-field-assessment');
+    if(source)witness={career,zero,proposal,source};
+  }
+  assert.ok(witness,'no seeded source-bound on-field goalkeeper witness');
+  const {career,zero,proposal,source}=witness;
+  const legacy=prepareM1V188LeagueMatch(career,zero.journal);
+  assert.equal(legacy?.ok,true);
+  assert.equal(legacy.request.medicalPolicyVersion,undefined);
+  assert.equal(proposal.request.medicalPolicyVersion,2);
+  assert.equal(proposal.externalMedicalAuthorityAuthenticated,false);
+  assert.equal(source.exitEventId,null);
+  assert.equal(source.returnEventId,null);
+  assert.equal(source.modelledDisposition,'may-remain-after-assessment');
+  const keeper=catalog.players.find(p=>p.id===source.patientPlayerId);
+  assert.equal(keeper?.primaryPosition,'GK');
+  const seeded=simulateM1V29CausalMedicalSource(
+    proposal.request.prematch,proposal.request.policy,[],[],true,true);
+  assert.equal(seeded.ok,true);
+  const inspected=deriveM1V186Law5FromCausalSource(
+    seeded,proposal.request.result,proposal.request.prematch);
+  assert.equal(inspected.ok,true);
+  const poisoned=structuredClone(seeded);
+  const keeperIndex=poisoned.causalAssessments.findIndex(a=>
+    a.goalkeeperExceptionSource===true);
+  assert.ok(keeperIndex>=0);
+  const patientLineup=source.patientTeamId===proposal.fixture.homeClubId?
+    proposal.request.prematch.homeLineup:
+    proposal.request.prematch.awayLineup;
+  const outfield=patientLineup.starters.find(id=>
+    catalog.players.find(p=>p.id===id)?.primaryPosition!=='GK');
+  assert.ok(outfield);
+  poisoned.causalAssessments[keeperIndex].patientPlayerId=outfield;
+  assert.deepEqual(deriveM1V186Law5FromCausalSource(
+    poisoned,proposal.request.result,proposal.request.prematch),
+    {ok:false,error:'UNSUPPORTED_LAW5_ORIGIN'},
+    'non-keeper cannot claim the source-bound goalkeeper exception');
+  const physicalCard=proposal.request.result.events.find(e=>
+    e.type==='source'&&e.source.type==='physical-transition'&&
+    e.source.source.type==='availability'&&
+    e.elapsedSeconds===source.runningSeconds&&
+    e.source.source.source.entry.action.teamId===
+      source.offenderTeamId&&
+    e.source.source.source.entry.action.playerId===
+      source.offenderPlayerId);
+  assert.ok(physicalCard,'a real seeded source decision must exist');
+  const side=source.patientTeamId===proposal.fixture.homeClubId?
+    'homePresent':'awayPresent';
+  assert.ok(proposal.clock.snapshots.some(snapshot=>
+    snapshot.runningSeconds===source.runningSeconds&&
+    snapshot[side].includes(source.patientPlayerId)),
+  'the keeper must remain present at the actual source event');
+  assert.ok(proposal.clock.snapshots.at(-1)[side].includes(
+    source.patientPlayerId),'the keeper must remain through full-time');
+  const saved=applyM1V188LeagueMatch(
+    career,zero.journal,proposal.request);
+  assert.equal(saved.ok,true);
+  assert.equal(saved.journal.entries[0].source.medicalPolicyVersion,2);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(saved.journal)).ok,true);
+  const after=prepareM1V188LeagueMatch(career,saved.journal);
+  assert.equal(after?.ok,true);
+  assert.equal(after.request.medicalPolicyVersion,2,
+    'no downgrade after a medical source policy entry');
+  const second=applyM1V188LeagueMatch(
+    career,saved.journal,after.request);
+  assert.equal(second.ok,true);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(second.journal)).ok,true);
+  const downgrade=structuredClone(second.journal);
+  delete downgrade.entries[1].source.medicalPolicyVersion;
+  assert.deepEqual(validateM1V188LeagueJournal(career,downgrade),
+    {ok:false,error:'INVALID_JOURNAL'});
+  const invented=structuredClone(saved.journal);
+  invented.entries[0].source.medicalPolicyVersion=3;
+  assert.deepEqual(validateM1V188LeagueJournal(career,invented),
+    {ok:false,error:'INVALID_JOURNAL'});
+  const forged=structuredClone(proposal.request);
+  forged.sourceLaw5Evidence=[{externalMedicalAuthorityAuthenticated:true}];
+  assert.deepEqual(applyM1V188LeagueMatch(
+    career,zero.journal,forged),
+    {ok:false,error:'INVALID_REQUEST'});
+  const tampered=structuredClone(proposal.request);
+  tampered.result.events[0].id='forged-medical-referee';
+  assert.deepEqual(applyM1V188LeagueMatch(
+    career,zero.journal,tampered),
     {ok:false,error:'SOURCE_MISMATCH'});
 });
 

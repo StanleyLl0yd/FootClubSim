@@ -94,6 +94,7 @@ export interface M1V29CausalAssessment {
   readonly elapsedSeconds: number;
   /** Legacy v29 tag; 2026/27 Law 5 does NOT require quick completion. */
   readonly transition: 'on-field-quick' | 'off-field-return';
+  readonly goalkeeperExceptionSource?: true;
   readonly medicalExitEventId: string | null;
   readonly medicalReturnEventId: string | null;
   readonly simulatedMedicalNeed: true;
@@ -108,6 +109,7 @@ type AssessmentDraft = Readonly<{
   incidentId: string; patientTeamId: string; patientPlayerId: string;
   elapsedSeconds: number;
   transition: M1V29CausalAssessment['transition'];
+  goalkeeperExceptionSource?: true;
 }>;
 
 const fail = (error: M1V23CoachError):
@@ -131,9 +133,11 @@ export function simulateM1V23TemporaryTreatment(
 export function simulateM1V29CausalMedicalSource(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown = [],
   inPlayCommands: unknown = [], denseShotSource=false,
+  goalkeeperOnFieldSource=false,
 ): M1V29CausalSourceRun {
   return simulateTreatmentCore(prematch, policy, halfTimeCommands,
-    inPlayCommands, true, undefined, denseShotSource);
+    inPlayCommands, true, undefined, denseShotSource,
+    goalkeeperOnFieldSource);
 }
 type M1V29InternalRejectionTrace={
   sourceError:Extract<M1V23RefereeRun,{ok:false}>['error']|null;
@@ -256,16 +260,19 @@ function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: false,
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
+  goalkeeperOnFieldSource?:boolean,
 ): M1V23CoachRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: true,
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
+  goalkeeperOnFieldSource?:boolean,
 ): M1V29CausalSourceRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: boolean,
   trace?:M1V29InternalRejectionTrace,denseShotSource=false,
+  goalkeeperOnFieldSource=false,
 ): M1V23CoachRun | M1V29CausalSourceRun {
   if (!isPlainJsonTree(prematch) || !isPlainJsonTree(policy) ||
       !isPlainJsonTree(halfTimeCommands) ||
@@ -485,13 +492,17 @@ function simulateTreatmentCore(
           const initialStarters = victimSide === 'home' ?
             input.homeLineup.starters : input.awayLineup.starters;
           const eligible = atWhistleOpponents.filter(id =>
-            active[victimSide].has(id) && players.get(id) !== 'GK' &&
+            active[victimSide].has(id) &&
+            (goalkeeperOnFieldSource || players.get(id) !== 'GK') &&
             initialStarters.includes(id));
           if (eligible.length > 0) {
             const patient = eligible[
               Math.floor(treatmentPlayerRoll * eligible.length)]!;
             // A seeded on-field choice, not an IFAB treatment-time gate.
-            const modelledOnField = treatmentTeamRoll < 0.5;
+            const goalkeeperPatient = players.get(patient) === 'GK';
+            // New opt-in source: the assessed keeper never leaves play.
+            const modelledOnField = goalkeeperPatient ||
+              treatmentTeamRoll < 0.5;
             const canLeave = second !== 2400 && second < 5100 &&
               active[victimSide].size > 7;
             if (modelledOnField || canLeave) {
@@ -500,6 +511,7 @@ function simulateTreatmentCore(
                 patientTeamId: clubIds[victimSide],
                 patientPlayerId: patient, elapsedSeconds: second,
                 transition: modelledOnField ? 'on-field-quick' : 'off-field-return',
+                ...(goalkeeperPatient ? {goalkeeperExceptionSource: true as const} : {}),
               });
               if (!modelledOnField) {
                 treatment.push({

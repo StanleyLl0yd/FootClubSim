@@ -95,7 +95,7 @@ function causalWitness(source:Causal,result:Replay):boolean{
  */
 function regenerateUnifiedSource(
   prematch:unknown,policy:unknown,manager:unknown,causal:boolean,
-  denseShotSource=false,
+  denseShotSource=false,goalkeeperOnFieldSource=false,
 ){
   if(!isPlainJsonTree(prematch)||!isPlainJsonTree(policy)||
       !isPlainJsonTree(manager)||!Array.isArray(manager)||
@@ -107,7 +107,8 @@ function regenerateUnifiedSource(
   const inPlay=changes.filter(c=>c.elapsedSeconds!==2700);
   const generated=causal?
     simulateM1V29CausalMedicalSource(
-      prematch,policy,half,inPlay,denseShotSource):
+      prematch,policy,half,inPlay,denseShotSource,
+      goalkeeperOnFieldSource):
     simulateM1V23TemporaryTreatment(prematch,policy,half,inPlay);
   if(!generated.ok)
     return {ok:false as const,error:'UNIFIED_GENERATION_REJECTED' as const};
@@ -129,7 +130,8 @@ function regenerateUnifiedSource(
        !causalWitness(causalGenerated,result)))
     return {ok:false as const,error:'UNIFIED_REPLAY_REJECTED' as const};
   const law5=causalGenerated&&causal?
-    deriveM1V186Law5FromCausalSource(causalGenerated,result):null;
+    deriveM1V186Law5FromCausalSource(
+      causalGenerated,result,prematch):null;
   if(law5&&!law5.ok)
     return {ok:false as const,error:'LAW5_SOURCE_REJECTED' as const};
   return {ok:true as const,sourceFixtureId:generated.fixtureId,
@@ -155,10 +157,11 @@ export function regenerateM1V182UnifiedSource(
  */
 export function regenerateM1V184CausalSource(
   prematch:unknown,policy:unknown,manager:unknown,
-  denseShotSource=false,
+  denseShotSource=false,goalkeeperOnFieldSource=false,
 ){
   return regenerateUnifiedSource(
-    prematch,policy,manager,true,denseShotSource);
+    prematch,policy,manager,true,denseShotSource,
+    goalkeeperOnFieldSource);
 }
 
 /** Canonical v182 claim is independently replayed before v120 CAS.

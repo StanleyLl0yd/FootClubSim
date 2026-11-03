@@ -1,4 +1,5 @@
 import {isPlainJsonTree} from './plain-json-tree.js';
+import {startM1Clock,type M1PrematchInput} from './m1-clock.js';
 import type {M1V29CausalSourceRun}
   from './m1-v23-temporary-treatment.js';
 import type {M1V105Run}
@@ -19,7 +20,8 @@ export interface M1V186Law5Evidence {
   readonly patientTeamId:string;
   readonly patientPlayerId:string;
   readonly runningSeconds:number;
-  readonly exception:'opponent-carded-physical-offence';
+  readonly exception:'opponent-carded-physical-offence'|
+    'goalkeeper-on-field-assessment';
   readonly modelledDisposition:'may-remain-after-assessment'|
     'voluntary-extended-off-field-assessment';
   readonly exitEventId:string|null;
@@ -46,11 +48,24 @@ const fail=(error:Extract<M1V186Law5Result,{ok:false}>['error']):
  */
 export function deriveM1V186Law5FromCausalSource(
   source:M1V29CausalSourceRun,result:M1V105Run,
+  prematch:unknown=undefined,
 ):M1V186Law5Result {
   if(!isPlainJsonTree(source)||!isPlainJsonTree(result)||
       !source.ok||!result.ok||
       source.fixtureId!==result.fixtureId)
     return fail('INVALID_CAUSAL_SOURCE');
+  const keeperEvidenceRequired=source.causalAssessments.some(a=>
+    a.goalkeeperExceptionSource===true);
+  let keepers:ReadonlySet<string>=new Set();
+  if(keeperEvidenceRequired){
+    if(!isPlainJsonTree(prematch)||!startM1Clock(prematch).ok)
+      return fail('UNSUPPORTED_LAW5_ORIGIN');
+    const input=prematch as M1PrematchInput;
+    if(input.fixture.id!==source.fixtureId)
+      return fail('UNSUPPORTED_LAW5_ORIGIN');
+    keepers=new Set(input.catalog.players.filter(p=>
+      p.primaryPosition==='GK').map(p=>p.id));
+  }
   const medical=source.syntheticTreatmentActions;
   const evidence:M1V186Law5Evidence[]=[];
   const visited=new Set<string>();
@@ -128,6 +143,10 @@ export function deriveM1V186Law5FromCausalSource(
       e.teamId===assessment.patientTeamId&&
       e.playerId===assessment.patientPlayerId&&
       e.elapsedSeconds===assessment.elapsedSeconds+300);
+    if(assessment.goalkeeperExceptionSource===true&&
+        (!keepers.has(assessment.patientPlayerId)||
+          assessment.transition!=='on-field-quick'))
+      return fail('UNSUPPORTED_LAW5_ORIGIN');
     if(assessment.transition==='on-field-quick'){
       if(leave.length!==0||back.length!==0||
           !restart.onField[patientSide].includes(
@@ -139,7 +158,9 @@ export function deriveM1V186Law5FromCausalSource(
         patientTeamId:assessment.patientTeamId,
         patientPlayerId:assessment.patientPlayerId,
         runningSeconds:assessment.elapsedSeconds,
-        exception:'opponent-carded-physical-offence',
+        exception:assessment.goalkeeperExceptionSource===true?
+          'goalkeeper-on-field-assessment':
+          'opponent-carded-physical-offence',
         modelledDisposition:'may-remain-after-assessment',
         exitEventId:null,returnEventId:null,
         minimumRunningSecondsSatisfied:true});

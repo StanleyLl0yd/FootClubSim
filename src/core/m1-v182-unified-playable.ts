@@ -113,6 +113,8 @@ export function prepareM1V184CausalMatch(
     modelledMedicalDepartures:generated.temporaryExitCount,
     modelledMedicalReturns:generated.temporaryReturnCount,
     causalAssessments:generated.causalAssessments,
+    law5SourceBoundEvidence:generated.law5Evidence,
+    otherLaw5ExceptionsSupported:false as const,
     refereeAndMedicalAuthorityAuthenticated:false as const,
     completeOpponentHistoryAvailable:false as const,
     request:{...base.request,

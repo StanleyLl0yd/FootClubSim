@@ -1,4 +1,7 @@
 import type {M1V105Run} from './m1-v105-special-goal-chronology.js';
+import {M1_MODELLED_GOAL_STOP_SECONDS,
+  M1_MODELLED_FOUL_STOP_SECONDS,
+  M1_MODELLED_HALF_TIME_STOP_SECONDS} from './m1-clock.js';
 
 /** A non-persisted clock from the SAME v105 event stream accepted by v120.
  * Wall delays below are fictional game parameters, not observed timing.
@@ -82,7 +85,10 @@ export function projectM1V179MatchClock(
     if(event.type==='source'&&event.source.type==='full-time'&&
         i!==result.events.length-1)
       return bad('INVALID_MATCH_CLOCK_SOURCE');
-    if(!halfTimeAdded&&sec>=2700){offset+=900;halfTimeAdded=true;}
+    if(!halfTimeAdded&&sec>=2700){
+      offset+=M1_MODELLED_HALF_TIME_STOP_SECONDS;
+      halfTimeAdded=true;
+    }
     const wall=sec+offset;
     if(wall<lastWall)return bad('INVALID_MATCH_CLOCK_SOURCE');
     let delay=0;
@@ -94,7 +100,7 @@ export function projectM1V179MatchClock(
         beneficiary==='home'?'away':'home':beneficiary;
       if(!present(actor,d.playerId))
         return bad('INVALID_XI_CHRONOLOGY');
-      delay=30;
+      delay=M1_MODELLED_GOAL_STOP_SECONDS;
     }else{
       const e=event.source;
       if(e.type==='physical-transition'){
@@ -109,32 +115,35 @@ export function projectM1V179MatchClock(
               return bad('INVALID_XI_CHRONOLOGY');
             active[side].delete(action.outPlayerId);
             active[side].add(action.inPlayerId);
-            delay=10;
+            // A referee stop already covers this physical replacement.
           }else if(transition.source.entry.effect==='yellow'){
-            delay=15;
+            delay=M1_MODELLED_FOUL_STOP_SECONDS;
             stops.add(sec);
           }else{
             if(!present(side,action.playerId))
               return bad('INVALID_XI_CHRONOLOGY');
             active[side].delete(action.playerId);
-            delay=25;
-            stops.add(sec);
+            if(action.kind==='caution'||action.kind==='direct-red'){
+              delay=M1_MODELLED_FOUL_STOP_SECONDS;
+              stops.add(sec);
+            }
           }
         }else{
           if(!medical(transition.action))
             return bad('INVALID_XI_CHRONOLOGY');
-          delay=transition.action.kind==='treatment-exit'?45:0;
+          // Medical movement uses the original source stoppage.
         }
       }else if(e.type==='intraphase-medical'){
         if(!medical(e.action))return bad('INVALID_XI_CHRONOLOGY');
-        delay=e.action.kind==='treatment-exit'?45:0;
+        // A medical transition creates no extra unverified whistle.
       }else if(e.type==='shot'){
         const side=sideFor(e.teamId);
         if(!side||!present(side,e.playerId))
           return bad('INVALID_XI_CHRONOLOGY');
         if(e.outcome==='goal'){
-          delay=30;
-          if(sec+1<5400)stops.add(sec+1);
+          delay=sec+1===2700||sec+1>=5400?0:
+            M1_MODELLED_GOAL_STOP_SECONDS;
+          if(sec+1<5400&&sec+1!==2700)stops.add(sec+1);
         }
       }else if(e.type==='full-time'){
         if(sec!==5400)return bad('INVALID_MATCH_CLOCK_SOURCE');

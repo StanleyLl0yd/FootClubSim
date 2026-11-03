@@ -1,6 +1,8 @@
 import { sameCanonicalValue } from './canonical-value.js';
 import { M1_CLOCK_MAX_EVENTS, M1_CLOCK_STEP_SECONDS,
-  M1_CLOCK_END_SECONDS, startM1Clock, type M1PrematchInput }
+  M1_CLOCK_END_SECONDS, startM1Clock,
+  M1_MODELLED_GOAL_STOP_SECONDS, M1_MODELLED_FOUL_STOP_SECONDS,
+  M1_MODELLED_HALF_TIME_STOP_SECONDS, type M1PrematchInput }
   from './m1-clock.js';
 import { isPlainJsonTree } from './plain-json-tree.js';
 import { SeededRng, RNG_VERSION } from './rng.js';
@@ -128,10 +130,10 @@ export function simulateM1V23TemporaryTreatment(
 }
 export function simulateM1V29CausalMedicalSource(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown = [],
-  inPlayCommands: unknown = [],
+  inPlayCommands: unknown = [], denseShotSource=false,
 ): M1V29CausalSourceRun {
   return simulateTreatmentCore(prematch, policy, halfTimeCommands,
-    inPlayCommands, true);
+    inPlayCommands, true, undefined, denseShotSource);
 }
 type M1V29InternalRejectionTrace={
   sourceError:Extract<M1V23RefereeRun,{ok:false}>['error']|null;
@@ -253,17 +255,17 @@ export function inspectM1V88SourceShotOnTarget(
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: false,
-  trace?:M1V29InternalRejectionTrace,
+  trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
 ): M1V23CoachRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: true,
-  trace?:M1V29InternalRejectionTrace,
+  trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
 ): M1V29CausalSourceRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: boolean,
-  trace?:M1V29InternalRejectionTrace,
+  trace?:M1V29InternalRejectionTrace,denseShotSource=false,
 ): M1V23CoachRun | M1V29CausalSourceRun {
   if (!isPlainJsonTree(prematch) || !isPlainJsonTree(policy) ||
       !isPlainJsonTree(halfTimeCommands) ||
@@ -419,7 +421,10 @@ function simulateTreatmentCore(
       // command; the automatic match and RNG budget remain unchanged.
       if(phase>0&&second!==2700&&extraByTime.has(second)){
         const prior=simulateM1V23RefereeWithTreatment(
-          input,policy,commands,treatment,0,900,foulTimes,20);
+          input,policy,commands,treatment,
+          causalMode?M1_MODELLED_GOAL_STOP_SECONDS:0,
+          M1_MODELLED_HALF_TIME_STOP_SECONDS,foulTimes,
+          M1_MODELLED_FOUL_STOP_SECONDS,undefined,denseShotSource);
         if(!prior.ok||!prior.events.some(e=>
           e.kind==='goal-whistle'&&e.runningSeconds===second-1))
           return fail('NO_GENERATED_FOUL_STOPPAGE');
@@ -555,7 +560,10 @@ function simulateTreatmentCore(
   // and authenticated-internally stoppage-gated coach substitutions.
   const sourceTrace:M1V23SourceRejectionTrace={subreason:null};
   const match = simulateM1V23RefereeWithTreatment(
-    input, policy, commands, treatment, 0, 900, foulTimes, 20,sourceTrace,
+    input, policy, commands, treatment,
+    causalMode?M1_MODELLED_GOAL_STOP_SECONDS:0,
+    M1_MODELLED_HALF_TIME_STOP_SECONDS,foulTimes,
+    M1_MODELLED_FOUL_STOP_SECONDS,sourceTrace,denseShotSource,
   );
   if(trace){
     trace.sourceSubreason=sourceTrace.subreason;

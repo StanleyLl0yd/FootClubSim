@@ -95,6 +95,7 @@ function causalWitness(source:Causal,result:Replay):boolean{
  */
 function regenerateUnifiedSource(
   prematch:unknown,policy:unknown,manager:unknown,causal:boolean,
+  denseShotSource=false,
 ){
   if(!isPlainJsonTree(prematch)||!isPlainJsonTree(policy)||
       !isPlainJsonTree(manager)||!Array.isArray(manager)||
@@ -105,7 +106,8 @@ function regenerateUnifiedSource(
   const half=changes.filter(c=>c.elapsedSeconds===2700);
   const inPlay=changes.filter(c=>c.elapsedSeconds!==2700);
   const generated=causal?
-    simulateM1V29CausalMedicalSource(prematch,policy,half,inPlay):
+    simulateM1V29CausalMedicalSource(
+      prematch,policy,half,inPlay,denseShotSource):
     simulateM1V23TemporaryTreatment(prematch,policy,half,inPlay);
   if(!generated.ok)
     return {ok:false as const,error:'UNIFIED_GENERATION_REJECTED' as const};
@@ -153,8 +155,10 @@ export function regenerateM1V182UnifiedSource(
  */
 export function regenerateM1V184CausalSource(
   prematch:unknown,policy:unknown,manager:unknown,
+  denseShotSource=false,
 ){
-  return regenerateUnifiedSource(prematch,policy,manager,true);
+  return regenerateUnifiedSource(
+    prematch,policy,manager,true,denseShotSource);
 }
 
 /** Canonical v182 claim is independently replayed before v120 CAS.

@@ -7,6 +7,15 @@ import {startM1V188LeagueJournal,prepareM1V188LeagueMatch,
   inspectM1V188LeagueCalendar}
   from '../dist/core/m1-v188-league-source-journal.js';
 
+import {simulateM1V29CausalMedicalSource}
+  from '../dist/core/m1-v23-temporary-treatment.js';
+import {regenerateM1V184CausalSource}
+  from '../dist/core/m1-v182-unified-source.js';
+import {M1_MODELLED_GOAL_STOP_SECONDS,
+  M1_MODELLED_FOUL_STOP_SECONDS,
+  M1_MODELLED_HALF_TIME_STOP_SECONDS}
+  from '../dist/core/m1-clock.js';
+
 const catalog=createSyntheticRplScaleCatalog(2026);
 const initial=createInitialCareer(
   catalog,catalog.clubs[0].id,11,'v188-two-team-career');
@@ -388,5 +397,86 @@ test('P3-1: actual scored goal admits a lawful source-replayed substitute',()=>{
   goal.source.outcome='saved';
   assert.deepEqual(applyM1V188LeagueMatch(
     career,start.journal,forgedResult),
+    {ok:false,error:'SOURCE_MISMATCH'});
+});
+
+test('P3-1: referee and physical v188 source share one stopped-time clock',()=>{
+  let witnessed=0;
+  for(let seed=1;seed<=12;seed++){
+    const initial=createInitialCareer(
+      catalog,catalog.clubs[0].id,seed,'v188-clock-cross-source-'+seed);
+    const zero=startM1V188LeagueJournal(initial);
+    assert.equal(zero.ok,true);
+    const prepared=prepareM1V188LeagueMatch(initial,zero.journal);
+    if(!prepared?.ok)continue;
+    const generated=simulateM1V29CausalMedicalSource(
+      prepared.request.prematch,prepared.request.policy,[],[],true);
+    assert.equal(generated.ok,true);
+    assert.equal(generated.match.goalPauseWallSeconds,
+      M1_MODELLED_GOAL_STOP_SECONDS);
+    assert.equal(generated.match.foulStoppageWallSeconds,
+      M1_MODELLED_FOUL_STOP_SECONDS);
+    assert.equal(generated.match.halfTimeWallSeconds,
+      M1_MODELLED_HALF_TIME_STOP_SECONDS);
+    const physicalShots=prepared.request.result.events.flatMap((e,n)=>
+      e.type==='source'&&e.source.type==='shot'?
+        [{e,wall:prepared.clock.snapshots[n].wallSeconds}]:[]);
+    const refereeShots=generated.match.events.filter(e=>e.kind==='shot');
+    assert.equal(refereeShots.length,physicalShots.length,
+      'source and referee must share actual shots');
+    for(let i=0;i<refereeShots.length;i++){
+      assert.equal(refereeShots[i].runningSeconds,
+        physicalShots[i].e.elapsedSeconds);
+      assert.equal(refereeShots[i].playerId,
+        physicalShots[i].e.source.playerId);
+      assert.equal(refereeShots[i].wallSeconds,physicalShots[i].wall,
+        'the same physical shot must have one stopped clock');
+    }
+    assert.equal(prepared.clock.wallFullTimeSeconds,
+      generated.match.events.at(-1).wallSeconds,
+      'referee and physical full-time clocks must agree');
+    if(generated.generatedIncidents.some(e=>
+        e.sanction!=='injury-withdrawal')&&
+        physicalShots.some(x=>x.e.source.outcome==='goal'))witnessed++;
+  }
+  assert.ok(witnessed>0,'a seeded goal+foul witness is required');
+});
+
+test('P3-1: old v188 source may be replayed but never mint new authority',()=>{
+  const career=createInitialCareer(
+    catalog,catalog.clubs[0].id,12,'v188-old-read-new-write');
+  const zero=startM1V188LeagueJournal(career);
+  assert.equal(zero.ok,true);
+  const proposal=prepareM1V188LeagueMatch(career,zero.journal);
+  assert.equal(proposal?.ok,true);
+  const legacy=regenerateM1V184CausalSource(
+    proposal.request.prematch,proposal.request.policy,[]);
+  assert.equal(legacy.ok,true);
+  const request={...proposal.request,
+    plannedCommands:legacy.plannedCommands,
+    checkpointMedical:legacy.checkpointMedical,result:legacy.result};
+  const {catalog:_catalog,...prematch}=request.prematch;
+  void _catalog;
+  const historical={...zero.journal,revision:1,entries:[{
+    fixtureId:proposal.fixture.id,round:proposal.fixture.round,
+    commandId:request.commandId,
+    source:{prematch,policy:request.policy,
+      plannedCommands:request.plannedCommands,
+      checkpointMedical:request.checkpointMedical},
+    result:request.result,
+  }]};
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(historical)).ok,true,
+    'old exact-result histories remain independently replayable');
+  const damaged=structuredClone(historical);
+  damaged.entries[0].result.report.home.goals++;
+  assert.equal(validateM1V188LeagueJournal(career,damaged).ok,false);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(historical)).ok,true);
+  // The final engine re-verifies incoming requests; a caller cannot
+  // force a new legacy source version or append an altered result.
+  const forged=structuredClone(request);
+  forged.result.events[0].id='m1-v105-forged-old-referee';
+  assert.deepEqual(applyM1V188LeagueMatch(career,zero.journal,forged),
     {ok:false,error:'SOURCE_MISMATCH'});
 });

@@ -1,6 +1,11 @@
 import { sameCanonicalValue } from './canonical-value.js';
 import { M1_CLOCK_END_SECONDS, M1_CLOCK_STEP_SECONDS } from './m1-clock.js';
-import { simulateM1V8MedicalPhases } from './m1-v8-medical-phases.js';
+import {simulateM1V8MedicalPhases,type M1V8Event}
+  from './m1-v8-medical-phases.js';
+import {simulateM1V103IntraphaseMedical,type M1V103Event}
+  from './m1-v103-intraphase-medical.js';
+import {M1_V99_SECONDS_PER_SLOT}
+  from './m1-v99-intraphase-shots.js';
 import { isPlainJsonTree } from './plain-json-tree.js';
 
 /**
@@ -119,6 +124,7 @@ export function simulateM1V23RefereeWithTreatment(
   halfTimeWallSeconds:unknown=900,foulStopSeconds:unknown=[],
   foulPauseWallSeconds:unknown=20,
   trace?:M1V23SourceRejectionTrace,
+  useDenseShotSource=false,
 ):M1V23RefereeRun{
   const unsupported=(subreason:M1V23UnsupportedSubreason):M1V23RefereeRun=>{
     if(trace)trace.subreason=subreason;
@@ -172,8 +178,36 @@ export function simulateM1V23RefereeWithTreatment(
   if(raw.some(x=>record(x)&&x.kind==='substitute-normal'&&
       x.elapsedSeconds===2700)&&
       halfTimeWallSeconds===0)return fail('INVALID_INTERVAL');
-  const source=simulateM1V8MedicalPhases(input,control,raw,[],medical);
-  if(!source.ok)return fail('SOURCE_MATCH_REJECTED');
+  const v8=simulateM1V8MedicalPhases(input,control,raw,[],medical);
+  if(!v8.ok)return fail('SOURCE_MATCH_REJECTED');
+  const dense=useDenseShotSource?
+    simulateM1V103IntraphaseMedical(input,control,raw,medical,[]):null;
+  if(useDenseShotSource&&(!dense||!dense.ok||
+      dense.fixtureId!==v8.fixtureId))return fail('SOURCE_MATCH_REJECTED');
+  if(dense?.ok){
+    const causalTransitions=dense.events.filter(e=>
+      e.type==='physical-transition').map(e=>e.source);
+    const v8Transitions=v8.events.filter(e=>
+      e.type==='availability'||e.type==='medical');
+    if(!sameCanonicalValue(causalTransitions,v8Transitions))
+      return fail('ROSTER_REPLAY_MISMATCH');
+  }
+  type DenseShot=Extract<M1V103Event,{type:'shot'|'full-time'}>;
+  const sourceEvents:(M1V8Event|DenseShot)[]=[];
+  if(dense?.ok){
+    for(const event of dense.events){
+      if(event.type==='physical-transition')sourceEvents.push(event.source);
+      else if(event.type==='shot'||event.type==='full-time')
+        sourceEvents.push(event);
+      else return fail('UNSUPPORTED_SOURCE_EVENT');
+    }
+  }else sourceEvents.push(...v8.events);
+  const source={fixtureId:v8.fixtureId,events:sourceEvents,
+    report:dense?.ok?dense.report:v8.report,
+    offFieldAtFullTime:v8.offFieldAtFullTime,
+    onFieldAtFullTime:v8.onFieldAtFullTime,
+    rngState:dense?.ok?dense.rngState:v8.rngState,
+    rngDraws:dense?.ok?dense.rngDraws:v8.rngDraws};
   const f=input.fixture;
   if(typeof f.id!=='string'||typeof f.homeClubId!=='string'||
       typeof f.awayClubId!=='string'||f.id!==source.fixtureId||
@@ -457,7 +491,9 @@ export function simulateM1V23RefereeWithTreatment(
     emit('goal-whistle',running,wall,event.id,event.teamId,event.playerId);
     const restart=event.elapsedSeconds+1;
     if(restart===2700||restart===M1_CLOCK_END_SECONDS)continue;
-    if(!clockStep(restart))return fail('ROSTER_REPLAY_MISMATCH');
+    if(!(useDenseShotSource?
+        restart%M1_V99_SECONDS_PER_SLOT===0:clockStep(restart)))
+      return fail('ROSTER_REPLAY_MISMATCH');
     const group=changes.get(restart)??[];
     const signals={home:0,away:0};
     const boards=group.map((change,index)=>({
@@ -514,7 +550,7 @@ export function simulateM1V23RefereeWithTreatment(
     trace.shotOnTargetCount=
       source.report.home.shotsOnTarget+source.report.away.shotsOnTarget;
     trace.openPlayGoals=
-      source.report.home.openPlayGoals+source.report.away.openPlayGoals;
+      source.report.home.goals+source.report.away.goals;
   }
   return{ok:true,schemaVersion:M1_V23_REFEREE_SCHEMA,
     rulesId:M1_V23_REFEREE_RULES,

@@ -5,6 +5,9 @@ on:
     paths:
       - 'src/core/m1-v188-league-source-journal.ts'
       - 'src/core/m1-v23-temporary-treatment.ts'
+      - 'src/core/m1-v23-referee-treatment-source.ts'
+      - 'src/core/m1-v103-intraphase-medical.ts'
+      - 'src/core/m1-clock.ts'
       - 'src/core/m1-v182-unified-source.ts'
       - 'src/core/m1-v179-source-clock.ts'
       - 'src/core/m1-v186-law5-causal.ts'

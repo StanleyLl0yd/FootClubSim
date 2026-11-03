@@ -17,6 +17,10 @@ export const M1_CLOCK_SCHEMA_VERSION = 2 as const;
 export const M1_CLOCK_STEP_SECONDS = 300 as const;
 export const M1_CLOCK_END_SECONDS = 5400 as const;
 export const M1_CLOCK_MAX_EVENTS = M1_CLOCK_END_SECONDS / M1_CLOCK_STEP_SECONDS;
+/** One fictional stop policy for the causal source and v188 clock. */
+export const M1_MODELLED_GOAL_STOP_SECONDS = 30 as const;
+export const M1_MODELLED_FOUL_STOP_SECONDS = 20 as const;
+export const M1_MODELLED_HALF_TIME_STOP_SECONDS = 900 as const;
 
 export type M1PrematchInput = Omit<MatchLedgerInput, 'engineVersion' | 'events'> &
   Readonly<{ engineVersion: typeof M1_ENGINE_VERSION }>;

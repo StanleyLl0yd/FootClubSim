@@ -247,7 +247,8 @@ function replayedPhysicalClock(input:M1PrematchInput,result:Good,
 }
 
 function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
-  f:Fixture,index:number,holds:Hold[],schedule:readonly Fixture[]){
+  f:Fixture,index:number,holds:Hold[],schedule:readonly Fixture[],
+  allowLegacy=true){
   if(!rec(e)||!exact(e,entryKeys)||
       e.fixtureId!==f.id||e.round!==f.round||
       e.commandId!=='v188-league-'+f.id||
@@ -268,14 +269,22 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
   if(manager.length&&!belongs(f,i.selectedClubId))return false;
   if(!validManagerCommands(input,POLICY,manager,
       i.selectedClubId,i.rngState))return false;
-  const replay=regenerateM1V184CausalSource(input,POLICY,manager);
-  if(!replay.ok||
-      !sameCanonicalValue(replay.plannedCommands,
-        e.source.plannedCommands)||
-      !sameCanonicalValue(replay.checkpointMedical,
-        e.source.checkpointMedical)||
-      !sameCanonicalValue(replay.result,e.result)||
-      !replayedPhysicalClock(input,replay.result,manager))return false;
+  // Immutable old v188 entries have no shot-source discriminator.
+  // Prefer the final dense model, then prove exact legacy source replay.
+  const sourceAttempt=(dense:boolean)=>{
+    const replay=regenerateM1V184CausalSource(
+      input,POLICY,manager,dense);
+    return replay.ok&&
+      sameCanonicalValue(replay.plannedCommands,
+        e.source.plannedCommands)&&
+      sameCanonicalValue(replay.checkpointMedical,
+        e.source.checkpointMedical)&&
+      sameCanonicalValue(replay.result,e.result)&&
+      replayedPhysicalClock(input,replay.result,manager)?replay:null;
+  };
+  const replay=sourceAttempt(true)??
+    (allowLegacy?sourceAttempt(false):null);
+  if(!replay)return false;
   addHolds(holds,replay.generatedIncidents,f,index);
   return true;
 }
@@ -376,7 +385,7 @@ export function prepareM1V188LeagueMatch(
       initial.rngState))
     return {ok:false,error:'UNAUTHORIZED_MANAGER'};
   const generated=regenerateM1V184CausalSource(
-    prematch,POLICY,managerCommandsForFixture);
+    prematch,POLICY,managerCommandsForFixture,true);
   if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED'};
   const clock=replayedPhysicalClock(
     prematch,generated.result,managerCommandsForFixture);
@@ -423,8 +432,9 @@ export function applyM1V188LeagueMatch(
       checkpointMedical:raw.checkpointMedical},
     result:raw.result as Good};
   const holds=[...accepted.holds];
+  // New commits cannot claim the legacy shot/referee authority.
   if(!verifyEntry(initial,entry,f,n,holds,
-      accepted.schedule))return fail('SOURCE_MISMATCH');
+      accepted.schedule,false))return fail('SOURCE_MISMATCH');
   const next:M1V188Journal={...accepted.journal,revision:n+1,
     entries:[...accepted.journal.entries,entry]};
   if(JSON.stringify(next).length>MAX_BYTES)

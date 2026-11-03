@@ -583,7 +583,7 @@ test('P3-2: v188 opt-in keeper assessment is replay-bound and save compatible',(
   assert.deepEqual(validateM1V188LeagueJournal(career,downgrade),
     {ok:false,error:'INVALID_JOURNAL'});
   const invented=structuredClone(saved.journal);
-  invented.entries[0].source.medicalPolicyVersion=3;
+  invented.entries[0].source.medicalPolicyVersion=4;
   assert.deepEqual(validateM1V188LeagueJournal(career,invented),
     {ok:false,error:'INVALID_JOURNAL'});
   const forged=structuredClone(proposal.request);
@@ -596,6 +596,103 @@ test('P3-2: v188 opt-in keeper assessment is replay-bound and save compatible',(
   assert.deepEqual(applyM1V188LeagueMatch(
     career,zero.journal,tampered),
     {ok:false,error:'SOURCE_MISMATCH'});
+});
+
+test('P3-2: v3 two patients share a seeded foul whistle and replay as physical source',()=>{
+  let witness=null;
+  for(let seed=1;seed<=192&&!witness;seed++){
+    const career=createInitialCareer(
+      catalog,catalog.clubs[0].id,seed,'v188-p3-2-paired-'+seed);
+    const zero=startM1V188LeagueJournal(career);
+    if(!zero.ok)continue;
+    const p=prepareM1V188LeagueMatch(career,zero.journal,[],undefined,3);
+    if(!p?.ok)continue;
+    const pair=p.sourceLaw5Evidence?.find(e=>
+      e.sameWhistlePairOrdinal===2);
+    const first=pair&&p.sourceLaw5Evidence?.find(e=>
+      e.incidentId===pair.incidentId&&e.patientPlayerId!==pair.patientPlayerId);
+    if(first&&pair)witness={career,zero,p,first,pair};
+  }
+  assert.ok(witness,'no positive source-bound paired patient whistle');
+  const {career,zero,p,first,pair}=witness;
+  assert.equal(p.request.medicalPolicyVersion,3);
+  assert.equal(p.externalMedicalAuthorityAuthenticated,false);
+  assert.equal(pair.sameWhistlePairOrdinal,2);
+  assert.equal(first.incidentId,pair.incidentId);
+  assert.equal(first.whistleEventId,pair.whistleEventId);
+  assert.equal(first.restartEventId,pair.restartEventId);
+  assert.equal(first.runningSeconds,pair.runningSeconds);
+  assert.equal(first.patientTeamId,pair.patientTeamId);
+  assert.notEqual(first.patientPlayerId,pair.patientPlayerId);
+  const source=simulateM1V29CausalMedicalSource(
+    p.request.prematch,p.request.policy,[],[],true,true,true);
+  assert.equal(source.ok,true);
+  const derived=deriveM1V186Law5FromCausalSource(
+    source,p.request.result,p.request.prematch);
+  assert.equal(derived.ok,true);
+  assert.ok(derived.evidence.some(e=>
+    e.incidentId===pair.incidentId&&e.sameWhistlePairOrdinal===2));
+  const whistle=source.match.events.find(e=>e.id===pair.whistleEventId);
+  assert.ok(whistle);
+  const side=pair.patientTeamId===p.fixture.homeClubId?'home':'away';
+  assert.ok(whistle.onField[side].includes(first.patientPlayerId));
+  assert.ok(whistle.onField[side].includes(pair.patientPlayerId));
+  const fake=structuredClone(source);
+  const pairDraft=fake.causalAssessments.find(a=>
+    a.sameWhistleSecondPatient===true);
+  assert.ok(pairDraft);
+  pairDraft.patientPlayerId=first.patientPlayerId;
+  assert.deepEqual(deriveM1V186Law5FromCausalSource(
+    fake,p.request.result,p.request.prematch),
+    {ok:false,error:'UNSUPPORTED_LAW5_ORIGIN'});
+  const noPair=structuredClone(source);
+  delete noPair.causalAssessments.find(a=>
+    a.sameWhistleSecondPatient===true).sameWhistleSecondPatient;
+  assert.deepEqual(deriveM1V186Law5FromCausalSource(
+    noPair,p.request.result,p.request.prematch),
+    {ok:false,error:'UNSUPPORTED_LAW5_ORIGIN'});
+  const illegal=structuredClone(source);
+  illegal.causalAssessments.push(structuredClone(
+    illegal.causalAssessments.find(a=>a.sameWhistleSecondPatient===true)));
+  assert.deepEqual(deriveM1V186Law5FromCausalSource(
+    illegal,p.request.result,p.request.prematch),
+    {ok:false,error:'UNSUPPORTED_LAW5_ORIGIN'});
+  const saved=applyM1V188LeagueMatch(career,zero.journal,p.request);
+  assert.equal(saved.ok,true);
+  assert.equal(saved.journal.entries[0].source.medicalPolicyVersion,3);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(saved.journal)).ok,true);
+  assert.deepEqual(prepareM1V188LeagueMatch(
+    career,saved.journal,[],undefined,2),
+    {ok:false,error:'INVALID_REQUEST'});
+  const second=prepareM1V188LeagueMatch(career,saved.journal);
+  assert.equal(second?.ok,true);
+  assert.equal(second.request.medicalPolicyVersion,3);
+  const down=structuredClone(second.request);
+  down.medicalPolicyVersion=2;
+  assert.deepEqual(applyM1V188LeagueMatch(career,saved.journal,down),
+    {ok:false,error:'SOURCE_MISMATCH'});
+  const continued=applyM1V188LeagueMatch(
+    career,saved.journal,second.request);
+  assert.equal(continued.ok,true);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(continued.journal)).ok,true);
+  const v2First=prepareM1V188LeagueMatch(
+    career,zero.journal,[],undefined,2);
+  assert.equal(v2First?.ok,true);
+  const v2Saved=applyM1V188LeagueMatch(
+    career,zero.journal,v2First.request);
+  assert.equal(v2Saved.ok,true);
+  const upgrade=prepareM1V188LeagueMatch(
+    career,v2Saved.journal,[],undefined,3);
+  assert.equal(upgrade?.ok,true);
+  const promoted=applyM1V188LeagueMatch(
+    career,v2Saved.journal,upgrade.request);
+  assert.equal(promoted.ok,true);
+  assert.equal(promoted.journal.entries[0].source.medicalPolicyVersion,2);
+  assert.equal(promoted.journal.entries[1].source.medicalPolicyVersion,3);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(promoted.journal)).ok,true);
 });
 
 test('P3-3: external claims and even an empty purported clearance fail closed',()=>{

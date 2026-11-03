@@ -21,7 +21,8 @@ export interface M1V186Law5Evidence {
   readonly patientPlayerId:string;
   readonly runningSeconds:number;
   readonly exception:'opponent-carded-physical-offence'|
-    'goalkeeper-on-field-assessment';
+    'goalkeeper-on-field-assessment'|'same-whistle-second-patient';
+  readonly sameWhistlePairOrdinal?:2;
   readonly modelledDisposition:'may-remain-after-assessment'|
     'voluntary-extended-off-field-assessment';
   readonly exitEventId:string|null;
@@ -68,7 +69,7 @@ export function deriveM1V186Law5FromCausalSource(
   }
   const medical=source.syntheticTreatmentActions;
   const evidence:M1V186Law5Evidence[]=[];
-  const visited=new Set<string>();
+  const inspectedPatients=new Map<string,readonly string[]>();
   const exits=medical.filter(a=>a.kind==='treatment-exit');
   const returns=medical.filter(a=>a.kind==='treatment-return');
   const absentEvents=(patientId:string,start:number,end:number)=>
@@ -89,13 +90,18 @@ export function deriveM1V186Law5FromCausalSource(
   for(const assessment of source.causalAssessments){
     const incident=source.generatedIncidents.find(i=>
       i.id===assessment.incidentId);
-    if(!incident||visited.has(incident.id)||
+    const prior=incident?
+      inspectedPatients.get(incident.id)??[]:[];
+    const second=assessment.sameWhistleSecondPatient===true;
+    if(!incident||
+        (second?prior.length!==1:prior.length!==0)||
+        prior.includes(assessment.patientPlayerId)||
         incident.teamId===assessment.patientTeamId||
         !['reckless-challenge','serious-foul-play'].includes(
           incident.offence)||
         !['caution','direct-red'].includes(incident.sanction))
       return fail('UNSUPPORTED_LAW5_ORIGIN');
-    visited.add(incident.id);
+    inspectedPatients.set(incident.id,[...prior,assessment.patientPlayerId]);
     const decision=source.match.events.find(e=>
       e.id===incident.sourceEventId);
     const whistle=source.match.events.find(e=>
@@ -159,8 +165,10 @@ export function deriveM1V186Law5FromCausalSource(
         patientPlayerId:assessment.patientPlayerId,
         runningSeconds:assessment.elapsedSeconds,
         exception:assessment.goalkeeperExceptionSource===true?
-          'goalkeeper-on-field-assessment':
+          'goalkeeper-on-field-assessment':second?
+          'same-whistle-second-patient':
           'opponent-carded-physical-offence',
+        ...(second?{sameWhistlePairOrdinal:2 as const}:{}),
         modelledDisposition:'may-remain-after-assessment',
         exitEventId:null,returnEventId:null,
         minimumRunningSecondsSatisfied:true});
@@ -190,7 +198,9 @@ export function deriveM1V186Law5FromCausalSource(
       patientTeamId:assessment.patientTeamId,
       patientPlayerId:assessment.patientPlayerId,
       runningSeconds:assessment.elapsedSeconds,
-      exception:'opponent-carded-physical-offence',
+      exception:second?'same-whistle-second-patient':
+        'opponent-carded-physical-offence',
+      ...(second?{sameWhistlePairOrdinal:2 as const}:{}),
       modelledDisposition:'voluntary-extended-off-field-assessment',
       exitEventId:exitEvent.id,returnEventId:returnEvent.id,
       minimumRunningSecondsSatisfied:true});

@@ -24,6 +24,8 @@ export const M1_V23_COACH_RULES =
   'ifab-2026-27-internal-foul-temporary-treatment-subset' as const;
 export const M1_V23_COACH_DOMAIN_SALT = 0x7f4a7c15 as const;
 export const M1_V23_TREATMENT_DOMAIN_SALT = 0x5b33ab2d as const;
+export const M1_V30_PAIRED_MEDICAL_DOMAIN_SALT = 0x6a5c21f9 as const;
+const PAIRED_TREATMENT_TRIGGER = 0.2;
 const CONDITIONAL_TREATMENT_TRIGGER = 0.28;
 const TREATMENT_DRAWS_PER_PHASE = 3 as const;
 const FOUL_TRIGGER = 0.2;
@@ -95,6 +97,7 @@ export interface M1V29CausalAssessment {
   /** Legacy v29 tag; 2026/27 Law 5 does NOT require quick completion. */
   readonly transition: 'on-field-quick' | 'off-field-return';
   readonly goalkeeperExceptionSource?: true;
+  readonly sameWhistleSecondPatient?: true;
   readonly medicalExitEventId: string | null;
   readonly medicalReturnEventId: string | null;
   readonly simulatedMedicalNeed: true;
@@ -110,6 +113,7 @@ type AssessmentDraft = Readonly<{
   elapsedSeconds: number;
   transition: M1V29CausalAssessment['transition'];
   goalkeeperExceptionSource?: true;
+  sameWhistleSecondPatient?: true;
 }>;
 
 const fail = (error: M1V23CoachError):
@@ -133,11 +137,11 @@ export function simulateM1V23TemporaryTreatment(
 export function simulateM1V29CausalMedicalSource(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown = [],
   inPlayCommands: unknown = [], denseShotSource=false,
-  goalkeeperOnFieldSource=false,
+  goalkeeperOnFieldSource=false,multiPatientSource=false,
 ): M1V29CausalSourceRun {
   return simulateTreatmentCore(prematch, policy, halfTimeCommands,
     inPlayCommands, true, undefined, denseShotSource,
-    goalkeeperOnFieldSource);
+    goalkeeperOnFieldSource,multiPatientSource);
 }
 type M1V29InternalRejectionTrace={
   sourceError:Extract<M1V23RefereeRun,{ok:false}>['error']|null;
@@ -260,19 +264,19 @@ function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: false,
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
-  goalkeeperOnFieldSource?:boolean,
+  goalkeeperOnFieldSource?:boolean,multiPatientSource?:boolean,
 ): M1V23CoachRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: true,
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
-  goalkeeperOnFieldSource?:boolean,
+  goalkeeperOnFieldSource?:boolean,multiPatientSource?:boolean,
 ): M1V29CausalSourceRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
   inPlayCommands: unknown, causalMode: boolean,
   trace?:M1V29InternalRejectionTrace,denseShotSource=false,
-  goalkeeperOnFieldSource=false,
+  goalkeeperOnFieldSource=false,multiPatientSource=false,
 ): M1V23CoachRun | M1V29CausalSourceRun {
   if (!isPlainJsonTree(prematch) || !isPlainJsonTree(policy) ||
       !isPlainJsonTree(halfTimeCommands) ||
@@ -330,6 +334,9 @@ function simulateTreatmentCore(
     (gate.state.rngSeed ^ M1_V23_TREATMENT_DOMAIN_SALT) >>> 0
   ) || 0x9e3779b9;
   const treatmentRng = new SeededRng(treatmentSeed);
+  const pairedSeed=((gate.state.rngSeed^
+    M1_V30_PAIRED_MEDICAL_DOMAIN_SALT)>>>0)||0x9e3779b9;
+  const pairedRng=multiPatientSource?new SeededRng(pairedSeed):null;
   const clubIds = {
     home: input.fixture.homeClubId, away: input.fixture.awayClubId,
   };
@@ -339,26 +346,33 @@ function simulateTreatmentCore(
     home: new Set(input.homeLineup.starters),
     away: new Set(input.awayLineup.starters),
   };
-  // At most one ordinary outfield assessment at any running checkpoint.
-  let pending: {side: Side; playerId: string; returnAt: number} | null = null;
+  // Historical v23/v29 mode has exactly one pending patient. The opt-in
+  // multi-patient mode may add one independent second patient per whistle.
+  type Pending={side:Side;playerId:string;returnAt:number};
+  let pending:Pending|null=null,extraPending:Pending|null=null;
   const treatment: M1V7TemporaryMedicalAction[] = [];
   let treatmentExits = 0;
   let treatmentReturns = 0;
   function completeDueReturn(second: number, phase: number): void {
-    if (pending === null || pending.returnAt !== second) return;
-    const action: M1V7TemporaryMedicalAction = {
-      schemaVersion: 1, id: (causalMode ? 'm1-v29-return-' : 'm1-v23-return-') +
-        (phase + 1),
-      fixtureId: input.fixture.id, teamId: clubIds[pending.side],
-      playerId: pending.playerId, elapsedSeconds: second,
-      kind: 'treatment-return', returnContext: 'running-clock',
-      ballInPlay: true, entryBoundary: 'touchline',
-      refereeSignalId: 'm1-v23-unverified-synthetic-signal',
-    };
-    treatment.push(action);
-    active[pending.side].add(pending.playerId);
-    pending = null;
-    treatmentReturns++;
+    // The primary action stays first, preserving every legacy event ID.
+    for(const ordinal of [1,2] as const){
+      const due=ordinal===1?pending:extraPending;
+      if(due===null||due.returnAt!==second)continue;
+      const action:M1V7TemporaryMedicalAction={
+        schemaVersion:1,
+        id:(ordinal===1?(causalMode?'m1-v29-return-':'m1-v23-return-'):
+          'm1-v30-pair-return-')+(phase+1),
+        fixtureId:input.fixture.id,teamId:clubIds[due.side],
+        playerId:due.playerId,elapsedSeconds:second,
+        kind:'treatment-return',returnContext:'running-clock',
+        ballInPlay:true,entryBoundary:'touchline',
+        refereeSignalId:'m1-v23-unverified-synthetic-signal',
+      };
+      treatment.push(action);
+      active[due.side].add(due.playerId);
+      if(ordinal===1)pending=null;else extraPending=null;
+      treatmentReturns++;
+    }
   }
   const cautions = new Set<string>();
   const commands: unknown[] = [];
@@ -394,6 +408,9 @@ function simulateTreatmentCore(
     const treatmentRoll = treatmentRng.nextFloat();
     const treatmentTeamRoll = treatmentRng.nextFloat();
     const treatmentPlayerRoll = treatmentRng.nextFloat();
+    // Fixed independent v3 budget: old seeded foul/treatment RNGs unchanged.
+    const pairRoll=pairedRng?.nextFloat()??1;
+    const pairedPlayerRoll=pairedRng?.nextFloat()??0;
     if (second === 2700) {
       // The one approved coach checkpoint is applied BEFORE all later
       // generated sanctions and shots. v17/v8 still performs full team,
@@ -487,7 +504,7 @@ function simulateTreatmentCore(
       if (causalMode) {
         // The offender and patient must be on opposing physical XIs at
         // the SAME whistle. Never infer a patient from the card alone.
-        if (pending === null && treatmentRoll <
+        if (pending === null && extraPending === null && treatmentRoll <
             CONDITIONAL_TREATMENT_TRIGGER) {
           const initialStarters = victimSide === 'home' ?
             input.homeLineup.starters : input.awayLineup.starters;
@@ -526,6 +543,39 @@ function simulateTreatmentCore(
                 pending = {side: victimSide, playerId: patient,
                   returnAt: second + M1_CLOCK_STEP_SECONDS};
                 treatmentExits++;
+              }
+              // Version-3 hypothetical two-patient *same-whistle* event.
+              // No claim that a collision, medical diagnosis or actual
+              // referee permission was independently observed.
+              if(multiPatientSource&&eligible.length>=2&&
+                  pairRoll<PAIRED_TREATMENT_TRIGGER){
+                const otherPatients=eligible.filter(id=>id!==patient);
+                const nextPatient=otherPatients[
+                  Math.floor(pairedPlayerRoll*otherPatients.length)]!;
+                const secondKeeper=players.get(nextPatient)==='GK';
+                const secondCanLeave=!modelledOnField&&!secondKeeper&&
+                  active[victimSide].size>7;
+                drafts.push({
+                  incidentId:'m1-v23-foul-'+(phase+1),
+                  patientTeamId:clubIds[victimSide],
+                  patientPlayerId:nextPatient,elapsedSeconds:second,
+                  transition:secondCanLeave?'off-field-return':'on-field-quick',
+                  sameWhistleSecondPatient:true,
+                  ...(secondKeeper?{goalkeeperExceptionSource:true as const}:{}),
+                });
+                if(secondCanLeave){
+                  treatment.push({
+                    schemaVersion:1,id:'m1-v30-pair-exit-'+(phase+1),
+                    fixtureId:input.fixture.id,teamId:clubIds[victimSide],
+                    playerId:nextPatient,elapsedSeconds:second,
+                    kind:'treatment-exit',reason:'medical-staff-entered',
+                    restartAtRunningSeconds:second,
+                  });
+                  active[victimSide].delete(nextPatient);
+                  extraPending={side:victimSide,playerId:nextPatient,
+                    returnAt:second+M1_CLOCK_STEP_SECONDS};
+                  treatmentExits++;
+                }
               }
             }
           }

@@ -133,3 +133,75 @@ test('v188 manager selects a real halftime XI change in the league source',()=>{
       sourceAuthority:'forged',
     }]),{ok:false,error:'UNAUTHORIZED_MANAGER'});
 });
+
+test('v188 exact-byte replay cache fails closed on post-commit mutations',()=>{
+  const career=createInitialCareer(
+    catalog,catalog.clubs[0].id,15,'v188-replay-cache-seed15');
+  const zero=startM1V188LeagueJournal(career);
+  assert.equal(zero.ok,true);
+  const proposed=prepareM1V188LeagueMatch(career,zero.journal);
+  assert.equal(proposed?.ok,true);
+  const one=applyM1V188LeagueMatch(
+    career,zero.journal,proposed.request);
+  assert.equal(one.ok,true);
+  for(let i=0;i<3;i++){
+    const clone=structuredClone(one.journal);
+    assert.equal(validateM1V188LeagueJournal(career,clone).ok,true);
+  }
+  const changed=structuredClone(one.journal);
+  changed.entries[0].result.report.home.goals++;
+  assert.deepEqual(validateM1V188LeagueJournal(career,changed),
+    {ok:false,error:'INVALID_JOURNAL'});
+  const changedSeed=structuredClone(one.journal);
+  changedSeed.entries[0].source.prematch.rngSeed=1;
+  assert.equal(validateM1V188LeagueJournal(
+    career,changedSeed).ok,false);
+  const changedOrder=structuredClone(one.journal);
+  changedOrder.entries[0].commandId='v188-league-forged';
+  assert.equal(validateM1V188LeagueJournal(
+    career,changedOrder).ok,false);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(one.journal)).ok,true);
+  const second=prepareM1V188LeagueMatch(
+    career,structuredClone(one.journal));
+  assert.equal(second?.ok,true);
+  const two=applyM1V188LeagueMatch(
+    career,structuredClone(one.journal),second.request);
+  assert.equal(two.ok,true);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(two.journal)).ok,true);
+  const broken=structuredClone(two.journal);
+  broken.entries[1].source.policy.home.availableStaffIds=['fake'];
+  assert.deepEqual(validateM1V188LeagueJournal(career,broken),
+    {ok:false,error:'INVALID_JOURNAL'});
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(two.journal)).ok,true);
+});
+
+test('v188 cached schedule is isolated from mutated returned fixture aliases',()=>{
+  const career=createInitialCareer(
+    catalog,catalog.clubs[0].id,11,'v188-cache-schedule-alias');
+  const zero=startM1V188LeagueJournal(career);
+  assert.equal(zero.ok,true);
+  const original=prepareM1V188LeagueMatch(career,zero.journal);
+  assert.equal(original?.ok,true);
+  const correctId=original.fixture.id;
+  const correctHome=original.fixture.homeClubId;
+  // A caller may mutate an object despite TypeScript readonly declarations.
+  original.fixture.id='a-forged-calendar-identity';
+  original.fixture.homeClubId='injected-foreign-club';
+  assert.equal(original.request.prematch.fixture.id,
+    'a-forged-calendar-identity');
+  const again=prepareM1V188LeagueMatch(career,zero.journal);
+  assert.equal(again?.ok,true);
+  assert.equal(again.fixture.id,correctId);
+  assert.equal(again.fixture.homeClubId,correctHome);
+  assert.deepEqual(applyM1V188LeagueMatch(
+    career,zero.journal,original.request),
+    {ok:false,error:'WRONG_FIXTURE'});
+  const valid=applyM1V188LeagueMatch(
+    career,zero.journal,again.request);
+  assert.equal(valid.ok,true);
+  assert.equal(validateM1V188LeagueJournal(
+    career,valid.journal).ok,true);
+});

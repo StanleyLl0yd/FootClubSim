@@ -106,14 +106,15 @@ function addHolds(holds:Hold[],incidents:readonly Incident[],
   const cautions=new Map<string,number>();
   for(const inc of incidents){
     let ban:number|null|undefined;
-    if(inc.sanction==='direct-red')ban=null;
+    // Fictional league-only fallback; external KDK rulings remain unverified.
+    if(inc.sanction==='direct-red')ban=3;
     if(inc.sanction==='injury-withdrawal')
       ban=missed(f.id,inc.decisionId,inc.playerId);
     if(inc.sanction==='caution'){
       const key=inc.teamId+'/'+inc.playerId;
       const count=(cautions.get(key)??0)+1;
       cautions.set(key,count);
-      if(count===2)ban=null;
+      if(count===2)ban=1;
     }
     if(ban!==undefined)holds.push({clubId:inc.teamId,
       playerId:inc.playerId,sourceIndex:index,missedGames:ban});
@@ -239,6 +240,31 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
   addHolds(holds,replay.generatedIncidents,f,index);
   return true;
 }
+/** One process only. Match exact serialized input AND immutable M0 initial.
+ * The first encounter always performs full source replay; identical bytes
+ * already verified in this process reuse only their derived hold state.
+ * No checksum or client-supplied attestation can mint authority.
+ */
+type VerifiedPrefix=Readonly<{initialBytes:string;journalBytes:string;
+  holds:readonly Hold[]}>;
+const VERIFIED_PREFIX_CACHE_LIMIT=2;
+const verifiedPrefixes=new Map<string,VerifiedPrefix>();
+function rememberVerified(i:InitialCareerSave,j:M1V188Journal,
+  holds:readonly Hold[]):void{
+  const initialBytes=JSON.stringify(i);
+  const journalBytes=JSON.stringify(j);
+  if(initialBytes.length>10_000_000||
+      journalBytes.length>MAX_BYTES)return;
+  verifiedPrefixes.delete(i.careerId);
+  verifiedPrefixes.set(i.careerId,{
+    initialBytes,journalBytes,holds:holds.map(h=>({...h})),
+  });
+  if(verifiedPrefixes.size>VERIFIED_PREFIX_CACHE_LIMIT){
+    const oldest=verifiedPrefixes.keys().next().value;
+    if(oldest!==undefined)verifiedPrefixes.delete(oldest);
+  }
+}
+
 function read(i:InitialCareerSave,value:unknown){
   const raw=copy(value,MAX_BYTES);
   if(!rec(raw)||!exact(raw,rootKeys)||
@@ -250,15 +276,21 @@ function read(i:InitialCareerSave,value:unknown){
       (raw.revision as number)<0||(raw.revision as number)>LIMIT||
       !Array.isArray(raw.entries)||
       raw.entries.length!==raw.revision)return null;
+  const journal=raw as unknown as M1V188Journal;
+  const cached=verifiedPrefixes.get(i.careerId);
+  if(cached&&cached.initialBytes===JSON.stringify(i)&&
+      cached.journalBytes===JSON.stringify(journal))
+    return{journal,holds:cached.holds.map(h=>({...h})),
+      schedule:calendar(i)};
   const schedule=calendar(i),holds:Hold[]=[];
   if(schedule.length!==LIMIT)return null;
-  const journal=raw as unknown as M1V188Journal;
   for(let n=0;n<journal.entries.length;n++){
     const entry=journal.entries[n]!;
     if(copy(entry,MAX_REQUEST)===null||
         !verifyEntry(i,entry,schedule[n]!,n,holds,schedule))
       return null;
   }
+  rememberVerified(i,journal,holds);
   return{journal,holds,schedule};
 }
 function good(journal:M1V188Journal):M1V188Gate{
@@ -348,12 +380,14 @@ export function applyM1V188LeagueMatch(
       plannedCommands:raw.plannedCommands,
       checkpointMedical:raw.checkpointMedical},
     result:raw.result as Good};
-  if(!verifyEntry(initial,entry,f,n,[...accepted.holds],
+  const holds=[...accepted.holds];
+  if(!verifyEntry(initial,entry,f,n,holds,
       accepted.schedule))return fail('SOURCE_MISMATCH');
   const next:M1V188Journal={...accepted.journal,revision:n+1,
     entries:[...accepted.journal.entries,entry]};
   if(JSON.stringify(next).length>MAX_BYTES)
     return fail('JOURNAL_SIZE_LIMIT');
+  rememberVerified(initial,next,holds);
   return good(next);
 }
 export function inspectM1V188LeagueCalendar(initial:unknown):

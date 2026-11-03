@@ -13,6 +13,8 @@ import {verifyM1V158CommandShape}
 import {simulateM1V105SpecialGoalChronology,
   type M1V105Run}
   from './m1-v105-special-goal-chronology.js';
+import {deriveM1V186Law5FromCausalSource}
+  from './m1-v186-law5-causal.js';
 
 type Command=Readonly<Record<string,unknown>>;
 const valid=(value:unknown):value is Command=>
@@ -124,6 +126,10 @@ function regenerateUnifiedSource(
       (causal&&causalGenerated!==null&&
        !causalWitness(causalGenerated,result)))
     return {ok:false as const,error:'UNIFIED_REPLAY_REJECTED' as const};
+  const law5=causalGenerated&&causal?
+    deriveM1V186Law5FromCausalSource(causalGenerated,result):null;
+  if(law5&&!law5.ok)
+    return {ok:false as const,error:'LAW5_SOURCE_REJECTED' as const};
   return {ok:true as const,sourceFixtureId:generated.fixtureId,
     plannedCommands,checkpointMedical,
     generatedIncidents:[...generated.generatedIncidents],
@@ -131,7 +137,8 @@ function regenerateUnifiedSource(
     temporaryReturnCount:generated.syntheticTemporaryReturnCount,
     result,
     ...(causalGenerated!==null&&causal?
-      {causalAssessments:causalGenerated.causalAssessments}:{}),
+      {causalAssessments:causalGenerated.causalAssessments,
+        law5Evidence:law5?.ok?law5.evidence:[]}:{}),
   };
 }
 

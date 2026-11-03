@@ -32,8 +32,22 @@ type PhysicalClock=Extract<M1V179ClockResult,{ok:true}>;
 type Incident=Extract<
   ReturnType<typeof regenerateM1V184CausalSource>,
   {ok:true}>['generatedIncidents'][number];
+type HoldReason='straight-red'|'fictional-injury'|'second-yellow'|
+  'simple-caution-history'|'four-cautions';
 type Hold={clubId:string;playerId:string;sourceIndex:number;
-  missedGames:number|null};
+  missedGames:number|null;reason:HoldReason};
+export type M1V188FictionalHold=Readonly<{
+  clubId:string;playerId:string;sourceFixtureId:string;
+  sourceIndex:number;reason:HoldReason;missedOwnFixtures:number|null;
+  servedOwnFixtures:number;remainingOwnFixtures:number|null;
+  lastBlockedFixtureId:string|null;
+}>;
+export type M1V188HoldInspection=
+  | Readonly<{ok:false;error:'INVALID_INITIAL'|'INVALID_JOURNAL'}>
+  | Readonly<{ok:true;schemaVersion:188;journalRevision:number;
+    status:'FICTIONAL_SOURCE_ONLY_EXTERNAL_KDK_UNVERIFIED';
+    externalKdkAuthenticated:false;officialClearanceAuthenticated:false;
+    holds:readonly M1V188FictionalHold[]}>;
 type Source={prematch:Record<string,unknown>;policy:unknown;
   plannedCommands:unknown[];checkpointMedical:unknown[];
   disciplinePolicyVersion?:2};
@@ -50,7 +64,8 @@ export type M1V188Error='INVALID_INITIAL'|'INVALID_JOURNAL'|
   'INVALID_REQUEST'|'WRONG_CAREER'|'STALE_REVISION'|
   'WRONG_FIXTURE'|'UNTRUSTED_CATALOG'|'SOURCE_MISMATCH'|
   'NO_LEGAL_LINEUP'|'GENERATOR_REJECTED'|'SEASON_COMPLETE'|
-  'UNAUTHORIZED_MANAGER'|'JOURNAL_SIZE_LIMIT';
+  'UNAUTHORIZED_MANAGER'|'JOURNAL_SIZE_LIMIT'|
+  'UNVERIFIED_EXTERNAL_DISCIPLINE';
 export type M1V188Gate=
   | Readonly<{ok:false;error:M1V188Error}>
   | Readonly<{ok:true;schemaVersion:188;status:
@@ -124,17 +139,17 @@ function addHolds(holds:Hold[],incidents:readonly Incident[],
     if(inc.sanction==='direct-red'){
       reds.add(key);
       holds.push({clubId:inc.teamId,playerId:inc.playerId,
-        sourceIndex:index,missedGames:3});
+        sourceIndex:index,missedGames:3,reason:'straight-red'});
     }else if(inc.sanction==='injury-withdrawal'){
       holds.push({clubId:inc.teamId,playerId:inc.playerId,
         sourceIndex:index,missedGames:missed(f.id,inc.decisionId,
-          inc.playerId)});
+          inc.playerId),reason:'fictional-injury'});
     }
   }
   for(const [key,warning] of cautions){
     if(warning.count===2){
       holds.push({clubId:warning.clubId,playerId:warning.playerId,
-        sourceIndex:index,missedGames:1});
+        sourceIndex:index,missedGames:1,reason:'second-yellow'});
       continue;
     }
     if(warning.count!==1||reds.has(key))continue;
@@ -144,10 +159,10 @@ function addHolds(holds:Hold[],incidents:readonly Incident[],
     const previous=holds.filter(h=>h.clubId===warning.clubId&&
       h.playerId===warning.playerId&&h.missedGames===0).length;
     holds.push({clubId:warning.clubId,playerId:warning.playerId,
-      sourceIndex:index,missedGames:0});
+      sourceIndex:index,missedGames:0,reason:'simple-caution-history'});
     if(versioned&&(previous+1)%4===0){
       holds.push({clubId:warning.clubId,playerId:warning.playerId,
-        sourceIndex:index,missedGames:1});
+        sourceIndex:index,missedGames:1,reason:'four-cautions'});
     }
   }
 }
@@ -406,8 +421,13 @@ export function validateM1V188LeagueJournal(
 }
 export function prepareM1V188LeagueMatch(
   initial:unknown,value:unknown,manager:unknown=[],
+  externalDiscipline:unknown=undefined,
 ):M1V188Proposal|null{
   if(!validInitial(initial))return {ok:false,error:'INVALID_INITIAL'};
+  // No complete authenticated external KDK feed exists in this game.
+  // Even an empty caller-supplied list is not proof of official clearance.
+  if(externalDiscipline!==undefined)
+    return {ok:false,error:'UNVERIFIED_EXTERNAL_DISCIPLINE'};
   const accepted=read(initial,value);
   if(!accepted)return {ok:false,error:'INVALID_JOURNAL'};
   const index=accepted.journal.revision,f=accepted.schedule[index];
@@ -440,8 +460,11 @@ export function prepareM1V188LeagueMatch(
 }
 export function applyM1V188LeagueMatch(
   initial:unknown,value:unknown,request:unknown,
+  externalDiscipline:unknown=undefined,
 ):M1V188Gate{
   if(!validInitial(initial))return fail('INVALID_INITIAL');
+  if(externalDiscipline!==undefined)
+    return fail('UNVERIFIED_EXTERNAL_DISCIPLINE');
   const accepted=read(initial,value);
   if(!accepted)return fail('INVALID_JOURNAL');
   const raw=copy(request,MAX_REQUEST);
@@ -481,6 +504,37 @@ export function applyM1V188LeagueMatch(
     return fail('JOURNAL_SIZE_LIMIT');
   rememberVerified(initial,next,holds);
   return good(next);
+}
+/** A replay-derived, read-only audit of the EXACT playable journal.
+ * No inferred expiry grants external KDK clearance or clinical permission.
+ */
+export function inspectM1V188FictionalHolds(
+  initial:unknown,value:unknown,
+):M1V188HoldInspection {
+  if(!validInitial(initial))
+    return {ok:false,error:'INVALID_INITIAL'};
+  const accepted=read(initial,value);
+  if(!accepted)return {ok:false,error:'INVALID_JOURNAL'};
+  const holds=accepted.holds.filter(h=>h.missedGames!==0).map(h=>{
+    const following=accepted.schedule.slice(h.sourceIndex+1)
+      .filter(f=>belongs(f,h.clubId));
+    const served=accepted.schedule.slice(h.sourceIndex+1,
+      accepted.journal.revision).filter(f=>belongs(f,h.clubId)).length;
+    const missed=h.missedGames;
+    return {clubId:h.clubId,playerId:h.playerId,
+      sourceFixtureId:accepted.schedule[h.sourceIndex]!.id,
+      sourceIndex:h.sourceIndex,reason:h.reason,
+      missedOwnFixtures:missed,
+      servedOwnFixtures:missed===null?served:Math.min(served,missed),
+      remainingOwnFixtures:missed===null?null:Math.max(0,missed-served),
+      lastBlockedFixtureId:missed===null?null:
+        following[missed-1]?.id??null};
+  });
+  return {ok:true,schemaVersion:188,
+    journalRevision:accepted.journal.revision,
+    status:'FICTIONAL_SOURCE_ONLY_EXTERNAL_KDK_UNVERIFIED',
+    externalKdkAuthenticated:false,
+    officialClearanceAuthenticated:false,holds};
 }
 export function inspectM1V188LeagueCalendar(initial:unknown):
   {ok:false;error:'INVALID_INITIAL'}|

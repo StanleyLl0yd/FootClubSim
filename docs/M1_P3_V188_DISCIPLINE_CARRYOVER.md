@@ -31,6 +31,31 @@ source-seeded injury withdrawal durations are unchanged.
   `applyM1V188LeagueMatch`, v188 IndexedDB store and source replay, not
   a separate diagnostic engine.
 
+
+## Replay-derived hold/expiry inspection
+
+The playable v188 journal now provides `inspectM1V188FictionalHolds`.
+It fully validates the historical journal (or reuses only an exactly
+byte-matched, previously verified in-process prefix) and derives source
+fixture ID, club, player, hold reason, missed **own-team** fixtures,
+actually served own-team fixtures, remaining fixtures and the last
+scheduled blocked fixture. In-match warnings are not copied into a
+caller-controlled suspension history; the inspector omits zero-duration
+caution bookkeeping and never edits persisted v188 bytes. Historical
+v188 entries still replay under their stored discipline policy.
+
+The inspection result explicitly reports `externalKdkAuthenticated:false`
+and `officialClearanceAuthenticated:false`. Fictional automatic expiry
+is **not** an official decision to reinstate a player. The selected
+playable `prepareM1V188LeagueMatch` and `applyM1V188LeagueMatch`
+paths accept an optional external-discipline claim argument solely to
+**reject** it with `UNVERIFIED_EXTERNAL_DISCIPLINE`; even a submitted
+empty list is not an authenticated complete official snapshot. Without
+that argument, the previous internally fictional gameplay remains
+unchanged. External KDK orders, authenticated appeals, cancellations,
+reinstatement and retroactive conflicts remain outside this feature.
+This is partial P3-3 progress, not ACCEPTED.
+
 ## Explicit limitations
 
 This is **fictional gameplay policy**, not the RFU/KDK's actual sanction,

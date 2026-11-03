@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v188 two-team native CAS</title></head>
+<body>
+<h1>M1 240-fixture two-team source persistence</h1>
+<pre id="status">M1_V188_BROWSER_CAS_RUNNING</pre>
+<script type="module">
+  import {createSyntheticRplScaleCatalog}
+    from '../dist/core/synthetic.js';
+  import {createInitialCareer}
+    from '../dist/core/save.js';
+  import {saveNewInitialCareer,loadInitialCareer}
+    from '../dist/browser/initial-career-store.js';
+  import {createM1V188PersistedLeague as create,
+    loadM1V188PersistedLeague as load,
+    commitM1V188PersistedLeagueMatch as commit}
+    from '../dist/browser/m1-v188-league-store.js';
+  import {startM1V188LeagueJournal,prepareM1V188LeagueMatch,
+    applyM1V188LeagueMatch,validateM1V188LeagueJournal}
+    from '../dist/core/m1-v188-league-source-journal.js';
+
+  const status=document.getElementById('status');
+  const check=(v,why)=>{if(!v)throw Error(why);};
+  const yieldPage=()=>new Promise(resolve=>setTimeout(resolve,0));
+  const catalog=createSyntheticRplScaleCatalog(2026);
+  const career=seed=>createInitialCareer(
+    catalog,catalog.clubs[0].id,seed,'m1-v188-native-cas');
+  const params=new URL(location.href).searchParams;
+  async function rejected(op,code){
+    try{await op;}catch(error){
+      check(error?.code===code,'expected '+code+' got '+String(error));
+      return;
+    }
+    throw Error('expected rejected '+code);
+  }
+  async function sample(){
+    for(let seed=1;seed<=24;seed++){
+      await yieldPage();
+      const initial=career(seed);
+      const started=startM1V188LeagueJournal(initial);
+      if(!started.ok)continue;
+      const first=prepareM1V188LeagueMatch(initial,started.journal);
+      if(!first?.ok)continue;
+      const one=applyM1V188LeagueMatch(
+        initial,started.journal,first.request);
+      if(!one.ok)continue;
+      await yieldPage();
+      const next=prepareM1V188LeagueMatch(initial,one.journal);
+      if(next?.ok)return {seed,initial,first};
+    }
+    throw Error('no two-fixture source-replayed league seed');
+  }
+  async function run(){
+    if(params.get('stage')===null){
+      const {seed,initial,first}=await sample();
+      await saveNewInitialCareer(initial);
+      const zero=await create(initial.careerId);
+      check(zero.revision===0,'fresh full league journal not empty');
+      const forged=structuredClone(first.request);
+      forged.result.report.home.goals++;
+      await rejected(commit(initial.careerId,0,forged),'DOMAIN_REJECTED');
+      check((await load(initial.careerId)).revision===0,
+        'forged synthetic score wrote journal');
+      const one=await commit(initial.careerId,0,first.request);
+      check(one.revision===1&&one.entries.length===1&&
+        one.entries[0].fixtureId===first.fixture.id,
+        'source verified first fixture not persisted');
+      const target=new URL(location.href);
+      target.searchParams.set('stage','verify');
+      target.searchParams.set('seed',String(seed));
+      target.searchParams.set('first',first.fixture.id);
+      location.replace(target.href);
+      return;
+    }
+    check(params.get('stage')==='verify','unknown stage');
+    const seed=Number(params.get('seed'));
+    check(Number.isSafeInteger(seed)&&seed>=1&&seed<=24,
+      'invalid preserved seed');
+    const initial=career(seed);
+    const savedInitial=await loadInitialCareer(initial.careerId);
+    check(savedInitial.careerId===initial.careerId&&
+      savedInitial.rngState===initial.rngState,
+      'immutable initial career changed');
+    const prior=await load(initial.careerId);
+    check(prior.revision===1&&prior.entries.length===1&&
+      prior.entries[0].fixtureId===params.get('first'),
+      'first full-league fixture not restored');
+    check(validateM1V188LeagueJournal(initial,prior).ok,
+      'restored source rejected full replay');
+    await rejected(create(initial.careerId),'ALREADY_EXISTS');
+    const next=prepareM1V188LeagueMatch(initial,prior);
+    check(next?.ok,'cannot prepare next league fixture');
+    check(next.fixture.id!==prior.entries[0].fixtureId,
+      'opponent fixture ordering is stale');
+    await rejected(commit(initial.careerId,0,next.request),
+      'STALE_REVISION');
+    const before=JSON.stringify(await load(initial.careerId));
+    const fake=structuredClone(next.request);
+    fake.commandId='v188-league-forged';
+    await rejected(commit(initial.careerId,1,fake),'DOMAIN_REJECTED');
+    check(JSON.stringify(await load(initial.careerId))===before,
+      'failed second-fixture claim mutated history');
+    const racers=await Promise.allSettled([
+      commit(initial.careerId,1,next.request),
+      commit(initial.careerId,1,next.request),
+    ]);
+    check(racers.filter(x=>x.status==='fulfilled').length===1,
+      'two native CAS writers unexpectedly succeeded');
+    check(racers.filter(x=>x.status==='rejected').every(x=>
+      x.reason?.code==='STALE_REVISION'),
+      'CAS loser not classified as stale');
+    const done=await load(initial.careerId);
+    check(done.revision===2&&done.entries.length===2&&
+      done.entries[0].fixtureId===prior.entries[0].fixtureId&&
+      done.entries[1].fixtureId===next.fixture.id,
+      'chronological two-team journal lost entries');
+    check((await loadInitialCareer(initial.careerId)).careerId===
+      initial.careerId,'full-league CAS rewrote M0');
+    status.textContent='M1_V188_BROWSER_CAS_PASS';
+  }
+  run().catch(error=>{
+    status.textContent='M1_V188_BROWSER_CAS_FAIL: '+
+      String(error?.stack??error);
+  });
+</script>
+</body>
+</html>

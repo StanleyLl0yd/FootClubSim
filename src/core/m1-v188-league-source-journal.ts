@@ -35,7 +35,8 @@ type Incident=Extract<
 type Hold={clubId:string;playerId:string;sourceIndex:number;
   missedGames:number|null};
 type Source={prematch:Record<string,unknown>;policy:unknown;
-  plannedCommands:unknown[];checkpointMedical:unknown[]};
+  plannedCommands:unknown[];checkpointMedical:unknown[];
+  disciplinePolicyVersion?:2};
 export type M1V188Entry={fixtureId:string;round:number;
   commandId:string;source:Source;result:Good};
 export type M1V188Journal={schemaVersion:188;careerId:string;
@@ -74,6 +75,7 @@ const rootKeys=['schemaVersion','careerId','selectedClubId',
   'basePackId','basePackVersion','revision','entries'];
 const entryKeys=['fixtureId','round','commandId','source','result'];
 const sourceKeys=['prematch','policy','plannedCommands','checkpointMedical'];
+const sourceKeysV2=[...sourceKeys,'disciplinePolicyVersion'];
 const requestKeys=['schemaVersion','careerId','expectedRevision',
   'commandId','prematch','policy','plannedCommands',
   'checkpointMedical','result'];
@@ -106,22 +108,47 @@ function missed(fixtureId:string,incidentId:string,playerId:string){
   return 1+hash%4;
 }
 function addHolds(holds:Hold[],incidents:readonly Incident[],
-  f:Fixture,index:number){
-  const cautions=new Map<string,number>();
+  f:Fixture,index:number,versioned=false){
+  const cautions=new Map<string,{clubId:string;playerId:string;count:number}>();
+  const reds=new Set<string>();
   for(const inc of incidents){
-    let ban:number|null|undefined;
-    // Fictional league-only fallback; external KDK rulings remain unverified.
-    if(inc.sanction==='direct-red')ban=3;
-    if(inc.sanction==='injury-withdrawal')
-      ban=missed(f.id,inc.decisionId,inc.playerId);
+    const key=JSON.stringify([inc.teamId,inc.playerId]);
     if(inc.sanction==='caution'){
-      const key=inc.teamId+'/'+inc.playerId;
-      const count=(cautions.get(key)??0)+1;
-      cautions.set(key,count);
-      if(count===2)ban=1;
+      const previous=cautions.get(key);
+      cautions.set(key,{clubId:inc.teamId,playerId:inc.playerId,
+        count:(previous?.count??0)+1});
+      continue;
     }
-    if(ban!==undefined)holds.push({clubId:inc.teamId,
-      playerId:inc.playerId,sourceIndex:index,missedGames:ban});
+    // Only the internally modelled league durations are applied here.
+    // Official KDK orders, cancellations and appeals are not inferred.
+    if(inc.sanction==='direct-red'){
+      reds.add(key);
+      holds.push({clubId:inc.teamId,playerId:inc.playerId,
+        sourceIndex:index,missedGames:3});
+    }else if(inc.sanction==='injury-withdrawal'){
+      holds.push({clubId:inc.teamId,playerId:inc.playerId,
+        sourceIndex:index,missedGames:missed(f.id,inc.decisionId,
+          inc.playerId)});
+    }
+  }
+  for(const [key,warning] of cautions){
+    if(warning.count===2){
+      holds.push({clubId:warning.clubId,playerId:warning.playerId,
+        sourceIndex:index,missedGames:1});
+      continue;
+    }
+    if(warning.count!==1||reds.has(key))continue;
+    // Zero-duration entries are replay-derived history, never bans.
+    // They also recover the earlier simple-card count from legacy v188
+    // careers without retroactively changing their legal lineups.
+    const previous=holds.filter(h=>h.clubId===warning.clubId&&
+      h.playerId===warning.playerId&&h.missedGames===0).length;
+    holds.push({clubId:warning.clubId,playerId:warning.playerId,
+      sourceIndex:index,missedGames:0});
+    if(versioned&&(previous+1)%4===0){
+      holds.push({clubId:warning.clubId,playerId:warning.playerId,
+        sourceIndex:index,missedGames:1});
+    }
   }
 }
 function excluded(team:string,index:number,holds:Hold[],
@@ -252,7 +279,10 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
   if(!rec(e)||!exact(e,entryKeys)||
       e.fixtureId!==f.id||e.round!==f.round||
       e.commandId!=='v188-league-'+f.id||
-      !rec(e.source)||!exact(e.source,sourceKeys)||
+      !rec(e.source)||
+      !(exact(e.source,sourceKeys)||
+        (exact(e.source,sourceKeysV2)&&
+          e.source.disciplinePolicyVersion===2))||
       !rec(e.source.prematch)||
       Object.hasOwn(e.source.prematch,'catalog')||
       !Array.isArray(e.source.plannedCommands)||
@@ -285,7 +315,8 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
   const replay=sourceAttempt(true)??
     (allowLegacy?sourceAttempt(false):null);
   if(!replay)return false;
-  addHolds(holds,replay.generatedIncidents,f,index);
+  addHolds(holds,replay.generatedIncidents,f,index,
+    e.source.disciplinePolicyVersion===2);
   return true;
 }
 /** One process only. Match exact serialized input AND immutable M0 initial.
@@ -332,11 +363,15 @@ function read(i:InitialCareerSave,value:unknown){
       schedule:calendar(i)};
   const schedule=calendar(i),holds:Hold[]=[];
   if(schedule.length!==LIMIT)return null;
+  let versionedSeen=false;
   for(let n=0;n<journal.entries.length;n++){
     const entry=journal.entries[n]!;
+    const versioned=entry.source?.disciplinePolicyVersion===2;
+    if(versionedSeen&&!versioned)return null;
     if(copy(entry,MAX_REQUEST)===null||
         !verifyEntry(i,entry,schedule[n]!,n,holds,schedule))
       return null;
+    if(versioned)versionedSeen=true;
   }
   rememberVerified(i,journal,holds);
   return{journal,holds,schedule};
@@ -429,7 +464,8 @@ export function applyM1V188LeagueMatch(
   const entry:M1V188Entry={fixtureId:f.id,round:f.round,
     commandId:raw.commandId,source:{prematch,policy:raw.policy,
       plannedCommands:raw.plannedCommands,
-      checkpointMedical:raw.checkpointMedical},
+      checkpointMedical:raw.checkpointMedical,
+      disciplinePolicyVersion:2},
     result:raw.result as Good};
   const holds=[...accepted.holds];
   // New commits cannot claim the legacy shot/referee authority.

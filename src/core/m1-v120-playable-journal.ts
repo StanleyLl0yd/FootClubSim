@@ -3,7 +3,8 @@ import {verifyM1V158SourceClaim}
   from './m1-v158-generated-goal-stops.js';
 import {verifyM1V124GeneratedSourceClaim}
   from './m1-v124-generated-source.js';
-import {verifyM1V166CombinedSourceClaim}
+import {verifyM1V166CombinedSourceClaim,
+  verifyM1V180RefereeStoppageSourceClaim}
   from './m1-v166-combined-source.js';
 import {verifyM1V176MedicalSourceClaim}
   from './m1-v176-dense-medical.js';
@@ -168,6 +169,14 @@ function replay(initial:InitialCareerSave,entry:M1V120Entry,
        !verifyM1V166CombinedSourceClaim(prematch,source.policy,
          source.plannedCommands,scheduled.id,initial.selectedClubId,
          initial.rngState)))return false;
+  if(entry.commandId.startsWith('v180-ref-whistle-')&&
+      (entry.commandId!=='v180-ref-whistle-'+scheduled.id||
+       source.checkpointMedical.length!==0||
+       source.intraphaseMedical.length!==0||
+       source.trustedDecisions.length!==0||
+       !verifyM1V180RefereeStoppageSourceClaim(
+         prematch,source.policy,source.plannedCommands,
+         scheduled.id,initial.selectedClubId,initial.rngState)))return false;
   if(entry.commandId.startsWith('v158-goal-multi-')&&
       (entry.commandId!=='v158-goal-multi-'+scheduled.id||
        source.checkpointMedical.length!==0||
@@ -277,6 +286,15 @@ export function applyM1V120Source(
        !verifyM1V166CombinedSourceClaim(raw.prematch,raw.policy,
          raw.plannedCommands,fixture.id,initial.selectedClubId,
          initial.rngState)))
+    return fail('SOURCE_REPLAY_REJECTED');
+  if((raw.commandId as string).startsWith('v180-ref-whistle-')&&
+      (raw.commandId!=='v180-ref-whistle-'+fixture.id||
+       raw.checkpointMedical.length!==0||
+       raw.intraphaseMedical.length!==0||
+       raw.trustedDecisions.length!==0||
+       !verifyM1V180RefereeStoppageSourceClaim(
+         raw.prematch,raw.policy,raw.plannedCommands,
+         fixture.id,initial.selectedClubId,initial.rngState)))
     return fail('SOURCE_REPLAY_REJECTED');
   if((raw.commandId as string).startsWith('v158-goal-multi-')&&
       (raw.commandId!=='v158-goal-multi-'+fixture.id||

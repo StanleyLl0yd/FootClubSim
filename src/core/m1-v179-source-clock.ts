@@ -112,11 +112,13 @@ export function projectM1V179MatchClock(
             delay=10;
           }else if(transition.source.entry.effect==='yellow'){
             delay=15;
+            stops.add(sec);
           }else{
             if(!present(side,action.playerId))
               return bad('INVALID_XI_CHRONOLOGY');
             active[side].delete(action.playerId);
             delay=25;
+            stops.add(sec);
           }
         }else{
           if(!medical(transition.action))

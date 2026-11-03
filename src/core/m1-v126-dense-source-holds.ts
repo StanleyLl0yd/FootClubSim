@@ -5,7 +5,8 @@ import {verifyM1V176MedicalSourceClaim}
   from './m1-v176-dense-medical.js';
 import {verifyM1V158SourceClaim}
   from './m1-v158-generated-goal-stops.js';
-import {verifyM1V166CombinedSourceClaim}
+import {verifyM1V166CombinedSourceClaim,
+  verifyM1V180RefereeStoppageSourceClaim}
   from './m1-v166-combined-source.js';
 import type {M1PrematchInput} from './m1-clock.js';
 import {verifyM1V124DenseVirtualRefereeSource}
@@ -191,15 +192,21 @@ export function reviewM1V126DenseSourceHolds(
       continue;
     }
     const combined=entry.commandId==='v166-combined-'+entry.fixtureId;
+    const refereeWhistle=entry.commandId===
+      'v180-ref-whistle-'+entry.fixtureId;
     const sourceVerified=generatedMedical?
       verifyM1V176MedicalSourceClaim(
         {...source.prematch,catalog:initial.catalog},source.policy,
         source.plannedCommands,source.checkpointMedical,
         entry.fixtureId,initial.rngState):
+      refereeWhistle?verifyM1V180RefereeStoppageSourceClaim(
+        {...source.prematch,catalog:initial.catalog},source.policy,
+        source.plannedCommands,entry.fixtureId,initial.selectedClubId,
+        initial.rngState):
       combined?verifyM1V166CombinedSourceClaim(
-      {...source.prematch,catalog:initial.catalog},source.policy,
-      source.plannedCommands,entry.fixtureId,initial.selectedClubId,
-      initial.rngState):verifyM1V124DenseVirtualRefereeSource(
+        {...source.prematch,catalog:initial.catalog},source.policy,
+        source.plannedCommands,entry.fixtureId,initial.selectedClubId,
+        initial.rngState):verifyM1V124DenseVirtualRefereeSource(
         initial,journal,entry.fixtureId);
     if(!sourceVerified)
       return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};

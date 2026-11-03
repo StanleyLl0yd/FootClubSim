@@ -38,7 +38,7 @@ export function verifyM1V158GeneratedGoalStops(
 /** Canonical v158 claim identity, verified before v120 CAS persistence.
  * This is a fictional, source-generated whistle, never external authority.
  */
-export function verifyM1V158SourceClaim(
+export function verifyM1V158CommandShape(
   prematch:unknown,policy:unknown,commands:unknown,
   fixtureId:string,selectedTeamId:string,fixtureSeedBase:number,
 ):boolean{
@@ -48,13 +48,13 @@ export function verifyM1V158SourceClaim(
       !prematch||typeof prematch!=='object'||
       (prematch as {rngSeed?:unknown}).rngSeed!==
         deriveM1FixtureSeed(fixtureSeedBase,fixtureId)||
-      !verifyM1V158GeneratedGoalStops(prematch,policy,commands)||
       !Array.isArray(commands))return false;
   const names=new Set<string>(),outs=new Set<string>(),
     ins=new Set<string>();
   let last=-1;
   for(let i=0;i<commands.length;i++){
-    const c=commands[i] as Record<string,unknown>;
+    const c=commands[i] as Record<string,unknown>|null;
+    if(!c||typeof c!=='object'||Array.isArray(c))return false;
     const t=c.elapsedSeconds;
     if(Reflect.ownKeys(c).length!==10||c.schemaVersion!==1||
         c.kind!=='substitute-normal'||
@@ -74,4 +74,14 @@ export function verifyM1V158SourceClaim(
     last=t as number;
   }
   return names.size===commands.length;
+}
+
+/** Exact source identity plus a source-generated open-play goal/half-time stop. */
+export function verifyM1V158SourceClaim(
+  prematch:unknown,policy:unknown,commands:unknown,
+  fixtureId:string,selectedTeamId:string,fixtureSeedBase:number,
+):boolean{
+  return verifyM1V158GeneratedGoalStops(prematch,policy,commands)&&
+    verifyM1V158CommandShape(prematch,policy,commands,
+      fixtureId,selectedTeamId,fixtureSeedBase);
 }

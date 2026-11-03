@@ -4,7 +4,7 @@ import {createSyntheticRplScaleCatalog} from '../dist/core/synthetic.js';
 import {createInitialCareer} from '../dist/core/save.js';
 import {startM1V188LeagueJournal,prepareM1V188LeagueMatch,
   applyM1V188LeagueMatch,validateM1V188LeagueJournal,
-  inspectM1V188LeagueCalendar}
+  inspectM1V188LeagueCalendar,inspectM1V188FictionalHolds}
   from '../dist/core/m1-v188-league-source-journal.js';
 
 import {simulateM1V29CausalMedicalSource}
@@ -497,6 +497,35 @@ test('P3-1: old v188 source may be replayed but never mint new authority',()=>{
     {ok:false,error:'SOURCE_MISMATCH'});
 });
 
+test('P3-3: external claims and even an empty purported clearance fail closed',()=>{
+  const career=createInitialCareer(
+    catalog,catalog.clubs[0].id,8,'v188-no-external-kdk-attestation');
+  const start=startM1V188LeagueJournal(career);
+  assert.equal(start.ok,true);
+  const proposal=prepareM1V188LeagueMatch(career,start.journal);
+  assert.equal(proposal?.ok,true);
+  const baseline=inspectM1V188FictionalHolds(career,start.journal);
+  assert.equal(baseline.ok,true);
+  assert.equal(baseline.externalKdkAuthenticated,false);
+  assert.equal(baseline.officialClearanceAuthenticated,false);
+  assert.deepEqual(baseline.holds,[]);
+  for(const untrusted of [[],[{rulingId:'unverified-kdk-order'}],
+    {appeal:'cancelled'},null]){
+    assert.deepEqual(prepareM1V188LeagueMatch(
+      career,start.journal,[],untrusted),
+      {ok:false,error:'UNVERIFIED_EXTERNAL_DISCIPLINE'});
+    assert.deepEqual(applyM1V188LeagueMatch(
+      career,start.journal,proposal.request,untrusted),
+      {ok:false,error:'UNVERIFIED_EXTERNAL_DISCIPLINE'});
+  }
+  const applied=applyM1V188LeagueMatch(
+    career,start.journal,proposal.request);
+  assert.equal(applied.ok,true,
+    'fictional mode remains playable with no official attestation claim');
+  assert.equal(inspectM1V188FictionalHolds(
+    career,applied.journal).ok,true);
+});
+
 test('P3-3: versioned simple cautions preserve legacy replay and reject downgrade',()=>{
   const career=createInitialCareer(
     catalog,catalog.clubs[0].id,15,'v188-p3-3-caution-carry');
@@ -592,4 +621,32 @@ test('P3-3: four distinct seeded cautions exclude the next own-team match',()=>{
     'fixed seed must exercise a fourth caution and next-club-match ban');
   assert.equal(validateM1V188LeagueJournal(career,
     structuredClone(journal)).ok,true);
+  const timeline=inspectM1V188FictionalHolds(
+    career,structuredClone(journal));
+  assert.equal(timeline.ok,true);
+  assert.equal(timeline.journalRevision,journal.revision);
+  assert.equal(timeline.externalKdkAuthenticated,false);
+  assert.equal(timeline.officialClearanceAuthenticated,false);
+  const four=timeline.holds.filter(h=>h.reason==='four-cautions');
+  assert.ok(four.length>0,'replay must report source-derived bans');
+  assert.ok(four.some(h=>h.remainingOwnFixtures===0),
+    'at least one fourth-warning ban must be served');
+  const fixtures=inspectM1V188LeagueCalendar(career).fixtures;
+  for(const h of timeline.holds){
+    const future=fixtures.slice(h.sourceIndex+1).filter(f=>
+      f.homeClubId===h.clubId||f.awayClubId===h.clubId);
+    const played=future.filter(f=>
+      fixtures.indexOf(f)<journal.revision).length;
+    assert.equal(h.servedOwnFixtures,
+      Math.min(h.missedOwnFixtures,played));
+    assert.equal(h.remainingOwnFixtures,
+      Math.max(0,h.missedOwnFixtures-played));
+    assert.equal(h.lastBlockedFixtureId,
+      future[h.missedOwnFixtures-1]?.id??null);
+    assert.equal(fixtures[h.sourceIndex].id,h.sourceFixtureId);
+  }
+  const forged=structuredClone(journal);
+  forged.entries[0].result.report.home.goals++;
+  assert.deepEqual(inspectM1V188FictionalHolds(career,forged),
+    {ok:false,error:'INVALID_JOURNAL'});
 });

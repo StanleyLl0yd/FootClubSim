@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v188 real 240-fixture browser season</title></head>
+<body>
+<h1>Full 240-fixture native source and IndexedDB observation</h1>
+<pre id="status">M1_V188_BROWSER_SEASON_RUNNING: initializing</pre>
+<pre id="report"></pre>
+<script type="module">
+  import {createSyntheticRplScaleCatalog}
+    from '../dist/core/synthetic.js';
+  import {createInitialCareer}
+    from '../dist/core/save.js';
+  import {saveNewInitialCareer,loadInitialCareer}
+    from '../dist/browser/initial-career-store.js';
+  import {createM1V188PersistedLeague as create,
+    loadM1V188PersistedLeague as load,
+    commitM1V188PersistedLeagueMatch as commit}
+    from '../dist/browser/m1-v188-league-store.js';
+  import {prepareM1V188LeagueMatch,
+    validateM1V188LeagueJournal,inspectM1V188LeagueCalendar}
+    from '../dist/core/m1-v188-league-source-journal.js';
+
+  const MARKER='M1_V188_BROWSER_SEASON';
+  const status=document.querySelector('#status');
+  const report=document.querySelector('#report');
+  const query=new URL(location.href).searchParams;
+  const catalog=createSyntheticRplScaleCatalog(2026);
+  const seed=7;
+  const initial=createInitialCareer(catalog,catalog.clubs[0].id,
+    seed,'v188-native-full-season');
+  const check=(value,description)=>{
+    if(!value)throw Error(description);
+  };
+  const yieldPage=()=>new Promise(resolve=>setTimeout(resolve,0));
+  const numeric=(name)=>{
+    const v=Number(query.get(name));
+    check(Number.isFinite(v)&&v>=0,'invalid '+name);
+    return v;
+  };
+  async function firstPass(){
+    const calendar=inspectM1V188LeagueCalendar(initial);
+    check(calendar.ok&&calendar.fixtureCount===240,
+      'full 240-fixture canonical schedule unavailable');
+    await saveNewInitialCareer(initial);
+    let journal=await create(initial.careerId);
+    check(journal.revision===0,'expected empty league journal');
+    const started=performance.now();
+    let maxPrepareMs=0,maxCommitMs=0;
+    const statuses={completed:0,selectedClub:0,opponentOnly:0};
+    for(let n=0;n<240;n++){
+      await yieldPage();
+      const p=performance.now();
+      const next=prepareM1V188LeagueMatch(initial,journal);
+      check(next?.ok,'prepare failed at '+n+': '+JSON.stringify(next));
+      const pms=performance.now()-p;
+      maxPrepareMs=Math.max(maxPrepareMs,pms);
+      check(next.fixture.id===calendar.fixtures[n].id,
+        'fixture order mismatch at '+n);
+      const c=performance.now();
+      const committed=await commit(initial.careerId,n,next.request);
+      const cms=performance.now()-c;
+      maxCommitMs=Math.max(maxCommitMs,cms);
+      check(committed.revision===n+1&&
+        committed.entries.length===n+1&&
+        committed.entries[n].fixtureId===next.fixture.id,
+        'native CAS lost/duplicated fixture '+n);
+      journal=committed;
+      statuses.completed++;
+      if(next.selectedClubFixture)statuses.selectedClub++;
+      else statuses.opponentOnly++;
+      if(n%8===7||n===239)
+        status.textContent=MARKER+'_RUNNING: '+
+          (n+1)+'/240, last='+next.fixture.id+
+          ', maxCommitMs='+Math.round(maxCommitMs);
+    }
+    check(statuses.completed===240&&statuses.selectedClub===30&&
+      statuses.opponentOnly===210,
+      'full-season participant counts incorrect');
+    const totalMs=performance.now()-started;
+    const originalBytes=new TextEncoder().encode(
+      JSON.stringify(journal)).length;
+    const target=new URL(location.href);
+    target.searchParams.set('stage','verify');
+    target.searchParams.set('totalMs',String(totalMs));
+    target.searchParams.set('maxPrepareMs',String(maxPrepareMs));
+    target.searchParams.set('maxCommitMs',String(maxCommitMs));
+    target.searchParams.set('bytes',String(originalBytes));
+    target.searchParams.set('selected',String(statuses.selectedClub));
+    target.searchParams.set('opponents',String(statuses.opponentOnly));
+    location.replace(target.href);
+  }
+  async function afterNavigation(){
+    check(query.get('stage')==='verify','unknown test stage');
+    const started=performance.now();
+    const saved=await load(initial.careerId);
+    const replayMs=performance.now()-started;
+    check(saved.revision===240&&saved.entries.length===240,
+      'real browser failed to restore 240 fixtures');
+    const verified=validateM1V188LeagueJournal(initial,saved);
+    check(verified.ok&&verified.completeHistory===true&&
+      verified.bothTeamsEligibilityApplied===true,
+      'full-season source replay did not verify');
+    const canonical=inspectM1V188LeagueCalendar(initial);
+    check(canonical.ok&&canonical.fixtures.length===240,
+      'canonical fixture list unavailable');
+    for(let i=0;i<240;i++)
+      check(saved.entries[i].fixtureId===canonical.fixtures[i].id,
+        'full-season fixture mismatch at '+i);
+    const bytes=new TextEncoder().encode(
+      JSON.stringify(saved)).length;
+    check(bytes===numeric('bytes'),'journal bytes changed after reload');
+    const restoredInitial=await loadInitialCareer(initial.careerId);
+    check(restoredInitial.careerId===initial.careerId&&
+      restoredInitial.rngState===initial.rngState,
+      'M0 initial career overwritten');
+    const remaining=prepareM1V188LeagueMatch(initial,saved);
+    check(remaining===null,'played season allowed a 241st fixture');
+    const observation={
+      schemaVersion:1,
+      status:'NATIVE_240_FIXTURE_OBSERVATION_NOT_RELEASE_SLA',
+      finalRevision:saved.revision,
+      completedFixtures:240,
+      selectedClubFixtures:numeric('selected'),
+      opponentOnlyFixtures:numeric('opponents'),
+      saveBytes:bytes,
+      fullSeasonProgressMs:numeric('totalMs'),
+      maxPrepareMs:numeric('maxPrepareMs'),
+      maxCommitMs:numeric('maxCommitMs'),
+      restoredReplayMs:replayMs,
+      exactSourceReplayVerified:true,
+      nativeIndexedDbCommitted:true,
+      browser: navigator.userAgent,
+      engineAcceptedForP3:false,
+      releasePerformanceAccepted:false,
+    };
+    check(observation.selectedClubFixtures===30&&
+      observation.opponentOnlyFixtures===210,
+      'source league coverage drift');
+    report.textContent=JSON.stringify(observation);
+    status.textContent=MARKER+'_PASS';
+  }
+  (query.get('stage')===null?firstPass():afterNavigation())
+    .catch(error=>{
+      status.textContent=MARKER+'_FAIL: '+
+        String(error?.stack??error);
+    });
+</script>
+</body>
+</html>

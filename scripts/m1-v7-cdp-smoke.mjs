@@ -12,13 +12,14 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const executable = process.argv[2];
 const url = process.argv[3] ?? 'http://127.0.0.1:5173/examples/m1-v7-cas-smoke.html';
 const marker = process.argv[4] ?? 'M1_V7_BROWSER_CAS';
-if (!/^(?:M1_V(?:7|8|26|32|78|110|120|182|188)_BROWSER_CAS|M1_V80_BROWSER_INTERACTIVE|M1_V36_BROWSER_PROFILE|M1_V40_BROWSER_RECOVERY|M1_V43_BROWSER_WORKER|M1_V47_BROWSER_UNKNOWN|M1_V46_BROWSER_READ)$/.test(marker)) {
+if (!/^(?:M1_V(?:7|8|26|32|78|110|120|182|188)_BROWSER_CAS|M1_V188_BROWSER_SEASON|M1_V80_BROWSER_INTERACTIVE|M1_V36_BROWSER_PROFILE|M1_V40_BROWSER_RECOVERY|M1_V43_BROWSER_WORKER|M1_V47_BROWSER_UNKNOWN|M1_V46_BROWSER_READ)$/.test(marker)) {
   throw new Error('Unsupported browser CAS status marker');
 }
 if (!executable) {
   console.error('Usage: node scripts/m1-v7-cdp-smoke.mjs /path/to/chromium [url]');
   process.exit(2);
 }
+class ExplicitBrowserFailure extends Error {}
 async function until(fn, description, duration = 45_000) {
   const deadline = Date.now() + duration;
   let lastError;
@@ -26,7 +27,10 @@ async function until(fn, description, duration = 45_000) {
     try {
       const answer = await fn();
       if (answer) return answer;
-    } catch (error) { lastError = error; }
+    } catch (error) {
+      if (error instanceof ExplicitBrowserFailure) throw error;
+      lastError = error;
+    }
     await sleep(250);
   }
   throw new Error('Timeout waiting for ' + description +
@@ -59,7 +63,7 @@ async function connect(address) {
       const timer = setTimeout(() => {
         pending.delete(next);
         reject(new Error('CDP request timed out: ' + method));
-      }, 15_000);
+      }, marker==='M1_V188_BROWSER_SEASON'?120_000:15_000);
       pending.set(next, { resolve, reject, timer });
       socket.send(JSON.stringify({ id: next, method, params }));
     });
@@ -110,16 +114,40 @@ try {
     const value = reply.result?.value;
     if (typeof value !== 'string') return null;
     lastObservedStatus = value.slice(0, 350);
-    if (value.startsWith(marker + '_FAIL')) throw new Error(value);
+    if (value.startsWith(marker + '_FAIL'))
+      throw new ExplicitBrowserFailure(value);
     return value === marker + '_PASS' ? value : null;
   }, marker + ' native IndexedDB post-navigation result',
     marker === 'M1_V36_BROWSER_PROFILE' ? 240_000 :
     ['M1_V182_BROWSER_CAS','M1_V188_BROWSER_CAS'].includes(marker) ?
-      180_000 : 90_000)
+      180_000 : marker==='M1_V188_BROWSER_SEASON'?
+        2_100_000 : 90_000)
     .catch(error => {
       throw new Error(String(error) +
         '; last observed page status: ' + JSON.stringify(lastObservedStatus));
     });
+  if (marker === 'M1_V188_BROWSER_SEASON') {
+    const data = await send('Runtime.evaluate', {
+      expression: 'document.querySelector("#report")?.textContent ?? ""',
+      returnByValue: true,
+    });
+    const payload=data.result?.value;
+    const profile=JSON.parse(String(payload));
+    if(profile.status!=='NATIVE_240_FIXTURE_OBSERVATION_NOT_RELEASE_SLA'||
+        profile.finalRevision!==240||profile.completedFixtures!==240||
+        profile.selectedClubFixtures!==30||
+        profile.opponentOnlyFixtures!==210||
+        profile.exactSourceReplayVerified!==true||
+        profile.nativeIndexedDbCommitted!==true||
+        profile.engineAcceptedForP3!==false||
+        profile.releasePerformanceAccepted!==false||
+        !Number.isFinite(profile.saveBytes)||profile.saveBytes<=0||
+        !Number.isFinite(profile.fullSeasonProgressMs)) {
+      throw new Error('Invalid full native season profile report');
+    }
+    console.log(JSON.stringify(profile));
+    console.log('PASS: actual 240-fixture native Chromium source and CAS');
+  }
   if (marker === 'M1_V36_BROWSER_PROFILE') {
     const reply = await send('Runtime.evaluate', {
       expression: 'document.querySelector("#report")?.textContent ?? ""',

@@ -21,8 +21,11 @@ export interface M1V186Law5Evidence {
   readonly patientPlayerId:string;
   readonly runningSeconds:number;
   readonly exception:'opponent-carded-physical-offence'|
-    'goalkeeper-on-field-assessment'|'same-whistle-second-patient';
+    'goalkeeper-on-field-assessment'|'same-whistle-second-patient'|
+    'source-modelled-same-team-collision'|
+    'source-modelled-keeper-outfield-collision';
   readonly sameWhistlePairOrdinal?:2;
+  readonly sourceCollisionEventId?:string;
   readonly modelledDisposition:'may-remain-after-assessment'|
     'voluntary-extended-off-field-assessment';
   readonly exitEventId:string|null;
@@ -56,7 +59,7 @@ export function deriveM1V186Law5FromCausalSource(
       source.fixtureId!==result.fixtureId)
     return fail('INVALID_CAUSAL_SOURCE');
   const keeperEvidenceRequired=source.causalAssessments.some(a=>
-    a.goalkeeperExceptionSource===true);
+    a.goalkeeperExceptionSource===true||a.collisionOriginSource===true);
   let keepers:ReadonlySet<string>=new Set();
   if(keeperEvidenceRequired){
     if(!isPlainJsonTree(prematch)||!startM1Clock(prematch).ok)
@@ -70,6 +73,9 @@ export function deriveM1V186Law5FromCausalSource(
   const medical=source.syntheticTreatmentActions;
   const evidence:M1V186Law5Evidence[]=[];
   const inspectedPatients=new Map<string,readonly string[]>();
+  const inspectedCollisions=new Set<string>();
+  const collisionEvents=source.match.events.filter(e=>
+    e.kind==='synthetic-same-team-collision');
   const exits=medical.filter(a=>a.kind==='treatment-exit');
   const returns=medical.filter(a=>a.kind==='treatment-return');
   const absentEvents=(patientId:string,start:number,end:number)=>
@@ -123,6 +129,53 @@ export function deriveM1V186Law5FromCausalSource(
         !['caution','second-yellow-dismissal',
           'straight-red-dismissal'].includes(decision.kind))
       return fail('INVALID_MEDICAL_CHRONOLOGY');
+    let collisionEventId:string|undefined;
+    let collisionException:
+      'source-modelled-same-team-collision'|
+      'source-modelled-keeper-outfield-collision'|undefined;
+    if(assessment.collisionOriginSource===true){
+      const paired=source.causalAssessments.filter(a=>
+        a.incidentId===incident.id);
+      const collision=source.match.events.find(e=>
+        e.id===assessment.collisionEventId&&
+        e.kind==='synthetic-same-team-collision');
+      const clubs=(prematch as M1PrematchInput).fixture;
+      const collisionSide=collision?.teamId===clubs.homeClubId?'home':
+        collision?.teamId===clubs.awayClubId?'away':null;
+      const otherSide=collisionSide==='home'?'away':'home';
+      if(paired.length!==2||
+          paired.some(a=>a.collisionOriginSource!==true||
+            a.collisionEventId!==assessment.collisionEventId)||
+          paired[0]!.patientPlayerId===paired[1]!.patientPlayerId||
+          !paired[1]!.sameWhistleSecondPatient||
+          !collision||collision.teamId!==assessment.patientTeamId||
+          collision.playerId!==paired[0]!.patientPlayerId||
+          collision.collisionPartnerPlayerId!==paired[1]!.patientPlayerId||
+          collision.sourceEventId!==decision.sourceEventId||
+          collision.runningSeconds!==assessment.elapsedSeconds||
+          collision.sequence<=whistle.sequence||
+          collision.sequence>=decision.sequence||
+          !collisionSide||
+          !Array.isArray(collision.onField[collisionSide])||
+          !Array.isArray(collision.onField[otherSide])||
+          !collision.onField[collisionSide].includes(
+            paired[0]!.patientPlayerId)||
+          !collision.onField[collisionSide].includes(
+            paired[1]!.patientPlayerId)||
+          collision.onField[otherSide].includes(
+            paired[0]!.patientPlayerId)||
+          collision.onField[otherSide].includes(
+            paired[1]!.patientPlayerId))
+        return fail('UNSUPPORTED_LAW5_ORIGIN');
+      collisionEventId=collision.id;
+      inspectedCollisions.add(collision.id);
+      collisionException=
+        keepers.has(paired[0]!.patientPlayerId)||
+        keepers.has(paired[1]!.patientPlayerId)?
+          'source-modelled-keeper-outfield-collision':
+          'source-modelled-same-team-collision';
+    }else if(assessment.collisionEventId!==undefined)
+      return fail('UNSUPPORTED_LAW5_ORIGIN');
     const patientSide=whistle.onField.home.includes(
       assessment.patientPlayerId)?'home':
       whistle.onField.away.includes(assessment.patientPlayerId)?'away':null;
@@ -164,11 +217,12 @@ export function deriveM1V186Law5FromCausalSource(
         patientTeamId:assessment.patientTeamId,
         patientPlayerId:assessment.patientPlayerId,
         runningSeconds:assessment.elapsedSeconds,
-        exception:assessment.goalkeeperExceptionSource===true?
+        exception:collisionException??(assessment.goalkeeperExceptionSource===true?
           'goalkeeper-on-field-assessment':second?
           'same-whistle-second-patient':
-          'opponent-carded-physical-offence',
+          'opponent-carded-physical-offence'),
         ...(second?{sameWhistlePairOrdinal:2 as const}:{}),
+        ...(collisionEventId?{sourceCollisionEventId:collisionEventId}:{}),
         modelledDisposition:'may-remain-after-assessment',
         exitEventId:null,returnEventId:null,
         minimumRunningSecondsSatisfied:true});
@@ -198,16 +252,18 @@ export function deriveM1V186Law5FromCausalSource(
       patientTeamId:assessment.patientTeamId,
       patientPlayerId:assessment.patientPlayerId,
       runningSeconds:assessment.elapsedSeconds,
-      exception:second?'same-whistle-second-patient':
-        'opponent-carded-physical-offence',
+      exception:collisionException??(second?'same-whistle-second-patient':
+        'opponent-carded-physical-offence'),
       ...(second?{sameWhistlePairOrdinal:2 as const}:{}),
+      ...(collisionEventId?{sourceCollisionEventId:collisionEventId}:{}),
       modelledDisposition:'voluntary-extended-off-field-assessment',
       exitEventId:exitEvent.id,returnEventId:returnEvent.id,
       minimumRunningSecondsSatisfied:true});
   }
   const departures=evidence.filter(e=>e.exitEventId!==null).length;
   if(departures!==exits.length||departures!==returns.length||
-      evidence.length!==source.causalAssessments.length)
+      evidence.length!==source.causalAssessments.length||
+      inspectedCollisions.size!==collisionEvents.length)
     return fail('INVALID_MEDICAL_CHRONOLOGY');
   return {ok:true,schemaVersion:M1_V186_LAW5_SCHEMA,
     status:'SOURCE_BOUND_LAW5_PHYSICAL_OFFENCE_SUBSET',

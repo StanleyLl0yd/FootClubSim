@@ -40,11 +40,12 @@
       const started=startM1V188LeagueJournal(initial);
       if(!started.ok)continue;
       const first=prepareM1V188LeagueMatch(
-        initial,started.journal,[],undefined,3);
-      if(!first?.ok||first.request.medicalPolicyVersion!==3||
+        initial,started.journal,[],undefined,4);
+      if(!first?.ok||first.request.medicalPolicyVersion!==4||
           first.externalMedicalAuthorityAuthenticated!==false||
           !first.sourceLaw5Evidence?.some(e=>
-            e.sameWhistlePairOrdinal===2))continue;
+            e.sameWhistlePairOrdinal===2&&
+            typeof e.sourceCollisionEventId==='string'))continue;
       const one=applyM1V188LeagueMatch(
         initial,started.journal,first.request);
       if(!one.ok)continue;
@@ -66,7 +67,7 @@
       check((await load(initial.careerId)).revision===0,
         'forged synthetic score wrote journal');
       const one=await commit(initial.careerId,0,first.request);
-      check(one.entries[0].source.medicalPolicyVersion===3,
+      check(one.entries[0].source.medicalPolicyVersion===4,
         'native CAS lost opt-in medical source policy');
       check(one.revision===1&&one.entries.length===1&&
         one.entries[0].fixtureId===first.fixture.id,
@@ -91,14 +92,14 @@
     check(prior.revision===1&&prior.entries.length===1&&
       prior.entries[0].fixtureId===params.get('first'),
       'first full-league fixture not restored');
-    check(prior.entries[0].source.medicalPolicyVersion===3,
+    check(prior.entries[0].source.medicalPolicyVersion===4,
       'browser reload lost opt-in medical policy');
     check(validateM1V188LeagueJournal(initial,prior).ok,
       'restored source rejected full replay');
     await rejected(create(initial.careerId),'ALREADY_EXISTS');
     const next=prepareM1V188LeagueMatch(initial,prior);
     check(next?.ok,'cannot prepare next league fixture');
-    check(next.request.medicalPolicyVersion===3,
+    check(next.request.medicalPolicyVersion===4,
       'browser CAS permitted medical source downgrade');
     check(next.fixture.id!==prior.entries[0].fixtureId,
       'opponent fixture ordering is stale');
@@ -129,7 +130,7 @@
     check(done.revision===2&&done.entries.length===2&&
       done.entries[0].fixtureId===prior.entries[0].fixtureId&&
       done.entries[1].fixtureId===next.fixture.id&&
-      done.entries.every(e=>e.source.medicalPolicyVersion===3),
+      done.entries.every(e=>e.source.medicalPolicyVersion===4),
       'chronological two-team journal lost entries');
     check((await loadInitialCareer(initial.careerId)).careerId===
       initial.careerId,'full-league CAS rewrote M0');

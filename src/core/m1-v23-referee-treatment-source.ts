@@ -24,6 +24,7 @@ export type M1V23RefereeError =
 type Kind = 'kickoff' | 'shot' | 'treatment-exit' | 'treatment-return' |
   'caution' | 'second-yellow-dismissal' | 'straight-red-dismissal' |
   'injury-withdrawal' | 'synthetic-foul-whistle' |
+  'synthetic-same-team-collision' |
   'synthetic-foul-restart' | 'goal-whistle' |
   'board-signal' | 'substitution-applied' | 'restart-kickoff' |
   'half-time-whistle' | 'half-time-substitution' |
@@ -38,6 +39,7 @@ export interface M1V23RefereeEvent {
   readonly teamId: string | null;
   readonly playerId: string | null;
   readonly replacedByPlayerId: string | null;
+  readonly collisionPartnerPlayerId?:string;
   readonly onField: Readonly<{home: readonly string[];away: readonly string[]}>;
 }
 export type M1V23RefereeRun =
@@ -87,6 +89,10 @@ function clone(value:unknown,max:number):unknown|null{
   }catch{return null;}
 }
 type Side='home'|'away';
+interface SyntheticCollision {
+  elapsedSeconds:number;teamId:string;
+  firstPlayerId:string;secondPlayerId:string;
+}
 interface Change {
   readonly side:Side;
   readonly teamId:string;
@@ -125,6 +131,7 @@ export function simulateM1V23RefereeWithTreatment(
   foulPauseWallSeconds:unknown=20,
   trace?:M1V23SourceRejectionTrace,
   useDenseShotSource=false,
+  collisionSource:unknown=[],
 ):M1V23RefereeRun{
   const unsupported=(subreason:M1V23UnsupportedSubreason):M1V23RefereeRun=>{
     if(trace)trace.subreason=subreason;
@@ -139,6 +146,9 @@ export function simulateM1V23RefereeWithTreatment(
   const raw=clone(commands,1_000_000);
   const medical=clone(medicalActions,1_000_000);
   const authorized=clone(foulStopSeconds,1024);
+  const collisionClaims=clone(collisionSource,2048);
+  if(!Array.isArray(collisionClaims)||collisionClaims.length>18)
+    return fail('INVALID_SOURCE');
   if(!Array.isArray(authorized)||authorized.length>18){
     return unsupported('FOUL_STOP_COUNT_OVER_18');
   }
@@ -147,6 +157,22 @@ export function simulateM1V23RefereeWithTreatment(
     return unsupported('FOUL_STOP_INVALID_OR_DUPLICATE');
   }
   const foulTimes=new Set<number>(authorized as number[]);
+  const collisionByTime=new Map<number,SyntheticCollision>();
+  for(const rawPair of collisionClaims){
+    if(!record(rawPair)||Object.keys(rawPair).length!==4||
+        !['elapsedSeconds','teamId','firstPlayerId','secondPlayerId']
+          .every(key=>Object.hasOwn(rawPair,key))||
+        !clockStep(rawPair.elapsedSeconds as number)||
+        !foulTimes.has(rawPair.elapsedSeconds as number)||
+        typeof rawPair.teamId!=='string'||
+        typeof rawPair.firstPlayerId!=='string'||
+        typeof rawPair.secondPlayerId!=='string'||
+        rawPair.firstPlayerId===rawPair.secondPlayerId||
+        collisionByTime.has(rawPair.elapsedSeconds as number))
+      return fail('INVALID_SOURCE');
+    collisionByTime.set(rawPair.elapsedSeconds as number,
+      rawPair as unknown as SyntheticCollision);
+  }
   if(!record(input)||!record(input.fixture)||
       !record(input.homeLineup)||!record(input.awayLineup)||
       !Array.isArray(input.homeLineup.starters)||
@@ -311,10 +337,12 @@ export function simulateM1V23RefereeWithTreatment(
     injuryWithdrawn:0};
   function emit(kind:Kind,time:number,at:number,
     sourceEventId:string|null=null,teamId:string|null=null,
-    playerId:string|null=null,replacedByPlayerId:string|null=null):void{
+    playerId:string|null=null,replacedByPlayerId:string|null=null,
+    collisionPartnerPlayerId?:string):void{
     events.push({id:'m1-v23-'+(events.length+1),
       sequence:events.length+1,kind,runningSeconds:time,wallSeconds:at,
       sourceEventId,teamId,playerId,replacedByPlayerId,
+      ...(collisionPartnerPlayerId?{collisionPartnerPlayerId}:{}),
       onField:{home:sorted(home),away:sorted(away)}});
   }
   function advance(time:number):boolean{
@@ -443,6 +471,19 @@ export function simulateM1V23RefereeWithTreatment(
         const recipient=side==='home'?f.awayClubId:f.homeClubId;
         emit('synthetic-foul-whistle',running,wall,event.id,
           recipient,action.playerId);
+        const collision=collisionByTime.get(running);
+        if(collision){
+          const patientSide:Side=side==='home'?'away':'home';
+          if(collision.teamId!==recipient||
+              !teams[patientSide].has(collision.firstPlayerId)||
+              !teams[patientSide].has(collision.secondPlayerId)||
+              absent.has(collision.firstPlayerId)||
+              absent.has(collision.secondPlayerId))
+            return fail('ROSTER_REPLAY_MISMATCH');
+          emit('synthetic-same-team-collision',running,wall,event.id,
+            collision.teamId,collision.firstPlayerId,null,
+            collision.secondPlayerId);
+        }
       }
       if(kind!=='caution')teams[side].delete(action.playerId);
       emit(kind,running,wall,event.id,action.teamId,action.playerId);
@@ -536,7 +577,8 @@ export function simulateM1V23RefereeWithTreatment(
       return fail('ROSTER_REPLAY_MISMATCH');
     }
   }
-  if(events.length>320||foulSeen.size!==foulTimes.size||
+  if(events.length>(collisionClaims.length?338:320)||
+      foulSeen.size!==foulTimes.size||
       !sameCanonicalValue(sorted(absent),source.offFieldAtFullTime)||
       !sameCanonicalValue(finalOnField,source.onFieldAtFullTime)||
       opportunities.home.size>3||opportunities.away.size>3){

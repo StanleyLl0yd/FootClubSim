@@ -480,3 +480,100 @@ test('P3-1: old v188 source may be replayed but never mint new authority',()=>{
   assert.deepEqual(applyM1V188LeagueMatch(career,zero.journal,forged),
     {ok:false,error:'SOURCE_MISMATCH'});
 });
+
+test('P3-3: versioned simple cautions preserve legacy replay and reject downgrade',()=>{
+  const career=createInitialCareer(
+    catalog,catalog.clubs[0].id,15,'v188-p3-3-caution-carry');
+  const zero=startM1V188LeagueJournal(career);
+  assert.equal(zero.ok,true);
+  const first=prepareM1V188LeagueMatch(career,zero.journal);
+  assert.equal(first?.ok,true);
+  const one=applyM1V188LeagueMatch(career,zero.journal,first.request);
+  assert.equal(one.ok,true);
+  assert.equal(one.journal.entries[0].source.disciplinePolicyVersion,2);
+  assert.equal(validateM1V188LeagueJournal(career,
+    structuredClone(one.journal)).ok,true);
+  const firstLegacy=structuredClone(one.journal);
+  delete firstLegacy.entries[0].source.disciplinePolicyVersion;
+  assert.equal(validateM1V188LeagueJournal(career,firstLegacy).ok,true,
+    'previously saved exact-source fixtures keep their original policy');
+  const resumed=prepareM1V188LeagueMatch(career,firstLegacy);
+  assert.equal(resumed?.ok,true);
+  const migrated=applyM1V188LeagueMatch(
+    career,firstLegacy,resumed.request);
+  assert.equal(migrated.ok,true);
+  assert.equal(migrated.journal.entries[0].source.disciplinePolicyVersion,
+    undefined);
+  assert.equal(migrated.journal.entries[1].source.disciplinePolicyVersion,2);
+  assert.equal(validateM1V188LeagueJournal(career,
+    structuredClone(migrated.journal)).ok,true);
+  const next=prepareM1V188LeagueMatch(career,one.journal);
+  assert.equal(next?.ok,true);
+  const two=applyM1V188LeagueMatch(career,one.journal,next.request);
+  assert.equal(two.ok,true);
+  assert.equal(validateM1V188LeagueJournal(career,
+    structuredClone(two.journal)).ok,true);
+  const downgraded=structuredClone(two.journal);
+  delete downgraded.entries[1].source.disciplinePolicyVersion;
+  assert.deepEqual(validateM1V188LeagueJournal(career,downgraded),
+    {ok:false,error:'INVALID_JOURNAL'});
+  const invented=structuredClone(one.journal);
+  invented.entries[0].source.disciplinePolicyVersion=3;
+  assert.equal(validateM1V188LeagueJournal(career,invented).ok,false);
+  const unsolicited=structuredClone(one.journal);
+  unsolicited.entries[0].source.externalKdkAuthenticated=true;
+  assert.equal(validateM1V188LeagueJournal(career,unsolicited).ok,false);
+});
+
+test('P3-3: four distinct seeded cautions exclude the next own-team match',()=>{
+  const career=createInitialCareer(
+    catalog,catalog.clubs[0].id,11,'v188-p3-3-full-source');
+  let journal=startM1V188LeagueJournal(career).journal;
+  const cautions=new Map();
+  const pending=[];
+  let acceptedBan=0;
+  for(let index=0;index<240&&acceptedBan===0;index++){
+    const prepared=prepareM1V188LeagueMatch(career,journal);
+    assert.equal(prepared?.ok,true,'all fixture sources must be playable');
+    const fixture=prepared.fixture;
+    for(let k=pending.length-1;k>=0;k--){
+      const ban=pending[k];
+      if(index<=ban.sourceIndex||
+          ![fixture.homeClubId,fixture.awayClubId].includes(ban.clubId))
+        continue;
+      const lineup=fixture.homeClubId===ban.clubId?
+        prepared.request.prematch.homeLineup:
+        prepared.request.prematch.awayLineup;
+      assert.equal([...lineup.starters,...lineup.bench].includes(
+        ban.playerId),false,
+      'four simple cautions must exclude starters AND bench');
+      pending.splice(k,1);
+      acceptedBan++;
+    }
+    const reds=new Set(prepared.request.plannedCommands.filter(c=>
+      c.kind==='direct-red').map(c=>JSON.stringify([c.teamId,c.playerId])));
+    const warnings=new Map();
+    for(const c of prepared.request.plannedCommands){
+      if(c.kind!=='caution')continue;
+      const key=JSON.stringify([c.teamId,c.playerId]);
+      warnings.set(key,(warnings.get(key)??0)+1);
+    }
+    for(const [key,count] of warnings){
+      if(count!==1||reds.has(key))continue;
+      const next=(cautions.get(key)??0)+1;
+      cautions.set(key,next);
+      if(next%4===0){
+        const [clubId,playerId]=JSON.parse(key);
+        pending.push({clubId,playerId,sourceIndex:index});
+      }
+    }
+    const saved=applyM1V188LeagueMatch(
+      career,journal,prepared.request);
+    assert.equal(saved.ok,true);
+    journal=saved.journal;
+  }
+  assert.ok(acceptedBan>0,
+    'fixed seed must exercise a fourth caution and next-club-match ban');
+  assert.equal(validateM1V188LeagueJournal(career,
+    structuredClone(journal)).ok,true);
+});

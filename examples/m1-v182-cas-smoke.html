@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v182 unified source native CAS</title></head>
+<body>
+<h1>v182 referee, medical and manager source persisted in native IndexedDB</h1>
+<pre id="status">M1_V182_BROWSER_CAS_RUNNING</pre>
+<script type="module">
+  import {createSyntheticRplScaleCatalog}
+    from '../dist/core/synthetic.js';
+  import {createInitialCareer}
+    from '../dist/core/save.js';
+  import {saveNewInitialCareer,loadInitialCareer}
+    from '../dist/browser/initial-career-store.js';
+  import {createM1V120PersistedJournal as create,
+    loadM1V120PersistedJournal as load,
+    commitM1V120PersistedSource as commit}
+    from '../dist/browser/m1-v120-journal-store.js';
+  import {startM1V120Journal}
+    from '../dist/core/m1-v120-playable-journal.js';
+  import {prepareM1V182UnifiedMatch}
+    from '../dist/core/m1-v182-unified-playable.js';
+  import {admitM1V171SourceWithHolds}
+    from '../dist/core/m1-v171-precommit-holds.js';
+  import {reviewM1V126DenseSourceHolds}
+    from '../dist/core/m1-v126-dense-source-holds.js';
+  import {projectM1V179MatchClock}
+    from '../dist/core/m1-v179-source-clock.js';
+
+  const status=document.getElementById('status');
+  const check=(value,why)=>{if(!value)throw Error(why);};
+  const catalog=createSyntheticRplScaleCatalog(2026);
+  const players=new Map(catalog.players.map(p=>[p.id,p]));
+  const careerFor=seed=>createInitialCareer(
+    catalog,catalog.clubs[0].id,seed,'m1-v182-native-cas');
+  const stage=new URL(location.href).searchParams.get('stage');
+  const yieldBrowser=()=>new Promise(resolve=>setTimeout(resolve,0));
+
+  async function rejected(operation,code){
+    try{await operation;}
+    catch(error){
+      check(error?.code===code,
+        'expected '+code+', got '+String(error));
+      return;
+    }
+    throw Error('expected '+code+' rejection');
+  }
+
+  async function manualNext(career,history){
+    const baseline=prepareM1V182UnifiedMatch(career,history);
+    if(!baseline?.ok)return null;
+    const prematch=baseline.request.prematch;
+    const own=prematch.fixture.homeClubId===career.selectedClubId?
+      prematch.homeLineup:prematch.awayLineup;
+    const outgoing=own.starters.filter(id=>
+      players.get(id)?.primaryPosition!=='GK').slice(0,3);
+    const incoming=own.bench.filter(id=>
+      players.get(id)?.primaryPosition!=='GK').slice(0,3);
+    for(const outPlayerId of outgoing){
+      for(const inPlayerId of incoming){
+        await yieldBrowser();
+        const choice={outPlayerId,inPlayerId,elapsedSeconds:2700};
+        const proposed=prepareM1V182UnifiedMatch(
+          career,history,[choice]);
+        if(!proposed?.ok)continue;
+        const admitted=admitM1V171SourceWithHolds(
+          career,history,proposed.request);
+        if(admitted.ok)return choice;
+      }
+    }
+    return null;
+  }
+
+  async function sample(){
+    for(let seed=1;seed<=24;seed++){
+      await yieldBrowser();
+      const career=careerFor(seed);
+      const started=startM1V120Journal(career);
+      if(!started.ok)continue;
+      const first=prepareM1V182UnifiedMatch(
+        career,started.journal);
+      if(!first?.ok||first.modelledMedicalDepartures<1||
+          !first.request.checkpointMedical.some(a=>
+            a.kind==='treatment-return'))continue;
+      const admitted=admitM1V171SourceWithHolds(
+        career,started.journal,first.request);
+      if(!admitted.ok)continue;
+      const choice=await manualNext(career,admitted.journal);
+      if(!choice)continue;
+      return {career,first,seed,choice};
+    }
+    throw Error('no deterministic medical + manager two-fixture source');
+  }
+
+  async function run(){
+    if(stage===null){
+      const {career,first,seed,choice}=await sample();
+      await saveNewInitialCareer(career);
+      const zero=await create(career.careerId);
+      check(zero.revision===0,'new native journal not empty');
+      const tampered=structuredClone(first.request);
+      tampered.checkpointMedical[0].playerId='forged-patient';
+      await rejected(commit(career.careerId,0,tampered),
+        'DOMAIN_REJECTED');
+      check((await load(career.careerId)).revision===0,
+        'forged medical source was persisted');
+      const one=await commit(career.careerId,0,first.request);
+      check(one.revision===1&&one.entries.length===1&&
+        one.entries[0].commandId===first.request.commandId&&
+        one.entries[0].commandId.startsWith('v182-unified-'),
+        'canonical unified source not persisted');
+      const next=new URL(location.href);
+      next.searchParams.set('stage','verify');
+      next.searchParams.set('seed',String(seed));
+      next.searchParams.set('first',first.request.commandId);
+      next.searchParams.set('out',choice.outPlayerId);
+      next.searchParams.set('in',choice.inPlayerId);
+      location.replace(next.href);
+      return;
+    }
+    check(stage==='verify','unexpected navigation stage');
+    const seed=Number(new URL(location.href).searchParams.get('seed'));
+    check(Number.isSafeInteger(seed)&&seed>=1&&seed<=24,
+      'invalid source seed after navigation');
+    const career=careerFor(seed);
+    const restored=await loadInitialCareer(career.careerId);
+    check(restored.careerId===career.careerId&&
+      restored.rngState===career.rngState,
+      'M0 initial career changed during native v182 CAS');
+    const prior=await load(career.careerId);
+    check(prior.revision===1&&prior.entries.length===1&&
+      prior.entries[0].commandId===
+        new URL(location.href).searchParams.get('first'),
+      'unified source lost during real navigation');
+    const holds=reviewM1V126DenseSourceHolds(career,prior);
+    check(holds.ok&&holds.sourceVerifiedVirtualFixtures===1,
+      'persisted source-derived holds not replayable');
+    const source=prior.entries[0].source;
+    const events=prior.entries[0].result.events;
+    const exits=source.checkpointMedical.filter(a=>
+      a.kind==='treatment-exit');
+    check(exits.length>0,'persisted treatment has no departure');
+    for(const leave of exits){
+      const back=source.checkpointMedical.find(a=>
+        a.kind==='treatment-return'&&a.teamId===leave.teamId&&
+        a.playerId===leave.playerId);
+      if(!back)continue;
+      check(!events.some(e=>e.type==='source'&&
+        e.source.type==='shot'&&e.source.playerId===leave.playerId&&
+        e.elapsedSeconds>=leave.elapsedSeconds&&
+        e.elapsedSeconds<back.elapsedSeconds),
+        'off-field patient shot during treatment');
+    }
+    const params=new URL(location.href).searchParams;
+    const choice={outPlayerId:params.get('out'),
+      inPlayerId:params.get('in'),elapsedSeconds:2700};
+    const proposed=prepareM1V182UnifiedMatch(career,prior,[choice]);
+    check(proposed?.ok&&admitM1V171SourceWithHolds(
+      career,prior,proposed.request).ok,
+      'saved manager selection not replayable after navigation');
+    check(proposed.request.plannedCommands.some(c=>
+      c.kind==='substitute-normal'&&
+      c.outPlayerId===choice.outPlayerId&&
+      c.inPlayerId===choice.inPlayerId&&
+      c.elapsedSeconds===2700),
+      'manager command absent from canonical unified source');
+    const physical=proposed.request.result.events.find(e=>
+      e.type==='source'&&e.source.type==='physical-transition'&&
+      e.source.source.type==='availability'&&
+      e.source.source.source.entry.action.kind==='substitute-normal'&&
+      e.source.source.source.entry.action.inPlayerId===choice.inPlayerId);
+    check(physical,'accepted substitution did not change physical XI');
+    const clock=projectM1V179MatchClock(
+      proposed.request.prematch,proposed.request.result);
+    check(clock.ok,'unified source clock not replayable');
+    const at=clock.snapshots.find(s=>s.sourceEventId===physical.id);
+    const on=proposed.fixture.homeClubId===career.selectedClubId?
+      at?.homePresent:at?.awayPresent;
+    check(on?.includes(choice.inPlayerId)&&
+      !on.includes(choice.outPlayerId),
+      'substitution not applied to source clock/physical XI');
+    await rejected(create(career.careerId),'ALREADY_EXISTS');
+    await rejected(commit(career.careerId,0,proposed.request),
+      'STALE_REVISION');
+    const before=JSON.stringify(await load(career.careerId));
+    const forged=structuredClone(proposed.request);
+    const manager=forged.plannedCommands.find(c=>
+      c.kind==='substitute-normal');
+    manager.stoppage='referee-authorized';
+    await rejected(commit(career.careerId,1,forged),
+      'DOMAIN_REJECTED');
+    check(JSON.stringify(await load(career.careerId))===before,
+      'forged halftime whistle changed committed history');
+    const race=await Promise.allSettled([
+      commit(career.careerId,1,proposed.request),
+      commit(career.careerId,1,proposed.request),
+    ]);
+    check(race.filter(x=>x.status==='fulfilled').length===1,
+      'native concurrent CAS did not have one winner');
+    check(race.filter(x=>x.status==='rejected').every(x=>
+      x.reason?.code==='STALE_REVISION'),
+      'losing writer did not fail with stale revision');
+    const committed=await load(career.careerId);
+    check(committed.revision===2&&committed.entries.length===2&&
+      committed.entries[0].commandId===prior.entries[0].commandId&&
+      committed.entries[1].commandId===proposed.request.commandId,
+      'native unified journal lost ordered source history');
+    check((await loadInitialCareer(career.careerId)).careerId===
+      career.careerId,'native source CAS rewrote M0');
+    status.textContent='M1_V182_BROWSER_CAS_PASS';
+  }
+  run().catch(error=>{
+    status.textContent='M1_V182_BROWSER_CAS_FAIL: '+
+      String(error?.stack??error);
+  });
+</script>
+</body>
+</html>

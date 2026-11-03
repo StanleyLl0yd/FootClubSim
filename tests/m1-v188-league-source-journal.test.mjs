@@ -468,6 +468,22 @@ test('P3-1: old v188 source may be replayed but never mint new authority',()=>{
   assert.equal(validateM1V188LeagueJournal(
     career,structuredClone(historical)).ok,true,
     'old exact-result histories remain independently replayable');
+  const dense=regenerateM1V184CausalSource(
+    proposal.request.prematch,proposal.request.policy,[],true);
+  assert.equal(dense.ok,true);
+  // The persisted v105 result can be identical under both referee modes.
+  // Source replay is not a cryptographic attestation of historical origin.
+  assert.deepEqual(legacy.result,dense.result,
+    'this deterministic witness has canonically equivalent saved events');
+  const equivalent=structuredClone(historical);
+  equivalent.entries[0].source.disciplinePolicyVersion=2;
+  assert.equal(validateM1V188LeagueJournal(career,equivalent).ok,true,
+    'identical dense-replayable events cannot reveal their prior generator');
+  const forgedVersioned=structuredClone(equivalent);
+  forgedVersioned.entries[0].result.events[0].id='forged-referee';
+  assert.deepEqual(validateM1V188LeagueJournal(career,forgedVersioned),
+    {ok:false,error:'INVALID_JOURNAL'},
+    'versioned entries still reject inconsistent canonical source bytes');
   const damaged=structuredClone(historical);
   damaged.entries[0].result.report.home.goals++;
   assert.equal(validateM1V188LeagueJournal(career,damaged).ok,false);

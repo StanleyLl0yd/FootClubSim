@@ -19,6 +19,7 @@ import {defaultTacticalPlan} from './tactics.js';
 import type {InitialCareerSave} from './save.js';
 import type {MatchRosterRules} from './model.js';
 import type {M1V105Run} from './m1-v105-special-goal-chronology.js';
+import type {M1V186Law5Evidence} from './m1-v186-law5-causal.js';
 
 export const M1_V188_LEAGUE_SCHEMA=188 as const;
 const RULES:MatchRosterRules={
@@ -50,7 +51,7 @@ export type M1V188HoldInspection=
     holds:readonly M1V188FictionalHold[]}>;
 type Source={prematch:Record<string,unknown>;policy:unknown;
   plannedCommands:unknown[];checkpointMedical:unknown[];
-  disciplinePolicyVersion?:2};
+  disciplinePolicyVersion?:2;medicalPolicyVersion?:2};
 export type M1V188Entry={fixtureId:string;round:number;
   commandId:string;source:Source;result:Good};
 export type M1V188Journal={schemaVersion:188;careerId:string;
@@ -59,7 +60,8 @@ export type M1V188Journal={schemaVersion:188;careerId:string;
 export type M1V188Request={schemaVersion:188;careerId:string;
   expectedRevision:number;commandId:string;prematch:unknown;
   policy:unknown;plannedCommands:unknown[];
-  checkpointMedical:unknown[];result:unknown};
+  checkpointMedical:unknown[];result:unknown;
+  medicalPolicyVersion?:2};
 export type M1V188Error='INVALID_INITIAL'|'INVALID_JOURNAL'|
   'INVALID_REQUEST'|'WRONG_CAREER'|'STALE_REVISION'|
   'WRONG_FIXTURE'|'UNTRUSTED_CATALOG'|'SOURCE_MISMATCH'|
@@ -79,7 +81,9 @@ export type M1V188Proposal=
   | Readonly<{ok:false;error:M1V188Error}>
   | Readonly<{ok:true;fixture:Fixture;request:M1V188Request;
     clock:PhysicalClock;remainingFixtures:number;
-    selectedClubFixture:boolean}>;
+    selectedClubFixture:boolean;
+    sourceLaw5Evidence?:readonly M1V186Law5Evidence[];
+    externalMedicalAuthorityAuthenticated:false}>;
 
 const rec=(v:unknown):v is Record<string,unknown>=>
   v!==null&&typeof v==='object'&&!Array.isArray(v);
@@ -91,9 +95,11 @@ const rootKeys=['schemaVersion','careerId','selectedClubId',
 const entryKeys=['fixtureId','round','commandId','source','result'];
 const sourceKeys=['prematch','policy','plannedCommands','checkpointMedical'];
 const sourceKeysV2=[...sourceKeys,'disciplinePolicyVersion'];
+const sourceKeysMedical=[...sourceKeysV2,'medicalPolicyVersion'];
 const requestKeys=['schemaVersion','careerId','expectedRevision',
   'commandId','prematch','policy','plannedCommands',
   'checkpointMedical','result'];
+const requestKeysMedical=[...requestKeys,'medicalPolicyVersion'];
 const fail=(error:M1V188Error):Extract<M1V188Gate,{ok:false}>=>
   ({ok:false,error});
 function copy(value:unknown,cap:number):unknown|null{
@@ -297,7 +303,10 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       !rec(e.source)||
       !(exact(e.source,sourceKeys)||
         (exact(e.source,sourceKeysV2)&&
-          e.source.disciplinePolicyVersion===2))||
+          e.source.disciplinePolicyVersion===2)||
+        (exact(e.source,sourceKeysMedical)&&
+          e.source.disciplinePolicyVersion===2&&
+          e.source.medicalPolicyVersion===2))||
       !rec(e.source.prematch)||
       Object.hasOwn(e.source.prematch,'catalog')||
       !Array.isArray(e.source.plannedCommands)||
@@ -318,7 +327,8 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
   // Prefer the final dense model, then prove exact legacy source replay.
   const sourceAttempt=(dense:boolean)=>{
     const replay=regenerateM1V184CausalSource(
-      input,POLICY,manager,dense);
+      input,POLICY,manager,dense,
+      e.source.medicalPolicyVersion===2);
     return replay.ok&&
       sameCanonicalValue(replay.plannedCommands,
         e.source.plannedCommands)&&
@@ -382,15 +392,18 @@ function read(i:InitialCareerSave,value:unknown){
       schedule:calendar(i)};
   const schedule=calendar(i),holds:Hold[]=[];
   if(schedule.length!==LIMIT)return null;
-  let versionedSeen=false;
+  let versionedSeen=false,medicalVersionedSeen=false;
   for(let n=0;n<journal.entries.length;n++){
     const entry=journal.entries[n]!;
     const versioned=entry.source?.disciplinePolicyVersion===2;
-    if(versionedSeen&&!versioned)return null;
+    const medical=entry.source?.medicalPolicyVersion===2;
+    if(versionedSeen&&!versioned||medicalVersionedSeen&&!medical)
+      return null;
     if(copy(entry,MAX_REQUEST)===null||
         !verifyEntry(i,entry,schedule[n]!,n,holds,schedule))
       return null;
     if(versioned)versionedSeen=true;
+    if(medical)medicalVersionedSeen=true;
   }
   rememberVerified(i,journal,holds);
   return{journal,holds,schedule};
@@ -422,14 +435,19 @@ export function validateM1V188LeagueJournal(
 export function prepareM1V188LeagueMatch(
   initial:unknown,value:unknown,manager:unknown=[],
   externalDiscipline:unknown=undefined,
+  medicalPolicyVersion:unknown=undefined,
 ):M1V188Proposal|null{
   if(!validInitial(initial))return {ok:false,error:'INVALID_INITIAL'};
   // No complete authenticated external KDK feed exists in this game.
   // Even an empty caller-supplied list is not proof of official clearance.
   if(externalDiscipline!==undefined)
     return {ok:false,error:'UNVERIFIED_EXTERNAL_DISCIPLINE'};
+  if(medicalPolicyVersion!==undefined&&medicalPolicyVersion!==2)
+    return {ok:false,error:'INVALID_REQUEST'};
   const accepted=read(initial,value);
   if(!accepted)return {ok:false,error:'INVALID_JOURNAL'};
+  const medicalSource=medicalPolicyVersion===2||
+    accepted.journal.entries.some(e=>e.source.medicalPolicyVersion===2);
   const index=accepted.journal.revision,f=accepted.schedule[index];
   if(!f)return null;
   const managerCommandsForFixture=managerCommands(manager,f,
@@ -444,7 +462,7 @@ export function prepareM1V188LeagueMatch(
       initial.rngState))
     return {ok:false,error:'UNAUTHORIZED_MANAGER'};
   const generated=regenerateM1V184CausalSource(
-    prematch,POLICY,managerCommandsForFixture,true);
+    prematch,POLICY,managerCommandsForFixture,true,medicalSource);
   if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED'};
   const clock=replayedPhysicalClock(
     prematch,generated.result,managerCommandsForFixture);
@@ -454,7 +472,10 @@ export function prepareM1V188LeagueMatch(
     commandId:'v188-league-'+f.id,prematch,policy:POLICY,
     plannedCommands:generated.plannedCommands,
     checkpointMedical:generated.checkpointMedical,
-    result:generated.result},
+    result:generated.result,
+    ...(medicalSource?{medicalPolicyVersion:2 as const}:{})},
+    ...(medicalSource?{sourceLaw5Evidence:generated.law5Evidence}:{}),
+    externalMedicalAuthorityAuthenticated:false,
     remainingFixtures:LIMIT-index-1,
     selectedClubFixture:belongs(f,initial.selectedClubId)};
 }
@@ -468,7 +489,8 @@ export function applyM1V188LeagueMatch(
   const accepted=read(initial,value);
   if(!accepted)return fail('INVALID_JOURNAL');
   const raw=copy(request,MAX_REQUEST);
-  if(!rec(raw)||!exact(raw,requestKeys)||
+  if(!rec(raw)||!(exact(raw,requestKeys)||
+      exact(raw,requestKeysMedical)&&raw.medicalPolicyVersion===2)||
       raw.schemaVersion!==188||
       !Number.isSafeInteger(raw.expectedRevision)||
       typeof raw.commandId!=='string'||!rec(raw.prematch)||
@@ -477,6 +499,8 @@ export function applyM1V188LeagueMatch(
       !Array.isArray(raw.checkpointMedical))
     return fail('INVALID_REQUEST');
   if(raw.careerId!==initial.careerId)return fail('WRONG_CAREER');
+  if(accepted.journal.entries.some(e=>e.source.medicalPolicyVersion===2)&&
+      raw.medicalPolicyVersion!==2)return fail('SOURCE_MISMATCH');
   if(raw.expectedRevision!==accepted.journal.revision)
     return fail('STALE_REVISION');
   const n=accepted.journal.revision,f=accepted.schedule[n];
@@ -492,7 +516,8 @@ export function applyM1V188LeagueMatch(
     commandId:raw.commandId,source:{prematch,policy:raw.policy,
       plannedCommands:raw.plannedCommands,
       checkpointMedical:raw.checkpointMedical,
-      disciplinePolicyVersion:2},
+      disciplinePolicyVersion:2,
+      ...(raw.medicalPolicyVersion===2?{medicalPolicyVersion:2 as const}:{})},
     result:raw.result as Good};
   const holds=[...accepted.holds];
   // New commits cannot claim the legacy shot/referee authority.

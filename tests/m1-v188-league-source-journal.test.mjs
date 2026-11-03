@@ -309,3 +309,84 @@ test('P3-1: ten-player live restart and unsourced in-play stop fail closed',()=>
   assert.equal(forbidden?.ok,false,
     'user may not fabricate a referee-authorized substitution');
 });
+
+test('P3-1: actual scored goal admits a lawful source-replayed substitute',()=>{
+  let witness=null;
+  const positions=new Map(catalog.players.map(p=>[p.id,p.primaryPosition]));
+  for(let seed=1;seed<=48&&!witness;seed++){
+    const career=createInitialCareer(
+      catalog,catalog.clubs[0].id,seed,'v188-p3-1-goal-'+seed);
+    const start=startM1V188LeagueJournal(career);
+    if(!start.ok)continue;
+    const automatic=prepareM1V188LeagueMatch(career,start.journal);
+    if(!automatic?.ok)continue;
+    const goalTimes=automatic.request.result.events.filter(e=>
+      e.type==='source'&&e.source.type==='shot'&&
+      e.source.outcome==='goal'&&e.elapsedSeconds%300===299&&
+      e.elapsedSeconds<5099).map(e=>e.elapsedSeconds+1);
+    const own=automatic.fixture.homeClubId===career.selectedClubId?
+      automatic.request.prematch.homeLineup:
+      automatic.request.prematch.awayLineup;
+    for(const time of goalTimes){
+      if(witness)break;
+      for(const outPlayerId of own.starters.filter(
+        id=>positions.get(id)!=='GK').slice(0,5)){
+        if(witness)break;
+        for(const inPlayerId of own.bench.filter(
+          id=>positions.get(id)!=='GK').slice(0,5)){
+          const manual=prepareM1V188LeagueMatch(
+            career,start.journal,[{outPlayerId,inPlayerId,
+              elapsedSeconds:time}]);
+          if(!manual?.ok)continue;
+          const physical=manual.request.result.events.find(e=>
+            e.type==='source'&&e.source.type==='physical-transition'&&
+            e.source.source.type==='availability'&&
+            e.source.source.source.entry.action.kind==='substitute-normal'&&
+            e.elapsedSeconds===time&&
+            e.source.source.source.entry.action.inPlayerId===inPlayerId);
+          if(!physical)continue;
+          const saved=applyM1V188LeagueMatch(
+            career,start.journal,manual.request);
+          if(!saved.ok)continue;
+          witness={career,start,automatic,manual,saved,
+            outPlayerId,inPlayerId,time};
+          break;
+        }
+      }
+    }
+  }
+  assert.ok(witness,'no legal ordinary seeded-goal substitute in 48 seeds');
+  const {career,start,automatic,manual,saved,
+    outPlayerId,inPlayerId,time}=witness;
+  assert.ok(automatic.clock.managerStopsFromSource.includes(time),
+    'the original seeded source must actually contain the goal whistle');
+  assert.ok(manual.clock.managerStopsFromSource.includes(time));
+  assert.ok(manual.request.result.events.some(e=>
+    e.type==='source'&&e.source.type==='shot'&&
+    e.source.outcome==='goal'&&e.elapsedSeconds===time-1),
+    'the same actual goal must precede the substituted restart');
+  assert.equal(validateM1V188LeagueJournal(career,saved.journal).ok,true);
+  const move=manual.clock.snapshots.find(s=>
+    s.runningSeconds===time&&
+    ([...s.homePresent,...s.awayPresent].includes(inPlayerId))&&
+    ![...s.homePresent,...s.awayPresent].includes(outPlayerId));
+  assert.ok(move,'the substitute must enter the saved physical XI');
+  const noStop=Array.from({length:17},(_,i)=>(i+1)*300)
+    .find(t=>t!==2700&&
+      !automatic.clock.managerStopsFromSource.includes(t));
+  assert.ok(noStop);
+  const forged=prepareM1V188LeagueMatch(career,start.journal,[{
+    outPlayerId,inPlayerId,elapsedSeconds:noStop,
+  }]);
+  assert.equal(forged?.ok,false,
+    'absence of seeded whistle must never authorize a substitution');
+  const forgedResult=structuredClone(manual.request);
+  const goal=forgedResult.result.events.find(e=>
+    e.type==='source'&&e.source.type==='shot'&&
+    e.elapsedSeconds===time-1&&e.source.outcome==='goal');
+  assert.ok(goal);
+  goal.source.outcome='saved';
+  assert.deepEqual(applyM1V188LeagueMatch(
+    career,start.journal,forgedResult),
+    {ok:false,error:'SOURCE_MISMATCH'});
+});

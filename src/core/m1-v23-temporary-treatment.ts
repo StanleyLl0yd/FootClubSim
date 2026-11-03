@@ -357,6 +357,22 @@ function simulateTreatmentCore(
   const foulTimes: number[] = [];
   const drafts: AssessmentDraft[] = [];
   let acceptedInPlayCommands = 0;
+  function applyGeneratedStopCommands(second:number):boolean{
+    for(const action of extraByTime.get(second)??[]){
+      const coachSide:Side|null=action.teamId===clubIds.home?'home':
+        action.teamId===clubIds.away?'away':null;
+      const leaving=action.outPlayerId,entering=action.inPlayerId;
+      if(!coachSide||typeof leaving!=='string'||
+          typeof entering!=='string'||
+          !active[coachSide].has(leaving)||
+          active[coachSide].has(entering))return false;
+      active[coachSide].delete(leaving);
+      active[coachSide].add(entering);
+      commands.push(action);
+      acceptedInPlayCommands++;
+    }
+    return true;
+  }
   for (let phase = 0; phase < M1_CLOCK_MAX_EVENTS; phase++) {
     const second = phase * M1_CLOCK_STEP_SECONDS;
     // Fixed draw budget even if there is no offence or an ineligible team.
@@ -396,6 +412,20 @@ function simulateTreatmentCore(
       injuryTrigger < SUSPECTED_INJURY_TRIGGER;
     if (phase === 0 || second === 2700 ||
         (trigger >= FOUL_TRIGGER && !injuryIncident)) {
+      // A normal goal restart is a legal coach checkpoint. Its whistle
+      // must be derived from the SAME seeded physical source BEFORE the
+      // requested replacement changes any later referee or shot choices.
+      // Forecasting is only needed for an explicitly requested in-play
+      // command; the automatic match and RNG budget remain unchanged.
+      if(phase>0&&second!==2700&&extraByTime.has(second)){
+        const prior=simulateM1V23RefereeWithTreatment(
+          input,policy,commands,treatment,0,900,foulTimes,20);
+        if(!prior.ok||!prior.events.some(e=>
+          e.kind==='goal-whistle'&&e.runningSeconds===second-1))
+          return fail('NO_GENERATED_FOUL_STOPPAGE');
+        if(!applyGeneratedStopCommands(second))
+          return fail('INVALID_INPLAY_COMMANDS');
+      }
       completeDueReturn(second, phase);
       continue;
     }
@@ -440,23 +470,8 @@ function simulateTreatmentCore(
     }
     if (kind !== 'injury-withdrawal') {
       foulTimes.push(second);
-      for (const action of extraByTime.get(second) ?? []) {
-        const coachSide: Side | null =
-          action.teamId === clubIds.home ? 'home' :
-          action.teamId === clubIds.away ? 'away' : null;
-        const leaving = action.outPlayerId;
-        const entering = action.inPlayerId;
-        if (!coachSide || typeof leaving !== 'string' ||
-            typeof entering !== 'string' ||
-            !active[coachSide].has(leaving) ||
-            active[coachSide].has(entering)) {
-          return fail('INVALID_INPLAY_COMMANDS');
-        }
-        active[coachSide].delete(leaving);
-        active[coachSide].add(entering);
-        commands.push(action);
-        acceptedInPlayCommands++;
-      }
+      if(!applyGeneratedStopCommands(second))
+        return fail('INVALID_INPLAY_COMMANDS');
       if (causalMode) {
         // The offender and patient must be on opposing physical XIs at
         // the SAME whistle. Never infer a patient from the card alone.

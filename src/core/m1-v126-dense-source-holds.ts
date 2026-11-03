@@ -1,9 +1,11 @@
 import {simulateM1V19InternalReferee} from './m1-v19-internal-foul-injury.js';
-import {simulateM1V23TemporaryTreatment}
+import {simulateM1V23TemporaryTreatment,
+  simulateM1V29CausalMedicalSource}
   from './m1-v23-temporary-treatment.js';
 import {verifyM1V176MedicalSourceClaim}
   from './m1-v176-dense-medical.js';
-import {verifyM1V182UnifiedSourceClaim}
+import {verifyM1V182UnifiedSourceClaim,
+  verifyM1V184CausalSourceClaim}
   from './m1-v182-unified-source.js';
 import {verifyM1V158SourceClaim}
   from './m1-v158-generated-goal-stops.js';
@@ -77,8 +79,9 @@ export function reviewM1V126DenseSourceHolds(
     const generatedMedical=
       entry.commandId==='v176-medical-'+entry.fixtureId;
     const unified=entry.commandId==='v182-unified-'+entry.fixtureId;
+    const causal=entry.commandId==='v184-causal-'+entry.fixtureId;
     if((source.checkpointMedical.length!==0&&
-        !generatedMedical&&!unified)||
+        !generatedMedical&&!unified&&!causal)||
        source.intraphaseMedical.length!==0||
        source.trustedDecisions.length!==0)
       return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
@@ -91,7 +94,7 @@ export function reviewM1V126DenseSourceHolds(
        entry.commandId!=='v138-multi-'+entry.fixtureId&&
        entry.commandId!=='v158-goal-multi-'+entry.fixtureId&&
        entry.commandId!=='v166-combined-'+entry.fixtureId&&
-       !generatedMedical&&!unified)continue;
+       !generatedMedical&&!unified&&!causal)continue;
     // A user-requested v132 normal substitution is already checked for
     // physical legality by the full v120/v105 source replay above. It is not
     // a modelled referee sanction and must not mint or discharge any hold.
@@ -198,7 +201,12 @@ export function reviewM1V126DenseSourceHolds(
     const combined=entry.commandId==='v166-combined-'+entry.fixtureId;
     const refereeWhistle=entry.commandId===
       'v180-ref-whistle-'+entry.fixtureId;
-    const sourceVerified=unified?
+    const sourceVerified=causal?
+      verifyM1V184CausalSourceClaim(
+        {...source.prematch,catalog:initial.catalog},source.policy,
+        source.plannedCommands,source.checkpointMedical,
+        entry.fixtureId,initial.selectedClubId,initial.rngState):
+      unified?
       verifyM1V182UnifiedSourceClaim(
         {...source.prematch,catalog:initial.catalog},source.policy,
         source.plannedCommands,source.checkpointMedical,
@@ -221,10 +229,14 @@ export function reviewM1V126DenseSourceHolds(
       return {ok:false,error:'UNVERIFIED_VIRTUAL_SOURCE'};
     const prematch={...source.prematch,
       catalog:initial.catalog} as M1PrematchInput;
-    const manager=unified?source.plannedCommands.filter(
+    const manager=(unified||causal)?source.plannedCommands.filter(
       c=>c!==null&&typeof c==='object'&&
         (c as {kind?:unknown}).kind==='substitute-normal'):[];
-    const replay=unified?
+    const replay=causal?
+      simulateM1V29CausalMedicalSource(prematch,source.policy,
+        manager.filter(c=>(c as {elapsedSeconds:number}).elapsedSeconds===2700),
+        manager.filter(c=>(c as {elapsedSeconds:number}).elapsedSeconds!==2700)):
+      unified?
       simulateM1V23TemporaryTreatment(prematch,source.policy,
         manager.filter(c=>(c as {elapsedSeconds:number}).elapsedSeconds===2700),
         manager.filter(c=>(c as {elapsedSeconds:number}).elapsedSeconds!==2700)):

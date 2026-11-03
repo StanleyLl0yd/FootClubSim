@@ -18,9 +18,19 @@
         "Automatic and manager-directed matches follow the same lawful command path; unimplemented exceptional decisions fail closed.",
         "Goals, substitutions, discipline and temporary player absences change subsequent match actions rather than advisory-only views."
       ],
-      "next": "Integrate currently separate v105/v138 and medical/referee paths; regression for 10-player restart and live shots.",
-      "state": "open",
-      "verification": null
+      "next": "ACCEPTED on exact main 1b801aee; preserve source authority and old-read/new-append security boundary while completing dependent P3-2/P3-3/P3-4.",
+      "state": "accepted",
+      "verification": {
+        "exactMainSha": "1b801aeedb5c3f34dbe3b4c9b624f9335f724fb7",
+        "evidenceUrls": [
+          "https://github.com/StanleyLl0yd/FootClubSim/issues/29#issuecomment-6603275980",
+          "https://github.com/StanleyLl0yd/FootClubSim/pull/468",
+          "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/41629567415",
+          "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/41629567249",
+          "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/41626903404"
+        ],
+        "acceptedBy": "https://github.com/StanleyLl0yd/FootClubSim/issues/29#issuecomment-6603275980"
+      }
     },
     {
       "id": "P3-2",

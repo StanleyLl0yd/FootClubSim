@@ -1,0 +1,25 @@
+name: M1 v182 focused source and journal regression
+on:
+  push:
+    branches: [m1-v182-focused-run]
+permissions: {}
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact feature
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Lockfile install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: TypeScript source verification
+        run: npm run typecheck
+      - name: Build domain and focused exact test
+        run: npm run build:core && node --test tests/m1-v182-unified.test.mjs

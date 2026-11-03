@@ -1,13 +1,13 @@
 # M1 P3/P5 — nine-block functional closure matrix
 
-**Status: 0/9 ACCEPTED; P3 0/4, P5 0/5. M1 and exit #3 OPEN, M2 prohibited.**
+**Status: 1/9 ACCEPTED; P3 1/4, P5 0/5. M1 and exit #3 OPEN, M2 prohibited.**
 This is a *tracking subdivision* of existing [P3 #29](https://github.com/StanleyLl0yd/FootClubSim/issues/29) and [P5 #31](https://github.com/StanleyLl0yd/FootClubSim/issues/31), not a rewrite or relaxation of either issue's acceptance criteria. P1 #27, P2 #28, deferred P4 #30 and the two full repository-wide audits in exit #3 are **additional independent M1 obligations**, not silently included in the nine.
 
 The executable source of the nine records is `data/m1-p3-p5-closure-gates.json`. Every record begins **open**, despite extensive partial implementations and previously successful CI. Only move a gate to `accepted` after its entire `criteria` list is demonstrated on the integrated playable engine, with exact-main SHA, evidence URLs and written acceptance; no increment of the counter from a research-only or regression-only PR.
 
 | Block | Acceptance area | Dependency | Current status |
 | --- | --- | --- | --- |
-| P3-1 | Unified match authority and physical XI | Independent | OPEN |
+| P3-1 | Unified match authority and physical XI | Independent | ACCEPTED — [exact-main review](https://github.com/StanleyLl0yd/FootClubSim/issues/29#issuecomment-6603275980) |
 | P3-2 | Medical events and exceptions | P3-1 | OPEN |
 | P3-3 | Discipline and match-specific suspensions | P3-1 | OPEN |
 | P3-4 | Complete two-team career chronology | P3-1, P3-2, P3-3 | OPEN |
@@ -19,9 +19,9 @@ The executable source of the nine records is `data/m1-p3-p5-closure-gates.json`.
 
 ## Fastest safe execution order
 
-1. First clear existing gated PRs [#430](https://github.com/StanleyLl0yd/FootClubSim/pull/430) and [#431](https://github.com/StanleyLl0yd/FootClubSim/pull/431) without merging stale/unverified heads. Neither closes a block.
-2. Build **P3-1 and P3-4 integration foundations**, not more parallel research-only engine families. Preserve M0/v8 and persisted schema compatibility through explicit versioning.
-3. Finish **P3-2 and P3-3** atop the same event/physical-XI source; the complete P3-4 gate can close only when both are verified. Coverage must include two-team history rather than a selected-team-only proxy.
+1. **Completed:** earlier gated #430/#431 work and P3-1 source integration #468 are on protected main. Do not reopen closed integration work without a demonstrated regression.
+2. **P3-1 ACCEPTED.** Finish P3-2 and P3-3 on the same v188 source, then close the remaining P3-4 recovery/rescheduling cases. Preserve M0/v8 and persisted schema compatibility.
+3. Do not mark P3-4 accepted merely because 240-fixture Chromium replay passed: rescheduling and clinical/KDK-dependent restrictions still need positive and negative evidence.
 4. In parallel, complete **P5-1**, establish P5-4 final-engine adversarial harness and predeclare P5-5 budgets. These tasks do not require opening the sealed 2024/25 holdout.
 5. After final P3 engine is frozen, carry out **P5-2** full-engine calibrated aggregate/cohort work. Only then, with frozen thresholds and rights, perform **P5-3** once. Finish P5-4/5 on the identical final engine and browser targets.
 6. Even after all nine gates are accepted, keep M1 exit #3 open until P1/P2/P4 acceptance and **two genuinely complete repository-wide audit passes**, review, security, source/rights check and exact-main CI are recorded.
@@ -36,7 +36,7 @@ The executable source of the nine records is `data/m1-p3-p5-closure-gates.json`.
 
 ## Next work (not closure claims)
 
-- **P3-1:** Integrate currently separate v105/v138 and medical/referee paths; regression for 10-player restart and live shots.
+- **P3-1 ACCEPTED:** [#468](https://github.com/StanleyLl0yd/FootClubSim/pull/468) unified the dense physical source and replayed stopped clock; explicit [3/3 review](https://github.com/StanleyLl0yd/FootClubSim/issues/29#issuecomment-6603275980) on `1b801aeedb5c3f34dbe3b4c9b624f9335f724fb7`, 9/9 required exact-main PASS. Preserve this contract while implementing P3-2/3/4.
 - **P3-2:** Complete source-driven medical/return transitions and executable exception coverage.
 - **P3-3:** Integrate card carryover and authority-bound disciplinary ledger into playable career.
 - **P3-4:** Replace selected-club-only unknown opponent history with replay-verified two-team coverage and season gates.

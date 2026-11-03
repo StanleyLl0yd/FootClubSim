@@ -15,6 +15,12 @@ source-seeded injury withdrawal durations are unchanged.
 - Old entries without this property replay under the original per-match
   caution rule. Their first simple cautions still inform later v2 counts
   without retroactively changing past lineups or journal bytes.
+- A **v2** entry must replay the dense physical v103 shot/referee source,
+  including on cold reload; the legacy v8 replay fallback is legal **only**
+  for entries without `disciplinePolicyVersion`. Identical persisted v105
+  source bytes may independently satisfy both referee modes: replay checks
+  canonical event validity, **not cryptographic origin attestation**. A v2
+  label cannot authorize an event that fails the actual dense replay.
 - A journal can progress from old entries to v2 entries, never downgrade
   to an old-policy entry after v2 begins. Unknown versions and extra claimed
   authority are rejected by the exact-source validator.

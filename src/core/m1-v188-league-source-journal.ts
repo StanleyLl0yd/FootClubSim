@@ -312,8 +312,12 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       sameCanonicalValue(replay.result,e.result)&&
       replayedPhysicalClock(input,replay.result,manager)?replay:null;
   };
+  // Version 2 is minted only from the dense physical source. Never
+  // validate a v2 entry by laundering an older v8 chronology through
+  // the historical read-only fallback.
   const replay=sourceAttempt(true)??
-    (allowLegacy?sourceAttempt(false):null);
+    (allowLegacy&&e.source.disciplinePolicyVersion!==2?
+      sourceAttempt(false):null);
   if(!replay)return false;
   addHolds(holds,replay.generatedIncidents,f,index,
     e.source.disciplinePolicyVersion===2);

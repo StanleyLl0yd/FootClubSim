@@ -275,34 +275,74 @@ async function run() {
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await assertNondefaultCareer('normal profile restore');
 
-    // Player-facing v188 season: one real fixture, atomic save and reload.
+    // Player-facing career: automatic opponent game, owned-team
+    // halftime coaching decision, verified two-team table and durable reload.
     await clickSeason('Начать или продолжить сезон');
     await waitText('Сезон проверен и загружен. Сыграно матчей: 0 из 240.');
-    await clickSeason('Рассчитать матч');
-    await waitText('Результат рассчитан. Подтвердите запись');
-    const scoreVisible = await evaluate(
-      "document.querySelector('.season-preview-score')?.innerText ?? ''");
-    if (!scoreVisible.includes(':')) {
-      throw new Error('Player-facing v188 preview did not show a score');
-    }
-    await clickSeason('Подтвердить и сохранить');
-    await waitText('Матч №1 записан в браузер');
+    await clickSeason('Перейти к своему матчу');
+    await waitText('Теперь очередь вашего клуба. Остальные матчи сохранены.');
     const tablePlayed = await evaluate(`(() => {
       return Array.from(document.querySelectorAll('.season-table tbody tr'))
         .filter(row => Number(row.querySelectorAll('td')[1]?.textContent) === 1)
         .length;
     })()`);
     if (tablePlayed !== 2) {
-      throw new Error('Player-visible table did not update both fixture clubs');
+      throw new Error('Automatic opponent fixture did not update both table rows');
+    }
+    await clickSeason('Настроить замену');
+    await waitText('Замена в перерыве вашего матча');
+    const seasonChoice = await evaluate(`(() => ({
+      outgoing: document.querySelector('#season-sub-out')?.value,
+      incoming: document.querySelector('#season-sub-in')?.value,
+    }))()`);
+    if (!seasonChoice.outgoing || !seasonChoice.incoming ||
+        seasonChoice.outgoing === seasonChoice.incoming) {
+      throw new Error('No valid manual halftime substitution available');
+    }
+    await clickSeason('Рассчитать с заменой');
+    await waitText('Замена в перерыве включена в расчёт матча.');
+    const scoreVisible = await evaluate(
+      "document.querySelector('.season-preview-score')?.innerText ?? ''");
+    if (!scoreVisible.includes(':')) {
+      throw new Error('Player-facing v188 preview did not show a score');
+    }
+    await clickSeason('Подтвердить и сохранить');
+    await waitText('Матч №2 записан в браузер');
+    const storedChange = await evaluate(`new Promise((resolve, reject) => {
+      const opening = indexedDB.open('footclubsim-m1-v188', 1);
+      opening.onerror = () => reject(opening.error);
+      opening.onsuccess = () => {
+        const db = opening.result;
+        const tx = db.transaction('full-league-source-journals', 'readonly');
+        const request = tx.objectStore('full-league-source-journals')
+          .get('m0-ui-initial-career');
+        let result = null;
+        request.onsuccess = () => {
+          const journal = request.result;
+          result = {
+            revision: journal?.revision,
+            change: journal?.entries?.[1]?.source?.plannedCommands
+              ?.find(cmd => cmd.kind === 'substitute-normal') ?? null,
+          };
+        };
+        tx.oncomplete = () => { db.close(); resolve(result); };
+        tx.onabort = () => { db.close(); reject(tx.error); };
+      };
+    })`);
+    if (storedChange?.revision !== 2 ||
+        storedChange.change?.outPlayerId !== seasonChoice.outgoing ||
+        storedChange.change?.inPlayerId !== seasonChoice.incoming ||
+        storedChange.change?.elapsedSeconds !== 2700) {
+      throw new Error('Player halftime choice not saved in canonical league');
     }
     await send('Page.reload', { ignoreCache: true });
     await waitText('Выберите клуб, создайте начальную карьеру');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await clickSeason('Начать или продолжить сезон');
-    await waitText('Сезон проверен и загружен. Сыграно матчей: 1 из 240.');
+    await waitText('Сезон проверен и загружен. Сыграно матчей: 2 из 240.');
     await assertNondefaultCareer('v188 game season CAS and reload');
-    console.log('PASS: native player-facing season, score, table and reload');
+    console.log('PASS: own halftime substitution, opponent autopilot, table and reload');
 
     // Exercise the actual M1 UI against native IndexedDB, then reload.
     // M0 identity/revision must remain unchanged while M1 advances independently.

@@ -3,6 +3,7 @@ import { LIGA_PRIKOLOV_IDENTITIES } from '../branding/identities.js';
 import { ClubBadge } from './ClubBadge.js';
 import { M1Playtest } from './M1Playtest.js';
 import { M1DensePlaytest } from './M1DensePlaytest.js';
+import { M1LeagueSeason } from './M1LeagueSeason.js';
 import { createSyntheticRplScaleCatalog } from '../core/synthetic.js';
 import { generateDoubleRoundRobin } from '../core/fixtures.js';
 import { validateDoubleRoundRobin } from '../core/fixture-validation.js';
@@ -26,7 +27,7 @@ export function App() {
   );
   const [selectedClubId, setSelectedClubId] = useState(catalog.clubs[0]!.id);
   const [career, setCareer] = useState<InitialCareerSave | null>(null);
-  const [message, setMessage] = useState('Выберите вымышленный клуб и создайте стартовую карьеру.');
+  const [message, setMessage] = useState('Выберите клуб, создайте начальную карьеру и начните сезон.');
   const [working, setWorking] = useState(false);
   const club = catalog.clubs.find(entry => entry.id === selectedClubId)!;
   const firstRound = rounds[0]!;
@@ -35,7 +36,7 @@ export function App() {
     try {
       const next = createInitialCareer(catalog, selectedClubId, 42, CAREER_ID);
       setCareer(next);
-      setMessage('Стартовая карьера создана в памяти браузера. Для матчей сохраните её и подключите тестовый M1.');
+      setMessage('Карьера создана. Сохраните её в браузере, затем начните сезон.');
     } catch (error) {
       setMessage('Ошибка создания: ' + errorMessage(error));
     }
@@ -142,13 +143,13 @@ export function App() {
       <header className="masthead">
         <div className="brand"><span className="brand-mark" aria-hidden="true">FC</span>
           <span>FootClubSim</span></div>
-        <span className="edition">Версия 0.0.0 · M0 / M1 playtest</span>
+        <span className="edition">Версия 0.0.0 · игровой прототип</span>
       </header>
 
       <section className="hero" aria-labelledby="welcome">
         <p className="eyebrow">Футбольный клуб под вашим руководством</p>
-        <h1 id="welcome">Начало карьеры</h1>
-        <p>Технический прототип футбольного менеджера. Начальная карьера M0 и отдельный тестовый матчевый цикл M1. Все команды и футболисты вымышленные.</p>
+        <h1 id="welcome">Начните свою карьеру</h1>
+        <p>Выберите клуб и проведите первый сезон: матчи, результаты, турнирная таблица и сохранение прогресса. Пока это игровая пробная версия на вымышленных командах и составах.</p>
       </section>
 
       <section className="metrics" aria-label="Тестовая лига">
@@ -158,16 +159,16 @@ export function App() {
         <div><strong>{rounds.reduce((sum, round) => sum + round.fixtures.length, 0)}</strong><span>матчей в календаре</span></div>
       </section>
 
-      <section className="panel" aria-labelledby="fictional-league-title">
-        <h2 id="fictional-league-title">Лига приколов · утверждённые эмблемы</h2>
-        <p className="subtle">Предпросмотр 16 будущих клубов. Это визуальные концепты, а не команды действующей тестовой карьеры M0.</p>
+      <details className="panel identities-details">
+        <summary>Клубы «Лиги приколов» · утверждённые эмблемы</summary>
+        <p className="subtle">Будущий состав лиги. Сейчас в пробном сезоне используется отдельный синтетический набор клубов и футболистов.</p>
         <div className="club-identity-grid">
           {LIGA_PRIKOLOV_IDENTITIES.map(entry => <div className="club-identity" key={entry.id}>
             <ClubBadge club={entry} size={58} />
             <span>{entry.name}</span>
           </div>)}
         </div>
-      </section>
+      </details>
 
       <div className="columns">
         <section className="panel" aria-labelledby="club-title">
@@ -202,8 +203,14 @@ export function App() {
         </section>
       </div>
 
-      {career && <M1Playtest key={career.selectedClubId} career={career} disabled={working} />}
-      {career && <M1DensePlaytest key={career.selectedClubId} career={career} disabled={working} />}
+      {career && <M1LeagueSeason key={career.selectedClubId}
+        career={career} disabled={working} />}
+      {career && <details className="panel technical-tests">
+        <summary>Технические сценарии движка (для разработчиков)</summary>
+        <p className="subtle">Два отдельных старых журнала для регрессионных проверок. Они не изменяют сезон выше.</p>
+        <M1Playtest key={career.selectedClubId} career={career} disabled={working} />
+        <M1DensePlaytest key={career.selectedClubId} career={career} disabled={working} />
+      </details>}
 
       <section className="panel" aria-labelledby="schedule-title">
         <h2 id="schedule-title">Календарь · тур {firstRound.number}</h2>
@@ -219,7 +226,7 @@ export function App() {
 
       <p className="status" role="status" aria-live="polite">{fixtureErrors.length ?
         'Календарь некорректен: ' + fixtureErrors[0]!.code : message}</p>
-      <footer>M0 хранит только исходную карьеру. Тестовый M1 рассчитывает и сохраняет отдельные синтетические матчи, но пока не является официальной карьерой или полностью принятой моделью футбола. Трансферы и финансы не реализованы. Сервер не требуется.</footer>
+      <footer>M0 хранит только исходную карьеру. Первый сезон использует существующий v188-движок и отдельный журнал матчей с проверкой при записи и восстановлении. Это пробный режим, ещё не официально принятые правила лиги. Трансферы и финансы пока не реализованы. Сервер не требуется.</footer>
     </main>
   );
 }

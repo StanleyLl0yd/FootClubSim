@@ -330,19 +330,19 @@ def main():
                 raise RuntimeError("Safari WebDriver session could not be started")
 
             wd(session, "url", {"url": APP_URL})
-            text = wait_for_text(session, "Начало карьеры")
+            text = wait_for_text(session, "Начните свою карьеру")
             for expected in ("Календарь", "Сохранения", "368", "240"):
                 if expected not in text:
                     raise AssertionError(f"Safari rendered UI without {expected!r}")
 
             select_nondefault_club(session)
             click(session, "Создать стартовую карьеру")
-            wait_for_text(session, "Стартовая карьера создана в памяти браузера")
+            wait_for_text(session, "Карьера создана. Сохраните её в браузере")
             assert_restored_club(session)
             click(session, "Сохранить в браузере")
             wait_for_text(session, "Начальная карьера записана в IndexedDB")
             wd(session, "refresh", {})
-            wait_for_text(session, "Выберите вымышленный клуб")
+            wait_for_text(session, "Выберите клуб, создайте начальную карьеру")
             click(session, "Восстановить из браузера")
             wait_for_text(session, "Стартовая карьера восстановлена и проверена по SHA-256")
             assert_restored_club(session)
@@ -359,7 +359,7 @@ def main():
             if removed != "deleted":
                 raise AssertionError(f"Safari IndexedDB clearing failed: {removed!r}")
             wd(session, "refresh", {})
-            wait_for_text(session, "Выберите вымышленный клуб")
+            wait_for_text(session, "Выберите клуб, создайте начальную карьеру")
             click(session, "Восстановить из браузера")
             wait_for_text(session, "Восстановление отклонено: NOT_FOUND")
             set_test_file(session, backup, "m0-recovery.json")

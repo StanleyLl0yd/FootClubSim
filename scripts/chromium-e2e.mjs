@@ -167,18 +167,30 @@ async function run() {
 
     async function click(label) {
       const found = await evaluate(`(() => {
-        const button = Array.from(document.querySelectorAll('button')).find(
+        const button = Array.from(document.querySelectorAll(${JSON.stringify(label === 'Рассчитать матч' ? '.technical-tests button' : 'button')})).find(
           element => element.textContent.trim() === ${JSON.stringify(label)}
         );
         if (!button || button.disabled) return false;
+        const details = button.closest('details.technical-tests');
+        if (details) details.open = true;
         button.click();
         return true;
       })()`);
       if (found !== true) throw new Error('Unavailable browser button: ' + label);
     }
 
+    async function clickSeason(label) {
+      const found = await evaluate(`(() => {
+        const button = Array.from(document.querySelectorAll('.season-panel button'))
+          .find(element => element.textContent.trim() === ${JSON.stringify(label)});
+        if (!button || button.disabled) return false;
+        button.click();
+        return true;
+      })()`);
+      if (found !== true) throw new Error('Unavailable season button: ' + label);
+    }
     await send('Page.navigate', { url: targetUrl });
-    const body = await waitText('Начало карьеры');
+    const body = await waitText('Начните свою карьеру');
     for (const text of ['Календарь', 'Сохранения', '368', '240']) {
       if (!body.includes(text)) throw new Error('Missing M0 UI text: ' + text);
     }
@@ -205,7 +217,7 @@ async function run() {
     }
 
     await click('Создать стартовую карьеру');
-    await waitText('Стартовая карьера создана в памяти браузера');
+    await waitText('Карьера создана. Сохраните её в браузере');
     await assertNondefaultCareer('creation');
     await click('Сохранить в браузере');
 
@@ -222,7 +234,7 @@ async function run() {
         await click('Сохранить в браузере');
         await waitText('Сохранение отклонено: DUPLICATE');
         await send('Page.reload', { ignoreCache: true });
-        await waitText('Выберите вымышленный клуб');
+        await waitText('Выберите клуб, создайте начальную карьеру');
         await click('Восстановить из браузера');
         await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
         await assertNondefaultCareer('private-session restore');
@@ -258,10 +270,39 @@ async function run() {
     await waitText('Сохранение отклонено: DUPLICATE');
 
     await send('Page.reload', { ignoreCache: true });
-    await waitText('Выберите вымышленный клуб');
+    await waitText('Выберите клуб, создайте начальную карьеру');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await assertNondefaultCareer('normal profile restore');
+
+    // Player-facing v188 season: one real fixture, atomic save and reload.
+    await clickSeason('Начать или продолжить сезон');
+    await waitText('Сезон проверен и загружен. Сыграно матчей: 0 из 240.');
+    await clickSeason('Рассчитать матч');
+    await waitText('Результат рассчитан. Подтвердите запись');
+    const scoreVisible = await evaluate(
+      "document.querySelector('.season-preview-score')?.innerText ?? ''");
+    if (!scoreVisible.includes(':')) {
+      throw new Error('Player-facing v188 preview did not show a score');
+    }
+    await clickSeason('Подтвердить и сохранить');
+    await waitText('Матч №1 записан в браузер');
+    const tablePlayed = await evaluate(`(() => {
+      return Array.from(document.querySelectorAll('.season-table tbody tr'))
+        .filter(row => Number(row.querySelectorAll('td')[1]?.textContent) === 1)
+        .length;
+    })()`);
+    if (tablePlayed !== 2) {
+      throw new Error('Player-visible table did not update both fixture clubs');
+    }
+    await send('Page.reload', { ignoreCache: true });
+    await waitText('Выберите клуб, создайте начальную карьеру');
+    await click('Восстановить из браузера');
+    await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+    await clickSeason('Начать или продолжить сезон');
+    await waitText('Сезон проверен и загружен. Сыграно матчей: 1 из 240.');
+    await assertNondefaultCareer('v188 game season CAS and reload');
+    console.log('PASS: native player-facing season, score, table and reload');
 
     // Exercise the actual M1 UI against native IndexedDB, then reload.
     // M0 identity/revision must remain unchanged while M1 advances independently.
@@ -278,7 +319,7 @@ async function run() {
     await waitText('Матч подтверждён, независимо перепроверен и сохранён');
     await assertNondefaultCareer('M1 result CAS commit');
     await send('Page.reload', { ignoreCache: true });
-    await waitText('Выберите вымышленный клуб');
+    await waitText('Выберите клуб, создайте начальную карьеру');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await click('Начать или продолжить M1');
@@ -356,7 +397,7 @@ async function run() {
       throw new Error('Browser CAS did not preserve the user-selected substitution');
     }
     await send('Page.reload', { ignoreCache: true });
-    await waitText('Выберите вымышленный клуб');
+    await waitText('Выберите клуб, создайте начальную карьеру');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await click('Начать или продолжить M1');
@@ -411,7 +452,7 @@ async function run() {
       throw new Error('Native CAS did not preserve a valid internal referee event source');
     }
     await send('Page.reload', { ignoreCache: true });
-    await waitText('Выберите вымышленный клуб');
+    await waitText('Выберите клуб, создайте начальную карьеру');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await click('Начать или продолжить M1');
@@ -487,7 +528,7 @@ async function run() {
       throw new Error('Native CAS did not retain keeper substitution');
     }
     await send('Page.reload', { ignoreCache: true });
-    await waitText('Выберите вымышленный клуб');
+    await waitText('Выберите клуб, создайте начальную карьеру');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await click('Начать или продолжить M1');
@@ -530,7 +571,7 @@ async function run() {
       throw new Error('v120 dense native journal not atomically stored');
     }
     await send('Page.reload', { ignoreCache: true });
-    await waitText('Выберите вымышленный клуб');
+    await waitText('Выберите клуб, создайте начальную карьеру');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await click('Создать или загрузить отдельный v120');
@@ -541,7 +582,7 @@ async function run() {
     await click('Рассчитать и сохранить следующий матч v120');
     await waitText('v120: плотный матч атомарно записан, 270 PRNG draws, ревизия 2 из 30.');
     await send('Page.reload', { ignoreCache: true });
-    await waitText('Выберите вымышленный клуб');
+    await waitText('Выберите клуб, создайте начальную карьеру');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await click('Создать или загрузить отдельный v120');
@@ -584,7 +625,7 @@ async function run() {
       throw new Error('Native v120 CAS did not preserve exact virtual referee source');
     }
     await send('Page.reload', { ignoreCache: true });
-    await waitText('Выберите вымышленный клуб');
+    await waitText('Выберите клуб, создайте начальную карьеру');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await click('Создать или загрузить отдельный v120');
@@ -646,7 +687,7 @@ async function run() {
         throw new Error('Manual v128 continuation bypassed a source-verified hold');
       }
       await send('Page.reload',{ignoreCache:true});
-      await waitText('Выберите вымышленный клуб');
+      await waitText('Выберите клуб, создайте начальную карьеру');
       await click('Восстановить из браузера');
       await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
       await click('Создать или загрузить отдельный v120');
@@ -689,7 +730,7 @@ async function run() {
         throw new Error('Repeated virtual referee bypassed historical hold or source namespace');
       }
       await send('Page.reload',{ignoreCache:true});
-      await waitText('Выберите вымышленный клуб');
+      await waitText('Выберите клуб, создайте начальную карьеру');
       await click('Восстановить из браузера');
       await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
       await click('Создать или загрузить отдельный v120');
@@ -760,7 +801,7 @@ async function run() {
           denseSub?.stoppage!=='half-time')
         throw new Error('Dense CAS lost manager-selected substitution participants/time');
       await send('Page.reload',{ignoreCache:true});
-      await waitText('Выберите вымышленный клуб');
+      await waitText('Выберите клуб, создайте начальную карьеру');
       await click('Восстановить из браузера');
       await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
       await click('Создать или загрузить отдельный v120');
@@ -804,7 +845,7 @@ async function run() {
           doubleStored[0].commandId===doubleStored[1].commandId)
         throw new Error('Dense double-substitution source-CAS identity mismatch');
       await send('Page.reload',{ignoreCache:true});
-      await waitText('Выберите вымышленный клуб');
+      await waitText('Выберите клуб, создайте начальную карьеру');
       await click('Восстановить из браузера');
       await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
       await click('Создать или загрузить отдельный v120');
@@ -846,7 +887,7 @@ async function run() {
           multiStored[2].elapsedSeconds!==thirdChoice.time)
         throw new Error('Dense third substitution source-CAS identity mismatch');
       await send('Page.reload',{ignoreCache:true});
-      await waitText('Выберите вымышленный клуб');
+      await waitText('Выберите клуб, создайте начальную карьеру');
       await click('Восстановить из браузера');
       await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
       await click('Создать или загрузить отдельный v120');
@@ -902,7 +943,7 @@ async function run() {
           reSubbed[2].elapsedSeconds!==2700)
         throw new Error('Substitute-of-substitute source was not committed');
       await send('Page.reload',{ignoreCache:true});
-      await waitText('Выберите вымышленный клуб');
+      await waitText('Выберите клуб, создайте начальную карьеру');
       await click('Восстановить из браузера');
       await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
       await click('Создать или загрузить отдельный v120');
@@ -1027,7 +1068,7 @@ async function run() {
           chainStored[1].outPlayerId!==firstIncoming)
         throw new Error('Double substitute-of-substitute source-CAS mismatch');
       await send('Page.reload',{ignoreCache:true});
-      await waitText('Выберите вымышленный клуб');
+      await waitText('Выберите клуб, создайте начальную карьеру');
       await click('Восстановить из браузера');
       await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
       await click('Создать или загрузить отдельный v120');
@@ -1069,7 +1110,7 @@ async function run() {
       origin: new URL(targetUrl).origin, storageTypes: 'indexeddb',
     });
     await send('Page.reload', { ignoreCache: true });
-    await waitText('Выберите вымышленный клуб');
+    await waitText('Выберите клуб, создайте начальную карьеру');
     await click('Восстановить из браузера');
     await waitText('Восстановление отклонено: NOT_FOUND');
     const documentTree = await send('DOM.getDocument');
@@ -1182,7 +1223,7 @@ async function run() {
     await send('Page.enable');
     await send('Runtime.enable');
     await send('Page.navigate', { url: targetUrl });
-    await waitText('Начало карьеры');
+    await waitText('Начните свою карьеру');
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await assertNondefaultCareer('normal profile restore');

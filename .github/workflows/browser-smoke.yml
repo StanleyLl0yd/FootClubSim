@@ -62,7 +62,7 @@ jobs:
             --disable-dev-shm-usage --virtual-time-budget=10000 \
             --dump-dom http://127.0.0.1:4173/ \
             >/tmp/footclubsim-dom.html 2>/tmp/footclubsim-browser.log
-          grep -Fq 'Начало карьеры' /tmp/footclubsim-dom.html
+          grep -Fq 'Начните свою карьеру' /tmp/footclubsim-dom.html
           grep -Fq 'Календарь' /tmp/footclubsim-dom.html
           grep -Fq 'Сохранения' /tmp/footclubsim-dom.html
           echo 'React M0 shell rendered in Chromium'

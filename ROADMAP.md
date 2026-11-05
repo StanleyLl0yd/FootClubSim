@@ -2,6 +2,16 @@
 
 > Planning document. **M0 closed 2026-10-15**, with successful exact-main CI and completed exit issue #2; no playable release exists. **M1 separately authorized by the owner and actively in development since 2026-10-15**; milestone #3 remains OPEN and M2 has not begun. [Final acceptance ADR-0010](docs/adr/0010-m0-final-acceptance.md). The owner-approved [M0/M2 gate boundary](docs/adr/0006-m0-m2-acceptance-boundary.md) separates M0 source/contracts acceptance from M2 playable rosters and executable authentic rules.
 
+## Product-first reorientation · 2026-11-05
+
+The owner directed active development toward a **working game**, not more low-frequency referee, medical, or disciplinary edge cases. [ADR-0011](docs/adr/0011-playable-first.md), [product task #478](https://github.com/StanleyLl0yd/FootClubSim/issues/478).
+
+**Immediate vertical slice (on the existing v188 engine):** choose a club → start/resume a season → simulate a match → inspect score and provisional table → confirm atomic browser save → play the next match. Follow with human manager decisions, cohesive playable teams/personnel, coaching UI and game-loop usability. M0 synthetic catalog and the approved fictional «Лига приколов» brand/roster **remain separate until a tested migration**.
+
+**Deferred until a functioning playable preview:** rare Law 5 returns, clinical authority edge cases, KDK appeals/cancellations, unusual late rescheduling, and research-level statistical calibration. Preserve existing implementation, regression checks, original save formats and rights boundaries; do not merge a failing PR. Open historic P3/P5 gates stay OPEN, not artificially accepted. This decision authorizes **M1 player-facing prototype work** now, without falsely signing off M1 exit #3 or M2 release compliance. Any changed formal milestone gates require an explicit documented re-baseline, not silent checklist edits.
+
+**Near-term exit for the player-facing slice:** human can create a club career, complete and resume at least one full fictional 240-match season locally, inspect schedule/results/table, recover from save interruption, and use a straightforward Russian-language interface. Manual coaching controls and actual approved «Лига приколов» identities are follow-on acceptance needs before a public playable release. Cross-browser and storage safety checks remain required. Full two-pass exit audits remain required at formal milestone acceptance.
+
 ## Product contract
 
 - Browser-first, **internet-connected** Russian-language single-player football **club management** simulation; mandatory offline gameplay is **not** required. Deterministic calculations and local career saves remain separate from network-dependent Bank of Russia rates ([ADR-0008](docs/adr/0008-online-daily-fx-rounding.md)).

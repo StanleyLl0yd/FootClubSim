@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
+import {M1ClubOverview} from './M1ClubOverview.js';
 import {sameCanonicalValue} from '../core/canonical-value.js';
 import {deriveM1V188ProvisionalTable}
   from '../core/m1-v188-provisional-table.js';
@@ -399,6 +400,7 @@ export function M1LeagueSeason({career,disabled}:{
               <p role="alert">Таблица недоступна: журнал не соответствует календарю.</p>}
           </div>
         </div>
+        <M1ClubOverview career={career} journal={journal} fixtures={fixtures}/>
       </>}
     <p className="subtle" role="status" aria-live="polite">{status}</p>
   </section>;

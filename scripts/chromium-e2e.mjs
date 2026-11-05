@@ -207,6 +207,8 @@ async function run() {
       await waitText('Карьера создана. Сохраните её в браузере');
       await click('Сохранить в браузере');
       await waitText('Начальная карьера записана в IndexedDB');
+      if(!(await evaluate("Boolean(document.querySelector('#import-full-file'))")))
+        throw new Error('Full backup import is absent from player UI');
       await clickSeason('Начать или продолжить сезон');
       await waitText('Сезон проверен и загружен. Сыграно матчей: 0 из 240.');
       const overview=await evaluate(`(() => ({
@@ -265,6 +267,53 @@ async function run() {
       await clickSeason('Начать или продолжить сезон');
       await waitText('Сезон проверен и загружен. Сыграно матчей: 1 из 240.');
       console.log('PASS: approved Liga Prikolov synthetic club career persisted and restored');
+
+      // A downloaded full archive must bring back the ACTUAL v188 season
+      // after deleting BOTH underlying databases, not merely the M0 header.
+      await send('Browser.setDownloadBehavior',{
+        behavior:'allow',downloadPath:profile,eventsEnabled:true,
+      });
+      await click('Скачать полную карьеру');
+      await waitText('Полный архив создан: стартовая карьера');
+      const fullPath=join(profile,'footclubsim-'+ligaId+'-full-career.json');
+      const fullJson=await until(async()=>{
+        const contents=await readFile(fullPath,'utf8');
+        return contents.includes('footclubsim-v188-full-career')?
+          contents:null;
+      },'full source journal actual browser download');
+      const fullEnvelope=JSON.parse(fullJson);
+      const savedFullJournal=JSON.parse(fullEnvelope.journalPayload);
+      if(savedFullJournal.revision!==1||fullEnvelope.careerId!==ligaId)
+        throw new Error('Export skipped a played fixture or changed career ID');
+      await send('Storage.clearDataForOrigin',{
+        origin:new URL(targetUrl).origin,storageTypes:'indexeddb',
+      });
+      await send('Page.reload',{ignoreCache:true});
+      await waitText('Выберите клуб, создайте начальную карьеру');
+      const fullDoc=await send('DOM.getDocument');
+      const fullInput=await send('DOM.querySelector',{
+        nodeId:fullDoc.root.nodeId,selector:'#import-full-file',
+      });
+      if(!fullInput.nodeId)throw new Error('Full-archive import input missing');
+      await send('DOM.setFileInputFiles',{
+        nodeId:fullInput.nodeId,files:[fullPath],
+      });
+      await waitText('Полная карьера восстановлена. Сыграно матчей: 1 из 240.');
+      await clickSeason('Начать или продолжить сезон');
+      await waitText('Сезон проверен и загружен. Сыграно матчей: 1 из 240.');
+      const corruptedFull={...fullEnvelope,journalChecksum:'0'.repeat(64)};
+      const corruptedPath=join(profile,'full-career-corrupted.json');
+      await writeFile(corruptedPath,JSON.stringify(corruptedFull),'utf8');
+      await send('DOM.setFileInputFiles',{
+        nodeId:fullInput.nodeId,files:[corruptedPath],
+      });
+      await waitText('Импорт полного архива отклонён:');
+      const stillOne=await evaluate(
+        "document.querySelectorAll('.season-own-calendar .season-played').length");
+      if(stillOne!==1)
+        throw new Error('Tampered full archive damaged active season');
+      console.log('PASS: native full-v188 archive roundtrip across both IndexedDB stores, tamper rejected');
+
 
       // A second independently saved Liga career must not overwrite
       // either the first career or its already played match.
@@ -1420,7 +1469,7 @@ async function run() {
       return true;
     })()`);
     await click('Сохранить в браузере');
-    await waitText('Недостаточно места в хранилище браузера');
+    await waitText('Недостаточно места в браузере');
     if (!await evaluate("Boolean(document.querySelector('.career-info'))")) {
       throw new Error('Active career lost after simulated storage quota rejection');
     }

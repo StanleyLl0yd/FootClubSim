@@ -195,6 +195,129 @@ async function run() {
       if (!body.includes(text)) throw new Error('Missing M0 UI text: ' + text);
     }
 
+    // The real player-facing preview starts with approved fictional clubs.
+    // Old M0 fixtures remain available only through the technical pack mode.
+    if (!privateFlag) {
+      const initialClub = await evaluate(
+        "document.querySelector('#club-select')?.value");
+      if (initialClub !== 'lp-nadir') {
+        throw new Error('Approved Liga Prikolov was not the default club pack');
+      }
+      await click('Создать стартовую карьеру');
+      await waitText('Карьера создана. Сохраните её в браузере');
+      await click('Сохранить в браузере');
+      await waitText('Начальная карьера записана в IndexedDB');
+      await clickSeason('Начать или продолжить сезон');
+      await waitText('Сезон проверен и загружен. Сыграно матчей: 0 из 240.');
+      const overview=await evaluate(`(() => ({
+        squad: document.querySelectorAll('.season-squad tbody tr').length,
+        clubFixtures: document.querySelectorAll('.season-own-calendar li').length,
+        club: document.querySelector('.season-club-summary')?.textContent ?? '',
+      }))()`);
+      if(overview.squad!==23||overview.clubFixtures!==30||
+          !overview.club.includes('Надир')) {
+        throw new Error('Player cannot inspect club roster and 30-match calendar');
+      }
+      await clickSeason('Рассчитать матч');
+      await waitText('Результат рассчитан. Подтвердите запись');
+      await clickSeason('Подтвердить и сохранить');
+      await waitText('Матч №1 записан в браузер');
+      const playedOwn=await evaluate(
+        "document.querySelectorAll('.season-own-calendar .season-played').length");
+      if(playedOwn!==1)
+        throw new Error('Club calendar did not show committed first fixture');
+
+      await send('Page.reload', { ignoreCache: true });
+      await waitText('Выберите клуб, создайте начальную карьеру');
+      const ligaId = await until(async () => evaluate(`(() => {
+        const select = document.querySelector('#career-saved-select');
+        if (!select) return null;
+        const option = Array.from(select.options).find(
+          value => value.value.startsWith('lp-career-'));
+        if (!option) return null;
+        const setter = Object.getOwnPropertyDescriptor(
+          HTMLSelectElement.prototype, 'value').set;
+        setter.call(select, option.value);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return option.value;
+      })()`), 'saved Liga Prikolov career listing');
+      if (!ligaId) throw new Error('Liga Prikolov save not discoverable');
+      await click('Восстановить из браузера');
+      await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+      const restoredClub = await evaluate(
+        "document.querySelector('#club-select')?.value");
+      if (restoredClub !== 'lp-nadir') {
+        throw new Error('Approved fictional club not restored');
+      }
+      await clickSeason('Начать или продолжить сезон');
+      await waitText('Сезон проверен и загружен. Сыграно матчей: 1 из 240.');
+      console.log('PASS: approved Liga Prikolov synthetic club career persisted and restored');
+
+      // A second independently saved Liga career must not overwrite
+      // either the first career or its already played match.
+      await click('Создать стартовую карьеру');
+      await waitText('Карьера создана. Сохраните её в браузере');
+      await click('Сохранить в браузере');
+      await waitText('Начальная карьера записана в IndexedDB');
+      const bothPresent = await until(async () => evaluate(`(() => {
+        const ids = Array.from(document.querySelector('#career-saved-select')?.options ?? [])
+          .map(option => option.value).filter(value => value.startsWith('lp-career-'));
+        return ids.length === 2 && new Set(ids).size === 2;
+      })()`), 'two independent fictional-club career saves');
+      if (!bothPresent) throw new Error('Independent Liga career overwritten');
+      await send('Page.reload', { ignoreCache: true });
+      await waitText('Выберите клуб, создайте начальную карьеру');
+      const firstStillAvailable = await until(async () => evaluate(`(() => {
+        const select = document.querySelector('#career-saved-select');
+        if (!select || !Array.from(select.options).some(option => option.value === ${JSON.stringify(ligaId)}))
+          return false;
+        const setter = Object.getOwnPropertyDescriptor(
+          HTMLSelectElement.prototype, 'value').set;
+        setter.call(select, ${JSON.stringify(ligaId)});
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      })()`), 'first saved career after independent save');
+      if (!firstStillAvailable) throw new Error('First Liga career was lost');
+      await click('Восстановить из браузера');
+      await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
+      await clickSeason('Начать или продолжить сезон');
+      await waitText('Сезон проверен и загружен. Сыграно матчей: 1 из 240.');
+      console.log('PASS: two independent Liga careers coexist without losing first season history');
+      const clubChanged=await evaluate(`(() => {
+        const select=document.querySelector('#club-select');
+        if(!select || !Array.from(select.options).some(x=>x.value==='lp-vagon'))
+          return false;
+        const setter=Object.getOwnPropertyDescriptor(
+          HTMLSelectElement.prototype,'value').set;
+        setter.call(select,'lp-vagon');
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+        return true;
+      })()`);
+      if(!clubChanged)throw new Error('Cannot select another fictional club');
+      await waitText('Выбран другой клуб. Создайте новую карьеру');
+      if(await evaluate("Boolean(document.querySelector('.career-info'))"))
+        throw new Error('Old active career remained attached to another club');
+      const stillSaved=await evaluate(`(() =>
+        Array.from(document.querySelector('#career-saved-select')?.options ?? [])
+          .filter(option=>option.value.startsWith('lp-career-')).length
+      )()`);
+      if(stillSaved!==2)
+        throw new Error('Changing club unexpectedly erased saved careers');
+      console.log('PASS: switching clubs never mutates another active career');
+
+    }
+    const packSwitched = await evaluate(`(() => {
+      const select = document.querySelector('#pack-select');
+      if (!select || !Array.from(select.options).some(x => x.value === 'demo'))
+        return false;
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLSelectElement.prototype, 'value').set;
+      setter.call(select, 'demo');
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    })()`);
+    if (!packSwitched) throw new Error('Legacy demonstration mode missing');
+    await waitText('Старый синтетический набор сохраняется');
     // Select a non-default club so restore must recover actual saved UI state.
     const switched = await evaluate(`(() => {
       const select = document.querySelector('#club-select');
@@ -1177,7 +1300,8 @@ async function run() {
       throw new Error('Foreign career ID import erased the active M0 career');
     }
 
-    // Pack/version strings alone do not prove that a club exists in this shell.
+    // A valid checksum plus unchanged pack/version strings must not permit
+    // a forged club catalog. Validate the entire canonical pack instead.
     const foreignClub = JSON.parse(savedJson);
     const foreignPayload = JSON.parse(foreignClub.payload);
     const selected = foreignPayload.catalog.clubs.find(club => club.id === foreignPayload.selectedClubId);
@@ -1189,7 +1313,7 @@ async function run() {
     const foreignClubPath = join(profile, 'm0-foreign-club.json');
     await writeFile(foreignClubPath, foreignClubJson, 'utf8');
     await send('DOM.setFileInputFiles', { nodeId: fileInput.nodeId, files: [foreignClubPath] });
-    await waitText('Импорт отклонён: клуб отсутствует в тестовой базе');
+    await waitText('Импорт отклонён: неизвестная версия игрового набора');
     await assertNondefaultCareer('foreign club import rejection');
 
     const storedForeignClub = await evaluate(`new Promise((resolve, reject) => {
@@ -1205,7 +1329,7 @@ async function run() {
     })`);
     if (!storedForeignClub) throw new Error('Could not set foreign-club restore fixture');
     await click('Восстановить из браузера');
-    await waitText('Восстановление отклонено: клуб отсутствует в тестовой базе');
+    await waitText('Восстановление отклонено: неизвестная или изменённая версия игрового набора');
     await assertNondefaultCareer('foreign club restore rejection');
     await send('Storage.clearDataForOrigin', {
       origin: new URL(targetUrl).origin, storageTypes: 'indexeddb',

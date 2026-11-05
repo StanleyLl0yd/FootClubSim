@@ -132,6 +132,22 @@ def click(session: str, name: str):
 
 
 def select_nondefault_club(session: str):
+    # Preserve the original M0 compatibility smoke while the public UI uses
+    # the approved but fully synthetic fictional competition by default.
+    switched = run_script(session, """
+        const select = document.querySelector('#pack-select');
+        if (!select || !Array.from(select.options).some(x => x.value === 'demo'))
+            return false;
+        const setter = Object.getOwnPropertyDescriptor(
+            HTMLSelectElement.prototype, 'value'
+        ).set;
+        setter.call(select, 'demo');
+        select.dispatchEvent(new Event('change', {bubbles: true}));
+        return true;
+    """)
+    if switched is not True:
+        raise AssertionError("Safari could not select legacy M0 fixture pack")
+    wait_for_text(session, "Старый синтетический набор сохраняется")
     # Exercise restore of non-default state, not merely the initial selected club.
     changed = run_script(session, """
         const select = document.querySelector('#club-select');
@@ -383,7 +399,7 @@ def main():
             foreign["payload"] = json.dumps(foreign_payload, ensure_ascii=False, separators=(",", ":"))
             foreign["checksum"] = hashlib.sha256(foreign["payload"].encode("utf-8")).hexdigest()
             set_test_file(session, json.dumps(foreign), "m0-foreign-club.json")
-            wait_for_text(session, "Импорт отклонён: клуб отсутствует в тестовой базе")
+            wait_for_text(session, "Импорт отклонён: неизвестная версия игрового набора")
             assert_restored_club(session)
             invalid = backup.replace("fictional-1", "fictional-X", 1)
             if invalid == backup:

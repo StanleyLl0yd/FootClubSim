@@ -112,3 +112,34 @@ export async function loadInitialCareer(careerId: string): Promise<InitialCareer
   if (result.value.careerId !== careerId) throw new CareerStorageError('CORRUPTED');
   return result.value;
 }
+
+/** Bounded, read-only discovery for multiple independent browser careers.
+ * Never infers a valid save from a key: loadInitialCareer verifies each choice.
+ */
+export async function listStoredInitialCareerIds():Promise<readonly string[]>{
+  const db=await openDatabase();
+  try{
+    return await new Promise<readonly string[]>((resolve,reject)=>{
+      let transaction:IDBTransaction;
+      try{transaction=db.transaction(STORE,'readonly');}
+      catch{reject(new CareerStorageError('STORAGE_FAILED'));return;}
+      const store=transaction.objectStore(STORE);
+      let keys:IDBValidKey[]|null=null,count=0;
+      const keyRequest=store.getAllKeys(undefined,65);
+      const countRequest=store.count();
+      keyRequest.onsuccess=()=>{keys=keyRequest.result;};
+      countRequest.onsuccess=()=>{count=countRequest.result;};
+      transaction.oncomplete=()=>{
+        if(!keys||count>64||keys.length!==count){
+          reject(new CareerStorageError('STORAGE_FAILED'));return;
+        }
+        if(!keys.every(isStableId)){
+          reject(new CareerStorageError('CORRUPTED'));return;
+        }
+        resolve(keys as string[]);
+      };
+      transaction.onabort=()=>reject(new CareerStorageError('STORAGE_FAILED'));
+      transaction.onerror=()=>{};
+    });
+  }finally{db.close();}
+}

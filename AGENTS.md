@@ -513,6 +513,12 @@ After the functional work and planned acceptance activities of **each milestone*
 
 This rule applies automatically to all future milestones without a repeated owner request. It is triggered by completing milestone work, not by an invented calendar deadline.
 
+## README style and scope
+
+- Preserve the README's established Russian, conversational, lightly ironic football-manager voice. It is an introduction for players, not an engineering changelog.
+- Update it for meaningful player-visible capabilities and honest current limitations, using the existing headings and narrative style. Keep the text compact; do not accumulate dated progress diaries, PR numbers, commit hashes, CI reports, internal source-journal versions, or milestone acceptance mechanics there.
+- Put detailed history, technical gates, research and architectural decisions in ROADMAP, ADRs, issues and pull requests instead. Never describe a preview feature as a released or fully accepted game.
+
 ## Repository workflow and security
 
 - Use short-lived feature branches and reviewed pull requests; do not develop directly on `main`. Keep changes focused and do not introduce unrelated formatting churn.

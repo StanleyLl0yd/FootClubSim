@@ -218,10 +218,23 @@ async function run() {
           !overview.club.includes('Надир')) {
         throw new Error('Player cannot inspect club roster and 30-match calendar');
       }
+      await clickSeason('Настроить стартовый состав');
+      const eleven=await evaluate(
+        "document.querySelectorAll('.season-xi-grid input:checked').length");
+      if(eleven!==11)throw new Error('Manual XI default is invalid');
       await clickSeason('Рассчитать матч');
+      await waitText('Стартовый состав и тактика выбраны тренером');
       await waitText('Результат рассчитан. Подтвердите запись');
       await clickSeason('Подтвердить и сохранить');
-      await waitText('Матч №1 записан в браузер');
+      const firstCommit=await until(async()=>{
+        const value=await evaluate(
+          "document.querySelector('.season-panel > p[role=status]')?.innerText ?? ''");
+        return value.includes('Матч №1 записан')||
+          value.includes('Запись не подтверждена')||
+          value.includes('Не удалось записать')?value:null;
+      },'managed XI commit result');
+      if(!firstCommit.includes('Матч №1 записан'))
+        throw new Error('Manual XI commit rejected: '+firstCommit);
       const playedOwn=await evaluate(
         "document.querySelectorAll('.season-own-calendar .season-played').length");
       if(playedOwn!==1)

@@ -278,3 +278,39 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
 @media(max-width:570px) {
   .season-own-calendar li { grid-template-columns: 3.5rem minmax(0,1fr) 3rem; gap: .35rem; }
 }
+
+.season-xi-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  max-height: 22rem;
+  overflow: auto;
+  gap: .45rem .75rem;
+  margin: .8rem 0 1rem;
+}
+.season-xi-grid label {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .45rem .55rem;
+  border: 1px solid #d6e5d9;
+  border-radius: .5rem;
+  font-size: .86rem;
+  font-weight: 500;
+  margin: 0;
+}
+.season-xi-grid input { flex: none; accent-color: #17634b; }
+.season-tactics-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: .8rem;
+}
+.season-tactics-grid input[type="range"] {
+  display: block;
+  width: 100%;
+  accent-color: #17634b;
+}
+@media (max-width: 680px) {
+  .season-xi-grid, .season-tactics-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -15,7 +15,9 @@ import {selectM1V96EligibleRegisteredLineup}
   from './m1-v96-cap-safe-lineup.js';
 import {isPlainJsonTree} from './plain-json-tree.js';
 import {RNG_VERSION} from './rng.js';
-import {defaultTacticalPlan} from './tactics.js';
+import {defaultTacticalPlan,validateTacticalPlan,
+  type TacticalPlan} from './tactics.js';
+import {validateLineup} from './validation.js';
 import type {InitialCareerSave} from './save.js';
 import type {MatchRosterRules} from './model.js';
 import type {M1V105Run} from './m1-v105-special-goal-chronology.js';
@@ -51,7 +53,12 @@ export type M1V188HoldInspection=
     status:'FICTIONAL_SOURCE_ONLY_EXTERNAL_KDK_UNVERIFIED';
     externalKdkAuthenticated:false;officialClearanceAuthenticated:false;
     holds:readonly M1V188FictionalHold[]}>;
-type Source={prematch:Record<string,unknown>;policy:unknown;
+export type M1V188ManagedXI=Readonly<{
+  schemaVersion:1;clubId:string;starters:readonly string[];
+  tactics:TacticalPlan;
+}>;
+type Source={managedXI?:M1V188ManagedXI;
+  prematch:Record<string,unknown>;policy:unknown;
   plannedCommands:unknown[];checkpointMedical:unknown[];
   disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[]};
@@ -62,6 +69,7 @@ export type M1V188Journal={schemaVersion:188;careerId:string;
   revision:number;entries:M1V188Entry[]};
 export type M1V188Request={schemaVersion:188;careerId:string;
   expectedRevision:number;commandId:string;prematch:unknown;
+  managedXI?:M1V188ManagedXI;
   policy:unknown;plannedCommands:unknown[];
   checkpointMedical:unknown[];result:unknown;
   medicalPolicyVersion?:2|3|4|5;
@@ -108,6 +116,51 @@ const requestKeysMedical=[...requestKeys,'medicalPolicyVersion'];
 const requestKeysMedicalV5=[...requestKeysMedical,'autonomousMedicalOrigin'];
 const fail=(error:M1V188Error):Extract<M1V188Gate,{ok:false}>=>
   ({ok:false,error});
+/** The managed XI must use ONLY already eligible fixture players.
+ * The opponent, original catalog, tactics and all exclusions are immutable.
+ */
+function managedPrematch(
+  baseline:M1PrematchInput,selected:string,choice:unknown,
+):M1PrematchInput|null{
+  if(choice===undefined)return baseline;
+  const f=baseline.fixture;
+  if(!belongs(f,selected)||!rec(choice)||
+      !exact(choice,['schemaVersion','clubId','starters','tactics'])||
+      choice.schemaVersion!==1||choice.clubId!==selected||
+      !Array.isArray(choice.starters)||choice.starters.length!==11||
+      choice.starters.some(id=>typeof id!=='string')||
+      new Set(choice.starters).size!==11||
+      !rec(choice.tactics)||!exact(choice.tactics,[
+        'schemaVersion','clubId','formation','mentality','pressing',
+        'compactness','defensiveLine','passingRisk','tempo'])||
+      validateTacticalPlan(choice.tactics as unknown as TacticalPlan,
+        selected).length>0)return null;
+  const home=f.homeClubId===selected;
+  const original=home?baseline.homeLineup:baseline.awayLineup;
+  const available=[...original.starters,...original.bench];
+  const possible=new Set(available);
+  if(choice.starters.some(id=>!possible.has(id)))return null;
+  const selectedIds=[...choice.starters] as string[];
+  const fielded=new Set(selectedIds);
+  const proposed={clubId:selected,starters:selectedIds,
+    bench:available.filter(id=>!fielded.has(id))};
+  const club=baseline.catalog.clubs.find(c=>c.id===selected);
+  if(!club||validateLineup(proposed,club,new Map(
+      baseline.catalog.players.map(p=>[p.id,p])),RULES).length>0)
+    return null;
+  // Source request also stores the user's versioned choice. The
+  // JSON-tree validator forbids aliases between two request paths.
+  const tactics={...(choice.tactics as unknown as TacticalPlan)};
+  return home?{...baseline,homeLineup:proposed,homeTactics:tactics}:
+    {...baseline,awayLineup:proposed,awayTactics:tactics};
+}
+function hasManagedShape(
+  value:Record<string,unknown>,keys:readonly string[],
+):boolean{
+  const extra=Object.hasOwn(value,'managedXI')?1:0;
+  return Object.keys(value).length===keys.length+extra&&
+    keys.every(key=>Object.hasOwn(value,key));
+}
 function copy(value:unknown,cap:number):unknown|null{
   if(!isPlainJsonTree(value))return null;
   try{
@@ -307,15 +360,15 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       e.fixtureId!==f.id||e.round!==f.round||
       e.commandId!=='v188-league-'+f.id||
       !rec(e.source)||
-      !(exact(e.source,sourceKeys)||
-        (exact(e.source,sourceKeysV2)&&
+      !(hasManagedShape(e.source,sourceKeys)||
+        (hasManagedShape(e.source,sourceKeysV2)&&
           e.source.disciplinePolicyVersion===2)||
-        (exact(e.source,sourceKeysMedical)&&
+        (hasManagedShape(e.source,sourceKeysMedical)&&
           e.source.disciplinePolicyVersion===2&&
           (e.source.medicalPolicyVersion===2||
             e.source.medicalPolicyVersion===3||
             e.source.medicalPolicyVersion===4))||
-        (exact(e.source,sourceKeysMedicalV5)&&
+        (hasManagedShape(e.source,sourceKeysMedicalV5)&&
           e.source.disciplinePolicyVersion===2&&
           e.source.medicalPolicyVersion===5&&
           Array.isArray(e.source.autonomousMedicalOrigin)&&
@@ -325,7 +378,9 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       !Array.isArray(e.source.plannedCommands)||
       !Array.isArray(e.source.checkpointMedical)||
       !rec(e.result))return false;
-  const input=canonicalPrematch(i,f,index,holds,schedule);
+  const baseline=canonicalPrematch(i,f,index,holds,schedule);
+  const input=baseline?managedPrematch(
+    baseline,i.selectedClubId,e.source.managedXI):null;
   if(!input)return false;
   const {catalog:_catalog,...canonical}=input;
   void _catalog;
@@ -461,6 +516,7 @@ export function prepareM1V188LeagueMatch(
   initial:unknown,value:unknown,manager:unknown=[],
   externalDiscipline:unknown=undefined,
   medicalPolicyVersion:unknown=undefined,
+  managedXI:unknown=undefined,
 ):M1V188Proposal|null{
   if(!validInitial(initial))return {ok:false,error:'INVALID_INITIAL'};
   // No complete authenticated external KDK feed exists in this game.
@@ -492,9 +548,12 @@ export function prepareM1V188LeagueMatch(
     initial.selectedClubId);
   if(managerCommandsForFixture===null)
     return {ok:false,error:'UNAUTHORIZED_MANAGER'};
-  const prematch=canonicalPrematch(initial,f,index,
+  const baseline=canonicalPrematch(initial,f,index,
     accepted.holds,accepted.schedule);
-  if(!prematch)return {ok:false,error:'NO_LEGAL_LINEUP'};
+  if(!baseline)return {ok:false,error:'NO_LEGAL_LINEUP'};
+  const prematch=managedPrematch(baseline,
+    initial.selectedClubId,managedXI);
+  if(!prematch)return {ok:false,error:'UNAUTHORIZED_MANAGER'};
   if(!validManagerCommands(prematch,POLICY,
       managerCommandsForFixture,initial.selectedClubId,
       initial.rngState))
@@ -510,6 +569,7 @@ export function prepareM1V188LeagueMatch(
   return{ok:true,fixture:f,clock,request:{schemaVersion:188,
     careerId:initial.careerId,expectedRevision:index,
     commandId:'v188-league-'+f.id,prematch,policy:POLICY,
+    ...(managedXI!==undefined?{managedXI:managedXI as M1V188ManagedXI}:{}),
     plannedCommands:generated.plannedCommands,
     checkpointMedical:generated.checkpointMedical,
     result:generated.result,
@@ -531,11 +591,11 @@ export function applyM1V188LeagueMatch(
   const accepted=read(initial,value);
   if(!accepted)return fail('INVALID_JOURNAL');
   const raw=copy(request,MAX_REQUEST);
-  if(!rec(raw)||!(exact(raw,requestKeys)||
-      exact(raw,requestKeysMedical)&&
+  if(!rec(raw)||!(hasManagedShape(raw,requestKeys)||
+      hasManagedShape(raw,requestKeysMedical)&&
         (raw.medicalPolicyVersion===2||raw.medicalPolicyVersion===3||
           raw.medicalPolicyVersion===4)||
-      exact(raw,requestKeysMedicalV5)&&
+      hasManagedShape(raw,requestKeysMedicalV5)&&
         raw.medicalPolicyVersion===5&&
         Array.isArray(raw.autonomousMedicalOrigin)&&
         raw.autonomousMedicalOrigin.length<=1)||
@@ -572,6 +632,8 @@ export function applyM1V188LeagueMatch(
   void _catalog;
   const entry:M1V188Entry={fixtureId:f.id,round:f.round,
     commandId:raw.commandId,source:{prematch,policy:raw.policy,
+      ...(Object.hasOwn(raw,'managedXI')?{
+        managedXI:raw.managedXI as M1V188ManagedXI}:{}),
       plannedCommands:raw.plannedCommands,
       checkpointMedical:raw.checkpointMedical,
       disciplinePolicyVersion:2,

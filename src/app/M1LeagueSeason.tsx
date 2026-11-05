@@ -7,9 +7,10 @@ import {planM1V188NextOwnMatch}
   from '../core/m1-v188-season-navigation.js';
 import type {M1PrematchInput} from '../core/m1-clock.js';
 import {inspectM1V188LeagueCalendar,prepareM1V188LeagueMatch,
-  type M1V188Journal,type M1V188Proposal}
+  type M1V188Journal,type M1V188Proposal,type M1V188ManagedXI}
   from '../core/m1-v188-league-source-journal.js';
 import type {M1V105Run} from '../core/m1-v105-special-goal-chronology.js';
+import {validateLineup} from '../core/validation.js';
 import type {InitialCareerSave} from '../core/save.js';
 import {loadInitialCareer} from '../browser/initial-career-store.js';
 import {createM1V188PersistedLeague,loadM1V188PersistedLeague,
@@ -36,6 +37,11 @@ export function M1LeagueSeason({career,disabled}:{
   const [busy,setBusy]=useState(false);
   const [advancing,setAdvancing]=useState(false);
   const [managerSetup,setManagerSetup]=useState<Ready|null>(null);
+  const [xiSetup,setXiSetup]=useState<Ready|null>(null);
+  const [starterIds,setStarterIds]=useState<string[]>([]);
+  const [xiMentality,setXiMentality]=useState(0);
+  const [xiPressing,setXiPressing]=useState(50);
+  const [xiTempo,setXiTempo]=useState(50);
   const [outId,setOutId]=useState('');
   const [inId,setInId]=useState('');
   const stopRequested=useRef(false);
@@ -80,10 +86,33 @@ export function M1LeagueSeason({career,disabled}:{
   const inOptions=managerLineup?.bench.filter(id=>
     playersById.get(id)?.primaryPosition!=='GK')??[];
   const actualIn=inOptions.includes(inId)?inId:inOptions[0]??'';
+  const xiPrematch=xiSetup?.request.prematch as M1PrematchInput|undefined;
+  const xiBase=xiPrematch?(
+    xiPrematch.fixture.homeClubId===career.selectedClubId?
+      xiPrematch.homeLineup:xiPrematch.awayLineup):null;
+  const xiAvailable=xiBase?[...xiBase.starters,...xiBase.bench]:[];
+  const xiBaseTactics=xiPrematch?(
+    xiPrematch.fixture.homeClubId===career.selectedClubId?
+      xiPrematch.homeTactics:xiPrematch.awayTactics):null;
+  const xiChoice:M1V188ManagedXI|undefined=xiSetup&&xiBaseTactics?{
+    schemaVersion:1,clubId:career.selectedClubId,starters:starterIds,
+    tactics:{...xiBaseTactics,mentality:xiMentality,
+      pressing:xiPressing,tempo:xiTempo},
+  }:undefined;
+  const xiPlayers=new Set(starterIds);
+  const xiClub=career.catalog.clubs.find(c=>c.id===career.selectedClubId);
+  const xiErrors=xiBase&&xiClub?validateLineup({
+    clubId:career.selectedClubId,starters:starterIds,
+    bench:xiAvailable.filter(id=>!xiPlayers.has(id)),
+  },xiClub,playersById,{
+    starterCount:11,maxBench:12,maxForeignersOnField:7,
+  }):[];
+  const xiLegal=!xiSetup||xiErrors.length===0;
 
   async function connect():Promise<void>{
     if(busy||disabled)return;
     setBusy(true);setPreview(null);setManagerSetup(null);
+    setXiSetup(null);setStarterIds([]);
     try{
       const stored=await loadInitialCareer(career.careerId);
       if(!sameCanonicalValue(stored,career)){
@@ -115,9 +144,10 @@ export function M1LeagueSeason({career,disabled}:{
   }
 
   function calculate(changes:readonly HalfTimeChange[]=[]):void{
-    if(busy||disabled||!journal||preview)return;
+    if(busy||disabled||!journal||preview||!xiLegal)return;
     try{
-      const prepared=prepareM1V188LeagueMatch(career,journal,changes);
+      const prepared=prepareM1V188LeagueMatch(
+        career,journal,changes,undefined,undefined,xiChoice);
       if(prepared===null){
         setStatus('Сезон завершён. Все 240 матчей уже сохранены.');
       }else if(!prepared.ok){
@@ -140,7 +170,7 @@ export function M1LeagueSeason({career,disabled}:{
       const updated=await commitM1V188PersistedLeagueMatch(
         career.careerId,expected,request);
       setJournal(updated);
-      setManagerSetup(null);
+      setManagerSetup(null);setXiSetup(null);setStarterIds([]);
       setStatus('Матч №'+updated.revision+
         ' записан в браузер. Результат и таблица обновлены.');
     }catch(error){
@@ -157,10 +187,38 @@ export function M1LeagueSeason({career,disabled}:{
     }finally{setBusy(false);}
   }
 
+  function configureXI():void{
+    if(busy||disabled||!journal||!ownNextNow||preview)return;
+    const prepared=prepareM1V188LeagueMatch(career,journal);
+    if(!prepared?.ok){
+      setStatus('Не удалось открыть состав: '+
+        (prepared?.error??'SEASON_COMPLETE'));
+      return;
+    }
+    const prematch=prepared.request.prematch as M1PrematchInput;
+    const own=prematch.fixture.homeClubId===career.selectedClubId?
+      prematch.homeLineup:prematch.awayLineup;
+    setXiSetup(prepared);
+    setStarterIds([...own.starters]);
+    const tactics=prematch.fixture.homeClubId===career.selectedClubId?
+      prematch.homeTactics:prematch.awayTactics;
+    setXiMentality(tactics.mentality);
+    setXiPressing(tactics.pressing);
+    setXiTempo(tactics.tempo);
+    setManagerSetup(null);
+    setStatus('Выберите 11 игроков для ближайшего матча своего клуба.');
+  }
+  function clearXI():void{
+    setXiSetup(null);setStarterIds([]);setManagerSetup(null);
+    setStatus('Возвращён автоматический стартовый состав.');
+  }
+
   function configureHalfTime():void{
     if(busy||disabled||!journal||!ownNextNow||preview)return;
     try{
-      const prepared=prepareM1V188LeagueMatch(career,journal);
+      if(!xiLegal)return;
+      const prepared=prepareM1V188LeagueMatch(
+        career,journal,[],undefined,undefined,xiChoice);
       if(!prepared?.ok){
         setStatus('Подготовка состава отклонена: '+
           (prepared?.error??'SEASON_COMPLETE'));
@@ -178,7 +236,7 @@ export function M1LeagueSeason({career,disabled}:{
     if(busy||disabled||!journal||!navigation||
         navigation.automaticMatches===0||preview)return;
     setBusy(true);setAdvancing(true);
-    setPreview(null);setManagerSetup(null);
+    setPreview(null);setManagerSetup(null);setXiSetup(null);
     stopRequested.current=false;
     try{
       const stored=await loadInitialCareer(career.careerId);
@@ -286,16 +344,66 @@ export function M1LeagueSeason({career,disabled}:{
           <span className="subtle">Следующая игра · тур {next.round}</span>
           <strong>{clubs.get(next.homeClubId)} — {clubs.get(next.awayClubId)}</strong>
           <div className="button-stack">
-            <button type="button" disabled={busy||disabled||!!preview}
+            <button type="button" disabled={busy||disabled||!!preview||!xiLegal}
               onClick={()=>calculate()}>Рассчитать матч</button>
             {ownNextNow&&<button type="button" className="secondary-button"
               disabled={busy||disabled||!!preview}
+              onClick={xiSetup?clearXI:configureXI}>
+              {xiSetup?'Вернуть автосостав':'Настроить стартовый состав'}
+            </button>}
+            {ownNextNow&&<button type="button" className="secondary-button"
+              disabled={busy||disabled||!!preview||!xiLegal}
               onClick={configureHalfTime}>Настроить замену</button>}
             <button type="button" disabled={busy||disabled||!!preview}
               className="secondary-button"
               onClick={()=>void connect()}>Обновить сохранение</button>
           </div>
         </div>}
+        {xiSetup&&ownNextNow&&!preview&&<fieldset
+          className="season-substitution" disabled={busy||disabled}>
+          <legend>Стартовый состав · {starterIds.length} из 11</legend>
+          <p className="subtle">Выберите 11 игроков, включая ровно
+            одного вратаря. Дисквалифицированные и недоступные
+            футболисты исключены.</p>
+          <div className="season-xi-grid">
+            {xiAvailable.map(id=><label key={id}>
+              <input type="checkbox" checked={xiPlayers.has(id)}
+                onChange={event=>{
+                  setStarterIds(current=>event.target.checked?
+                    current.length<11?[...current,id]:current:
+                    current.filter(player=>player!==id));
+                  setManagerSetup(null);
+                }} />
+              <span>{playerNames.get(id)??id} ·
+                {' '}{playersById.get(id)?.primaryPosition}</span>
+            </label>)}
+          </div>
+          <div className="season-tactics-grid">
+            <label>Настрой
+              <select value={xiMentality}
+                onChange={event=>setXiMentality(Number(event.target.value))}>
+                <option value={-2}>Осторожный</option>
+                <option value={-1}>Сдержанный</option>
+                <option value={0}>Сбалансированный</option>
+                <option value={1}>Атакующий</option>
+                <option value={2}>Всё вперёд</option>
+              </select>
+            </label>
+            <label>Прессинг · {xiPressing}
+              <input type="range" min="0" max="100" step="10"
+                value={xiPressing}
+                onChange={event=>setXiPressing(Number(event.target.value))}/>
+            </label>
+            <label>Темп · {xiTempo}
+              <input type="range" min="0" max="100" step="10"
+                value={xiTempo}
+                onChange={event=>setXiTempo(Number(event.target.value))}/>
+            </label>
+          </div>
+          {!xiLegal&&<p role="alert" className="subtle">
+            Проверьте 11 игроков, вратаря и лимит легионеров.
+          </p>}
+        </fieldset>}
         {managerSetup&&ownNextNow&&!preview&&<fieldset
           className="season-substitution" disabled={busy||disabled}>
           <legend>Замена в перерыве вашего матча</legend>
@@ -316,7 +424,7 @@ export function M1LeagueSeason({career,disabled}:{
             </label>
           </div>
           <div className="button-stack">
-            <button type="button" disabled={!actualOut||!actualIn}
+            <button type="button" disabled={!actualOut||!actualIn||!xiLegal}
               onClick={()=>calculate([{
                 outPlayerId:actualOut,inPlayerId:actualIn,
                 elapsedSeconds:2700,
@@ -340,6 +448,9 @@ export function M1LeagueSeason({career,disabled}:{
             В створ {previewResult.report.home.shotsOnTarget} :{' '}
             {previewResult.report.away.shotsOnTarget}.
           </p>
+          {preview.request.managedXI&&
+            <p className="subtle">Стартовый состав и тактика выбраны тренером
+              и включены в проверяемый расчёт.</p>}
           {preview.request.plannedCommands.some(command=>
             command!==null&&typeof command==='object'&&
             'kind' in command&&command.kind==='substitute-normal')&&

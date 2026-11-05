@@ -2,6 +2,8 @@ import {isPlainJsonTree} from './plain-json-tree.js';
 import {startM1Clock,type M1PrematchInput} from './m1-clock.js';
 import type {M1V29CausalSourceRun}
   from './m1-v23-temporary-treatment.js';
+import type {M1V23RefereeEvent}
+  from './m1-v23-referee-treatment-source.js';
 import type {M1V105Run}
   from './m1-v105-special-goal-chronology.js';
 
@@ -12,18 +14,20 @@ import type {M1V105Run}
 export const M1_V186_LAW5_SCHEMA=186 as const;
 export interface M1V186Law5Evidence {
   readonly incidentId:string;
-  readonly decisionEventId:string;
+  readonly decisionEventId:string|null;
   readonly whistleEventId:string;
   readonly restartEventId:string;
-  readonly offenderTeamId:string;
-  readonly offenderPlayerId:string;
+  readonly offenderTeamId:string|null;
+  readonly offenderPlayerId:string|null;
   readonly patientTeamId:string;
   readonly patientPlayerId:string;
   readonly runningSeconds:number;
   readonly exception:'opponent-carded-physical-offence'|
     'goalkeeper-on-field-assessment'|'same-whistle-second-patient'|
     'source-modelled-same-team-collision'|
-    'source-modelled-keeper-outfield-collision';
+    'source-modelled-keeper-outfield-collision'|
+    'independent-same-team-collision'|
+    'independent-keeper-outfield-collision';
   readonly sameWhistlePairOrdinal?:2;
   readonly sourceCollisionEventId?:string;
   readonly modelledDisposition:'may-remain-after-assessment'|
@@ -56,10 +60,19 @@ export function deriveM1V186Law5FromCausalSource(
 ):M1V186Law5Result {
   if(!isPlainJsonTree(source)||!isPlainJsonTree(result)||
       !source.ok||!result.ok||
-      source.fixtureId!==result.fixtureId)
+      source.fixtureId!==result.fixtureId||
+      !Array.isArray(source.causalAssessments)||
+      !Array.isArray(source.generatedIncidents)||
+      !Array.isArray(source.syntheticTreatmentActions)||
+      !source.match?.ok||!Array.isArray(source.match.events)||
+      !Array.isArray(result.events)||
+      source.autonomousCollisions!==undefined&&
+        (!Array.isArray(source.autonomousCollisions)||
+          source.autonomousCollisions.length>1))
     return fail('INVALID_CAUSAL_SOURCE');
   const keeperEvidenceRequired=source.causalAssessments.some(a=>
-    a.goalkeeperExceptionSource===true||a.collisionOriginSource===true);
+    a.goalkeeperExceptionSource===true||a.collisionOriginSource===true)||
+    (source.autonomousCollisions?.length??0)>0;
   let keepers:ReadonlySet<string>=new Set();
   if(keeperEvidenceRequired){
     if(!isPlainJsonTree(prematch)||!startM1Clock(prematch).ok)
@@ -110,7 +123,8 @@ export function deriveM1V186Law5FromCausalSource(
     inspectedPatients.set(incident.id,[...prior,assessment.patientPlayerId]);
     const decision=source.match.events.find(e=>
       e.id===incident.sourceEventId);
-    const whistle=source.match.events.find(e=>
+    const whistle:M1V23RefereeEvent|undefined=
+      source.match.events.find(e=>
       e.id===assessment.foulWhistleEventId&&
       e.kind==='synthetic-foul-whistle');
     const restart=source.match.events.find(e=>
@@ -136,13 +150,16 @@ export function deriveM1V186Law5FromCausalSource(
     if(assessment.collisionOriginSource===true){
       const paired=source.causalAssessments.filter(a=>
         a.incidentId===incident.id);
-      const collision=source.match.events.find(e=>
+      const collision:M1V23RefereeEvent|undefined=
+        source.match.events.find(e=>
         e.id===assessment.collisionEventId&&
         e.kind==='synthetic-same-team-collision');
       const clubs=(prematch as M1PrematchInput).fixture;
-      const collisionSide=collision?.teamId===clubs.homeClubId?'home':
+      const collisionSide:'home'|'away'|null=
+        collision?.teamId===clubs.homeClubId?'home':
         collision?.teamId===clubs.awayClubId?'away':null;
-      const otherSide=collisionSide==='home'?'away':'home';
+      const otherSide:'home'|'away'=
+        collisionSide==='home'?'away':'home';
       if(paired.length!==2||
           paired.some(a=>a.collisionOriginSource!==true||
             a.collisionEventId!==assessment.collisionEventId)||
@@ -260,9 +277,76 @@ export function deriveM1V186Law5FromCausalSource(
       exitEventId:exitEvent.id,returnEventId:returnEvent.id,
       minimumRunningSecondsSatisfied:true});
   }
+  const standalone=source.autonomousCollisions??[];
+  const seenStandaloneIds=new Set<string>();
+  for(const c of standalone){
+    if(!c||Object.keys(c).length!==10||
+        !['id','teamId','firstPlayerId','secondPlayerId',
+          'elapsedSeconds','whistleEventId','collisionEventId',
+          'restartEventId','modelledNeedsOnFieldAttention',
+          'externalMedicalAuthorityAuthenticated'].every(k=>
+            Object.hasOwn(c,k))||
+        c.modelledNeedsOnFieldAttention!==true||
+        c.externalMedicalAuthorityAuthenticated!==false||
+        c.firstPlayerId===c.secondPlayerId||
+        seenStandaloneIds.has(c.id))
+      return fail('UNSUPPORTED_LAW5_ORIGIN');
+    seenStandaloneIds.add(c.id);
+    const cards=source.generatedIncidents.filter(i=>
+      i.elapsedSeconds===c.elapsedSeconds);
+    const triple=source.match.events.filter(e=>e.sourceEventId===c.id);
+    const [whistle,collision,restart]=triple;
+    const input=prematch as M1PrematchInput;
+    const patientSide=c.teamId===input.fixture.homeClubId?'home':
+      c.teamId===input.fixture.awayClubId?'away':null;
+    const opponent=patientSide==='home'?'away':'home';
+    if(cards.length!==0||triple.length!==3||
+        !patientSide||!whistle||!collision||!restart||
+        whistle.id!==c.whistleEventId||
+        collision.id!==c.collisionEventId||
+        restart.id!==c.restartEventId||
+        whistle.kind!=='synthetic-medical-whistle'||
+        collision.kind!=='synthetic-same-team-collision'||
+        restart.kind!=='synthetic-medical-restart'||
+        whistle.teamId!==c.teamId||collision.teamId!==c.teamId||
+        restart.teamId!==c.teamId||
+        collision.playerId!==c.firstPlayerId||
+        collision.collisionPartnerPlayerId!==c.secondPlayerId||
+        !(whistle.sequence<collision.sequence&&
+          collision.sequence<restart.sequence)||
+        triple.some(e=>e.runningSeconds!==c.elapsedSeconds)||
+        restart.wallSeconds-whistle.wallSeconds<1||
+        [whistle,collision,restart].some(e=>
+          !e.onField[patientSide].includes(c.firstPlayerId)||
+          !e.onField[patientSide].includes(c.secondPlayerId)||
+          e.onField[opponent].includes(c.firstPlayerId)||
+          e.onField[opponent].includes(c.secondPlayerId))||
+        inspectedCollisions.has(c.collisionEventId))
+      return fail('UNSUPPORTED_LAW5_ORIGIN');
+    inspectedCollisions.add(c.collisionEventId);
+    const keeper=keepers.has(c.firstPlayerId)||
+      keepers.has(c.secondPlayerId);
+    const exception=keeper?'independent-keeper-outfield-collision':
+      'independent-same-team-collision';
+    for(const [index,playerId] of
+      [c.firstPlayerId,c.secondPlayerId].entries()){
+      evidence.push({
+        incidentId:c.id,decisionEventId:null,
+        whistleEventId:whistle.id,restartEventId:restart.id,
+        offenderTeamId:null,offenderPlayerId:null,
+        patientTeamId:c.teamId,patientPlayerId:playerId!,
+        runningSeconds:c.elapsedSeconds,exception,
+        ...(index===1?{sameWhistlePairOrdinal:2 as const}:{}),
+        sourceCollisionEventId:collision.id,
+        modelledDisposition:'may-remain-after-assessment',
+        exitEventId:null,returnEventId:null,
+        minimumRunningSecondsSatisfied:true});
+    }
+  }
   const departures=evidence.filter(e=>e.exitEventId!==null).length;
   if(departures!==exits.length||departures!==returns.length||
-      evidence.length!==source.causalAssessments.length||
+      evidence.length!==source.causalAssessments.length+
+        standalone.length*2||
       inspectedCollisions.size!==collisionEvents.length)
     return fail('INVALID_MEDICAL_CHRONOLOGY');
   return {ok:true,schemaVersion:M1_V186_LAW5_SCHEMA,

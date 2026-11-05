@@ -25,6 +25,7 @@ type Kind = 'kickoff' | 'shot' | 'treatment-exit' | 'treatment-return' |
   'caution' | 'second-yellow-dismissal' | 'straight-red-dismissal' |
   'injury-withdrawal' | 'synthetic-foul-whistle' |
   'synthetic-same-team-collision' |
+  'synthetic-medical-whistle'|'synthetic-medical-restart' |
   'synthetic-foul-restart' | 'goal-whistle' |
   'board-signal' | 'substitution-applied' | 'restart-kickoff' |
   'half-time-whistle' | 'half-time-substitution' |
@@ -93,6 +94,11 @@ interface SyntheticCollision {
   elapsedSeconds:number;teamId:string;
   firstPlayerId:string;secondPlayerId:string;
 }
+export interface M1V35IndependentCollision {
+  readonly id:string;
+  readonly elapsedSeconds:number;readonly teamId:string;
+  readonly firstPlayerId:string;readonly secondPlayerId:string;
+}
 interface Change {
   readonly side:Side;
   readonly teamId:string;
@@ -132,6 +138,7 @@ export function simulateM1V23RefereeWithTreatment(
   trace?:M1V23SourceRejectionTrace,
   useDenseShotSource=false,
   collisionSource:unknown=[],
+  independentCollisionSource:unknown=[],
 ):M1V23RefereeRun{
   const unsupported=(subreason:M1V23UnsupportedSubreason):M1V23RefereeRun=>{
     if(trace)trace.subreason=subreason;
@@ -147,6 +154,9 @@ export function simulateM1V23RefereeWithTreatment(
   const medical=clone(medicalActions,1_000_000);
   const authorized=clone(foulStopSeconds,1024);
   const collisionClaims=clone(collisionSource,2048);
+  const independentClaims=clone(independentCollisionSource,1024);
+  if(!Array.isArray(independentClaims)||independentClaims.length>1)
+    return fail('INVALID_SOURCE');
   if(!Array.isArray(collisionClaims)||collisionClaims.length>18)
     return fail('INVALID_SOURCE');
   if(!Array.isArray(authorized)||authorized.length>18){
@@ -157,6 +167,27 @@ export function simulateM1V23RefereeWithTreatment(
     return unsupported('FOUL_STOP_INVALID_OR_DUPLICATE');
   }
   const foulTimes=new Set<number>(authorized as number[]);
+  const independentByTime=new Map<number,M1V35IndependentCollision>();
+  for(const raw of independentClaims){
+    if(!record(raw)||Object.keys(raw).length!==5||
+        !['id','elapsedSeconds','teamId',
+          'firstPlayerId','secondPlayerId'].every(k=>
+            Object.hasOwn(raw,k))||
+        typeof raw.id!=='string'||
+        !/^m1-v35-autonomous-[0-9]+$/.test(raw.id)||
+        typeof raw.elapsedSeconds!=='number'||
+        !clockStep(raw.elapsedSeconds)||
+        raw.elapsedSeconds===2700||
+        foulTimes.has(raw.elapsedSeconds as number)||
+        typeof raw.teamId!=='string'||
+        typeof raw.firstPlayerId!=='string'||
+        typeof raw.secondPlayerId!=='string'||
+        raw.firstPlayerId===raw.secondPlayerId||
+        independentByTime.has(raw.elapsedSeconds as number))
+      return fail('INVALID_SOURCE');
+    independentByTime.set(raw.elapsedSeconds as number,
+      raw as unknown as M1V35IndependentCollision);
+  }
   const collisionByTime=new Map<number,SyntheticCollision>();
   for(const rawPair of collisionClaims){
     if(!record(rawPair)||Object.keys(rawPair).length!==4||
@@ -327,6 +358,7 @@ export function simulateM1V23RefereeWithTreatment(
   }
   const events:M1V23RefereeEvent[]=[];
   let running=0,wall=0,half=false,kickoffPending=false;
+  const completedIndependent=new Set<number>();
   const foulSeen=new Set<number>();
   let pendingFoulRestart:{
     time:number; beneficiary:string; sourceId:string|null;
@@ -374,6 +406,37 @@ export function simulateM1V23RefereeWithTreatment(
     // v8 processes all same-checkpoint medical actions before its shot.
     half=true;kickoffPending=true;return true;
   }
+  /** Emit autonomous medical stops at their own running-clock second.
+   * Flush first-half stops BEFORE halfTime() advances to 2700 and
+   * late second-half stops BEFORE full-time; do not rely on shots
+   * existing at each 300-second checkpoint.
+   */
+  function injectIndependentThrough(lastSecond:number):boolean{
+    for(const [time,collision] of independentByTime){
+      if(completedIndependent.has(time)||time>lastSecond)continue;
+      const patientSide:Side|null=collision.teamId===f.homeClubId?
+        'home':collision.teamId===f.awayClubId?'away':null;
+      if(!patientSide||foulTimes.has(time)||time<running||
+          !teams[patientSide].has(collision.firstPlayerId)||
+          !teams[patientSide].has(collision.secondPlayerId)||
+          absent.has(collision.firstPlayerId)||
+          absent.has(collision.secondPlayerId)||
+          source.events.some(e=>e.type==='availability'&&
+            e.elapsedSeconds===time))
+        return false;
+      if(!advance(time))return false;
+      emit('synthetic-medical-whistle',running,wall,collision.id,
+        collision.teamId);
+      emit('synthetic-same-team-collision',running,wall,collision.id,
+        collision.teamId,collision.firstPlayerId,null,
+        collision.secondPlayerId);
+      wall+=foulPauseWallSeconds as number;
+      emit('synthetic-medical-restart',running,wall,collision.id,
+        collision.teamId);
+      completedIndependent.add(time);
+    }
+    return true;
+  }
   emit('kickoff',0,0);
   for(const event of source.events){
     // All same-second medical exits/returns are applied before the
@@ -391,6 +454,16 @@ export function simulateM1V23RefereeWithTreatment(
         pendingFoulRestart.sourceId,pendingFoulRestart.beneficiary);
       pendingFoulRestart=null;
     }
+    if(!half&&event.elapsedSeconds>=2700&&
+        (!injectIndependentThrough(2699)||!halfTime()))
+      return fail('ROSTER_REPLAY_MISMATCH');
+    if(kickoffPending&&event.elapsedSeconds>2700){
+      emit('second-half-kickoff',2700,wall);
+      kickoffPending=false;
+    }
+    if(!injectIndependentThrough(
+        event.type==='full-time'?5399:event.elapsedSeconds))
+      return fail('ROSTER_REPLAY_MISMATCH');
     if(event.type==='full-time')continue;
     if(event.type==='availability'&&
         event.source.entry.action.kind==='substitute-normal'){
@@ -424,13 +497,6 @@ export function simulateM1V23RefereeWithTreatment(
         return fail('ROSTER_REPLAY_MISMATCH');
       }
       continue;
-    }
-    if(!half&&event.elapsedSeconds>=2700&&!halfTime()){
-      return fail('ROSTER_REPLAY_MISMATCH');
-    }
-    if(kickoffPending&&event.elapsedSeconds>2700){
-      emit('second-half-kickoff',2700,wall);
-      kickoffPending=false;
     }
     if(!advance(event.elapsedSeconds))return fail('ROSTER_REPLAY_MISMATCH');
     if(event.type==='availability'){
@@ -577,7 +643,9 @@ export function simulateM1V23RefereeWithTreatment(
       return fail('ROSTER_REPLAY_MISMATCH');
     }
   }
-  if(events.length>(collisionClaims.length?338:320)||
+  if(events.length>(independentClaims.length?341:
+        collisionClaims.length?338:320)||
+      completedIndependent.size!==independentByTime.size||
       foulSeen.size!==foulTimes.size||
       !sameCanonicalValue(sorted(absent),source.offFieldAtFullTime)||
       !sameCanonicalValue(finalOnField,source.onFieldAtFullTime)||

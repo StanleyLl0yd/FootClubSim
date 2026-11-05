@@ -51,13 +51,15 @@ export function simulateM1V105SpecialGoalChronology(
   prematch:unknown,policy:unknown,plannedCommands:unknown=[],
   checkpointMedical:unknown=[],intraphaseMedical:unknown=[],
   trustedDecisions:unknown=[],
+  allowSourceCheckpointExit=false,
 ):M1V105Run{
   if(![prematch,policy,plannedCommands,checkpointMedical,
       intraphaseMedical,trustedDecisions].every(isPlainJsonTree)||
       !Array.isArray(trustedDecisions)||trustedDecisions.length>18)
     return {ok:false,error:'INVALID_INPUT'};
   const physical=simulateM1V103IntraphaseMedical(prematch,policy,
-    plannedCommands,checkpointMedical,intraphaseMedical);
+    plannedCommands,checkpointMedical,intraphaseMedical,
+    allowSourceCheckpointExit);
   if(!physical.ok)return {ok:false,error:'V103_SOURCE_REJECTED'};
   const adjudicated=simulateM1V8MedicalPhases(prematch,policy,
     plannedCommands,trustedDecisions,checkpointMedical);

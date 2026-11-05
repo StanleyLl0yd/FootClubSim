@@ -83,7 +83,8 @@ export function deriveM1V186Law5FromCausalSource(
     keepers=new Set(input.catalog.players.filter(p=>
       p.primaryPosition==='GK').map(p=>p.id));
   }
-  const medical=source.syntheticTreatmentActions;
+  const medical=[...source.syntheticTreatmentActions,
+    ...(source.intraphaseMedicalActions??[])];
   const evidence:M1V186Law5Evidence[]=[];
   const inspectedPatients=new Map<string,readonly string[]>();
   const inspectedCollisions=new Set<string>();
@@ -98,14 +99,19 @@ export function deriveM1V186Law5FromCausalSource(
         e.type==='source'&&e.source.type==='shot'&&
           e.source.playerId===patientId));
   const physicalEvent=(action:typeof medical[number])=>
-    result.events.find(e=>
-      e.type==='source'&&e.source.type==='physical-transition'&&
-      e.source.source.type==='medical'&&
-      e.source.source.action.id===action.id&&
-      e.source.source.action.teamId===action.teamId&&
-      e.source.source.action.playerId===action.playerId&&
-      e.source.source.action.kind===action.kind&&
-      e.elapsedSeconds===action.elapsedSeconds);
+    result.events.find(e=>{
+      if(e.type!=='source'||e.elapsedSeconds!==action.elapsedSeconds)
+        return false;
+      const physical=e.source.type==='intraphase-medical'?
+        e.source.action:
+        e.source.type==='physical-transition'&&
+          e.source.source.type==='medical'?
+          e.source.source.action:null;
+      return physical?.id===action.id&&
+        physical?.teamId===action.teamId&&
+        physical?.playerId===action.playerId&&
+        physical?.kind===action.kind;
+    });
   for(const assessment of source.causalAssessments){
     const incident=source.generatedIncidents.find(i=>
       i.id===assessment.incidentId);
@@ -218,7 +224,8 @@ export function deriveM1V186Law5FromCausalSource(
     const back=returns.filter(e=>
       e.teamId===assessment.patientTeamId&&
       e.playerId===assessment.patientPlayerId&&
-      e.elapsedSeconds===assessment.elapsedSeconds+300);
+      e.elapsedSeconds===assessment.elapsedSeconds+
+        (e.id.startsWith('m1-v36-return-')?60:300));
     if(assessment.goalkeeperExceptionSource===true&&
         (!keepers.has(assessment.patientPlayerId)||
           assessment.transition!=='on-field-quick'))

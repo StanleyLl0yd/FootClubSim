@@ -73,11 +73,25 @@ export function projectM1V179MatchClock(
     return true;
   };
   let offset=0,halfTimeAdded=false,lastRunning=-1,lastWall=-1;
+  // Attribute the carded-foul pause after the same-second physical exit.
+  let deferredFoulDelay=0;
+  const preciseExitSeconds=new Set(result.events.filter(event=>
+    event.type==='source'&&
+    event.source.type==='intraphase-medical'&&
+    event.source.action.kind==='treatment-exit'&&
+    event.source.action.id==='m1-v36-exit-'+event.elapsedSeconds)
+    .map(event=>event.elapsedSeconds));
   const ids=new Set<string>();
   const snapshots:M1V179ClockSnapshot[]=[];
   for(let i=0;i<result.events.length;i++){
     const event=result.events[i]!;
     const sec=event.elapsedSeconds;
+    if(sec>lastRunning&&deferredFoulDelay!==0)
+      return bad('INVALID_MATCH_CLOCK_SOURCE');
+    const preciseExit=event.type==='source'&&
+      event.source.type==='intraphase-medical'&&
+      event.source.action.kind==='treatment-exit'&&
+      event.source.action.id==='m1-v36-exit-'+sec;
     if(event.sequence!==i+1||ids.has(event.id)||
         !Number.isSafeInteger(sec)||sec<lastRunning||
         sec<0||sec>5400)
@@ -155,11 +169,23 @@ export function projectM1V179MatchClock(
         'adjudication':event.source.type,modelledStopAfterSeconds:delay,
       homePresent:sorted([...active.home].filter(id=>!absent.has(id))),
       awayPresent:sorted([...active.away].filter(id=>!absent.has(id)))});
-    offset+=delay;
+    if(delay===M1_MODELLED_FOUL_STOP_SECONDS&&
+        preciseExitSeconds.has(sec)){
+      if(deferredFoulDelay!==0)
+        return bad('INVALID_MATCH_CLOCK_SOURCE');
+      deferredFoulDelay=delay;
+    }else offset+=delay;
+    if(preciseExit){
+      if(deferredFoulDelay!==M1_MODELLED_FOUL_STOP_SECONDS)
+        return bad('INVALID_MATCH_CLOCK_SOURCE');
+      offset+=deferredFoulDelay;
+      deferredFoulDelay=0;
+    }
   }
   const last=result.events.at(-1)!;
   if(last.type!=='source'||last.source.type!=='full-time'||
-      !halfTimeAdded||snapshots.at(-1)!.runningSeconds!==5400)
+      !halfTimeAdded||deferredFoulDelay!==0||
+      snapshots.at(-1)!.runningSeconds!==5400)
     return bad('INVALID_MATCH_CLOCK_SOURCE');
   return {ok:true,schemaVersion:M1_V179_CLOCK_SCHEMA,
     status:'MODELLED_WALL_SECONDS_FROM_REPLAYED_V105_SOURCE',

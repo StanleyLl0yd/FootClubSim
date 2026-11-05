@@ -53,8 +53,9 @@ export type M1V188HoldInspection=
     holds:readonly M1V188FictionalHold[]}>;
 type Source={prematch:Record<string,unknown>;policy:unknown;
   plannedCommands:unknown[];checkpointMedical:unknown[];
-  disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5;
-  autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[]};
+  disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5|6;
+  autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
+  intraphaseMedical?:readonly unknown[]};
 export type M1V188Entry={fixtureId:string;round:number;
   commandId:string;source:Source;result:Good};
 export type M1V188Journal={schemaVersion:188;careerId:string;
@@ -64,8 +65,9 @@ export type M1V188Request={schemaVersion:188;careerId:string;
   expectedRevision:number;commandId:string;prematch:unknown;
   policy:unknown;plannedCommands:unknown[];
   checkpointMedical:unknown[];result:unknown;
-  medicalPolicyVersion?:2|3|4|5;
-  autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[]};
+  medicalPolicyVersion?:2|3|4|5|6;
+  autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
+  intraphaseMedical?:readonly unknown[]};
 export type M1V188Error='INVALID_INITIAL'|'INVALID_JOURNAL'|
   'INVALID_REQUEST'|'WRONG_CAREER'|'STALE_REVISION'|
   'WRONG_FIXTURE'|'UNTRUSTED_CATALOG'|'SOURCE_MISMATCH'|
@@ -101,11 +103,13 @@ const sourceKeys=['prematch','policy','plannedCommands','checkpointMedical'];
 const sourceKeysV2=[...sourceKeys,'disciplinePolicyVersion'];
 const sourceKeysMedical=[...sourceKeysV2,'medicalPolicyVersion'];
 const sourceKeysMedicalV5=[...sourceKeysMedical,'autonomousMedicalOrigin'];
+const sourceKeysMedicalV6=[...sourceKeysMedicalV5,'intraphaseMedical'];
 const requestKeys=['schemaVersion','careerId','expectedRevision',
   'commandId','prematch','policy','plannedCommands',
   'checkpointMedical','result'];
 const requestKeysMedical=[...requestKeys,'medicalPolicyVersion'];
 const requestKeysMedicalV5=[...requestKeysMedical,'autonomousMedicalOrigin'];
+const requestKeysMedicalV6=[...requestKeysMedicalV5,'intraphaseMedical'];
 const fail=(error:M1V188Error):Extract<M1V188Gate,{ok:false}>=>
   ({ok:false,error});
 function copy(value:unknown,cap:number):unknown|null{
@@ -319,7 +323,14 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
           e.source.disciplinePolicyVersion===2&&
           e.source.medicalPolicyVersion===5&&
           Array.isArray(e.source.autonomousMedicalOrigin)&&
-          e.source.autonomousMedicalOrigin.length<=1))||
+          e.source.autonomousMedicalOrigin.length<=1)||
+        (exact(e.source,sourceKeysMedicalV6)&&
+          e.source.disciplinePolicyVersion===2&&
+          e.source.medicalPolicyVersion===6&&
+          Array.isArray(e.source.autonomousMedicalOrigin)&&
+          e.source.autonomousMedicalOrigin.length<=1&&
+          Array.isArray(e.source.intraphaseMedical)&&
+          e.source.intraphaseMedical.length<=2))||
       !rec(e.source.prematch)||
       Object.hasOwn(e.source.prematch,'catalog')||
       !Array.isArray(e.source.plannedCommands)||
@@ -339,26 +350,25 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
   // Immutable old v188 entries have no shot-source discriminator.
   // Prefer the final dense model, then prove exact legacy source replay.
   const sourceAttempt=(dense:boolean)=>{
+    const medical=e.source.medicalPolicyVersion;
     const replay=regenerateM1V184CausalSource(
       input,POLICY,manager,dense,
-      e.source.medicalPolicyVersion===2||
-        e.source.medicalPolicyVersion===3||
-        e.source.medicalPolicyVersion===4||
-        e.source.medicalPolicyVersion===5,
-      e.source.medicalPolicyVersion===3||
-        e.source.medicalPolicyVersion===4||
-        e.source.medicalPolicyVersion===5,
-      e.source.medicalPolicyVersion===4||
-        e.source.medicalPolicyVersion===5,
-      e.source.medicalPolicyVersion===5);
+      medical!==undefined,
+      medical!==undefined&&medical>=3,
+      medical!==undefined&&medical>=4,
+      medical!==undefined&&medical>=5,
+      medical===6);
     return replay.ok&&
       sameCanonicalValue(replay.plannedCommands,
         e.source.plannedCommands)&&
       sameCanonicalValue(replay.checkpointMedical,
         e.source.checkpointMedical)&&
-      (e.source.medicalPolicyVersion!==5||
+      (medical!==5&&medical!==6||
         sameCanonicalValue(replay.autonomousCollisions??[],
           e.source.autonomousMedicalOrigin))&&
+      (medical!==6||
+        sameCanonicalValue(replay.intraphaseMedical??[],
+          e.source.intraphaseMedical))&&
       sameCanonicalValue(replay.result,e.result)&&
       replayedPhysicalClock(input,replay.result,manager)?replay:null;
   };
@@ -417,7 +427,7 @@ function read(i:InitialCareerSave,value:unknown){
       schedule:calendar(i)};
   const schedule=calendar(i),holds:Hold[]=[];
   if(schedule.length!==LIMIT)return null;
-  let versionedSeen=false,medicalVersionSeen:0|2|3|4|5=0;
+  let versionedSeen=false,medicalVersionSeen:0|2|3|4|5|6=0;
   for(let n=0;n<journal.entries.length;n++){
     const entry=journal.entries[n]!;
     const versioned=entry.source?.disciplinePolicyVersion===2;
@@ -469,18 +479,16 @@ export function prepareM1V188LeagueMatch(
     return {ok:false,error:'UNVERIFIED_EXTERNAL_DISCIPLINE'};
   if(medicalPolicyVersion!==undefined&&medicalPolicyVersion!==2&&
       medicalPolicyVersion!==3&&medicalPolicyVersion!==4&&
-      medicalPolicyVersion!==5)
+      medicalPolicyVersion!==5&&medicalPolicyVersion!==6)
     return {ok:false,error:'INVALID_REQUEST'};
   const accepted=read(initial,value);
   if(!accepted)return {ok:false,error:'INVALID_JOURNAL'};
   const previous=accepted.journal.entries.at(-1)?.source.medicalPolicyVersion;
-  if(previous===5&&(medicalPolicyVersion===2||
-      medicalPolicyVersion===3||medicalPolicyVersion===4)||
-      previous===4&&(medicalPolicyVersion===2||
-      medicalPolicyVersion===3)||
-      previous===3&&medicalPolicyVersion===2)
+  if(previous!==undefined&&medicalPolicyVersion!==undefined&&
+      medicalPolicyVersion<previous)
     return {ok:false,error:'INVALID_REQUEST'};
-  const effective:2|3|4|5|undefined=
+  const effective:2|3|4|5|6|undefined=
+    medicalPolicyVersion===6||previous===6?6:
     medicalPolicyVersion===5||previous===5?5:
     medicalPolicyVersion===4||previous===4?4:
     medicalPolicyVersion===3||previous===3?3:
@@ -501,8 +509,9 @@ export function prepareM1V188LeagueMatch(
     return {ok:false,error:'UNAUTHORIZED_MANAGER'};
   const generated=regenerateM1V184CausalSource(
     prematch,POLICY,managerCommandsForFixture,true,medicalSource,
-    effective===3||effective===4||effective===5,
-    effective===4||effective===5,effective===5);
+    effective!==undefined&&effective>=3,
+    effective!==undefined&&effective>=4,
+    effective!==undefined&&effective>=5,effective===6);
   if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED'};
   const clock=replayedPhysicalClock(
     prematch,generated.result,managerCommandsForFixture);
@@ -514,8 +523,10 @@ export function prepareM1V188LeagueMatch(
     checkpointMedical:generated.checkpointMedical,
     result:generated.result,
     ...(effective?{medicalPolicyVersion:effective}:{}),
-    ...(effective===5?{
-      autonomousMedicalOrigin:generated.autonomousCollisions??[]}: {})},
+    ...(effective===5||effective===6?{
+      autonomousMedicalOrigin:generated.autonomousCollisions??[]}: {}),
+    ...(effective===6?{
+      intraphaseMedical:generated.intraphaseMedical??[]}:{})},
     ...(medicalSource?{sourceLaw5Evidence:generated.law5Evidence}:{}),
     externalMedicalAuthorityAuthenticated:false,
     remainingFixtures:LIMIT-index-1,
@@ -538,7 +549,13 @@ export function applyM1V188LeagueMatch(
       exact(raw,requestKeysMedicalV5)&&
         raw.medicalPolicyVersion===5&&
         Array.isArray(raw.autonomousMedicalOrigin)&&
-        raw.autonomousMedicalOrigin.length<=1)||
+        raw.autonomousMedicalOrigin.length<=1||
+      exact(raw,requestKeysMedicalV6)&&
+        raw.medicalPolicyVersion===6&&
+        Array.isArray(raw.autonomousMedicalOrigin)&&
+        raw.autonomousMedicalOrigin.length<=1&&
+        Array.isArray(raw.intraphaseMedical)&&
+        raw.intraphaseMedical.length<=2)||
       raw.schemaVersion!==188||
       !Number.isSafeInteger(raw.expectedRevision)||
       typeof raw.commandId!=='string'||!rec(raw.prematch)||
@@ -549,15 +566,9 @@ export function applyM1V188LeagueMatch(
   if(raw.careerId!==initial.careerId)return fail('WRONG_CAREER');
   const priorMedical=accepted.journal.entries.at(-1)?.
     source.medicalPolicyVersion;
-  if(priorMedical===5&&raw.medicalPolicyVersion!==5||
-      priorMedical===4&&raw.medicalPolicyVersion!==4&&
-        raw.medicalPolicyVersion!==5||
-      priorMedical===3&&raw.medicalPolicyVersion!==3&&
-        raw.medicalPolicyVersion!==4&&
-        raw.medicalPolicyVersion!==5||
-      priorMedical===2&&raw.medicalPolicyVersion!==2&&
-        raw.medicalPolicyVersion!==3&&raw.medicalPolicyVersion!==4&&
-        raw.medicalPolicyVersion!==5)
+  if(priorMedical!==undefined&&
+      (typeof raw.medicalPolicyVersion!=='number'||
+        raw.medicalPolicyVersion<priorMedical))
     return fail('SOURCE_MISMATCH');
   if(raw.expectedRevision!==accepted.journal.revision)
     return fail('STALE_REVISION');
@@ -578,10 +589,14 @@ export function applyM1V188LeagueMatch(
       ...(raw.medicalPolicyVersion===2?{medicalPolicyVersion:2 as const}:
         raw.medicalPolicyVersion===3?{medicalPolicyVersion:3 as const}:
         raw.medicalPolicyVersion===4?{medicalPolicyVersion:4 as const}:
-        raw.medicalPolicyVersion===5?{medicalPolicyVersion:5 as const}:{}),
-      ...(raw.medicalPolicyVersion===5?{
+        raw.medicalPolicyVersion===5?{medicalPolicyVersion:5 as const}:
+        raw.medicalPolicyVersion===6?{medicalPolicyVersion:6 as const}:{}),
+      ...(raw.medicalPolicyVersion===5||
+        raw.medicalPolicyVersion===6?{
         autonomousMedicalOrigin:raw.autonomousMedicalOrigin as
-          M1V35IndependentCollisionWitness[]}: {})},
+          M1V35IndependentCollisionWitness[]}: {}),
+      ...(raw.medicalPolicyVersion===6?{
+        intraphaseMedical:raw.intraphaseMedical as unknown[]}:{})},
     result:raw.result as Good};
   const holds=[...accepted.holds];
   // New commits cannot claim the legacy shot/referee authority.

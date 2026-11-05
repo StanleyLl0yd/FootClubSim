@@ -40,22 +40,21 @@
       const started=startM1V188LeagueJournal(initial);
       if(!started.ok)continue;
       const first=prepareM1V188LeagueMatch(
-        initial,started.journal,[],undefined,5);
-      if(!first?.ok||first.request.medicalPolicyVersion!==5||
+        initial,started.journal,[],undefined,6);
+      if(!first?.ok||first.request.medicalPolicyVersion!==6||
+          first.request.intraphaseMedical?.length!==2||
           first.externalMedicalAuthorityAuthenticated!==false||
           !first.sourceLaw5Evidence?.some(e=>
-            e.sameWhistlePairOrdinal===2&&
-            e.decisionEventId===null&&
-            e.offenderPlayerId===null&&
-            typeof e.sourceCollisionEventId==='string'))continue;
+            e.exitEventId!==null&&e.returnEventId!==null&&
+            e.minimumRunningSecondsSatisfied))continue;
       const one=applyM1V188LeagueMatch(
         initial,started.journal,first.request);
-      if(!one.ok)continue;
+      if(!one.ok)throw Error('v6 source-positive apply rejected: '+one.error);
       await yieldPage();
       const next=prepareM1V188LeagueMatch(initial,one.journal);
       if(next?.ok)return {seed,initial,first};
     }
-    throw Error('no source-bound two-patient two-fixture league seed');
+    throw Error('no source-bound 60-second two-fixture league seed');
   }
   async function run(){
     if(params.get('stage')===null){
@@ -69,8 +68,9 @@
       check((await load(initial.careerId)).revision===0,
         'forged synthetic score wrote journal');
       const one=await commit(initial.careerId,0,first.request);
-      check(one.entries[0].source.medicalPolicyVersion===5,
-        'native CAS lost opt-in medical source policy');
+      check(one.entries[0].source.medicalPolicyVersion===6&&
+        one.entries[0].source.intraphaseMedical?.length===2,
+        'native CAS lost exact 60-second medical chronology');
       check(one.revision===1&&one.entries.length===1&&
         one.entries[0].fixtureId===first.fixture.id,
         'source verified first fixture not persisted');
@@ -94,14 +94,15 @@
     check(prior.revision===1&&prior.entries.length===1&&
       prior.entries[0].fixtureId===params.get('first'),
       'first full-league fixture not restored');
-    check(prior.entries[0].source.medicalPolicyVersion===5,
-      'browser reload lost opt-in medical policy');
+    check(prior.entries[0].source.medicalPolicyVersion===6&&
+      prior.entries[0].source.intraphaseMedical?.length===2,
+      'browser reload lost exact medical return');
     check(validateM1V188LeagueJournal(initial,prior).ok,
       'restored source rejected full replay');
     await rejected(create(initial.careerId),'ALREADY_EXISTS');
     const next=prepareM1V188LeagueMatch(initial,prior);
     check(next?.ok,'cannot prepare next league fixture');
-    check(next.request.medicalPolicyVersion===5,
+    check(next.request.medicalPolicyVersion===6,
       'browser CAS permitted medical source downgrade');
     check(next.fixture.id!==prior.entries[0].fixtureId,
       'opponent fixture ordering is stale');
@@ -132,7 +133,7 @@
     check(done.revision===2&&done.entries.length===2&&
       done.entries[0].fixtureId===prior.entries[0].fixtureId&&
       done.entries[1].fixtureId===next.fixture.id&&
-      done.entries.every(e=>e.source.medicalPolicyVersion===5),
+      done.entries.every(e=>e.source.medicalPolicyVersion===6),
       'chronological two-team journal lost entries');
     check((await loadInitialCareer(initial.careerId)).careerId===
       initial.careerId,'full-league CAS rewrote M0');

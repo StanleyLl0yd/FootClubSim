@@ -120,7 +120,8 @@ export type M1V29CausalSourceRun =
   | Extract<M1V23CoachRun, {ok:false}>
   | (Extract<M1V23CoachRun, {ok:true}> &
       Readonly<{causalAssessments: readonly M1V29CausalAssessment[];
-        autonomousCollisions?:readonly M1V35IndependentCollisionWitness[]}>);
+        autonomousCollisions?:readonly M1V35IndependentCollisionWitness[];
+        intraphaseMedicalActions?:readonly M1V7TemporaryMedicalAction[]}>);
 type AssessmentDraft = Readonly<{
   incidentId: string; patientTeamId: string; patientPlayerId: string;
   elapsedSeconds: number;
@@ -153,11 +154,12 @@ export function simulateM1V29CausalMedicalSource(
   inPlayCommands: unknown = [], denseShotSource=false,
   goalkeeperOnFieldSource=false,multiPatientSource=false,
   collisionSource=false,autonomousCollisionSource=false,
+  preciseReturnSource=false,
 ): M1V29CausalSourceRun {
   return simulateTreatmentCore(prematch, policy, halfTimeCommands,
     inPlayCommands, true, undefined, denseShotSource,
     goalkeeperOnFieldSource,multiPatientSource,collisionSource,
-    autonomousCollisionSource);
+    autonomousCollisionSource,preciseReturnSource);
 }
 type M1V29InternalRejectionTrace={
   sourceError:Extract<M1V23RefereeRun,{ok:false}>['error']|null;
@@ -282,6 +284,7 @@ function simulateTreatmentCore(
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
   goalkeeperOnFieldSource?:boolean,multiPatientSource?:boolean,
   collisionSource?:boolean,autonomousCollisionSource?:boolean,
+  preciseReturnSource?:boolean,
 ): M1V23CoachRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
@@ -289,6 +292,7 @@ function simulateTreatmentCore(
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
   goalkeeperOnFieldSource?:boolean,multiPatientSource?:boolean,
   collisionSource?:boolean,autonomousCollisionSource?:boolean,
+  preciseReturnSource?:boolean,
 ): M1V29CausalSourceRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
@@ -296,6 +300,7 @@ function simulateTreatmentCore(
   trace?:M1V29InternalRejectionTrace,denseShotSource=false,
   goalkeeperOnFieldSource=false,multiPatientSource=false,
   collisionSource=false,autonomousCollisionSource=false,
+  preciseReturnSource=false,
 ): M1V23CoachRun | M1V29CausalSourceRun {
   if (!isPlainJsonTree(prematch) || !isPlainJsonTree(policy) ||
       !isPlainJsonTree(halfTimeCommands) ||
@@ -320,7 +325,9 @@ function simulateTreatmentCore(
     return fail('INVALID_SOURCE');
   }
   if((collisionSource&&!multiPatientSource)||
-      (autonomousCollisionSource&&(!causalMode||!denseShotSource)))
+      (autonomousCollisionSource&&(!causalMode||!denseShotSource))||
+      (preciseReturnSource&&(!autonomousCollisionSource||
+        !denseShotSource)))
     return fail('INVALID_SOURCE');
   const gate = startM1Clock(input);
   if (!gate.ok) return fail('INVALID_SOURCE');
@@ -687,12 +694,40 @@ function simulateTreatmentCore(
   // Source v8 evaluates exactly one match with generated decisions
   // and authenticated-internally stoppage-gated coach substitutions.
   const sourceTrace:M1V23SourceRejectionTrace={subreason:null};
+  // Version 6 moves one canonical ordinary off-field pair into the
+  // precise physical stream. Prior checkpoint actions are unchanged.
+  const preciseMedical:M1V7TemporaryMedicalAction[]=[];
+  let checkpointMedical=treatment;
+  if(preciseReturnSource){
+    const candidate=drafts.find(d=>
+      d.transition==='off-field-return'&&
+      drafts.filter(x=>x.incidentId===d.incidentId).length===1&&
+      d.elapsedSeconds>=300&&d.elapsedSeconds<=4800);
+    if(candidate){
+      const exit=treatment.find(a=>a.kind==='treatment-exit'&&
+        a.elapsedSeconds===candidate.elapsedSeconds&&
+        a.playerId===candidate.patientPlayerId&&
+        a.teamId===candidate.patientTeamId);
+      const back=treatment.find(a=>a.kind==='treatment-return'&&
+        a.elapsedSeconds===candidate.elapsedSeconds+M1_CLOCK_STEP_SECONDS&&
+        a.playerId===candidate.patientPlayerId&&
+        a.teamId===candidate.patientTeamId);
+      if(!exit||!back)return fail('REFEREE_REPLAY_MISMATCH');
+      preciseMedical.push({
+        ...exit,id:'m1-v36-exit-'+candidate.elapsedSeconds,
+      },{
+        ...back,id:'m1-v36-return-'+candidate.elapsedSeconds,
+        elapsedSeconds:candidate.elapsedSeconds+60,
+      });
+      checkpointMedical=treatment.filter(a=>a!==exit&&a!==back);
+    }
+  }
   const match = simulateM1V23RefereeWithTreatment(
-    input, policy, commands, treatment,
+    input, policy, commands, checkpointMedical,
     causalMode?M1_MODELLED_GOAL_STOP_SECONDS:0,
     M1_MODELLED_HALF_TIME_STOP_SECONDS,foulTimes,
     M1_MODELLED_FOUL_STOP_SECONDS,sourceTrace,denseShotSource,
-    collisionPairs,autonomousPairs,
+    collisionPairs,autonomousPairs,preciseMedical,preciseReturnSource,
   );
   if(trace){
     trace.sourceSubreason=sourceTrace.subreason;
@@ -757,9 +792,15 @@ function simulateTreatmentCore(
         e.runningSeconds === draft.elapsedSeconds &&
         e.playerId === draft.patientPlayerId &&
         e.teamId === draft.patientTeamId);
+      const precise=preciseMedical.some(a=>
+        a.kind==='treatment-exit'&&
+        a.elapsedSeconds===draft.elapsedSeconds&&
+        a.teamId===draft.patientTeamId&&
+        a.playerId===draft.patientPlayerId);
       const returnEvent = match.events.find(e =>
         e.kind === 'treatment-return' &&
-        e.runningSeconds === draft.elapsedSeconds + M1_CLOCK_STEP_SECONDS &&
+        e.runningSeconds === draft.elapsedSeconds +
+          (precise?60:M1_CLOCK_STEP_SECONDS) &&
         e.playerId === draft.patientPlayerId &&
         e.teamId === draft.patientTeamId);
       if (!incident || !decision || !whistle || !restart ||
@@ -831,7 +872,7 @@ function simulateTreatmentCore(
     refereeRngDraws: M1_CLOCK_MAX_EVENTS * REFEREE_DRAWS_PER_PHASE,
     generatedIncidents, acceptedHalfTimeCommands: requested.length,
     acceptedInPlayCommands,
-    syntheticTreatmentActions: treatment,
+    syntheticTreatmentActions: checkpointMedical,
     syntheticTemporaryExitCount: treatmentExits,
     syntheticTemporaryReturnCount: treatmentReturns,
     treatmentRngSeed: treatmentSeed,
@@ -852,7 +893,9 @@ function simulateTreatmentCore(
   return causalMode ?
     {...baseRun, causalAssessments: assessments,
       ...(autonomousCollisionSource?
-        {autonomousCollisions:independentEvidence}:{})} : baseRun;
+        {autonomousCollisions:independentEvidence}:{}),
+      ...(preciseReturnSource?
+        {intraphaseMedicalActions:preciseMedical}:{})} : baseRun;
 }
 export function verifyM1V23TemporaryTreatment(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,

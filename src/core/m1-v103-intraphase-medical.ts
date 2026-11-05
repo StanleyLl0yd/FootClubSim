@@ -55,7 +55,8 @@ const fields=['schemaVersion','id','fixtureId','teamId',
 const exitFields=[...fields,'kind','reason','restartAtRunningSeconds'];
 const returnFields=[...fields,'kind','returnContext','ballInPlay',
   'entryBoundary','refereeSignalId'];
-function readIntraphaseMedical(raw:unknown):M1V7TemporaryMedicalAction|null{
+function readIntraphaseMedical(raw:unknown,
+  allowSourceCheckpointExit=false):M1V7TemporaryMedicalAction|null{
   if(!raw||typeof raw!=='object'||Array.isArray(raw))return null;
   const action=raw as Record<string,unknown>;
   const expected=action.kind==='treatment-exit'?exitFields:
@@ -68,7 +69,9 @@ function readIntraphaseMedical(raw:unknown):M1V7TemporaryMedicalAction|null{
       !Number.isSafeInteger(action.elapsedSeconds)||
       (action.elapsedSeconds as number)<=0||
       (action.elapsedSeconds as number)>=5400||
-      (action.elapsedSeconds as number)%M1_CLOCK_STEP_SECONDS===0||
+      ((action.elapsedSeconds as number)%M1_CLOCK_STEP_SECONDS===0&&
+        !(allowSourceCheckpointExit&&action.kind==='treatment-exit'&&
+          action.id==='m1-v36-exit-'+action.elapsedSeconds))||
       (action.elapsedSeconds as number)%M1_V99_SECONDS_PER_SLOT===
         M1_V99_SECONDS_PER_SLOT-1)
     return null;
@@ -94,6 +97,7 @@ function readIntraphaseMedical(raw:unknown):M1V7TemporaryMedicalAction|null{
 export function simulateM1V103IntraphaseMedical(
   prematch:unknown,policy:unknown,plannedCommands:unknown=[],
   checkpointMedical:unknown=[],intraphaseMedical:unknown=[],
+  allowSourceCheckpointExit=false,
 ):M1V103Run{
   if(![prematch,policy,plannedCommands,checkpointMedical,
       intraphaseMedical].every(isPlainJsonTree)||
@@ -121,7 +125,7 @@ export function simulateM1V103IntraphaseMedical(
   const ids=new Set<string>();
   let prev=-1;
   for(const raw of intraphaseMedical){
-    const a=readIntraphaseMedical(raw);
+    const a=readIntraphaseMedical(raw,allowSourceCheckpointExit);
     if(!a||a.fixtureId!==input.fixture.id||
         (a.teamId!==input.fixture.homeClubId&&
           a.teamId!==input.fixture.awayClubId)||

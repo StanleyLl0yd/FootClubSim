@@ -27,21 +27,25 @@ type Replay=Extract<M1V105Run,{ok:true}>;
  * v105 physical source, not only in v29's independent diagnostic IDs.
  */
 function causalWitness(source:Causal,result:Replay):boolean{
-  const medical=source.syntheticTreatmentActions;
+  const medical=[...source.syntheticTreatmentActions,
+    ...(source.intraphaseMedicalActions??[])];
   const assessments=source.causalAssessments;
   const departures=assessments.filter(a=>
     a.transition==='off-field-return');
   if(medical.length!==departures.length*2)return false;
   const hasMedical=(action:typeof medical[number])=>
-    result.events.some(event=>
-      event.type==='source'&&
-      event.source.type==='physical-transition'&&
-      event.source.source.type==='medical'&&
-      event.source.source.action.id===action.id&&
-      event.source.source.action.kind===action.kind&&
-      event.source.source.action.teamId===action.teamId&&
-      event.source.source.action.playerId===action.playerId&&
-      event.elapsedSeconds===action.elapsedSeconds);
+    result.events.some(event=>{
+      if(event.type!=='source'||event.elapsedSeconds!==action.elapsedSeconds)
+        return false;
+      const physical=event.source.type==='intraphase-medical'?
+        event.source.action:
+        event.source.type==='physical-transition'&&
+          event.source.source.type==='medical'?
+          event.source.source.action:null;
+      return physical?.id===action.id&&physical.kind===action.kind&&
+        physical.teamId===action.teamId&&
+        physical.playerId===action.playerId;
+    });
   for(const assessment of assessments){
     const incident=source.generatedIncidents.find(i=>
       i.id===assessment.incidentId);
@@ -76,14 +80,17 @@ function causalWitness(source:Causal,result:Replay):boolean{
       action.kind==='treatment-return'&&
       action.teamId===assessment.patientTeamId&&
       action.playerId===assessment.patientPlayerId&&
-      action.elapsedSeconds===assessment.elapsedSeconds+300);
+      action.elapsedSeconds===assessment.elapsedSeconds+
+        (action.id.startsWith('m1-v36-return-')?60:300));
     if(returns.length!==1||!hasMedical(exit)||
         !hasMedical(returns[0]!))return false;
     const departureEvent=result.events.find(event=>
       event.type==='source'&&
-      event.source.type==='physical-transition'&&
-      event.source.source.type==='medical'&&
-      event.source.source.action.id===exit.id);
+      (event.source.type==='intraphase-medical'&&
+        event.source.action.id===exit.id||
+       event.source.type==='physical-transition'&&
+        event.source.source.type==='medical'&&
+        event.source.source.action.id===exit.id));
     if(!departureEvent||referee.sequence>=departureEvent.sequence)
       return false;
   }
@@ -97,7 +104,7 @@ function regenerateUnifiedSource(
   prematch:unknown,policy:unknown,manager:unknown,causal:boolean,
   denseShotSource=false,goalkeeperOnFieldSource=false,
   multiPatientSource=false,collisionSource=false,
-  autonomousCollisionSource=false,
+  autonomousCollisionSource=false,preciseReturnSource=false,
 ){
   if(!isPlainJsonTree(prematch)||!isPlainJsonTree(policy)||
       !isPlainJsonTree(manager)||!Array.isArray(manager)||
@@ -111,7 +118,7 @@ function regenerateUnifiedSource(
     simulateM1V29CausalMedicalSource(
       prematch,policy,half,inPlay,denseShotSource,
       goalkeeperOnFieldSource,multiPatientSource,collisionSource,
-      autonomousCollisionSource):
+      autonomousCollisionSource,preciseReturnSource):
     simulateM1V23TemporaryTreatment(prematch,policy,half,inPlay);
   if(!generated.ok)
     return {ok:false as const,error:'UNIFIED_GENERATION_REJECTED' as const};
@@ -127,7 +134,8 @@ function regenerateUnifiedSource(
     return {ok:false as const,error:'SOURCE_EVENT_BUDGET' as const};
   const checkpointMedical=[...generated.syntheticTreatmentActions];
   const result=simulateM1V105SpecialGoalChronology(
-    prematch,policy,plannedCommands,checkpointMedical,[],[]);
+    prematch,policy,plannedCommands,checkpointMedical,
+    causalGenerated?.intraphaseMedicalActions??[],[],preciseReturnSource);
   if(!result.ok||
       (causal&&causalGenerated!==null&&
        !causalWitness(causalGenerated,result)))
@@ -139,6 +147,9 @@ function regenerateUnifiedSource(
     return {ok:false as const,error:'LAW5_SOURCE_REJECTED' as const};
   return {ok:true as const,sourceFixtureId:generated.fixtureId,
     plannedCommands,checkpointMedical,
+    ...(preciseReturnSource?{
+      intraphaseMedical:causalGenerated?.intraphaseMedicalActions
+        ?.map(action=>({...action}))??[]}:{}),
     generatedIncidents:[...generated.generatedIncidents],
     temporaryExitCount:generated.syntheticTemporaryExitCount,
     temporaryReturnCount:generated.syntheticTemporaryReturnCount,
@@ -164,12 +175,12 @@ export function regenerateM1V184CausalSource(
   prematch:unknown,policy:unknown,manager:unknown,
   denseShotSource=false,goalkeeperOnFieldSource=false,
   multiPatientSource=false,collisionSource=false,
-  autonomousCollisionSource=false,
+  autonomousCollisionSource=false,preciseReturnSource=false,
 ){
   return regenerateUnifiedSource(
     prematch,policy,manager,true,denseShotSource,
     goalkeeperOnFieldSource,multiPatientSource,collisionSource,
-    autonomousCollisionSource);
+    autonomousCollisionSource,preciseReturnSource);
 }
 
 /** Canonical v182 claim is independently replayed before v120 CAS.

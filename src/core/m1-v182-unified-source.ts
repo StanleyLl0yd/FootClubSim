@@ -97,6 +97,7 @@ function regenerateUnifiedSource(
   prematch:unknown,policy:unknown,manager:unknown,causal:boolean,
   denseShotSource=false,goalkeeperOnFieldSource=false,
   multiPatientSource=false,collisionSource=false,
+  autonomousCollisionSource=false,
 ){
   if(!isPlainJsonTree(prematch)||!isPlainJsonTree(policy)||
       !isPlainJsonTree(manager)||!Array.isArray(manager)||
@@ -109,7 +110,8 @@ function regenerateUnifiedSource(
   const generated=causal?
     simulateM1V29CausalMedicalSource(
       prematch,policy,half,inPlay,denseShotSource,
-      goalkeeperOnFieldSource,multiPatientSource,collisionSource):
+      goalkeeperOnFieldSource,multiPatientSource,collisionSource,
+      autonomousCollisionSource):
     simulateM1V23TemporaryTreatment(prematch,policy,half,inPlay);
   if(!generated.ok)
     return {ok:false as const,error:'UNIFIED_GENERATION_REJECTED' as const};
@@ -143,6 +145,8 @@ function regenerateUnifiedSource(
     result,
     ...(causalGenerated!==null&&causal?
       {causalAssessments:causalGenerated.causalAssessments,
+        ...(causalGenerated.autonomousCollisions?
+          {autonomousCollisions:causalGenerated.autonomousCollisions}:{}),
         law5Evidence:law5?.ok?law5.evidence:[]}:{}),
   };
 }
@@ -160,10 +164,12 @@ export function regenerateM1V184CausalSource(
   prematch:unknown,policy:unknown,manager:unknown,
   denseShotSource=false,goalkeeperOnFieldSource=false,
   multiPatientSource=false,collisionSource=false,
+  autonomousCollisionSource=false,
 ){
   return regenerateUnifiedSource(
     prematch,policy,manager,true,denseShotSource,
-    goalkeeperOnFieldSource,multiPatientSource,collisionSource);
+    goalkeeperOnFieldSource,multiPatientSource,collisionSource,
+    autonomousCollisionSource);
 }
 
 /** Canonical v182 claim is independently replayed before v120 CAS.

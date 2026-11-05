@@ -145,6 +145,71 @@ test('v188 manager selects a real halftime XI change in the league source',()=>{
     }]),{ok:false,error:'UNAUTHORIZED_MANAGER'});
 });
 
+test('v188 manual starting XI is replay-safe and club-bound',()=>{
+  const career=createInitialCareer(
+    catalog,catalog.clubs[0].id,42,'v188-manual-xi');
+  const zero=startM1V188LeagueJournal(career);
+  assert.equal(zero.ok,true);
+  const auto=prepareM1V188LeagueMatch(career,zero.journal);
+  assert.equal(auto?.ok,true);
+  assert.equal(auto.selectedClubFixture,true);
+  const own=auto.request.prematch.fixture.homeClubId===career.selectedClubId?
+    auto.request.prematch.homeLineup:auto.request.prematch.awayLineup;
+  const pos=new Map(catalog.players.map(p=>[p.id,p.primaryPosition]));
+  const outgoing=own.starters.find(id=>pos.get(id)!=='GK');
+  const incoming=own.bench.find(id=>pos.get(id)!=='GK');
+  assert.ok(outgoing&&incoming);
+  const starters=own.starters.map(id=>id===outgoing?incoming:id);
+  const defaultTactics=auto.request.prematch.fixture.homeClubId===
+    career.selectedClubId?auto.request.prematch.homeTactics:
+    auto.request.prematch.awayTactics;
+  const choice={schemaVersion:1,clubId:career.selectedClubId,starters,
+    tactics:{...defaultTactics,mentality:1,pressing:70,tempo:80}};
+  const prepared=prepareM1V188LeagueMatch(
+    career,zero.journal,[],undefined,undefined,choice);
+  assert.equal(prepared?.ok,true);
+  const chosen=prepared.request.prematch.fixture.homeClubId===
+      career.selectedClubId?
+    prepared.request.prematch.homeLineup:prepared.request.prematch.awayLineup;
+  assert.deepEqual(chosen.starters,starters);
+  const changedTactics=prepared.request.prematch.fixture.homeClubId===
+    career.selectedClubId?
+    prepared.request.prematch.homeTactics:
+    prepared.request.prematch.awayTactics;
+  assert.equal(changedTactics.tempo,80);
+  assert.equal(changedTactics.pressing,70);
+  assert.equal(changedTactics.mentality,1);
+  // The prematch and saved choice must not alias the same mutable object.
+  assert.notStrictEqual(prepared.request.managedXI.tactics,changedTactics);
+  const saved=applyM1V188LeagueMatch(career,zero.journal,prepared.request);
+  assert.equal(saved.ok,true);
+  assert.equal(validateM1V188LeagueJournal(career,saved.journal).ok,true);
+  const invalid=[
+    {...choice,starters:[...starters.slice(0,10),starters[0]]},
+    {...choice,starters:[...starters.slice(0,10),'alien']},
+    {...choice,clubId:'alien'},
+    {...choice,schemaVersion:2},
+    {...choice,privilege:'override'},
+    {...choice,starters:starters.filter(id=>pos.get(id)!=='GK')},
+    {...choice,tactics:{...choice.tactics,tempo:101}},
+    {...choice,tactics:{...choice.tactics,clubId:'alien'}},
+    {...choice,tactics:{...choice.tactics,privilege:'override'}},
+  ];
+  for(const choice of invalid)
+    assert.deepEqual(prepareM1V188LeagueMatch(
+      career,zero.journal,[],undefined,undefined,choice),
+    {ok:false,error:'UNAUTHORIZED_MANAGER'});
+  const badRequest=structuredClone(prepared.request);
+  badRequest.managedXI.starters[1]=badRequest.managedXI.starters[0];
+  assert.equal(applyM1V188LeagueMatch(
+    career,zero.journal,badRequest).ok,false);
+  const badJournal=structuredClone(saved.journal);
+  badJournal.entries[0].source.managedXI.starters[1]=
+    badJournal.entries[0].source.managedXI.starters[0];
+  assert.equal(validateM1V188LeagueJournal(
+    career,badJournal).ok,false);
+});
+
 test('v188 exact-byte replay cache fails closed on post-commit mutations',()=>{
   const career=createInitialCareer(
     catalog,catalog.clubs[0].id,15,'v188-replay-cache-seed15');

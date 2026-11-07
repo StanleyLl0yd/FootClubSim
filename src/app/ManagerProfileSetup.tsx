@@ -131,7 +131,8 @@ export function ManagerProfileSetup({ disabled, onConfirm }: {
 
   function generateBiography() {
     if (!canPreview) return;
-    const seed = crypto.getRandomValues(new Uint32Array(1))[0] || 1;
+    // The seed varies fictional text and is never used for identity or authority.
+    const seed = Math.floor(Math.random() * 0xffffffff) + 1;
     setPreview(createManagerProfile(displayName, origin, skills, seed));
   }
 

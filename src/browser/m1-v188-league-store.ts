@@ -132,3 +132,23 @@ export async function commitM1V188PersistedLeagueMatch(
     };
   });
 }
+
+/** Import only a fully source-replayed journal, without replacing another
+ * saved season. Exact idempotent retries are handled by backup orchestration.
+ */
+export async function restoreM1V188PersistedLeague(
+  careerId:string,untrusted:unknown,
+):Promise<M1V188Journal>{
+  if(!isStableId(careerId))throw fail('INVALID_ID');
+  const initial=await loadInitialCareer(careerId);
+  const checked=validateM1V188LeagueJournal(initial,untrusted);
+  if(!checked.ok||checked.journal.careerId!==careerId)
+    throw fail('CORRUPTED');
+  return transact('readwrite',(objectStore,_abort,success,error)=>{
+    const req=objectStore.add(checked.journal,careerId);
+    req.onerror=()=>error(fail(
+      req.error?.name==='ConstraintError'?'ALREADY_EXISTS':
+        quota(req.error)?'QUOTA_EXCEEDED':'STORAGE_FAILED'));
+    success(checked.journal);
+  });
+}

@@ -422,7 +422,7 @@ def main():
                 }});
             """)
             click(session, "Сохранить в браузере")
-            wait_for_text(session, "Недостаточно места в хранилище браузера")
+            wait_for_text(session, "Недостаточно места в браузере")
             if not run_script(session, "return Boolean(document.querySelector('.career-info'))"):
                 raise AssertionError("Safari lost active career after simulated quota error")
             run_script(session, "Object.defineProperty(window, 'indexedDB', {configurable: true, value: undefined});")

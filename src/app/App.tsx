@@ -13,13 +13,21 @@ import { validateDoubleRoundRobin } from '../core/fixture-validation.js';
 import { createInitialCareer, exportInitialCareer, importInitialCareer, type InitialCareerSave } from '../core/save.js';
 import { CareerStorageError, loadInitialCareer, saveNewInitialCareer,
   listStoredInitialCareerIds } from '../browser/initial-career-store.js';
+import {exportM1V188FullCareerBackup,restoreM1V188FullCareerBackup,
+  M1V188FullBackupError}
+  from '../browser/m1-v188-full-career-backup.js';
 
 const CAREER_ID = 'm0-ui-initial-career';
 type PackMode='liga'|'demo';
 
 function errorMessage(error: unknown): string {
+  if (error instanceof M1V188FullBackupError) {
+    if(error.code==='CONFLICT') return 'Сохранение с этим именем уже существует и отличается. Оно не перезаписано.';
+    if(error.code==='UNKNOWN_PACK') return 'Неизвестный или изменённый набор клубов.';
+    return 'Ошибка полного архива: '+error.code;
+  }
   if (error instanceof CareerStorageError && error.code === 'QUOTA_EXCEEDED') {
-    return 'Недостаточно места в хранилище браузера. Экспортируйте карьеру в JSON и освободите место.';
+    return 'Недостаточно места в браузере. Если сезон уже начат, скачайте полный архив. Иначе сохраните стартовый JSON, затем освободите место.';
   }
   return error instanceof Error ? error.message : String(error);
 }
@@ -144,6 +152,52 @@ export function App() {
     }
   }
 
+  async function downloadFullCareer():Promise<void>{
+    if(!career||working)return;
+    setWorking(true);
+    try{
+      const json=await exportM1V188FullCareerBackup(career.careerId);
+      const url=URL.createObjectURL(new Blob([json],
+        {type:'application/json'}));
+      const anchor=document.createElement('a');
+      anchor.href=url;
+      anchor.download='footclubsim-'+career.careerId+'-full-career.json';
+      document.body.append(anchor);anchor.click();anchor.remove();
+      window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+      setMessage('Полный архив создан: стартовая карьера и все сыгранные матчи. Храните файл отдельно от браузера.');
+    }catch(error){
+      setMessage('Полный экспорт не выполнен: '+errorMessage(error)+
+        '. Сначала откройте сезон, если он ещё не создан.');
+    }finally{setWorking(false);}
+  }
+
+  async function importFullCareer(event:ChangeEvent<HTMLInputElement>):Promise<void>{
+    const file=event.currentTarget.files?.[0];
+    event.currentTarget.value='';
+    if(!file||working)return;
+    if(file.size>150_000_000){
+      setMessage('Импорт полного архива отклонён: файл слишком большой.');
+      return;
+    }
+    setWorking(true);
+    try{
+      const restored=await restoreM1V188FullCareerBackup(
+        await file.text(),[legacyCatalog,ligaCatalog]);
+      const restoredMode=modeForSaved(restored.initial);
+      if(restoredMode===null)throw Error('Неверный игровой набор');
+      setMode(restoredMode);setCareer(restored.initial);
+      setSelectedClubId(restored.initial.selectedClubId);
+      setStoredId(restored.initial.careerId);
+      try{setStoredIds(await listStoredInitialCareerIds());}
+      catch{ /* Full import completed; list is only a convenience. */ }
+      setMessage('Полная карьера восстановлена. Сыграно матчей: '+
+        restored.journal.revision+' из 240. Можно продолжать сезон.');
+    }catch(error){
+      setMessage('Импорт полного архива отклонён: '+errorMessage(error)+
+        '. Существующие сохранения не перезаписаны.');
+    }finally{setWorking(false);}
+  }
+
   async function importCareer(event: ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = '';
@@ -264,7 +318,7 @@ export function App() {
         <section className="panel" aria-labelledby="save-title">
           <h2 id="save-title">Сохранения</h2>
           <p className="subtle">Стартовое состояние хранится локально. Уже записанная карьера не перезаписывается.</p>
-          <p className="subtle">Экспорт JSON пока не включает сыгранные матчи. Не очищайте данные браузера, если хотите сохранить сезон.</p>
+          <p className="subtle">Обычный JSON сохраняет только начальные данные. Полный архив включает и журнал матчей; храните его вне браузера.</p>
           <label htmlFor="career-saved-select">Сохранённые карьеры</label>
           <select id="career-saved-select" value={storedId}
             onChange={event=>setStoredId(event.target.value)}
@@ -281,9 +335,12 @@ export function App() {
             <button type="button" onClick={() => void saveCareer()} disabled={!career || working}>Сохранить в браузере</button>
             <button type="button" onClick={() => void restoreCareer()} disabled={working}>Восстановить из браузера</button>
             <button type="button" onClick={() => void downloadCareer()} disabled={!career || working}>Экспортировать JSON</button>
+            <button type="button" onClick={() => void downloadFullCareer()} disabled={!career || working}>Скачать полную карьеру</button>
           </div>
           <label className="file-label" htmlFor="import-file">Импортировать JSON</label>
           <input id="import-file" type="file" accept=".json,application/json" onChange={event => void importCareer(event)} disabled={working} />
+          <label className="file-label" htmlFor="import-full-file">Восстановить полную карьеру</label>
+          <input id="import-full-file" type="file" accept=".json,application/json" onChange={event => void importFullCareer(event)} disabled={working} />
         </section>
       </div>
 
@@ -310,7 +367,7 @@ export function App() {
 
       <p className="status" role="status" aria-live="polite">{fixtureErrors.length ?
         'Календарь некорректен: ' + fixtureErrors[0]!.code : message}</p>
-      <footer>Пока это первый пробный сезон: трансферы и финансы ещё впереди. Результаты матчей сохраняются в браузере; экспорт JSON пока содержит только стартовую карьеру.</footer>
+      <footer>Пока это первый пробный сезон: трансферы и финансы ещё впереди. Результаты матчей сохраняются в браузере. Полный архив включает весь сезон; обычный JSON только стартовые данные.</footer>
     </main>
   );
 }

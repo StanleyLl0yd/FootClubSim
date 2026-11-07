@@ -1,15 +1,11 @@
 import { importSyntheticCatalog } from './import.js';
 import { isStableId } from './identifiers.js';
 import type { Catalog } from './model.js';
+import { readManagerProfile, type ManagerProfile } from './manager-profile.js';
 import { RNG_VERSION, SeededRng } from './rng.js';
 
-/**
- * M0-only initial career snapshot. No match/season state exists yet.
- * A later playable save version must migrate this explicitly rather than
- * treating an initial snapshot as a complete career.
- */
-export interface InitialCareerSave {
-  readonly saveSchemaVersion: 1;
+/** Immutable career snapshot. Match and season state live in separate journals. */
+interface InitialCareerBase {
   readonly careerId: string;
   readonly revision: 0;
   readonly engineVersion: '0';
@@ -20,6 +16,10 @@ export interface InitialCareerSave {
   readonly selectedClubId: string;
   readonly catalog: Catalog;
 }
+export type InitialCareerSave = InitialCareerBase & (
+  | { readonly saveSchemaVersion: 1; readonly managerProfile?: never }
+  | { readonly saveSchemaVersion: 2; readonly managerProfile: ManagerProfile }
+);
 
 export type InitialCareerImportResult =
   | { readonly ok: true; readonly value: InitialCareerSave }
@@ -38,14 +38,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 
 /** Validate and copy a potential snapshot without trusting its static TypeScript type. */
-function readInitialCareer(value: unknown): InitialCareerSave | null {
-  if (!isRecord(value) || Object.keys(value).length !== 10 ||
-      value.saveSchemaVersion !== 1 || value.revision !== 0 ||
+export function readInitialCareer(value: unknown): InitialCareerSave | null {
+  if (!isRecord(value) || (value.saveSchemaVersion !== 1 && value.saveSchemaVersion !== 2) ||
+      Object.keys(value).length !== (value.saveSchemaVersion === 1 ? 10 : 11) ||
+      value.revision !== 0 ||
       value.engineVersion !== '0' || value.rngAlgorithmVersion !== RNG_VERSION ||
       !isStableId(value.careerId) || !isStableId(value.basePackId) ||
       !isStableId(value.basePackVersion) || !isStableId(value.selectedClubId) ||
       !Number.isInteger(value.rngState) || (value.rngState as number) < 1 ||
       (value.rngState as number) > 0xffffffff) return null;
+
+  const profile = value.saveSchemaVersion === 2 ? readManagerProfile(value.managerProfile) : null;
+  if (value.saveSchemaVersion === 2 && !profile) return null;
 
   let encodedCatalog: string;
   try { encodedCatalog = JSON.stringify(value.catalog); }
@@ -55,20 +59,26 @@ function readInitialCareer(value: unknown): InitialCareerSave | null {
       imported.value.packVersion !== value.basePackVersion ||
       !imported.value.clubs.some(club => club.id === value.selectedClubId)) return null;
 
-  return {
-    saveSchemaVersion: 1, careerId: value.careerId, revision: 0, engineVersion: '0',
+  const base: InitialCareerBase = {
+    careerId: value.careerId, revision: 0, engineVersion: '0',
     rngAlgorithmVersion: RNG_VERSION, rngState: value.rngState as number,
     basePackId: value.basePackId, basePackVersion: value.basePackVersion,
     selectedClubId: value.selectedClubId, catalog: imported.value,
   };
+  return profile ?
+    { saveSchemaVersion: 2, ...base, managerProfile: profile } :
+    { saveSchemaVersion: 1, ...base };
 }
 
 /** No browser storage or game-world mutation occurs during snapshot creation. */
 export function createInitialCareer(
   catalog: Catalog, selectedClubId: string, seed: number, careerId: string,
+  managerProfile?: ManagerProfile,
 ): InitialCareerSave {
   const snapshot = readInitialCareer({
-    saveSchemaVersion: 1, careerId, revision: 0, engineVersion: '0',
+    ...(managerProfile === undefined ?
+      { saveSchemaVersion: 1 } : { saveSchemaVersion: 2, managerProfile }),
+    careerId, revision: 0, engineVersion: '0',
     rngAlgorithmVersion: RNG_VERSION, rngState: new SeededRng(seed).snapshot(),
     basePackId: catalog.packId, basePackVersion: catalog.packVersion,
     selectedClubId, catalog,
@@ -124,7 +134,7 @@ export async function importInitialCareer(json: string): Promise<InitialCareerIm
   let snapshot: unknown;
   try { snapshot = JSON.parse(envelope.payload) as unknown; }
   catch { return { ok: false, error: 'INVALID_JSON' }; }
-  if (isRecord(snapshot) && snapshot.saveSchemaVersion !== 1) {
+  if (isRecord(snapshot) && snapshot.saveSchemaVersion !== 1 && snapshot.saveSchemaVersion !== 2) {
     return { ok: false, error: 'UNSUPPORTED_VERSION' };
   }
   const validated = readInitialCareer(snapshot);

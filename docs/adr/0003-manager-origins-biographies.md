@@ -1,9 +1,9 @@
 # ADR-0003: Manager origin, starting competencies and generated biography
 
-**Status:** product principle accepted by owner on 2026-10-14. Attribute names,
-numerical values, balancing formulas, editable personal details and milestone
-acceptance criteria below are **design proposals**, not independently approved
-numbers or completed gameplay.
+**Status.** Product principle accepted on 2026-10-14. The owner approved
+the 12 skills, scale and starting distributions on 2026-11-07 for the playable
+preview. Future balancing formulas, personal details and milestone acceptance
+remain separate design decisions.
 
 ## Context and accepted experience
 
@@ -38,10 +38,10 @@ These three alternatives and the relationship between origin, skills and
 biography are **approved product requirements**. Actual skill values and
 biography content generation mechanisms below are proposed.
 
-## Proposed manager competencies (distinct from player ratings)
+## Manager competencies (distinct from player ratings)
 
 Do **not** conflate footballers' 33 on-pitch skills with the human manager's
-abilities. Proposed stable domain categories, subject to refinement:
+abilities. The starting profile uses these stable domain keys.
 
 | Key | User-facing concept | Typical impact, once system exists |
 | --- | --- | --- |
@@ -58,37 +58,23 @@ abilities. Proposed stable domain categories, subject to refinement:
 | `clubManagement` | Управление клубом | Long-term operational planning |
 | `mediaCommunication` | Работа с прессой | Media interactions and public expectations |
 
-The list is an **initial candidate**, not the final ratings schema or a
-promise that all twelve mechanics appear in M2. Some abilities affect M3+
-systems (contracts, training, recruiting, media) and should not invent an M1
-football match shortcut or rewrite seeded simulation outcomes.
+In the first playable profile, the skills describe the manager and inform
+the custom biography. Gameplay effects for training, scouting, recruiting,
+contracts, media and the match engine require separate reviewed formulas.
 
-## Proposed balanced starting allocation
+## Approved starting allocation
 
-- Define one **fixed total starting competency budget** and the same legal
-  per-skill floor and ceiling for all origins. An ex-player or theorist is
-  a different **distribution** of the same budget, not more free points.
-- Practitioner/theorist presets start with distinct, inspectable allocations:
-  one may privilege motivation, people skills, player assessment and match
-  experience; the other tactical knowledge, methodology, analysis and match
-  preparation. Each has concrete strengths and trade-offs. Profiles need
-  testing so one is not inherently optimal in every club.
-- Custom origin offers a manual allocator with remaining-point counter,
-  minimum/maximum values, reset, error messages and preview. Cannot proceed
-  with an invalid total or impossible allocation; unspent-point policy must
-  be explicit. The player can reproduce any valid preset total through the
-  custom allocator.
-- **Proposed UX:** preset users can preview the competency sheet before
-  confirming and optionally start from its distribution in custom mode.
-  Changing to manual allocation changes the **origin** to custom unless
-  the design explicitly preserves a separate chosen backstory field.
-- A fixed integer scale such as 1..100 would align with player data, but it
-  is **not yet approved for manager competencies**. The precise starting
-  budget, caps, initial values, growth, difficulty and influence weights need
-  explicit balancing/design approval before implementation.
-- Biographies should not grant secretly additional gameplay bonuses on top
-  of the displayed abilities. If a documented history modifier exists later,
-  expose it as part of the same bounded balance and persisted rules version.
+All origins share a 1–20 scale, a starting floor of 5, a starting ceiling
+of 15 and an exact 120-point total. In the order of the skill table above,
+the former player has `10, 9, 13, 8, 10, 14, 14, 12, 7, 7, 8, 8` and
+the theorist has `14, 13, 9, 13, 11, 8, 7, 9, 14, 7, 9, 6`.
+The custom profile starts at 10 in each skill and permits every integer
+allocation satisfying the same bounds and total. It can reproduce either
+preset's skill allocation while keeping a custom origin and biography.
+
+The first version collects a display name. Biography events use years
+relative to career start and are confirmed before club selection. Future
+growth, effects and optional personal details need separate design work.
 
 ## Biography synthesis (proposed deterministic local pipeline)
 

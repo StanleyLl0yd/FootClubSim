@@ -168,7 +168,8 @@ def assert_restored_club(session: str):
         const selected = document.querySelector('#club-select')?.value;
         const text = document.querySelector('.career-info')?.innerText ?? '';
         return selected === 'fictional-2' &&
-            text.includes('Fictional Club 2') && text.includes('Ревизия 0');
+            text.includes('Fictional Club 2') && text.includes('Ревизия 0') &&
+            text.includes('Тренер Safari · Теоретик');
     """)
     if selected is not True:
         raise AssertionError("Safari did not restore non-default club and initial revision")
@@ -351,6 +352,19 @@ def main():
                 if expected not in text:
                     raise AssertionError(f"Safari rendered UI without {expected!r}")
 
+            profile_started = run_script(session, """
+                const name = document.querySelector('#manager-name');
+                if (!name || !document.querySelector('#club-select')?.disabled) return false;
+                Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+                    .call(name, 'Тренер Safari');
+                name.dispatchEvent(new Event('input', {bubbles: true}));
+                document.querySelectorAll('input[name=manager-origin]')[1].click();
+                return true;
+            """)
+            if profile_started is not True:
+                raise AssertionError("Safari could not select a club before confirming the manager")
+            click(session, "Показать биографию")
+            click(session, "Подтвердить тренера")
             select_nondefault_club(session)
             click(session, "Создать стартовую карьеру")
             wait_for_text(session, "Карьера создана. Сохраните её в браузере")
@@ -358,7 +372,7 @@ def main():
             click(session, "Сохранить в браузере")
             wait_for_text(session, "Начальная карьера записана в IndexedDB")
             wd(session, "refresh", {})
-            wait_for_text(session, "Выберите клуб, создайте начальную карьеру")
+            wait_for_text(session, "Создайте тренера, выберите клуб")
             click(session, "Восстановить из браузера")
             wait_for_text(session, "Стартовая карьера восстановлена и проверена по SHA-256")
             assert_restored_club(session)
@@ -375,7 +389,7 @@ def main():
             if removed != "deleted":
                 raise AssertionError(f"Safari IndexedDB clearing failed: {removed!r}")
             wd(session, "refresh", {})
-            wait_for_text(session, "Выберите клуб, создайте начальную карьеру")
+            wait_for_text(session, "Создайте тренера, выберите клуб")
             click(session, "Восстановить из браузера")
             wait_for_text(session, "Восстановление отклонено: NOT_FOUND")
             set_test_file(session, backup, "m0-recovery.json")

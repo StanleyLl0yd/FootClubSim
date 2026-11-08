@@ -1,0 +1,103 @@
+name: Playable season through the UI
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/playable-season-ui.yml'
+      - 'scripts/playable-season-*.mjs'
+      - 'scripts/chromium-e2e.mjs'
+      - 'scripts/macos-safari-smoke.py'
+      - 'src/app/**'
+      - 'src/browser/**'
+      - 'src/core/**'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  chromium:
+    name: Complete playable season on Windows ${{ matrix.browser }}
+    runs-on: windows-2025
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [Chrome, Edge]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build the production application
+        run: npm run build:web
+      - name: Play, pause, resume, export, and restore 240 fixtures
+        shell: pwsh
+        env:
+          SEASON_BROWSER: ${{ matrix.browser }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $browserPaths = if ($env:SEASON_BROWSER -eq 'Chrome') {
+            "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
+            "$env:ProgramFiles\Google\Chrome\Application\chrome.exe"
+          } else {
+            "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
+            "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe"
+          }
+          $browser = $browserPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (!$browser) { throw "Browser not installed: $env:SEASON_BROWSER" }
+
+          $preview = Start-Process -FilePath 'node' -ArgumentList @(
+            'node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4173', '--strictPort'
+          ) -PassThru -NoNewWindow -RedirectStandardOutput "$env:RUNNER_TEMP/playable-season-preview.log" -RedirectStandardError "$env:RUNNER_TEMP/playable-season-preview-error.log"
+          try {
+            $ready = $false
+            foreach ($attempt in 1..40) {
+              try {
+                $response = Invoke-WebRequest -Uri 'http://127.0.0.1:4173/' -TimeoutSec 2
+                if ($response.StatusCode -eq 200) { $ready = $true; break }
+              } catch {}
+              Start-Sleep -Seconds 1
+            }
+            if (!$ready) {
+              Get-Content "$env:RUNNER_TEMP/playable-season-preview-error.log"
+              throw 'Vite preview did not start'
+            }
+            node scripts/chromium-e2e.mjs "$browser" 'http://127.0.0.1:4173/' --playable-season
+            if ($LASTEXITCODE -ne 0) { throw "$env:SEASON_BROWSER playable season failed" }
+          } finally {
+            Stop-Process -Id $preview.Id -Force -ErrorAction SilentlyContinue
+          }
+
+  safari:
+    name: Complete playable season on macOS Safari
+    runs-on: macos-15
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build the production application
+        run: npm run build:web
+      - name: Enable local Safari WebDriver
+        run: sudo /usr/bin/safaridriver --enable
+      - name: Play, pause, resume, export, and restore 240 fixtures
+        run: python3 scripts/macos-safari-smoke.py --playable-season

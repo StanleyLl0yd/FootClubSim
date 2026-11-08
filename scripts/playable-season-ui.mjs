@@ -113,9 +113,10 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   const run = (fn, ...args) => evaluate('(' + fn.toString() + ')(...' + JSON.stringify(args) + ')');
   const state = () => run(seasonState);
   const pageStatus = () => evaluate('document.querySelector(".shell > .status")?.textContent.trim() ?? ""');
-  const waitPage = (prefix, timeout) => waitFor(async () => {
+  const waitPage = (prefix, timeout, previousStatus) => waitFor(async () => {
     const status = await pageStatus();
     if (status.startsWith(prefix)) return status;
+    if (status === previousStatus) return null;
     if (/^(Ошибка|Импорт .* отклонён|Полный экспорт не выполнен|Сохранение отклонено|Восстановление отклонено)/u.test(status))
       throw new Error(status);
     return null;
@@ -249,9 +250,10 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   await reload();
   await waitPage('Создайте тренера, выберите клуб');
   await click('Восстановить из браузера');
-  await waitFor(async () => (await pageStatus()) === 'Восстановление отклонено: NOT_FOUND', 'empty IndexedDB after deletion');
+  const missing = 'Восстановление отклонено: NOT_FOUND';
+  await waitFor(async () => (await pageStatus()) === missing, 'empty IndexedDB after deletion');
   await importArchive(archive);
-  await waitPage('Полная карьера восстановлена. Сыграно матчей: 240 из 240.', COLD_REPLAY_TIMEOUT);
+  await waitPage('Полная карьера восстановлена. Сыграно матчей: 240 из 240.', COLD_REPLAY_TIMEOUT, missing);
   await openSeason(TOTAL);
   assert.deepEqual(await run(finalSnapshot), before, 'Restored profile, standings or results differ from the finished season');
   console.log('PASS: ' + JSON.stringify({

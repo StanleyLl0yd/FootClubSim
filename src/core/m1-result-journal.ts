@@ -1,6 +1,5 @@
 import { sameCanonicalValue } from './canonical-value.js';
 import { generateDoubleRoundRobin, type Fixture } from './fixtures.js';
-import { importSyntheticCatalog } from './import.js';
 import { isStableId } from './identifiers.js';
 import {
   M1_V5_ENGINE_VERSION, M1_V5_EVENT_SCHEMA_VERSION,
@@ -8,8 +7,7 @@ import {
 } from './m1-phases-v5.js';
 import type { MatchLedgerReport } from './match-contracts.js';
 import type { Catalog } from './model.js';
-import { RNG_VERSION } from './rng.js';
-import type { InitialCareerSave } from './save.js';
+import { readInitialCareer, type InitialCareerSave } from './save.js';
 
 /**
  * Versioned standalone M1 result journal, NOT an upgrade of M0 save v1.
@@ -17,11 +15,6 @@ import type { InitialCareerSave } from './save.js';
  */
 export const M1_RESULT_JOURNAL_SCHEMA_VERSION = 1 as const;
 export const M1_APPLY_COMMAND_SCHEMA_VERSION = 1 as const;
-const INITIAL_KEYS = [
-  'saveSchemaVersion', 'careerId', 'revision', 'engineVersion',
-  'rngAlgorithmVersion', 'rngState', 'basePackId', 'basePackVersion',
-  'selectedClubId', 'catalog',
-] as const;
 const JOURNAL_KEYS = [
   'schemaVersion', 'careerId', 'controlledClubId', 'basePackId',
   'basePackVersion', 'revision', 'results',
@@ -84,25 +77,8 @@ const int = (value: unknown, min: number, max: number): value is number =>
   Number.isSafeInteger(value) && (value as number) >= min && (value as number) <= max;
 
 function trustedInitial(candidate: unknown): InitialCareerSave | null {
-  if (!rec(candidate) || !own(candidate, INITIAL_KEYS) ||
-      candidate.saveSchemaVersion !== 1 || candidate.revision !== 0 ||
-      candidate.engineVersion !== '0' ||
-      candidate.rngAlgorithmVersion !== RNG_VERSION ||
-      !int(candidate.rngState, 1, 0xffffffff) ||
-      !isStableId(candidate.careerId) ||
-      !isStableId(candidate.basePackId) ||
-      !isStableId(candidate.basePackVersion) ||
-      !isStableId(candidate.selectedClubId)) return null;
-  if (!rec(candidate.catalog)) return null;
-  let json: string;
-  try { json = JSON.stringify(candidate.catalog); }
-  catch { return null; }
-  const validated = importSyntheticCatalog(json);
-  if (!validated.ok || !sameCanonicalValue(candidate.catalog, validated.value) ||
-      validated.value.packId !== candidate.basePackId ||
-      validated.value.packVersion !== candidate.basePackVersion ||
-      !validated.value.clubs.some(club => club.id === candidate.selectedClubId)) return null;
-  return candidate as unknown as InitialCareerSave;
+  const canonical = readInitialCareer(candidate);
+  return canonical && sameCanonicalValue(canonical, candidate) ? canonical : null;
 }
 function fixtureMap(catalog: Catalog): ReadonlyMap<string, Fixture> {
   return new Map(generateDoubleRoundRobin(catalog.clubs.map(club => club.id))

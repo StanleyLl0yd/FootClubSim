@@ -49,8 +49,10 @@ test('unrecognized schema and invalid references are rejected even with a correc
       checksum: Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join(''),
     });
   }
-  assert.deepEqual(await importInitialCareer(await replacePayload(s => ({ ...s, saveSchemaVersion: 2 }))),
+  assert.deepEqual(await importInitialCareer(await replacePayload(s => ({ ...s, saveSchemaVersion: 3 }))),
     { ok: false, error: 'UNSUPPORTED_VERSION' });
+  assert.deepEqual(await importInitialCareer(await replacePayload(s => ({ ...s, saveSchemaVersion: 2 }))),
+    { ok: false, error: 'INVALID_DATA' });
   assert.deepEqual(await importInitialCareer(await replacePayload(s => ({ ...s, selectedClubId: 'missing' }))),
     { ok: false, error: 'INVALID_DATA' });
   assert.deepEqual(await importInitialCareer(await replacePayload(s => ({ ...s, revision: 1 }))),

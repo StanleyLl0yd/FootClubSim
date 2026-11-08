@@ -58,11 +58,13 @@ generated prose must not be the sole authoritative record. A biography
 regeneration changes history seed and proposed backstory, **not** the
 competency pool or a committed existing career.
 
-This is a future M2 feature and requires its own save-schema version,
-import validation, offline/browser tests and source-rights review. Neither
-the current M0 revision-0 initial save nor M1 match-engine protocol should
-be retroactively treated as implementing it. Details: [ADR-0003](docs/adr/0003-manager-origins-biographies.md),
-[#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
+The playable preview stores the confirmed profile in initial career schema 2
+with profile and biography template version 1. Schema 1 saves still load
+without a profile. JSON and full career archives use the same profile
+validator and retain the confirmed event sequence. Skills and biography
+provide character identity in this slice. Match inputs, simulation and
+authority to make football decisions use the existing contracts.
+See [ADR-0003](docs/adr/0003-manager-origins-biographies.md) and [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76).
 
 ## Player/staff decision authority
 

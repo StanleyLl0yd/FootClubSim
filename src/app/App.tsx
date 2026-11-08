@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { LIGA_PRIKOLOV_IDENTITIES } from '../branding/identities.js';
 import { ClubBadge } from './ClubBadge.js';
 import { M1Playtest } from './M1Playtest.js';
 import { M1DensePlaytest } from './M1DensePlaytest.js';
 import { M1LeagueSeason } from './M1LeagueSeason.js';
+import { ManagerProfileSetup, SavedManagerProfile } from './ManagerProfileSetup.js';
+import type { ManagerProfile } from '../core/manager-profile.js';
 import {createLigaPrikolovPreviewCatalog}
   from './ligaPrikolovPreviewCatalog.js';
 import {sameCanonicalValue} from '../core/canonical-value.js';
@@ -18,6 +20,7 @@ import {exportM1V188FullCareerBackup,restoreM1V188FullCareerBackup,
   from '../browser/m1-v188-full-career-backup.js';
 
 const CAREER_ID = 'm0-ui-initial-career';
+const WELCOME_MESSAGE = 'Создайте тренера, выберите клуб и начните сезон.';
 type PackMode='liga'|'demo';
 
 function errorMessage(error: unknown): string {
@@ -45,7 +48,9 @@ export function App() {
   const [storedIds,setStoredIds]=useState<readonly string[]>([]);
   const [storedId,setStoredId]=useState('');
   const [career, setCareer] = useState<InitialCareerSave | null>(null);
-  const [message, setMessage] = useState('Выберите клуб, создайте начальную карьеру и начните сезон.');
+  const [manager, setManager] = useState<ManagerProfile | null>(null);
+  const [message, setMessage] = useState(WELCOME_MESSAGE);
+  const packSelect = useRef<HTMLSelectElement>(null);
   const [working, setWorking] = useState(false);
   const club = catalog.clubs.find(entry => entry.id === selectedClubId)!;
   useEffect(()=>{
@@ -55,6 +60,10 @@ export function App() {
     }).catch(()=>{ /* IndexedDB availability is reported by explicit save/load. */ });
     return()=>{alive=false;};
   },[]);
+  useEffect(() => {
+    if (manager) packSelect.current?.focus();
+  }, [manager]);
+
   function modeForSaved(value:InitialCareerSave):PackMode|null{
     if(value.basePackId===legacyCatalog.packId&&
         value.basePackVersion===legacyCatalog.packVersion&&
@@ -74,11 +83,22 @@ export function App() {
   }
   const firstRound = rounds[0]!;
 
+  function startNewCareer(): void {
+    setMode('liga');
+    setSelectedClubId(ligaCatalog.clubs[0]!.id);
+    setCareer(null);
+    setManager(null);
+    setStoredId('');
+    setMessage(WELCOME_MESSAGE);
+  }
+
   function createCareer(): void {
+    if (!manager || working || fixtureErrors.length > 0) return;
     try {
       const careerId=mode==='liga'?
         'lp-career-'+crypto.randomUUID():CAREER_ID;
-      const next=createInitialCareer(catalog,selectedClubId,42,careerId);
+      const next=createInitialCareer(catalog,selectedClubId,42,careerId,manager);
+      setManager(null);
       setStoredId(careerId);
       setCareer(next);
       setMessage('Карьера создана. Сохраните её в браузере, затем начните сезон.');
@@ -119,6 +139,7 @@ export function App() {
       }
       setMode(restoredMode);
       setCareer(restored);
+      setManager(null);
       setSelectedClubId(restored.selectedClubId);
       setStoredId(restored.careerId);
       setMessage('Стартовая карьера восстановлена и проверена по SHA-256.');
@@ -186,6 +207,7 @@ export function App() {
       const restoredMode=modeForSaved(restored.initial);
       if(restoredMode===null)throw Error('Неверный игровой набор');
       setMode(restoredMode);setCareer(restored.initial);
+      setManager(null);
       setSelectedClubId(restored.initial.selectedClubId);
       setStoredId(restored.initial.careerId);
       try{setStoredIds(await listStoredInitialCareerIds());}
@@ -231,6 +253,7 @@ export function App() {
       }
       setMode(importedMode);
       setCareer(imported.value);
+      setManager(null);
       setSelectedClubId(imported.value.selectedClubId);
       setStoredId(imported.value.careerId);
       setMessage('Стартовая карьера проверена и загружена в память, без перезаписи IndexedDB.');
@@ -252,7 +275,7 @@ export function App() {
       <section className="hero" aria-labelledby="welcome">
         <p className="eyebrow">Футбольный клуб под вашим руководством</p>
         <h1 id="welcome">Начните свою карьеру</h1>
-        <p>Выберите клуб и проведите первый сезон: матчи, результаты, турнирная таблица и сохранение прогресса. Пока это игровая пробная версия на вымышленных командах и составах.</p>
+        <p>Создайте тренера, выберите клуб и проведите первый сезон: матчи, результаты, турнирная таблица и сохранение прогресса. Пока это игровая пробная версия на вымышленных командах и составах.</p>
       </section>
 
       <section className="metrics" aria-label="Тестовая лига">
@@ -275,11 +298,19 @@ export function App() {
         </div>
       </details>
 
+      {!career && !manager && <ManagerProfileSetup disabled={working}
+        onConfirm={profile => {
+          setManager(profile);
+          setMessage('Тренер подтверждён. Теперь выберите клуб.');
+        }} />}
+
       <div className="columns">
         <section className="panel" aria-labelledby="club-title">
-          <h2 id="club-title">Ваш клуб</h2>
+          <h2 id="club-title">2. Ваш клуб</h2>
+          {!career && !manager && <p className="subtle">Сначала подтвердите профиль тренера.</p>}
+          {manager && <p>Тренер: <strong>{manager.displayName}</strong></p>}
           <label htmlFor="pack-select">Игровой набор</label>
-          <select id="pack-select" value={mode} disabled={working}
+          <select id="pack-select" ref={packSelect} value={mode} disabled={working || !manager}
             onChange={event=>switchPack(event.target.value as PackMode)}>
             <option value="liga">Лига приколов · оригинальные клубы</option>
             <option value="demo">Технический деморежим M0</option>
@@ -288,7 +319,7 @@ export function App() {
             'Утверждённые вымышленные клубы; футболисты и характеристики полностью синтетические. Это ещё не подтверждённые составы РПЛ.':
             'Старый синтетический набор сохраняется для совместимости и тестов.'}</p>
           <label htmlFor="club-select">Выберите команду</label>
-          <select id="club-select" value={selectedClubId} disabled={working}
+          <select id="club-select" value={selectedClubId} disabled={working || !manager}
             onChange={event => {
               setSelectedClubId(event.target.value);
               setCareer(null);
@@ -305,13 +336,23 @@ export function App() {
             <strong>{club.displayName}</strong>
           </div>}
           <p className="subtle">В заявке: {club.registeredPlayerIds.length} игроков. Все имена и характеристики созданы генератором.</p>
-          <button type="button" onClick={createCareer} disabled={working || fixtureErrors.length > 0}>
-            Создать стартовую карьеру
-          </button>
+          <div className="button-stack">
+            {career ? <button type="button" onClick={startNewCareer} disabled={working}>
+              Новая карьера
+            </button> : <button type="button" onClick={createCareer}
+              disabled={working || !manager || fixtureErrors.length > 0}>
+              Создать стартовую карьеру
+            </button>}
+            {manager && <button type="button" className="secondary-button" disabled={working}
+              onClick={() => { setManager(null); setMessage(WELCOME_MESSAGE); }}>
+              Выбрать другого тренера
+            </button>}
+          </div>
           {career && <div className="career-info">
             <strong>Активная карьера</strong>
             <span>Клуб: {catalog.clubs.find(entry => entry.id === career.selectedClubId)?.displayName}</span>
             <span>Ревизия {career.revision} · схема сохранения {career.saveSchemaVersion}</span>
+            {career.managerProfile && <SavedManagerProfile profile={career.managerProfile} />}
           </div>}
         </section>
 

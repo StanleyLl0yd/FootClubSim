@@ -6,10 +6,12 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { exercisePlayableSeason } from './playable-season-ui.mjs';
 
 const executable = process.argv[2];
 const targetUrl = process.argv[3] ?? 'http://127.0.0.1:4173/';
-const privateFlag = process.argv[4] ?? null;
+const fullSeason = process.argv[4] === '--playable-season';
+const privateFlag = fullSeason ? null : process.argv[4] ?? null;
 if (privateFlag !== null && privateFlag !== '--incognito' && privateFlag !== '--inprivate') {
   console.error('Unknown browser mode, expected --incognito or --inprivate');
   process.exit(2);
@@ -74,7 +76,7 @@ function cdpClient(socket) {
     const timeout = setTimeout(() => {
       pending.delete(id);
       reject(new Error('CDP timed out: ' + method));
-    }, 20_000);
+    }, fullSeason && method === 'Runtime.evaluate' ? 10 * 60_000 : 20_000);
     pending.set(id, { resolve, reject, timeout });
     socket.send(JSON.stringify({ id, method, params }));
   });
@@ -241,6 +243,35 @@ async function run() {
     }
 
     await send('Page.navigate', { url: targetUrl });
+    if (fullSeason) {
+      await exercisePlayableSeason({
+        evaluate,
+        reload: () => send('Page.reload', { ignoreCache: true }),
+        browser: process.platform + ' ' + executable.split(/[\\/]/u).at(-1),
+        download: async ({ click, waitPage, filename }) => {
+          await send('Browser.setDownloadBehavior', {
+            behavior: 'allow', downloadPath: profile, eventsEnabled: true,
+          });
+          await click('Скачать полную карьеру');
+          await waitPage('Полный архив создан: стартовая карьера', 10 * 60_000);
+          const path = join(profile, filename);
+          const json = await until(async () => {
+            const contents = await readFile(path, 'utf8');
+            return contents.endsWith('}') ? contents : null;
+          }, 'native browser full-season archive download');
+          return { filename, json, path };
+        },
+        importArchive: async ({ path }) => {
+          const doc = await send('DOM.getDocument');
+          const input = await send('DOM.querySelector', {
+            nodeId: doc.root.nodeId, selector: '#import-full-file',
+          });
+          if (!input.nodeId) throw new Error('Full-career input unavailable');
+          await send('DOM.setFileInputFiles', { nodeId: input.nodeId, files: [path] });
+        },
+      });
+      return;
+    }
     const body = await waitText('Начните свою карьеру');
     for (const text of ['Календарь', 'Сохранения', '368', '240']) {
       if (!body.includes(text)) throw new Error('Missing M0 UI text: ' + text);

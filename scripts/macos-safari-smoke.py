@@ -346,6 +346,13 @@ def main():
             if not session:
                 raise RuntimeError("Safari WebDriver session could not be started")
 
+            if "--playable-season" in sys.argv[1:]:
+                subprocess.run(
+                    ["node", "scripts/playable-season-safari.mjs", DRIVER, session, APP_URL],
+                    cwd=ROOT, check=True, timeout=55 * 60,
+                )
+                return
+
             wd(session, "url", {"url": APP_URL})
             text = wait_for_text(session, "Начните свою карьеру")
             for expected in ("Календарь", "Сохранения", "368", "240"):

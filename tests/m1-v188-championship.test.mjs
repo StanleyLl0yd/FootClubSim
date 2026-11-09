@@ -71,19 +71,6 @@ test('title won on the final fixture is celebrated, not only early clinches',()=
   assert.equal(champion?.provisionalTieBreak,undefined);
 });
 
-function tiedLeaderFixture(againstOthers){
-  const first=catalog.clubs[0].id,second=catalog.clubs[1].id;
-  return fixture=>{
-    const {homeClubId:h,awayClubId:a}=fixture;
-    if(h===first&&a===second||h===second&&a===first)return[1,0];
-    if(h===first)return[...againstOthers(first),0];
-    if(a===first)return[0,...againstOthers(first)];
-    if(h===second)return[...againstOthers(second),0];
-    if(a===second)return[0,...againstOthers(second)];
-    return[0,0];
-  };
-}
-
 test('equal final points with a higher goal difference wins the provisional table',()=>{
   const first=catalog.clubs[0].id;
   const outcomes=fixture=>{

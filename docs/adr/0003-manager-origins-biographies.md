@@ -34,9 +34,10 @@ what they achieved; for the theorist, where/how they studied, learned and
 worked; for the custom profile, it derives a believable history from the
 distribution. All text must be reviewable by the user before career creation.
 
-These three alternatives and the relationship between origin, skills and
-biography are **approved product requirements**. Actual skill values and
-biography content generation mechanisms below are proposed.
+These three alternatives, the exact starting skill model and the initial
+versioned biography generator are **approved and implemented** in the
+Playable Preview. Future gameplay effects and deeper personal-history
+generation remain separate decisions.
 
 ## Manager competencies (distinct from player ratings)
 
@@ -59,8 +60,32 @@ abilities. The starting profile uses these stable domain keys.
 | `mediaCommunication` | Работа с прессой | Media interactions and public expectations |
 
 In the first playable profile, the skills describe the manager and inform
-the custom biography. Gameplay effects for training, scouting, recruiting,
-contracts, media and the match engine require separate reviewed formulas.
+the custom biography. **None of the 12 values currently changes a match,
+lineup, tactics, training, transfers, scouting, finances, media, or staff
+decisions.** A different manager origin never applies a hidden match
+bonus or removes player control.
+
+### Implementation/effect boundary (2026-11-09)
+
+| Competencies | Effect today | Potential future responsibility |
+| --- | --- | --- |
+| `tacticalKnowledge`, `matchPreparation`, `inGameAdaptation` | Stored/displayed; for custom profiles contribute to the fictional biography's analysis/leadership motif | Tactical coaching and preparation may be designed during formal M2 work, **only after** independently agreed, tested, deterministic formulas |
+| `trainingMethodology`, `playerDevelopment`, `peopleManagement`, `motivation` | Stored/displayed; contribute to custom biography's development/leadership motif | Training, progression, morale and staff systems in M3+ or a separately approved later slice |
+| `talentAssessment`, `scoutingAnalysis` | Stored/displayed; contribute to custom biography's development/analysis motif | Recruitment and scouting systems in M3+ |
+| `negotiation`, `clubManagement`, `mediaCommunication` | Stored/displayed; contribute to custom biography's operations motif | Contracts, finance, club administration, and media systems in M3+ |
+
+For former-player and theorist presets, the complete skill vector is fixed
+by the selected origin and determines the visible profile; the fictional
+biography follows its corresponding origin path. For the custom profile, a
+deterministic comparison of four three-skill clusters selects the biography
+motif; a tie selects the balanced generalist path. Regeneration changes
+only the biography seed and timeline, never the saved skill values.
+
+Future-stage descriptions are **not promises of currently implemented
+effects**. M2 and M3+ may refine ownership of individual formulas during
+their own acceptance; no preview skill is connected to the v188 match source.
+See [#76](https://github.com/StanleyLl0yd/FootClubSim/issues/76) and
+[Playable Preview acceptance](../PLAYABLE_PREVIEW_ACCEPTANCE.md).
 
 ## Approved starting allocation
 
@@ -76,7 +101,14 @@ The first version collects a display name. Biography events use years
 relative to career start and are confirmed before club selection. Future
 growth, effects and optional personal details need separate design work.
 
-## Biography synthesis (proposed deterministic local pipeline)
+## Biography synthesis
+
+The first implemented version uses a local, seeded generator with three
+canonical timeline events per origin (former player, theorist, or custom),
+relative years, version-1 templates and bounded variations. The accepted
+events/seed are preserved across reload and complete career export/import.
+The following more detailed pipeline remains a **future design direction**,
+not a claim that the preview already generates every proposed field.
 
 1. Collect the manager's chosen display name and only the minimal **optional**
    self-description inputs the design ultimately approves (e.g. starting age,
@@ -152,25 +184,25 @@ but never silently take authority.
 Future effects must be explainable, bounded and deterministic; no secretly
 scripted match wins or preferential treatment because of origin.
 
-## Proposed staged delivery
+## Implementation stages and remaining gates
 
-- **M0:** accept the above product requirement, document proposed competency
-  contract, biography integrity invariants, UX acceptance tests and
-  architectural ownership. No live profile wizard, career schema mutation,
-  manager AI or match engine implementation in M0.
-- **M1:** no origin feature work. The match engine remains an independent
-  seeded calculation under its own reviewed input schema, subject to the
-  mandatory M0 exit pause and explicit owner authorization.
-- **M2 (first playable browser season):** manager creation flow before club
-  selection, three origin choices, default/preset and custom point allocator,
-  biography preview/regeneration, durable versioned manager profile and
-  offline Russian text, with same-seed replay and cross-browser save tests.
-  Connect only mechanics already implemented and whose formulas were
-  reviewed; do not claim future abilities already influence gameplay.
-- **M3+:** wire training, staff, contracts, recruitment and media competence
-  into their respective real systems, with measured balancing and audit
-  transparency. Later career development, achievements and changes in
-  manager reputation should be versioned and based on actual simulated events.
+- **M0:** completed under ADR-0010; only the original design contract was
+  accepted at this stage.
+- **Playable Preview:** manager creation, all three origins, approved skill
+  budgets, biography preview/regeneration and save/archive persistence
+  implemented in [#485](https://github.com/StanleyLl0yd/FootClubSim/pull/485).
+  The owner accepted the *preview criteria* on 2026-11-09, but manual product
+  acceptance remains OPEN in
+  [#488](https://github.com/StanleyLl0yd/FootClubSim/issues/488). This is
+  authorized prototype work while formal M1/M2 remain open under ADR-0011.
+- **Formal M2:** gameplay effects are **not** implied by the wizard. Any
+  future tactical manager effects require a reviewed formula, legal inputs,
+  tests and explicit acceptance. M2 sporting/data/rights conditions and its
+  own exit audits still apply independently.
+- **M3+:** as the training, staff, contracts, recruitment and media systems
+  are implemented, wire reviewed manager-skill effects into those systems
+  with measurable balancing and transparent deterministic behavior.
+  Version later manager growth, reputation and achievements separately.
 
 ## Future implementation test cases
 
@@ -204,13 +236,13 @@ scripted match wins or preferential treatment because of origin.
 
 ## Open design details
 
-Exact twelve-attribute list, numerical ranges and pool, background-specific
-distributions, starting age controls, fictional timeline templates, point
-respec rules, UI content lengths, biographical editing policy, future manager
-growth/reputation and gameplay influence weights are **proposals awaiting
-owner design approval**. The accepted principle does not sign off these
-numbers. See implementation tracking issue linked from the project roadmap.
+The twelve attributes, 1–20 scale, starting 5–15 range, 120-point budget,
+approved presets and version-1 seeded biography are **no longer proposals**.
+Still unapproved are starting age controls, manual biography editing, skill
+respec/growth, reputation, additional detailed biographical templates, and
+all numerical gameplay-effect/balancing formulas. Formal M2 data/rules/rights,
+M1 and M2 exit audits, and the separate storage-release gate remain OPEN.
 
-**M0 subsequently closed** under [ADR-0010](0010-m0-final-acceptance.md).
-Detailed M2 profile design and release rights remain open; **STOP** before
-M1 until explicitly authorized.
+M0 closed under [ADR-0010](0010-m0-final-acceptance.md), M1 was
+subsequently authorized, and the playable-first direction was separately
+approved under [ADR-0011](0011-playable-first.md).

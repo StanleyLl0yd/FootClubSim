@@ -12,6 +12,12 @@ The owner directed active development toward a **working game**, not more low-fr
 
 **The next decision is owner product acceptance, not an automatic M1 or M2 exit:** automated full seasons have passed in Windows Chrome/Edge and macOS Safari, and the owner has played complete seasons and reported follow-up defects. The nine owner checklist items are **not signed off**. Real Safari lifecycle/download and quota/eviction coverage remain open in [#155](https://github.com/StanleyLl0yd/FootClubSim/issues/155).
 
+## Player-facing navigation · 2026-11-09
+
+Two in-page workspaces: **«Тренер и клуб»** for onboarding and club selection, **«Сезон»** for active competition. The canonical v188 season stays mounted while hidden; save/restore and full archive controls are shared in an expandable panel. Creating, loading or importing a career opens the season automatically; starting a new career returns to setup. No browser routes, persistence schema migrations or match-engine changes.
+
+Extend the same workspace navigation with dedicated **transfers, finances, contracts and staff** sections only when their M3 game functionality is implemented. Avoid dead tabs or an ever-growing season page. Verify keyboard tab access, responsive layout and an entire v188 season with reload and full archive restore; manual product acceptance [#488](https://github.com/StanleyLl0yd/FootClubSim/issues/488) remains OPEN.
+
 ## Playable Preview: published state and owner-feedback backlog · 2026-11-09
 
 **Published test build:** [GitHub Pages](https://stanleyll0yd.github.io/FootClubSim/). Initial preview [#495](https://github.com/StanleyLl0yd/FootClubSim/pull/495) has since been superseded by [#497](https://github.com/StanleyLl0yd/FootClubSim/pull/497) (club badges and actor teams), [#498](https://github.com/StanleyLl0yd/FootClubSim/pull/498) (measurable versioned formation influence), and [#499](https://github.com/StanleyLl0yd/FootClubSim/pull/499) (final-round leader congratulation). GitHub Actions publication is confirmed; independent HTTP verification and overall owner manual sign-off remain separate.

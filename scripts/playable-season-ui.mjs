@@ -293,6 +293,11 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   const started = Date.now();
   await waitPage('Создайте тренера, выберите клуб');
   assert.equal(await evaluate('document.querySelector("#club-select").disabled'), true);
+  assert.deepEqual(await run(() => ({
+    selected:document.querySelector('.workspace-tabs [aria-selected="true"]')?.textContent.trim(),
+    seasonDisabled:document.querySelector('#workspace-season-tab')?.disabled,
+    setupHidden:document.querySelector('#workspace-setup')?.hidden,
+  })),{selected:'Тренер и клуб',seasonDisabled:true,setupHidden:false});
   await setValue('#manager-name', managerName);
   const wizard = () => run(managerWizardSnapshot);
   const origin = async index => {
@@ -350,6 +355,18 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   await click('Создать стартовую карьеру');
   const careerId = await evaluate('document.querySelector("#career-saved-select").value');
   assert.match(careerId, /^lp-career-/u);
+  // A created career opens the season; tab switching does not reload it.
+  assert.equal(await evaluate('document.querySelector("#workspace-setup").hidden'),true);
+  assert.equal(await evaluate('document.querySelector("#workspace-season").hidden'),false);
+  await click('Тренер и клуб','.workspace-tabs');
+  assert.equal(await evaluate('document.querySelector("#workspace-setup").hidden'),false);
+  await click('Сезон','.workspace-tabs');
+  assert.equal(await evaluate('document.querySelector("#workspace-season").hidden'),false);
+  assert.equal(await run(() => {
+    const storage=document.querySelector('.workspace-storage');
+    storage.querySelector('summary').click();
+    return storage.open;
+  }),true,'Save/restore controls not accessible from season workspace');
   // Regression: launch directly after career creation without manual save.
   // The app must commit the initial snapshot, and must not replace it on retry.
   let current = await openSeason(0);
@@ -370,6 +387,13 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
       const useHalfTime = before.ownNext && !tacticalFixture;
       const shouldPause=pausedAt===null && before.revision>=80 && before.revision<200;
 
+      if(before.own===1){
+        await click('Тренер и клуб','.workspace-tabs');
+        assert.equal(await evaluate('document.querySelector("#workspace-season").hidden'),true);
+        await click('Сезон','.workspace-tabs');
+        assert.equal((await state()).revision,before.revision,
+          'Switching workspace remounted or reset the running season');
+      }
       if (useHalfTime) {
         await seasonClick('Настроить стартовый состав');
         await setValue('.season-tactics-grid select', '1');
@@ -459,6 +483,7 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
         await setValue('#career-saved-select',careerId);
         await click('Восстановить из браузера');
         await waitPage('Стартовая карьера восстановлена');
+        assert.equal(await evaluate('document.querySelector("#workspace-season").hidden'),false);
         current=await openSeason(pausedAt);
         assert.equal(current.own,before.own+1);
         console.log(browser+': automatic opponent batch interrupted after '+
@@ -516,6 +541,7 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   await waitFor(async () => (await pageStatus()) === missing, 'empty IndexedDB after deletion');
   await importArchive(archive);
   await waitPage('Полная карьера восстановлена. Сыграно матчей: 240 из 240.', COLD_REPLAY_TIMEOUT, missing);
+  assert.equal(await evaluate('document.querySelector("#workspace-season").hidden'),false);
   await openSeason(TOTAL);
   assert.deepEqual(await run(finalSnapshot), before, 'Restored profile, standings or results differ from the finished season');
   console.log('PASS: ' + JSON.stringify({

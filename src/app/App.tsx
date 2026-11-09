@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { LIGA_PRIKOLOV_IDENTITIES } from '../branding/identities.js';
 import { ClubBadge } from './ClubBadge.js';
 import { M1Playtest } from './M1Playtest.js';
@@ -39,6 +39,9 @@ export function App() {
   const legacyCatalog=useMemo(()=>createSyntheticRplScaleCatalog(2026),[]);
   const ligaCatalog=useMemo(()=>createLigaPrikolovPreviewCatalog(2026),[]);
   const [mode,setMode]=useState<PackMode>('liga');
+  const [activeTab,setActiveTab]=useState<'setup'|'season'>('setup');
+  const setupTabRef=useRef<HTMLButtonElement>(null);
+  const seasonTabRef=useRef<HTMLButtonElement>(null);
   const catalog=mode==='liga'?ligaCatalog:legacyCatalog;
   const rounds = useMemo(() => generateDoubleRoundRobin(catalog.clubs.map(club => club.id)), [catalog]);
   const fixtureErrors = useMemo(
@@ -74,6 +77,7 @@ export function App() {
     return null;
   }
   function switchPack(next:PackMode):void{
+    switchWorkspace('setup');
     setMode(next);
     setSelectedClubId(
       (next==='liga'?ligaCatalog:legacyCatalog).clubs[0]!.id);
@@ -84,6 +88,7 @@ export function App() {
   const firstRound = rounds[0]!;
 
   function startNewCareer(): void {
+    switchWorkspace('setup');
     setMode('liga');
     setSelectedClubId(ligaCatalog.clubs[0]!.id);
     setCareer(null);
@@ -104,6 +109,7 @@ export function App() {
       setManager(null);
       setStoredId(careerId);
       setCareer(next);
+      switchWorkspace('season');
       setMessage('Карьера создана. При запуске сезона она автоматически сохранится в браузере.');
     } catch (error) {
       setMessage('Ошибка создания: ' + errorMessage(error));
@@ -152,6 +158,7 @@ export function App() {
       }
       setMode(restoredMode);
       setCareer(restored);
+      switchWorkspace('season');
       setManager(null);
       setSelectedClubId(restored.selectedClubId);
       setStoredId(restored.careerId);
@@ -220,6 +227,7 @@ export function App() {
       const restoredMode=modeForSaved(restored.initial);
       if(restoredMode===null)throw Error('Неверный игровой набор');
       setMode(restoredMode);setCareer(restored.initial);
+      switchWorkspace('season');
       setManager(null);
       setSelectedClubId(restored.initial.selectedClubId);
       setStoredId(restored.initial.careerId);
@@ -266,6 +274,7 @@ export function App() {
       }
       setMode(importedMode);
       setCareer(imported.value);
+      switchWorkspace('season');
       setManager(null);
       setSelectedClubId(imported.value.selectedClubId);
       setStoredId(imported.value.careerId);
@@ -277,6 +286,24 @@ export function App() {
     }
   }
 
+  function switchWorkspace(next:'setup'|'season'):void{
+    setActiveTab(next);
+    // A section change must not leave the viewport halfway down an old tab.
+    window.scrollTo({top:0,behavior:'auto'});
+  }
+
+  function onTabKeyDown(event:ReactKeyboardEvent<HTMLButtonElement>):void{
+    if(!career)return;
+    const next=event.key==='Home'?'setup':
+      event.key==='End'?'season':
+      event.key==='ArrowLeft'||event.key==='ArrowRight'?
+        activeTab==='setup'?'season':'setup':null;
+    if(next===null)return;
+    event.preventDefault();
+    switchWorkspace(next);
+    (next==='setup'?setupTabRef:seasonTabRef).current?.focus();
+  }
+
   return (
     <main className="shell">
       <header className="masthead">
@@ -285,6 +312,52 @@ export function App() {
         <span className="edition">Версия 0.0.0 · игровой прототип</span>
       </header>
 
+      <nav className="workspace-tabs" role="tablist" aria-label="Разделы карьеры">
+        <button ref={setupTabRef} id="workspace-setup-tab" type="button"
+          role="tab" aria-controls="workspace-setup" aria-selected={activeTab==='setup'}
+          tabIndex={activeTab==='setup'?0:-1} onKeyDown={onTabKeyDown}
+          onClick={()=>switchWorkspace('setup')}>Тренер и клуб</button>
+        <button ref={seasonTabRef} id="workspace-season-tab" type="button"
+          role="tab" aria-controls="workspace-season" aria-selected={activeTab==='season'}
+          tabIndex={activeTab==='season'?0:-1} onKeyDown={onTabKeyDown}
+          disabled={!career} onClick={()=>switchWorkspace('season')}>Сезон</button>
+      </nav>
+
+      <details className="panel workspace-storage">
+        <summary>Сохранения и архивы</summary>
+        <div className="workspace-storage-inner">
+        <section aria-labelledby="save-title">
+          <h2 id="save-title">Сохранения</h2>
+          <p className="subtle">Стартовое состояние хранится локально. Уже записанная карьера не перезаписывается.</p>
+          <p className="subtle">Обычный JSON сохраняет только начальные данные. Полный архив включает и журнал матчей; храните его вне браузера.</p>
+          <label htmlFor="career-saved-select">Сохранённые карьеры</label>
+          <select id="career-saved-select" value={storedId}
+            onChange={event=>setStoredId(event.target.value)}
+            disabled={working}>
+            <option value="">Сохранение не выбрано</option>
+            {storedId&&!storedIds.includes(storedId)&&
+              <option value={storedId}>Текущая карьера</option>}
+            {storedIds.map(id=><option key={id} value={id}>
+              {id===CAREER_ID?'Демокарьера M0':
+                'Лига приколов · '+id.slice(-12)}
+            </option>)}
+          </select>
+          <div className="button-stack">
+            <button type="button" onClick={() => void saveCareer()} disabled={!career || working}>Сохранить в браузере</button>
+            <button type="button" onClick={() => void restoreCareer()} disabled={working}>Восстановить из браузера</button>
+            <button type="button" onClick={() => void downloadCareer()} disabled={!career || working}>Экспортировать JSON</button>
+            <button type="button" onClick={() => void downloadFullCareer()} disabled={!career || working}>Скачать полную карьеру</button>
+          </div>
+          <label className="file-label" htmlFor="import-file">Импортировать JSON</label>
+          <input id="import-file" type="file" accept=".json,application/json" onChange={event => void importCareer(event)} disabled={working} />
+          <label className="file-label" htmlFor="import-full-file">Восстановить полную карьеру</label>
+          <input id="import-full-file" type="file" accept=".json,application/json" onChange={event => void importFullCareer(event)} disabled={working} />
+        </section>
+        </div>
+      </details>
+
+      <div id="workspace-setup" role="tabpanel" aria-labelledby="workspace-setup-tab"
+        hidden={activeTab!=='setup'}>
       <section className="hero" aria-labelledby="welcome">
         <p className="eyebrow">Футбольный клуб под вашим руководством</p>
         <h1 id="welcome">Начните свою карьеру</h1>
@@ -317,7 +390,7 @@ export function App() {
           setMessage('Тренер подтверждён. Теперь выберите клуб.');
         }} />}
 
-      <div className="columns">
+      <div className="setup-club">
         <section className="panel" aria-labelledby="club-title">
           <h2 id="club-title">2. Ваш клуб</h2>
           {!career && !manager && <p className="subtle">Сначала подтвердите профиль тренера.</p>}
@@ -369,35 +442,24 @@ export function App() {
           </div>}
         </section>
 
-        <section className="panel" aria-labelledby="save-title">
-          <h2 id="save-title">Сохранения</h2>
-          <p className="subtle">Стартовое состояние хранится локально. Уже записанная карьера не перезаписывается.</p>
-          <p className="subtle">Обычный JSON сохраняет только начальные данные. Полный архив включает и журнал матчей; храните его вне браузера.</p>
-          <label htmlFor="career-saved-select">Сохранённые карьеры</label>
-          <select id="career-saved-select" value={storedId}
-            onChange={event=>setStoredId(event.target.value)}
-            disabled={working}>
-            <option value="">Сохранение не выбрано</option>
-            {storedId&&!storedIds.includes(storedId)&&
-              <option value={storedId}>Текущая карьера</option>}
-            {storedIds.map(id=><option key={id} value={id}>
-              {id===CAREER_ID?'Демокарьера M0':
-                'Лига приколов · '+id.slice(-12)}
-            </option>)}
-          </select>
-          <div className="button-stack">
-            <button type="button" onClick={() => void saveCareer()} disabled={!career || working}>Сохранить в браузере</button>
-            <button type="button" onClick={() => void restoreCareer()} disabled={working}>Восстановить из браузера</button>
-            <button type="button" onClick={() => void downloadCareer()} disabled={!career || working}>Экспортировать JSON</button>
-            <button type="button" onClick={() => void downloadFullCareer()} disabled={!career || working}>Скачать полную карьеру</button>
-          </div>
-          <label className="file-label" htmlFor="import-file">Импортировать JSON</label>
-          <input id="import-file" type="file" accept=".json,application/json" onChange={event => void importCareer(event)} disabled={working} />
-          <label className="file-label" htmlFor="import-full-file">Восстановить полную карьеру</label>
-          <input id="import-full-file" type="file" accept=".json,application/json" onChange={event => void importFullCareer(event)} disabled={working} />
-        </section>
+
       </div>
 
+      {!career&&<section className="panel" aria-labelledby="schedule-title">
+        <h2 id="schedule-title">Календарь · тур {firstRound.number}</h2>
+        <p className="subtle">Тестовое двухкруговое расписание. Это не официальный календарь РПЛ.</p>
+        <ol className="matches">
+          {firstRound.fixtures.map(fixture => <li key={fixture.id}>
+            <span>{catalog.clubs.find(entry => entry.id === fixture.homeClubId)?.displayName}</span>
+            <span className="versus">vs</span>
+            <span>{catalog.clubs.find(entry => entry.id === fixture.awayClubId)?.displayName}</span>
+          </li>)}
+        </ol>
+      </section>}
+      </div>
+
+      <div id="workspace-season" role="tabpanel" aria-labelledby="workspace-season-tab"
+        hidden={activeTab!=='season'}>
       {career && <M1LeagueSeason key={career.careerId}
         career={career} disabled={working}
         onCareerStored={()=>{
@@ -411,17 +473,9 @@ export function App() {
         <M1DensePlaytest key={career.selectedClubId} career={career} disabled={working} />
       </details>}
 
-      {!career&&<section className="panel" aria-labelledby="schedule-title">
-        <h2 id="schedule-title">Календарь · тур {firstRound.number}</h2>
-        <p className="subtle">Тестовое двухкруговое расписание. Это не официальный календарь РПЛ.</p>
-        <ol className="matches">
-          {firstRound.fixtures.map(fixture => <li key={fixture.id}>
-            <span>{catalog.clubs.find(entry => entry.id === fixture.homeClubId)?.displayName}</span>
-            <span className="versus">vs</span>
-            <span>{catalog.clubs.find(entry => entry.id === fixture.awayClubId)?.displayName}</span>
-          </li>)}
-        </ol>
-      </section>}
+
+
+      </div>
 
       <p className="status" role="status" aria-live="polite">{fixtureErrors.length ?
         'Календарь некорректен: ' + fixtureErrors[0]!.code : message}</p>

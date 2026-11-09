@@ -49,6 +49,8 @@ function finalSnapshot() {
     table: rows('.season-columns .season-table tbody tr', 'td, th'),
     own: rows('.season-own-calendar li', ':scope > span, :scope > strong'),
     finalRound: rows('.season-fixtures li', ':scope > span, :scope > strong'),
+    lastOwnScoreboard: text(document.querySelector(
+      '.season-scoreboard > div:nth-child(2)')),
     tableBadges:document.querySelectorAll(
       '.season-columns .season-table tbody tr svg[role=img]').length,
     fixtureBadges:document.querySelectorAll(
@@ -177,6 +179,16 @@ function verifyArchive(json, careerId, snapshot) {
   assert.equal(snapshot.report.options,OWN);
   const lastPrematch=lastOwn.source.prematch.fixture;
   const lastResult=lastOwn.result.report;
+  assert.ok(snapshot.lastOwnScoreboard.includes(
+    'Последний матч вашего клуба · тур '+lastOwn.round),
+    'Scoreboard must identify the most recently played own-club fixture');
+  assert.ok(snapshot.lastOwnScoreboard.includes(
+    clubs.get(lastPrematch.homeClubId).name));
+  assert.ok(snapshot.lastOwnScoreboard.includes(
+    clubs.get(lastPrematch.awayClubId).name));
+  assert.ok(snapshot.lastOwnScoreboard.includes(
+    lastResult.home.goals+' : '+lastResult.away.goals),
+    'Scoreboard cannot show another club’s most recent league fixture');
   const expectedScore=[lastPrematch.homeClubId,lastPrematch.awayClubId].map(id=>
     clubs.get(id).name);
   assert.ok(snapshot.report.score.includes(expectedScore[0])&&

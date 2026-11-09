@@ -14,13 +14,13 @@ The owner directed active development toward a **working game**, not more low-fr
 
 ## Playable Preview: published state and owner-feedback backlog · 2026-11-09
 
-**Published test build:** [GitHub Pages](https://stanleyll0yd.github.io/FootClubSim/); [#495](https://github.com/StanleyLl0yd/FootClubSim/pull/495) merged on protected main at \`e61aaa3aed5528b3c24171dc3a191732434ef804\`, and [Pages workflow #42626732901](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/42626732901) completed successfully. The PR head passed 14/14 checks, including full-season Chrome/Edge/Safari evidence. This confirms GitHub Actions publication, **not** independent HTTP/browser verification of the live Pages URL or owner sign-off.
+**Published test build:** [GitHub Pages](https://stanleyll0yd.github.io/FootClubSim/); [#495](https://github.com/StanleyLl0yd/FootClubSim/pull/495) merged on protected main at `e61aaa3aed5528b3c24171dc3a191732434ef804`, and [Pages workflow #42626732901](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/42626732901) completed successfully. The PR head passed 14/14 checks, including full-season Chrome/Edge/Safari evidence. This confirms GitHub Actions publication, **not** independent HTTP/browser verification of the live Pages URL or owner sign-off.
 
 **Implemented after the first owner playthrough; owner retest still required:**
 
 | Owner finding | Integrated change | Evidence / outstanding check |
 | --- | --- | --- |
-| Starting an unsaved career raised \`NOT_FOUND\` | Start-season persists the new active career safely | [#492](https://github.com/StanleyLl0yd/FootClubSim/pull/492); owner retest |
+| Starting an unsaved career raised `NOT_FOUND` | Start-season persists the new active career safely | [#492](https://github.com/StanleyLl0yd/FootClubSim/pull/492); owner retest |
 | Other clubs' fixtures required manual clicks | Automatically simulate opponents up to the next user's fixture, including the final season tail | [#493](https://github.com/StanleyLl0yd/FootClubSim/pull/493); owner retest |
 | Table lacked W/D/L; XI had no formation selector | Show wins/draws/losses; select and persist a formation with a schematic XI field | [#494](https://github.com/StanleyLl0yd/FootClubSim/pull/494); **effect on play not yet established** |
 | No title celebration, limited match history, tactics reset between matches | Read-only mathematically guaranteed title display, event-derived own-match reports, carry forward eligible XI/formation/pressing/tempo | [#495](https://github.com/StanleyLl0yd/FootClubSim/pull/495); owner retest |

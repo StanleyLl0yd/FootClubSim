@@ -48,6 +48,22 @@ function finalSnapshot() {
   };
 }
 
+function managerWizardSnapshot() {
+  const root = document.querySelector('.manager-setup');
+  if (!root) return null;
+  const skills = [...root.querySelectorAll('.manager-skills li strong')]
+    .map(node => Number(node.textContent.trim()));
+  const show = [...root.querySelectorAll('button')]
+    .find(button => button.textContent.trim() === 'Показать биографию');
+  return {
+    skills,
+    remaining: root.querySelector('[aria-live="polite"]')?.textContent.trim() ?? null,
+    canPreview: Boolean(show && !show.disabled),
+    biography: [...root.querySelectorAll('.m1-preview .manager-timeline li')]
+      .map(node => node.textContent.trim().replace(/\s+/gu, ' ')),
+  };
+}
+
 function verifyArchive(json, careerId, snapshot) {
   const envelope = JSON.parse(json);
   const initial = JSON.parse(JSON.parse(envelope.initialPayload).payload);
@@ -70,6 +86,7 @@ function verifyArchive(json, careerId, snapshot) {
   const calendar = [];
   const finalRound = [];
   let ownWithTactics = 0;
+  let ownWithHalfTime = 0;
   for (const entry of journal.entries) {
     const fixture = entry.source.prematch.fixture;
     const home = clubs.get(fixture.homeClubId);
@@ -90,11 +107,15 @@ function verifyArchive(json, careerId, snapshot) {
         atHome ? 'Дома: ' + away.name : 'В гостях: ' + home.name,
         (atHome ? hg + ' : ' + ag : ag + ' : ' + hg)]);
       if (entry.source.managedXI?.tactics.mentality === 1) ownWithTactics++;
+      if (entry.source.plannedCommands.some(command => command?.kind === 'substitute-normal' &&
+        command.actor?.kind === 'player' && command.teamId === clubId &&
+        command.elapsedSeconds === 2700)) ownWithHalfTime++;
     }
     if (entry.round === 30) finalRound.push([home.name + ' — ' + away.name, hg + ' : ' + ag]);
   }
   assert.equal(calendar.length, OWN);
   assert.equal(ownWithTactics, 1);
+  assert.equal(ownWithHalfTime, 1, 'Halftime manager substitution missing from canonical journal');
   assert.equal(finalRound.length, 8);
   assert.equal(clubs.size, 16);
   assert.ok([...clubs.values()].every(row => row.played === OWN));
@@ -160,10 +181,57 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   await waitPage('Создайте тренера, выберите клуб');
   assert.equal(await evaluate('document.querySelector("#club-select").disabled'), true);
   await setValue('#manager-name', managerName);
-  await evaluate('document.querySelectorAll("input[name=manager-origin]")[2].click()');
+  const wizard = () => run(managerWizardSnapshot);
+  const origin = async index => {
+    assert.equal(await run(i => {
+      const input = document.querySelectorAll('input[name="manager-origin"]')[i];
+      if (!input) return false;
+      input.click();
+      return true;
+    }, index), true);
+    return waitFor(async () => {
+      const current = await wizard();
+      return current?.skills.length === 12 && current.skills.every(value =>
+        Number.isInteger(value) && value >= 5 && value <= 15) &&
+        current.skills.reduce((sum, value) => sum + value, 0) === 120 &&
+        current.canPreview && current.biography.length === 0 ? current : null;
+    }, 'valid 12-skill profile');
+  };
+  for (const index of [0, 1]) {
+    const profile = await origin(index);
+    assert.equal(profile.skills.reduce((sum, value) => sum + value, 0), 120);
+    await click('Показать биографию');
+    await waitFor(async () => (await wizard())?.biography.length === 3,
+      'three biography events for origin ' + index);
+    await click('Сгенерировать заново');
+    const regenerated = await wizard();
+    assert.deepEqual(regenerated.skills, profile.skills,
+      'Biography regeneration changed preset manager skills');
+    assert.equal(regenerated.biography.length, 3);
+  }
+  await origin(2);
+  await setValue('#manager-skill-tacticalKnowledge', '15');
+  await waitFor(async () => (await wizard())?.remaining === 'Снимите очков: 5',
+    'custom skill over-budget feedback');
+  assert.equal((await wizard()).canPreview, false, 'Over-budget profile accepted');
+  await setValue('#manager-skill-mediaCommunication', '5');
+  await waitFor(async () => (await wizard())?.remaining === 'Осталось распределить очков: 0',
+    'custom skill exact-budget feedback');
+  await click('Сбросить навыки');
+  assert.deepEqual((await wizard()).skills, Array(12).fill(10), 'Reset does not restore 120 points');
   await setValue('#manager-skill-tacticalKnowledge', '15');
   await setValue('#manager-skill-mediaCommunication', '5');
+  const custom = await waitFor(async () => {
+    const current = await wizard();
+    return current?.canPreview && current.remaining === 'Осталось распределить очков: 0' ?
+      current : null;
+  }, 'custom manager within 120-point budget');
   await click('Показать биографию');
+  await waitFor(async () => (await wizard())?.biography.length === 3,
+    'custom biography preview');
+  await click('Сгенерировать заново');
+  assert.deepEqual((await wizard()).skills, custom.skills,
+    'Biography regeneration changed custom manager skills');
   await click('Подтвердить тренера');
   await setValue('#club-select', clubId);
   await click('Создать стартовую карьеру');
@@ -216,13 +284,27 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
         console.log(browser + ': interrupted after saved fixture ' + pausedAt + ' and resumed after reload');
       }
     } else {
-      if (before.ownNext && !tacticalFixture) {
+      const useHalfTime = before.ownNext && !tacticalFixture;
+      if (useHalfTime) {
         await seasonClick('Настроить стартовый состав');
         await setValue('.season-tactics-grid select', '1');
+        await seasonClick('Настроить замену');
+        assert.equal(await run(() => {
+          const out = document.querySelector('#season-sub-out');
+          const incoming = document.querySelector('#season-sub-in');
+          return Boolean(out?.value && incoming?.value && out.value !== incoming.value);
+        }), true, 'No eligible halftime substitution pair');
+        await seasonClick('Рассчитать с заменой');
         tacticalFixture = true;
+      } else {
+        await seasonClick('Рассчитать матч');
       }
-      await seasonClick('Рассчитать матч');
       await waitSeason(value => value.status.startsWith('Результат рассчитан'), 'match preview');
+      if (useHalfTime) {
+        assert.equal(await run(() => [...document.querySelectorAll('.season-preview p')]
+          .some(node => node.textContent.includes('Замена в перерыве включена'))), true,
+        'No visible halftime-substitution confirmation');
+      }
       await seasonClick('Подтвердить и сохранить');
       current = await waitSeason(value => value.revision === before.revision + 1 &&
         value.status.startsWith('Матч №' + (before.revision + 1) + ' записан'), 'explicit match commit');
@@ -242,6 +324,30 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   const archive = await download({ click, waitPage, filename: expectedName });
   assert.equal(archive.filename, expectedName);
   verifyArchive(archive.json, careerId, before);
+
+  // A syntactically valid payload with an invalid SHA-256 must not overwrite
+  // an already healthy saved career. Exercise the real browser file-input path.
+  const tampered = JSON.parse(archive.json);
+  tampered.journalPayload += ' ';
+  await importArchive({
+    filename: 'footclubsim-tampered-full-career.json',
+    json: JSON.stringify(tampered),
+  });
+  await waitFor(async () => {
+    const status = await pageStatus();
+    return status.startsWith('Импорт полного архива отклонён:') &&
+      status.includes('INVALID_BACKUP');
+  }, 'corrupt full archive rejected before any write');
+  await reload();
+  await waitPage('Создайте тренера, выберите клуб');
+  await waitFor(() => run(id => [...document.querySelector('#career-saved-select').options]
+    .some(option => option.value === id), careerId), 'existing saved career after corrupt import');
+  await setValue('#career-saved-select', careerId);
+  await click('Восстановить из браузера');
+  await waitPage('Стартовая карьера восстановлена');
+  await openSeason(TOTAL);
+  assert.deepEqual(await run(finalSnapshot), before,
+    'Tampered archive damaged a healthy persisted career');
 
   // Remove only the two databases created by this test on its isolated origin.
   assert.equal(await evaluate('Promise.all(["footclubsim-m0","footclubsim-m1-v188"].map(name => new Promise(resolve => {' +

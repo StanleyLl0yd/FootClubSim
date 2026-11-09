@@ -22,6 +22,36 @@ button {
 button:hover:not(:disabled) { background: #114b39; }
 button:disabled { opacity: .54; cursor: not-allowed; }
 .shell { max-width: 1160px; margin: auto; padding: 0 1.5rem 2rem; }
+
+/* Separate in-page workspaces while keeping the current season mounted. */
+[hidden] { display: none !important; }
+.workspace-tabs {
+  position: sticky; top: .35rem; z-index: 20;
+  display: flex; gap: .5rem; padding: .35rem; margin: .25rem 0 1rem;
+  background: #dce9df; border: 1px solid #c4d6c9;
+  border-radius: .9rem; box-shadow: 0 3px 12px #143c2814;
+}
+.workspace-tabs button {
+  flex: 1; min-width: 0; border: 1px solid transparent;
+  background: transparent; color: #285645; text-align: center;
+}
+.workspace-tabs button[aria-selected="true"] {
+  background: #fff; border-color: #a8c7b4; color: #163b2b;
+  box-shadow: 0 1px 4px #143c281a;
+}
+.workspace-tabs button:hover:not(:disabled):not([aria-selected="true"]) {
+  background: #c9dfd0;
+}
+.workspace-tabs button:disabled { opacity: .47; }
+.workspace-storage { padding: .9rem 1.25rem; }
+.workspace-storage > summary { cursor: pointer; font-weight: 700; }
+.workspace-storage-inner { border-top: 1px solid #dce6dc; margin-top: 1rem; padding-top: 1rem; }
+.setup-club { max-width: 740px; }
+@media (max-width: 550px) {
+  .workspace-tabs { gap: .25rem; }
+  .workspace-tabs button { padding: .75rem .35rem; font-size: .9rem; }
+}
+
 .masthead { min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .brand { display: flex; align-items: center; gap: .75rem; font-size: 1.28rem; font-weight: 800; letter-spacing: -.03em; }
 .brand-mark { display: inline-grid; place-items: center; width: 2.7rem; height: 2.7rem; border-radius: .75rem; background: #1b7457; color: white; }

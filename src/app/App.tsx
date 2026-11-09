@@ -101,7 +101,7 @@ export function App() {
       setManager(null);
       setStoredId(careerId);
       setCareer(next);
-      setMessage('Карьера создана. Сохраните её в браузере, затем начните сезон.');
+      setMessage('Карьера создана. При запуске сезона она автоматически сохранится в браузере.');
     } catch (error) {
       setMessage('Ошибка создания: ' + errorMessage(error));
     }
@@ -111,8 +111,18 @@ export function App() {
     if (!career || working) return;
     setWorking(true);
     try {
-      await saveNewInitialCareer(career);
-      setMessage('Начальная карьера записана в IndexedDB. Повторная запись не перезапишет её.');
+      let alreadySaved=false;
+      try{await saveNewInitialCareer(career);}
+      catch(error){
+        if(!(error instanceof CareerStorageError)||error.code!=='DUPLICATE')
+          throw error;
+        const stored=await loadInitialCareer(career.careerId);
+        if(!sameCanonicalValue(stored,career))throw error;
+        alreadySaved=true;
+      }
+      setMessage(alreadySaved?
+        'Эта карьера уже сохранена в браузере. Данные не перезаписывались.':
+        'Начальная карьера записана в IndexedDB. Повторная запись не перезапишет её.');
       try{setStoredIds(await listStoredInitialCareerIds());}
       catch{/* Save was successful; a failed listing must not claim failure. */}
     } catch (error) {
@@ -386,7 +396,11 @@ export function App() {
       </div>
 
       {career && <M1LeagueSeason key={career.careerId}
-        career={career} disabled={working} />}
+        career={career} disabled={working}
+        onCareerStored={()=>{
+          void listStoredInitialCareerIds().then(setStoredIds)
+            .catch(()=>{/* Stored career remains valid if listing fails. */});
+        }} />}
       {career && <details className="panel technical-tests">
         <summary>Технические сценарии движка (для разработчиков)</summary>
         <p className="subtle">Два отдельных старых журнала для регрессионных проверок. Они не изменяют сезон выше.</p>

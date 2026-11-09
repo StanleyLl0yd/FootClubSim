@@ -304,7 +304,7 @@ async function run() {
         throw new Error('Approved Liga Prikolov was not the default club pack');
       }
       await click('Создать стартовую карьеру');
-      await waitText('Карьера создана. Сохраните её в браузере');
+      await waitText('Карьера создана. При запуске сезона она автоматически сохранится в браузере.');
       await click('Сохранить в браузере');
       await waitText('Начальная карьера записана в IndexedDB');
       if(!(await evaluate("Boolean(document.querySelector('#import-full-file'))")))
@@ -426,7 +426,7 @@ async function run() {
       await click('Новая карьера');
       await setupManager('Второй тренер');
       await click('Создать стартовую карьеру');
-      await waitText('Карьера создана. Сохраните её в браузере');
+      await waitText('Карьера создана. При запуске сезона она автоматически сохранится в браузере.');
       await click('Сохранить в браузере');
       await waitText('Начальная карьера записана в IndexedDB');
       const bothPresent = await until(async () => evaluate(`(() => {
@@ -513,7 +513,7 @@ async function run() {
     }
 
     await click('Создать стартовую карьеру');
-    await waitText('Карьера создана. Сохраните её в браузере');
+    await waitText('Карьера создана. При запуске сезона она автоматически сохранится в браузере.');
     await assertNondefaultCareer('creation');
     await click('Сохранить в браузере');
 
@@ -528,7 +528,7 @@ async function run() {
       if (outcome === 'saved') {
         // Private browsers may permit temporary same-session IndexedDB.
         await click('Сохранить в браузере');
-        await waitText('Сохранение отклонено: DUPLICATE');
+        await waitText('Эта карьера уже сохранена в браузере. Данные не перезаписывались.');
         await send('Page.reload', { ignoreCache: true });
         await waitText('Создайте тренера, выберите клуб');
         await click('Восстановить из браузера');
@@ -563,7 +563,7 @@ async function run() {
     console.log('PASS: native browser downloaded real M0 career JSON to disposable profile');
 
     await click('Сохранить в браузере');
-    await waitText('Сохранение отклонено: DUPLICATE');
+    await waitText('Эта карьера уже сохранена в браузере. Данные не перезаписывались.');
 
     await send('Page.reload', { ignoreCache: true });
     await waitText('Создайте тренера, выберите клуб');

@@ -12,7 +12,8 @@ import {inspectM1V188LeagueCalendar,prepareM1V188LeagueMatch,
 import type {M1V105Run} from '../core/m1-v105-special-goal-chronology.js';
 import {validateLineup} from '../core/validation.js';
 import type {InitialCareerSave} from '../core/save.js';
-import {loadInitialCareer} from '../browser/initial-career-store.js';
+import {CareerStorageError,loadInitialCareer,saveNewInitialCareer}
+  from '../browser/initial-career-store.js';
 import {createM1V188PersistedLeague,loadM1V188PersistedLeague,
   commitM1V188PersistedLeagueMatch,M1V188StorageError}
   from '../browser/m1-v188-league-store.js';
@@ -29,8 +30,9 @@ const errorText=(error:unknown)=>
  * First player-facing browser season slice. Uses the existing two-team
  * v188 domain and its independent replay/CAS store; no parallel match engine.
  */
-export function M1LeagueSeason({career,disabled}:{
+export function M1LeagueSeason({career,disabled,onCareerStored}:{
   readonly career:InitialCareerSave;readonly disabled:boolean;
+  readonly onCareerStored:()=>void;
 }){
   const [journal,setJournal]=useState<M1V188Journal|null>(null);
   const [preview,setPreview]=useState<Ready|null>(null);
@@ -47,7 +49,7 @@ export function M1LeagueSeason({career,disabled}:{
   const stopRequested=useRef(false);
   useEffect(()=>()=>{stopRequested.current=true;},[]);
   const [status,setStatus]=useState(
-    'Сначала сохраните начальную карьеру, затем нажмите «Начать или продолжить сезон».');
+    'Нажмите «Начать или продолжить сезон». Начальная карьера сохранится автоматически.');
   const calendar=useMemo(()=>inspectM1V188LeagueCalendar(career),[career]);
   const fixtures=calendar.ok?calendar.fixtures:[];
   const clubs=useMemo(()=>new Map(
@@ -114,7 +116,21 @@ export function M1LeagueSeason({career,disabled}:{
     setBusy(true);setPreview(null);setManagerSetup(null);
     setXiSetup(null);setStarterIds([]);
     try{
-      const stored=await loadInitialCareer(career.careerId);
+      let stored:InitialCareerSave;
+      try{stored=await loadInitialCareer(career.careerId);}
+      catch(error){
+        if(!(error instanceof CareerStorageError)||
+            error.code!=='NOT_FOUND')throw error;
+        // An unsaved new or imported career must be persisted before starting.
+        // Add-only storage protects existing careers even across multiple tabs.
+        try{await saveNewInitialCareer(career);}
+        catch(saveError){
+          if(!(saveError instanceof CareerStorageError)||
+              saveError.code!=='DUPLICATE')throw saveError;
+        }
+        stored=await loadInitialCareer(career.careerId);
+        onCareerStored();
+      }
       if(!sameCanonicalValue(stored,career)){
         setJournal(null);
         setStatus('Начальная карьера в браузере отличается от выбранной. '+

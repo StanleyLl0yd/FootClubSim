@@ -506,10 +506,29 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   assert.equal(archive.filename, expectedName);
   verifyArchive(archive.json, careerId, before);
 
+  // The separate OS-selected verification control must verify the actual
+  // downloaded file (Chrome/Edge) or a Safari WebDriver File fixture without
+  // restoring or modifying any journal. Safari OS download remains manual.
+  await importArchive({...archive,selector:'#verify-full-file'});
+  await waitPage('Выбранный полный архив проверен: 240 из 240 матчей.',COLD_REPLAY_TIMEOUT);
+  assert.deepEqual(await run(finalSnapshot),before,
+    'Read-only archive verification changed the running career');
+
   // A syntactically valid payload with an invalid SHA-256 must not overwrite
   // an already healthy saved career. Exercise the real browser file-input path.
   const tampered = JSON.parse(archive.json);
   tampered.journalPayload += ' ';
+  await importArchive({
+    filename:'footclubsim-tampered-full-career.json',
+    json:JSON.stringify(tampered),selector:'#verify-full-file',
+  });
+  await waitFor(async()=>{
+    const status=await pageStatus();
+    return status.startsWith('Проверка полного архива отклонена:')&&
+      status.includes('INVALID_BACKUP');
+  },'read-only verification rejects corrupted archive');
+  assert.deepEqual(await run(finalSnapshot),before,
+    'Rejected archive inspection changed the running career');
   await importArchive({
     filename: 'footclubsim-tampered-full-career.json',
     json: JSON.stringify(tampered),

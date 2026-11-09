@@ -61,7 +61,7 @@ async function download({ click, waitPage }) {
   return { filename, json: chunks.join('') };
 }
 
-async function importArchive({ filename, json }) {
+async function importArchive({ filename, json, selector = '#import-full-file' }) {
   const data = Buffer.from(json);
   await evaluate('window.__playableSeasonImport = []');
   for (let start = 0; start < data.length; start += chunkSize) {
@@ -70,7 +70,7 @@ async function importArchive({ filename, json }) {
       '), character => character.charCodeAt(0)))');
   }
   assert.equal(await evaluate('(() => {' +
-    'const input = document.querySelector("#import-full-file"); if (!input) return false;' +
+    'const input = document.querySelector(' + JSON.stringify(selector) + '); if (!input) return false;' +
     'const transfer = new DataTransfer(); transfer.items.add(new File(window.__playableSeasonImport, ' +
     JSON.stringify(filename) + ', { type: "application/json" }));' +
     'delete window.__playableSeasonImport; input.files = transfer.files;' +

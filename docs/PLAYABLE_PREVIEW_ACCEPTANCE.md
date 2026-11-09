@@ -2,7 +2,7 @@
 
 **Approved scope:** 2026-11-09, by the owner in [#478](https://github.com/StanleyLl0yd/FootClubSim/issues/478#issuecomment-6722937201) and the subsequent explicit confirmation.
 
-**Current status:** acceptance criteria APPROVED; **Playable Preview NOT YET ACCEPTED**. Automated full-season evidence exists, but the owner has not completed a separate hands-on walkthrough. No public or stable release is authorized by this document.
+**Current status:** Playable Preview **ACCEPTED** by the owner on 2026-11-09 in [issue #488](https://github.com/StanleyLl0yd/FootClubSim/issues/488#issuecomment-6750231567), at protected main `20196a217a1dcdb3378d3773b393ebccd896a166` (11/11 exact-main PASS). This acceptance is a product decision based on prior owner playthroughs and automated evidence, **not** a claim that each manual checkbox below was executed. Public/stable release still requires separate #155 and M1/M2 decisions.
 
 This gate is independent of formal [M1 exit #3](https://github.com/StanleyLl0yd/FootClubSim/issues/3) and [M2 exit #4](https://github.com/StanleyLl0yd/FootClubSim/issues/4). It follows [ADR-0011](adr/0011-playable-first.md). A feature demonstrated in the playable prototype is not automatically accepted under the formal M1 or M2 requirements.
 

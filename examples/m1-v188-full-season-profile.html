@@ -34,8 +34,18 @@
   const yieldPage=()=>new Promise(resolve=>setTimeout(resolve,0));
   const numeric=(name)=>{
     const v=Number(query.get(name));
-    check(Number.isFinite(v)&&v>=0,'invalid '+name);
+    check(query.has(name)&&Number.isFinite(v)&&v>=0,'invalid '+name);
     return v;
+  };
+  const distribution=(samples)=>{
+    check(samples.length===240&&samples.every(v=>Number.isFinite(v)&&v>=0),
+      'invalid 240-match duration series');
+    const sorted=[...samples].sort((a,b)=>a-b);
+    return {
+      mean:sorted.reduce((sum,n)=>sum+n,0)/sorted.length,
+      p50:sorted[Math.ceil(sorted.length*0.50)-1],
+      p95:sorted[Math.ceil(sorted.length*0.95)-1],
+    };
   };
   async function firstPass(){
     const calendar=inspectM1V188LeagueCalendar(initial);
@@ -46,6 +56,7 @@
     check(journal.revision===0,'expected empty league journal');
     const started=performance.now();
     let maxPrepareMs=0,maxCommitMs=0;
+    const prepareDurations=[],commitDurations=[];
     const statuses={completed:0,selectedClub:0,opponentOnly:0};
     for(let n=0;n<240;n++){
       await yieldPage();
@@ -53,12 +64,14 @@
       const next=prepareM1V188LeagueMatch(initial,journal);
       check(next?.ok,'prepare failed at '+n+': '+JSON.stringify(next));
       const pms=performance.now()-p;
+      prepareDurations.push(pms);
       maxPrepareMs=Math.max(maxPrepareMs,pms);
       check(next.fixture.id===calendar.fixtures[n].id,
         'fixture order mismatch at '+n);
       const c=performance.now();
       const committed=await commit(initial.careerId,n,next.request);
       const cms=performance.now()-c;
+      commitDurations.push(cms);
       maxCommitMs=Math.max(maxCommitMs,cms);
       check(committed.revision===n+1&&
         committed.entries.length===n+1&&
@@ -77,6 +90,8 @@
       statuses.opponentOnly===210,
       'full-season participant counts incorrect');
     const totalMs=performance.now()-started;
+    const prep=distribution(prepareDurations);
+    const write=distribution(commitDurations);
     const originalBytes=new TextEncoder().encode(
       JSON.stringify(journal)).length;
     const target=new URL(location.href);
@@ -84,6 +99,12 @@
     target.searchParams.set('totalMs',String(totalMs));
     target.searchParams.set('maxPrepareMs',String(maxPrepareMs));
     target.searchParams.set('maxCommitMs',String(maxCommitMs));
+    target.searchParams.set('meanPrepareMs',String(prep.mean));
+    target.searchParams.set('p50PrepareMs',String(prep.p50));
+    target.searchParams.set('p95PrepareMs',String(prep.p95));
+    target.searchParams.set('meanCommitMs',String(write.mean));
+    target.searchParams.set('p50CommitMs',String(write.p50));
+    target.searchParams.set('p95CommitMs',String(write.p95));
     target.searchParams.set('bytes',String(originalBytes));
     target.searchParams.set('selected',String(statuses.selectedClub));
     target.searchParams.set('opponents',String(statuses.opponentOnly));
@@ -115,8 +136,14 @@
       'M0 initial career overwritten');
     const remaining=prepareM1V188LeagueMatch(initial,saved);
     check(remaining===null,'played season allowed a 241st fixture');
+    const estimate=typeof navigator.storage?.estimate==='function'?
+      await Promise.race([
+        navigator.storage.estimate().catch(()=>null),
+        new Promise(resolve=>setTimeout(()=>resolve(null),2500)),
+      ]):null;
+    const heap=performance.memory?.usedJSHeapSize;
     const observation={
-      schemaVersion:1,
+      schemaVersion:2,
       status:'NATIVE_240_FIXTURE_OBSERVATION_NOT_RELEASE_SLA',
       finalRevision:saved.revision,
       completedFixtures:240,
@@ -125,8 +152,21 @@
       saveBytes:bytes,
       fullSeasonProgressMs:numeric('totalMs'),
       maxPrepareMs:numeric('maxPrepareMs'),
+      meanPrepareMs:numeric('meanPrepareMs'),
+      p50PrepareMs:numeric('p50PrepareMs'),
+      p95PrepareMs:numeric('p95PrepareMs'),
       maxCommitMs:numeric('maxCommitMs'),
+      meanCommitMs:numeric('meanCommitMs'),
+      p50CommitMs:numeric('p50CommitMs'),
+      p95CommitMs:numeric('p95CommitMs'),
       restoredReplayMs:replayMs,
+      durationSampleCount:240,
+      memorySampleKind:'post-navigation-browser-heap-if-exposed',
+      observedHeapUsedBytes:Number.isFinite(heap)?Math.trunc(heap):null,
+      storageEstimateUsageBytes:Number.isFinite(estimate?.usage)?
+        Math.trunc(estimate.usage):null,
+      storageEstimateQuotaBytes:Number.isFinite(estimate?.quota)?
+        Math.trunc(estimate.quota):null,
       exactSourceReplayVerified:true,
       nativeIndexedDbCommitted:true,
       browser: navigator.userAgent,
@@ -134,8 +174,12 @@
       releasePerformanceAccepted:false,
     };
     check(observation.selectedClubFixtures===30&&
-      observation.opponentOnlyFixtures===210,
-      'source league coverage drift');
+      observation.opponentOnlyFixtures===210&&
+      observation.p50PrepareMs<=observation.p95PrepareMs&&
+      observation.p95PrepareMs<=observation.maxPrepareMs&&
+      observation.p50CommitMs<=observation.p95CommitMs&&
+      observation.p95CommitMs<=observation.maxCommitMs,
+      'source league coverage or measurement invariant drift');
     report.textContent=JSON.stringify(observation);
     status.textContent=MARKER+'_PASS';
   }

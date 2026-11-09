@@ -333,9 +333,11 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
     filename: 'footclubsim-tampered-full-career.json',
     json: JSON.stringify(tampered),
   });
-  await waitFor(async () => (await pageStatus()).startsWith(
-    'Импорт полного архива отклонён: INVALID_BACKUP'),
-  'corrupt full archive rejected before any write');
+  await waitFor(async () => {
+    const status = await pageStatus();
+    return status.startsWith('Импорт полного архива отклонён:') &&
+      status.includes('INVALID_BACKUP');
+  }, 'corrupt full archive rejected before any write');
   await reload();
   await waitPage('Создайте тренера, выберите клуб');
   await waitFor(() => run(id => [...document.querySelector('#career-saved-select').options]

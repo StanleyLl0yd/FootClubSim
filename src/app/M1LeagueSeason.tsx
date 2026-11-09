@@ -91,8 +91,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const ownNext=journal?fixtures.slice(journal.revision).find(f=>
     f.homeClubId===career.selectedClubId||
     f.awayClubId===career.selectedClubId):null;
-  const last=journal?.entries.at(-1);
-  const lastFixture=last?fixtures[journal!.revision-1]:null;
+  // Keep the scorecard focused on the club the manager actually controls.
+  // The final committed league fixture may belong to two other teams.
+  const lastOwnPlayed=ownReports.at(-1);
   const round=next?.round??30;
   const roundFixtures=journal?fixtures.filter(f=>f.round===round):[];
   const previewResult=preview?.request.result as Good|undefined;
@@ -465,15 +466,19 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 name={clubs.get(ownNext.awayClubId)??ownNext.awayClubId}/>
             </span>:'Все матчи клуба сыграны'}</strong>
           </div>
-          {last&&lastFixture&&<div>
-            <span className="subtle">Последний результат</span>
+          {lastOwnPlayed&&<div>
+            <span className="subtle">
+              Последний матч вашего клуба · тур {lastOwnPlayed.fixture.round}
+            </span>
             <strong className="season-club-pair">
-              <LigaClubLabel clubId={lastFixture.homeClubId}
-                name={clubs.get(lastFixture.homeClubId)??lastFixture.homeClubId}/>
-              {' '}{last.result.report.home.goals} :{' '}
-              {last.result.report.away.goals}{' '}
-              <LigaClubLabel clubId={lastFixture.awayClubId}
-                name={clubs.get(lastFixture.awayClubId)??lastFixture.awayClubId}/>
+              <LigaClubLabel clubId={lastOwnPlayed.fixture.homeClubId}
+                name={clubs.get(lastOwnPlayed.fixture.homeClubId)??
+                  lastOwnPlayed.fixture.homeClubId}/>
+              {' '}{lastOwnPlayed.entry.result.report.home.goals} :{' '}
+              {lastOwnPlayed.entry.result.report.away.goals}{' '}
+              <LigaClubLabel clubId={lastOwnPlayed.fixture.awayClubId}
+                name={clubs.get(lastOwnPlayed.fixture.awayClubId)??
+                  lastOwnPlayed.fixture.awayClubId}/>
             </strong>
           </div>}
         </div>

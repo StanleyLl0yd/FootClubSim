@@ -49,3 +49,27 @@ test('original fictional clubs can actually play through canonical v188',()=>{
   assert.equal(saved.ok,true);
   assert.equal(saved.journal.revision,1);
 });
+
+test('two new careers with different saved seeds have distinct fixture outcomes yet repeat exactly',()=>{
+  const catalog=createLigaPrikolovPreviewCatalog(2026);
+  const first=createInitialCareer(catalog,catalog.clubs[0].id,
+    42,'lp-career-seed-42');
+  const second=createInitialCareer(catalog,catalog.clubs[0].id,
+    314159,'lp-career-seed-314159');
+  const left=startM1V188LeagueJournal(first);
+  const right=startM1V188LeagueJournal(second);
+  assert.equal(left.ok,true);assert.equal(right.ok,true);
+  const a=prepareM1V188LeagueMatch(first,left.journal);
+  const b=prepareM1V188LeagueMatch(second,right.journal);
+  assert.equal(a?.ok,true);assert.equal(b?.ok,true);
+  assert.equal(a.fixture.id,b.fixture.id);
+  assert.notEqual(first.rngState,second.rngState);
+  assert.notEqual(a.request.prematch.rngSeed,
+    b.request.prematch.rngSeed,'fixture RNG must be career-specific');
+  assert.deepEqual(
+    prepareM1V188LeagueMatch(first,left.journal).request,
+    a.request,'same saved seed must deterministically replay');
+  assert.deepEqual(
+    prepareM1V188LeagueMatch(second,right.journal).request,
+    b.request,'another saved seed must deterministically replay');
+});

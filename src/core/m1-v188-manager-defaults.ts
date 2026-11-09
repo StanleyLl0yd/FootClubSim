@@ -1,6 +1,6 @@
 import type {InitialCareerSave} from './save.js';
 import type {M1PrematchInput} from './m1-clock.js';
-import type {M1V188Journal,M1V188ManagedXI}
+import type {M1V188Journal,M1V188Entry,M1V188ManagedXI}
   from './m1-v188-league-source-journal.js';
 import {validateLineup} from './validation.js';
 
@@ -18,10 +18,14 @@ export function deriveM1V188RememberedXI(
       journal.selectedClubId!==clubId||
       upcoming.fixture.homeClubId!==clubId&&
       upcoming.fixture.awayClubId!==clubId)return null;
-  const own=journal.entries.findLast(entry=>{
+  let own:M1V188Entry|undefined;
+  for(let index=journal.entries.length-1;index>=0;index--){
+    const entry=journal.entries[index]!;
     const fixture=(entry.source.prematch as unknown as M1PrematchInput).fixture;
-    return fixture.homeClubId===clubId||fixture.awayClubId===clubId;
-  });
+    if(fixture.homeClubId===clubId||fixture.awayClubId===clubId){
+      own=entry;break;
+    }
+  }
   if(!own)return null;
   const previous=own.source.prematch as unknown as M1PrematchInput;
   const atHome=previous.fixture.homeClubId===clubId;

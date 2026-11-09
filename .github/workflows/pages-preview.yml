@@ -1,0 +1,82 @@
+name: GitHub Pages playable preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pages-preview.yml'
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    paths:
+      - '.github/workflows/pages-preview.yml'
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: pages-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and verify the browser preview
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install exactly locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build for GitHub Pages project path
+        run: npm run build:web -- --base=/FootClubSim/
+      - name: Assert production entry uses the GitHub Pages base path
+        run: |
+          test -s web-dist/index.html
+          grep -q '"/FootClubSim/assets/' web-dist/index.html
+          if grep -q '"/src/app/main.tsx' web-dist/index.html; then
+            echo 'ERROR: Vite entry was not bundled' >&2
+            exit 1
+          fi
+      - name: Upload GitHub Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: web-dist
+
+  deploy:
+    name: Publish playable preview
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+      actions: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -67,6 +67,14 @@
 
 Серверную ферму ради того, чтобы «Вагон» проиграл «Надиру», поднимать не собираемся.
 
+## 🎮 Играбельная версия в браузере
+
+[**Открыть Playable Preview на GitHub Pages**](https://stanleyll0yd.github.io/FootClubSim/) (после первого успешного развёртывания).
+
+Это публично доступная **предварительная сборка для ручной приёмки**, а не принятый стабильный релиз. Игра и все карьеры хранятся в браузере в IndexedDB. Используй отдельный браузерный профиль для проверки и скачивай полный архив перед очисткой данных браузера. Для перехода в другой профиль потребуется экспорт и импорт архива.
+
+Публикация автоматическая из `main` через [GitHub Actions](.github/workflows/pages-preview.yml). Если GitHub Pages ещё не включён, выбери **Settings → Pages → Build and deployment → Source: GitHub Actions** или запусти [PowerShell-скрипт для `gh`](scripts/Enable-FootClubSimPages.ps1). Он также инициирует публикацию. Приёмка по [#488](https://github.com/StanleyLl0yd/FootClubSim/issues/488) и релизный gate [#155](https://github.com/StanleyLl0yd/FootClubSim/issues/155) остаются открытыми.
+
 ## 🚀 Как запустить
 
 Понадобятся **Node.js 24** и npm.

@@ -171,6 +171,38 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
 .season-my-row { background: #e5f4e9; }
 .season-my-row th { font-weight: 750 !important; }
 .season-complete { color: #186b4d; font-weight: 700; }
+.season-champion {
+  margin: 1rem 0 1.3rem;padding: 1rem 1.15rem;
+  border: 1px solid #a5c6aa;border-radius: .8rem;background: #f5faf1;
+}
+.season-champion h3 { margin: 0 0 .4rem; color: #15583e; }
+.season-champion p { margin: .4rem 0 0; }
+.season-match-centre {
+  margin: 1.1rem 0;padding: 1rem;border: 1px solid #c7dfd0;
+  border-radius: .8rem;
+}
+.season-match-centre-heading {
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:.75rem;
+}
+.season-match-centre-heading h3 { margin: 0; }
+.season-match-centre-heading select {
+  display:block;width:100%;max-width:25rem;
+  padding:.5rem;border:1px solid #a9c3b3;border-radius:.5rem;background:white;
+}
+.season-report > p:last-child { margin: .8rem 0 0; font-size: .82rem; }
+.season-report-stats { display:grid;gap:.12rem;margin:.7rem 0; }
+.season-report-stat {
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(7rem,2fr) minmax(0,1fr);
+  gap:.5rem;padding:.4rem;border-bottom:1px solid #e3ebe5;text-align:center;
+}
+.season-report h4 { margin: .9rem 0 .4rem; }
+.season-report-events { list-style:none;padding:0;margin:0; }
+.season-report-events li {
+  display:grid;grid-template-columns:3.2rem minmax(0,2fr) minmax(0,1.8fr);
+  gap:.6rem;padding:.35rem;border-bottom:1px solid #e3ebe5;
+}
+.season-event-minute { font-weight:700; }
 @media(max-width:750px) {
   .season-columns, .season-scoreboard { grid-template-columns: 1fr; }
   .season-heading { flex-wrap: wrap; }
@@ -191,6 +223,8 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
 .season-advance p { margin: .4rem 0 0; }
 .season-advance .button-stack { flex: none; }
 .season-substitution {
+  min-width: 0;
+  width: 100%;
   margin: 1rem 0;
   padding: 1.15rem;
   border: 1px solid #bfdac7;
@@ -281,41 +315,73 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
   .season-own-calendar li { grid-template-columns: 3.5rem minmax(0,1fr) 3rem; gap: .35rem; }
 }
 
+.season-xi-layout {
+  display: grid;
+  grid-template-columns: minmax(0,1.2fr) minmax(0,1fr);
+  align-items: start;
+  gap: 1.2rem;
+  min-width: 0;
+  margin: .9rem 0 1.2rem;
+}
 .season-xi-grid {
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  max-height: 22rem;
-  overflow: auto;
-  gap: .45rem .75rem;
-  margin: .8rem 0 1rem;
+  max-height: 25rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  gap: .4rem;
+  margin: 0;
+  padding: .15rem;
 }
 .season-xi-grid label {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: .5rem;
-  padding: .45rem .55rem;
+  padding: .5rem .6rem;
   border: 1px solid #d6e5d9;
   border-radius: .5rem;
   font-size: .86rem;
   font-weight: 500;
   margin: 0;
 }
+.season-xi-grid label span { min-width: 0; overflow-wrap: anywhere; }
 .season-xi-grid input { flex: none; accent-color: #17634b; }
+.season-editor-title { margin: .9rem 0 .6rem; font-size: 1rem; }
 .season-tactics-grid {
   display: grid;
-  grid-template-columns: repeat(3,minmax(0,1fr));
-  gap: .8rem;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 1rem 1.2rem;
+  max-width: 52rem;
+  min-width: 0;
+}
+.season-tactics-grid > label {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.season-tactics-grid select {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  margin: 0;
 }
 .season-tactics-grid input[type="range"] {
   display: block;
+  min-width: 0;
   width: 100%;
+  max-width: 100%;
+  margin: .3rem 0;
   accent-color: #17634b;
 }
 /* A compact, readable pitch schematic; individual tactical roles are future work. */
-.season-formation-board {
-  margin: 1rem 0 .25rem;
-  max-width: 48rem;
-}
+.season-formation-board { min-width: 0; margin: 0; max-width: 100%; }
 .season-formation-board figcaption {
   font-weight: 700;
   margin-bottom: .5rem;
@@ -350,10 +416,14 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
   overflow-wrap: anywhere;
 }
 .season-formation-empty { border-style: dashed; color: #607369; }
+@media (max-width: 880px) {
+  .season-xi-layout { grid-template-columns: minmax(0,1fr); }
+}
 @media (max-width: 680px) {
   .season-xi-grid, .season-tactics-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0,1fr);
   }
+  .season-substitution { padding: .8rem; }
 }
 
 .manager-setup fieldset { border: 0; padding: 0; margin: 1rem 0; }

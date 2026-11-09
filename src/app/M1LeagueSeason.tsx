@@ -1,5 +1,8 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {M1ClubOverview} from './M1ClubOverview.js';
+import {M1MatchReport} from './M1MatchReport.js';
+import {deriveM1V188Champion} from '../core/m1-v188-championship.js';
+import {deriveM1V188RememberedXI} from '../core/m1-v188-manager-defaults.js';
 import {sameCanonicalValue} from '../core/canonical-value.js';
 import {deriveM1V188ProvisionalTable}
   from '../core/m1-v188-provisional-table.js';
@@ -43,6 +46,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const [managerSetup,setManagerSetup]=useState<Ready|null>(null);
   const [xiSetup,setXiSetup]=useState<Ready|null>(null);
   const [starterIds,setStarterIds]=useState<string[]>([]);
+  const [forceAutoXI,setForceAutoXI]=useState(false);
+  const [matchInspectId,setMatchInspectId]=useState('');
   const [xiFormation,setXiFormation]=useState('4-2-3-1');
   const [xiMentality,setXiMentality]=useState(0);
   const [xiPressing,setXiPressing]=useState(50);
@@ -59,11 +64,20 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     career.catalog.clubs.map(club=>[club.id,club.displayName])),[career]);
   const table=useMemo(()=>journal?
     deriveM1V188ProvisionalTable(career,journal):null,[career,journal]);
+  const champion=useMemo(()=>journal?
+    deriveM1V188Champion(career,journal):null,[career,journal]);
   const saved=useMemo(()=>new Map(
     (journal?.entries??[]).map(entry=>[entry.fixtureId,entry])),
   [journal]);
   const navigation=useMemo(()=>journal?
     planM1V188NextOwnMatch(career,journal):null,[career,journal]);
+  const ownReports=fixtures.filter(f=>
+    f.homeClubId===career.selectedClubId||
+    f.awayClubId===career.selectedClubId).flatMap(f=>{
+      const entry=saved.get(f.id);return entry?[{fixture:f,entry}]:[];
+    });
+  const selectedReport=ownReports.find(row=>
+    row.fixture.id===matchInspectId)??ownReports.at(-1);
   const playerNames=useMemo(()=>new Map(
     career.catalog.players.map(player=>[player.id,player.displayName])),[career]);
   const playersById=useMemo(()=>new Map(
@@ -132,6 +146,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     if(busy||disabled)return;
     setBusy(true);setPreview(null);setManagerSetup(null);
     setXiSetup(null);setStarterIds([]);
+    setForceAutoXI(false);setMatchInspectId('');
     try{
       let stored:InitialCareerSave;
       try{stored=await loadInitialCareer(career.careerId);}
@@ -180,8 +195,13 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   function calculate(changes:readonly HalfTimeChange[]=[]):void{
     if(busy||disabled||!journal||preview||!xiLegal)return;
     try{
-      const prepared=prepareM1V188LeagueMatch(
-        career,journal,changes,undefined,undefined,xiChoice);
+      const base=prepareM1V188LeagueMatch(career,journal,changes);
+      const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
+        deriveM1V188RememberedXI(
+          career,journal,base.request.prematch as M1PrematchInput):null;
+      const prepared=xiChoice||remembered?
+        prepareM1V188LeagueMatch(career,journal,changes,
+          undefined,undefined,xiChoice??remembered):base;
       if(prepared===null){
         setStatus('Сезон завершён. Все 240 матчей уже сохранены.');
       }else if(!prepared.ok){
@@ -205,6 +225,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         career.careerId,expected,request);
       setJournal(updated);
       setManagerSetup(null);setXiSetup(null);setStarterIds([]);
+      setForceAutoXI(false);
       setStatus('Матч №'+updated.revision+
         ' записан в браузер. Результат и таблица обновлены.');
       await advanceOpponents(updated);
@@ -233,28 +254,39 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     const prematch=prepared.request.prematch as M1PrematchInput;
     const own=prematch.fixture.homeClubId===career.selectedClubId?
       prematch.homeLineup:prematch.awayLineup;
+    const remembered=!forceAutoXI?
+      deriveM1V188RememberedXI(career,journal,prematch):null;
     setXiSetup(prepared);
-    setStarterIds([...own.starters]);
-    const tactics=prematch.fixture.homeClubId===career.selectedClubId?
-      prematch.homeTactics:prematch.awayTactics;
+    setStarterIds([...(remembered?.starters??own.starters)]);
+    const tactics=remembered?.tactics??(
+      prematch.fixture.homeClubId===career.selectedClubId?
+        prematch.homeTactics:prematch.awayTactics);
     setXiFormation(tactics.formation);
     setXiMentality(tactics.mentality);
     setXiPressing(tactics.pressing);
-    setXiTempo(tactics.tempo);
+    setXiTempo(tactics.tempo);setForceAutoXI(false);
     setManagerSetup(null);
-    setStatus('Выберите 11 игроков для ближайшего матча своего клуба.');
+    setStatus(remembered?
+      'Восстановлены состав и тактика прошлого матча. Проверьте доступность игроков.':
+      'Выберите 11 игроков для ближайшего матча своего клуба.');
   }
   function clearXI():void{
     setXiSetup(null);setStarterIds([]);setManagerSetup(null);
-    setStatus('Возвращён автоматический стартовый состав.');
+    setForceAutoXI(true);
+    setStatus('Для этого матча выбран автоматический стартовый состав.');
   }
 
   function configureHalfTime():void{
     if(busy||disabled||!journal||!ownNextNow||preview)return;
     try{
       if(!xiLegal)return;
-      const prepared=prepareM1V188LeagueMatch(
-        career,journal,[],undefined,undefined,xiChoice);
+      const base=prepareM1V188LeagueMatch(career,journal);
+      const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
+        deriveM1V188RememberedXI(
+          career,journal,base.request.prematch as M1PrematchInput):null;
+      const prepared=xiChoice||remembered?
+        prepareM1V188LeagueMatch(career,journal,[],
+          undefined,undefined,xiChoice??remembered):base;
       if(!prepared?.ok){
         setStatus('Подготовка состава отклонена: '+
           (prepared?.error??'SEASON_COMPLETE'));
@@ -357,6 +389,19 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       <>
         <progress className="season-progress" max={240}
           value={journal.revision} aria-label="Прогресс сезона" />
+        {champion&&champion.clubId===career.selectedClubId&&
+          <section className="season-champion" aria-label="Чемпионство">
+            <h3>🏆 Поздравляем! {clubs.get(champion.clubId)}
+              {' '}— чемпион «Лиги приколов»!</h3>
+            <p>{champion.remainingRounds>0?
+              'Титул гарантирован досрочно в '+champion.clinchedRound+
+                '-м туре, за '+champion.remainingRounds+' туров до конца.':
+              'Победа в чемпионате подтверждена по очкам.'}
+              {' '}Ни один соперник уже не мог догнать вашу команду,
+              даже выиграв все оставшиеся встречи.</p>
+            {champion.seasonComplete&&
+              <p>Сезон завершён: {champion.points} очков. Кубок ваш!</p>}
+          </section>}
         <div className="season-scoreboard">
           <div>
             <span className="subtle">Ваш следующий матч</span>
@@ -420,7 +465,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           <p className="subtle">Выберите 11 игроков, включая ровно
             одного вратаря. Дисквалифицированные и недоступные
             футболисты исключены.</p>
-          <div className="season-xi-grid">
+          <div className="season-xi-layout">
+            <div className="season-xi-grid">
             {xiAvailable.map(id=><label key={id}>
               <input type="checkbox" checked={xiPlayers.has(id)}
                 onChange={event=>{
@@ -432,7 +478,38 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               <span>{playerNames.get(id)??id} ·
                 {' '}{playersById.get(id)?.primaryPosition}</span>
             </label>)}
+            </div>
+          <figure className="season-formation-board"
+            aria-label={'Предварительная расстановка '+xiFormation}>
+            <figcaption>Расстановка · {xiFormation}</figcaption>
+            <div className="season-formation-pitch">
+              {[...boardLines].reverse().map((line,lineIndex)=>
+                <div className="season-formation-line" key={lineIndex}>
+                  {line.map((id,slotIndex)=>
+                    <span className={id?'season-formation-player':
+                      'season-formation-empty'} key={slotIndex}
+                      title={id?playerNames.get(id)??id:'Позиция не выбрана'}>
+                      {id?playerNames.get(id)??id:'Свободно'}
+                    </span>)}
+                </div>)}
+              <div className="season-formation-line">
+                <span className={boardGoalkeeper?
+                  'season-formation-player':'season-formation-empty'}
+                  title={boardGoalkeeper?
+                    playerNames.get(boardGoalkeeper)??boardGoalkeeper:
+                    'Выберите вратаря'}>
+                  {boardGoalkeeper?
+                    playerNames.get(boardGoalkeeper)??boardGoalkeeper:
+                    'Вратарь'}
+                </span>
+              </div>
+            </div>
+            <p className="subtle">Позиции игроков показаны условно.
+              Выбранная схема сохраняется в тактике матча;
+              индивидуальные роли на поле пока не назначаются.</p>
+          </figure>
           </div>
+          <h4 className="season-editor-title">Тактика на матч</h4>
           <div className="season-tactics-grid">
             <label>Настрой
               <select value={xiMentality}
@@ -465,35 +542,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 onChange={event=>setXiTempo(Number(event.target.value))}/>
             </label>
           </div>
-          <figure className="season-formation-board"
-            aria-label={'Предварительная расстановка '+xiFormation}>
-            <figcaption>Расстановка · {xiFormation}</figcaption>
-            <div className="season-formation-pitch">
-              {[...boardLines].reverse().map((line,lineIndex)=>
-                <div className="season-formation-line" key={lineIndex}>
-                  {line.map((id,slotIndex)=>
-                    <span className={id?'season-formation-player':
-                      'season-formation-empty'} key={slotIndex}
-                      title={id?playerNames.get(id)??id:'Позиция не выбрана'}>
-                      {id?playerNames.get(id)??id:'Свободно'}
-                    </span>)}
-                </div>)}
-              <div className="season-formation-line">
-                <span className={boardGoalkeeper?
-                  'season-formation-player':'season-formation-empty'}
-                  title={boardGoalkeeper?
-                    playerNames.get(boardGoalkeeper)??boardGoalkeeper:
-                    'Выберите вратаря'}>
-                  {boardGoalkeeper?
-                    playerNames.get(boardGoalkeeper)??boardGoalkeeper:
-                    'Вратарь'}
-                </span>
-              </div>
-            </div>
-            <p className="subtle">Позиции игроков показаны условно.
-              Выбранная схема сохраняется в тактике матча;
-              индивидуальные роли на поле пока не назначаются.</p>
-          </figure>
+
           {!xiLegal&&<p role="alert" className="subtle">
             Проверьте 11 игроков, вратаря и лимит легионеров.
           </p>}
@@ -559,6 +608,24 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             </button>
           </div>
         </div>}
+        {selectedReport&&<section className="season-match-centre">
+          <div className="season-match-centre-heading">
+            <h3>Протокол сыгранного матча</h3>
+            <label>Матч вашего клуба
+              <select aria-label="Выбрать сыгранный матч"
+                value={selectedReport.fixture.id}
+                onChange={event=>setMatchInspectId(event.target.value)}>
+                {ownReports.map(row=><option key={row.fixture.id}
+                  value={row.fixture.id}>
+                  Тур {row.fixture.round}: {clubs.get(row.fixture.homeClubId)}
+                  {' — '}{clubs.get(row.fixture.awayClubId)}
+                </option>)}
+              </select>
+            </label>
+          </div>
+          <M1MatchReport entry={selectedReport.entry}
+            catalog={career.catalog}/>
+        </section>}
         {!next&&<p className="season-complete">
           Сезон завершён. Все 240 результатов находятся в локальном журнале.
         </p>}

@@ -613,11 +613,20 @@ async function run() {
       throw new Error('Player-facing v188 preview did not show a score');
     }
     await clickSeason('Подтвердить и сохранить');
-    await waitText('Теперь очередь вашего клуба. Остальные матчи сохранены.');
-    const secondSeasonRevision=await evaluate(
-      "Number(document.querySelector('.season-progress')?.value)");
-    if(secondSeasonRevision<=2)
-      throw new Error('Opponents did not advance after owned halftime match');
+    // The previous 'your turn' status may still be visible during async CAS.
+    // Wait for both the committed managed match and the next opponent batch.
+    const secondSeasonRevision=await until(async()=>{
+      const result=await evaluate(`(() => ({
+        revision: Number(document.querySelector('.season-progress')?.value),
+        own: document.querySelectorAll('.season-own-calendar .season-played').length,
+        status: document.querySelector('.season-panel > p[role=status]')?.textContent ?? '',
+      }))()`);
+      if(result.status.startsWith('Автоматический расчёт не завершён'))
+        throw new Error(result.status);
+      return result.own===1&&result.revision>2&&
+        result.status.startsWith('Теперь очередь вашего клуба.')?
+          result.revision:null;
+    },'owned halftime result and automatic opponents complete');
     const storedChange = await evaluate(`new Promise((resolve, reject) => {
       const opening = indexedDB.open('footclubsim-m1-v188', 1);
       opening.onerror = () => reject(opening.error);

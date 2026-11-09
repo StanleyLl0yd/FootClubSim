@@ -23,6 +23,8 @@ type Good=Extract<M1V105Run,{ok:true}>;
 type HalfTimeChange=Readonly<{
   outPlayerId:string;inPlayerId:string;elapsedSeconds:2700;
 }>;
+const FORMATIONS=['4-2-3-1','4-3-3','4-4-2','4-1-4-1',
+  '3-5-2','3-4-3','5-3-2'] as const;
 const errorText=(error:unknown)=>
   error instanceof Error?error.message:String(error);
 
@@ -41,6 +43,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const [managerSetup,setManagerSetup]=useState<Ready|null>(null);
   const [xiSetup,setXiSetup]=useState<Ready|null>(null);
   const [starterIds,setStarterIds]=useState<string[]>([]);
+  const [xiFormation,setXiFormation]=useState('4-2-3-1');
   const [xiMentality,setXiMentality]=useState(0);
   const [xiPressing,setXiPressing]=useState(50);
   const [xiTempo,setXiTempo]=useState(50);
@@ -98,10 +101,24 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       xiPrematch.homeTactics:xiPrematch.awayTactics):null;
   const xiChoice:M1V188ManagedXI|undefined=xiSetup&&xiBaseTactics?{
     schemaVersion:1,clubId:career.selectedClubId,starters:starterIds,
-    tactics:{...xiBaseTactics,mentality:xiMentality,
-      pressing:xiPressing,tempo:xiTempo},
+    tactics:{...xiBaseTactics,formation:xiFormation,
+      mentality:xiMentality,pressing:xiPressing,tempo:xiTempo},
   }:undefined;
   const xiPlayers=new Set(starterIds);
+  // A read-only pitch preview. The tactical formation is persisted in v188,
+  // while individual player-to-slot assignments are not yet modelled.
+  const boardGoalkeeper=starterIds.find(id=>
+    playersById.get(id)?.primaryPosition==='GK')??null;
+  const boardOutfield=starterIds.filter(id=>
+    playersById.get(id)?.primaryPosition!=='GK');
+  let boardOffset=0;
+  const boardLines=xiFormation.split('-').map(part=>{
+    const size=Number(part);
+    const line=Array.from({length:size},(_,index)=>
+      boardOutfield[boardOffset+index]??null);
+    boardOffset+=size;
+    return line;
+  });
   const xiClub=career.catalog.clubs.find(c=>c.id===career.selectedClubId);
   const xiErrors=xiBase&&xiClub?validateLineup({
     clubId:career.selectedClubId,starters:starterIds,
@@ -220,6 +237,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     setStarterIds([...own.starters]);
     const tactics=prematch.fixture.homeClubId===career.selectedClubId?
       prematch.homeTactics:prematch.awayTactics;
+    setXiFormation(tactics.formation);
     setXiMentality(tactics.mentality);
     setXiPressing(tactics.pressing);
     setXiTempo(tactics.tempo);
@@ -426,6 +444,16 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 <option value={2}>Всё вперёд</option>
               </select>
             </label>
+            <label htmlFor="season-formation">Схема
+              <select id="season-formation" value={xiFormation}
+                onChange={event=>{
+                  setXiFormation(event.target.value);
+                  setManagerSetup(null);
+                }}>
+                {FORMATIONS.map(formation=>
+                  <option value={formation} key={formation}>{formation}</option>)}
+              </select>
+            </label>
             <label>Прессинг · {xiPressing}
               <input type="range" min="0" max="100" step="10"
                 value={xiPressing}
@@ -437,6 +465,35 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 onChange={event=>setXiTempo(Number(event.target.value))}/>
             </label>
           </div>
+          <figure className="season-formation-board"
+            aria-label={'Предварительная расстановка '+xiFormation}>
+            <figcaption>Расстановка · {xiFormation}</figcaption>
+            <div className="season-formation-pitch">
+              {[...boardLines].reverse().map((line,lineIndex)=>
+                <div className="season-formation-line" key={lineIndex}>
+                  {line.map((id,slotIndex)=>
+                    <span className={id?'season-formation-player':
+                      'season-formation-empty'} key={slotIndex}
+                      title={id?playerNames.get(id)??id:'Позиция не выбрана'}>
+                      {id?playerNames.get(id)??id:'Свободно'}
+                    </span>)}
+                </div>)}
+              <div className="season-formation-line">
+                <span className={boardGoalkeeper?
+                  'season-formation-player':'season-formation-empty'}
+                  title={boardGoalkeeper?
+                    playerNames.get(boardGoalkeeper)??boardGoalkeeper:
+                    'Выберите вратаря'}>
+                  {boardGoalkeeper?
+                    playerNames.get(boardGoalkeeper)??boardGoalkeeper:
+                    'Вратарь'}
+                </span>
+              </div>
+            </div>
+            <p className="subtle">Позиции игроков показаны условно.
+              Выбранная схема сохраняется в тактике матча;
+              индивидуальные роли на поле пока не назначаются.</p>
+          </figure>
           {!xiLegal&&<p role="alert" className="subtle">
             Проверьте 11 игроков, вратаря и лимит легионеров.
           </p>}
@@ -531,6 +588,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 <thead><tr>
                   <th scope="col">#</th><th scope="col">Клуб</th>
                   <th scope="col" title="Матчи">И</th>
+                  <th scope="col" title="Победы">В</th>
+                  <th scope="col" title="Ничьи">Н</th>
+                  <th scope="col" title="Поражения">П</th>
                   <th scope="col" title="Разница голов">РМ</th>
                   <th scope="col" title="Очки">О</th>
                 </tr></thead>
@@ -541,6 +601,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                     <td>{index+1}</td>
                     <th scope="row">{clubs.get(row.clubId)}</th>
                     <td>{row.played}</td>
+                    <td>{row.won}</td>
+                    <td>{row.drawn}</td>
+                    <td>{row.lost}</td>
                     <td>{row.goalDifference>0?'+':''}{row.goalDifference}</td>
                     <td><strong>{row.points}</strong></td>
                   </tr>)}</tbody>

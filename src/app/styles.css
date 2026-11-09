@@ -152,6 +152,7 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
 .season-table-scroll { min-width: 0; overflow-x: auto; }
 .season-table {
   width: 100%;
+  min-width: 30rem;
   border-collapse: collapse;
   font-size: .86rem;
 }
@@ -310,6 +311,45 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
   width: 100%;
   accent-color: #17634b;
 }
+/* A compact, readable pitch schematic; individual tactical roles are future work. */
+.season-formation-board {
+  margin: 1rem 0 .25rem;
+  max-width: 48rem;
+}
+.season-formation-board figcaption {
+  font-weight: 700;
+  margin-bottom: .5rem;
+}
+.season-formation-board > p { margin: .45rem 0 0; font-size: .82rem; }
+.season-formation-pitch {
+  display: grid;
+  gap: .9rem;
+  padding: 1rem .6rem;
+  border: 2px solid #b4d8bd;
+  border-radius: .85rem;
+  background: linear-gradient(180deg,#ecf7f0,#e2f3e6);
+}
+.season-formation-line {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: .3rem;
+}
+.season-formation-player,.season-formation-empty {
+  display: block;
+  min-width: 0;
+  max-width: 9rem;
+  flex: 1 1 0;
+  padding: .35rem .3rem;
+  border: 1px solid #97c8a5;
+  border-radius: .45rem;
+  background: white;
+  text-align: center;
+  font-size: .72rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.season-formation-empty { border-style: dashed; color: #607369; }
 @media (max-width: 680px) {
   .season-xi-grid, .season-tactics-grid {
     grid-template-columns: 1fr;

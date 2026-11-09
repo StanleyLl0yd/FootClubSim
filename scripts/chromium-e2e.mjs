@@ -324,6 +324,10 @@ async function run() {
       const eleven=await evaluate(
         "document.querySelectorAll('.season-xi-grid input:checked').length");
       if(eleven!==11)throw new Error('Manual XI default is invalid');
+      const formationShown=await evaluate(
+        "document.querySelector('#season-formation')?.value");
+      if(formationShown!=='4-2-3-1')
+        throw new Error('Default formation selection missing');
       await clickSeason('Рассчитать матч');
       await waitText('Стартовый состав и тактика выбраны тренером');
       await waitText('Результат рассчитан. Подтвердите запись');
@@ -393,6 +397,9 @@ async function run() {
       if (savedManager?.skills.tacticalKnowledge !== 15 ||
           savedManager.skills.mediaCommunication !== 5 || savedManager.origin !== 'custom')
         throw new Error('Full archive lost custom manager skills');
+      if(savedFullJournal.entries[0]?.source?.managedXI?.tactics?.formation!==
+           '4-2-3-1')
+        throw new Error('Default formation not saved in v188 full archive');
       if(savedFullJournal.revision!==firstSeasonRevision||
          fullEnvelope.careerId!==ligaId||
          savedFullJournal.entries.length!==firstSeasonRevision)

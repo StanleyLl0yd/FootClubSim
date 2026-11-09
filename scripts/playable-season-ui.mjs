@@ -45,6 +45,15 @@ function finalSnapshot() {
     own: rows('.season-own-calendar li', ':scope > span, :scope > strong'),
     finalRound: rows('.season-fixtures li', ':scope > span, :scope > strong'),
     complete: Boolean(document.querySelector('.season-complete')),
+    title: document.querySelector('.season-champion')?.textContent.trim()??null,
+    report: {
+      options:document.querySelectorAll('.season-match-centre select option').length,
+      score:document.querySelector('.season-match-centre .season-preview-score')
+        ?.textContent.trim().replace(/\s+/g,' ')??null,
+      rows:rows('.season-report-stat','strong, span'),
+      events:[...document.querySelectorAll('.season-report-events li')]
+        .map(node=>node.textContent.trim().replace(/\s+/g,' ')),
+    },
   };
 }
 
@@ -89,6 +98,8 @@ function verifyArchive(json, careerId, snapshot) {
   let ownWithTactics = 0;
   let ownWithFormation = 0;
   let ownWithHalfTime = 0;
+  let ownWithRememberedPlan = 0;
+  let lastOwn=null;
   for (const entry of journal.entries) {
     const fixture = entry.source.prematch.fixture;
     const home = clubs.get(fixture.homeClubId);
@@ -111,7 +122,10 @@ function verifyArchive(json, careerId, snapshot) {
       calendar.push(['Тур ' + entry.round,
         atHome ? 'Дома: ' + away.name : 'В гостях: ' + home.name,
         (atHome ? hg + ' : ' + ag : ag + ' : ' + hg)]);
+      lastOwn=entry;
       if (entry.source.managedXI?.tactics.mentality === 1) ownWithTactics++;
+      if(entry.source.managedXI?.tactics.pressing===70&&
+         entry.source.managedXI?.tactics.tempo===80)ownWithRememberedPlan++;
       if (entry.source.managedXI?.tactics.formation === '4-4-2')
         ownWithFormation++;
       if (entry.source.plannedCommands.some(command => command?.kind === 'substitute-normal' &&
@@ -121,8 +135,10 @@ function verifyArchive(json, careerId, snapshot) {
     if (entry.round === 30) finalRound.push([home.name + ' — ' + away.name, hg + ' : ' + ag]);
   }
   assert.equal(calendar.length, OWN);
-  assert.equal(ownWithTactics, 1);
-  assert.equal(ownWithFormation,1,'Chosen formation missing from source journal');
+  assert.equal(ownWithTactics, OWN);
+  assert.equal(ownWithFormation,OWN,'Formation not retained for every own match');
+  assert.equal(ownWithRememberedPlan,OWN,
+    'Pressing and tempo were reset between managed fixtures');
   assert.equal(ownWithHalfTime, 1, 'Halftime manager substitution missing from canonical journal');
   assert.equal(finalRound.length, 8);
   assert.equal(clubs.size, 16);
@@ -137,6 +153,34 @@ function verifyArchive(json, careerId, snapshot) {
   assert.deepEqual(snapshot.table, table);
   assert.deepEqual(snapshot.own, calendar);
   assert.deepEqual(snapshot.finalRound, finalRound);
+  assert.equal(snapshot.report.options,OWN);
+  const lastPrematch=lastOwn.source.prematch.fixture;
+  const lastResult=lastOwn.result.report;
+  const expectedScore=[lastPrematch.homeClubId,lastPrematch.awayClubId].map(id=>
+    clubs.get(id).name);
+  assert.ok(snapshot.report.score.includes(expectedScore[0])&&
+    snapshot.report.score.includes(expectedScore[1]));
+  assert.ok(snapshot.report.score.includes(
+    lastResult.home.goals+' : '+lastResult.away.goals));
+  assert.deepEqual(snapshot.report.rows[0],[
+    String(lastResult.home.shots),'Удары',String(lastResult.away.shots)]);
+  assert.deepEqual(snapshot.report.rows[1],[
+    String(lastResult.home.shotsOnTarget),'В створ',
+    String(lastResult.away.shotsOnTarget)]);
+  const players=new Map(initial.catalog.players.map(p=>[p.id,p.displayName]));
+  for(const event of lastOwn.result.events){
+    if(event.type==='source'&&event.source.type==='shot'&&
+       event.source.outcome==='goal')
+      assert.ok(snapshot.report.events.some(text=>
+        text.includes(players.get(event.source.playerId))),
+      'Scorer name missing from match timeline');
+  }
+  const ranked=[...clubs.values()].sort((a,b)=>
+    b.points-a.points||b.difference-a.difference||
+    b.goals-a.goals||a.id.localeCompare(b.id));
+  if(ranked[0].id===clubId&&ranked[0].points>ranked[1].points)
+    assert.ok(snapshot.title?.includes('чемпион'),'No title celebration');
+  else assert.equal(snapshot.title,null);
 }
 
 export async function exercisePlayableSeason({ evaluate, reload, download, importArchive, browser }) {
@@ -259,6 +303,7 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   await waitPage('Эта карьера уже сохранена в браузере. Данные не перезаписывались.');
   let pausedAt = null;
   let tacticalFixture = false;
+  let rememberedVerified=false;
 
   while (current.revision < TOTAL) {
     const before = current;
@@ -272,6 +317,8 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
         await seasonClick('Настроить стартовый состав');
         await setValue('.season-tactics-grid select', '1');
         await setValue('#season-formation','4-4-2');
+        await setValue('.season-tactics-grid label:nth-child(3) input','70');
+        await setValue('.season-tactics-grid label:nth-child(4) input','80');
         assert.equal(await evaluate(
           "document.querySelectorAll('.season-formation-line').length"),4,
         'Selected 4-4-2 is not displayed on pitch');
@@ -284,6 +331,21 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
         await seasonClick('Рассчитать с заменой');
         tacticalFixture = true;
       } else {
+        if(!rememberedVerified && before.own===1){
+          await seasonClick('Настроить стартовый состав');
+          const restored=await run(()=>({
+            formation:document.querySelector('#season-formation')?.value,
+            pressing:document.querySelector(
+              '.season-tactics-grid label:nth-child(3) input')?.value,
+            tempo:document.querySelector(
+              '.season-tactics-grid label:nth-child(4) input')?.value,
+            starters:document.querySelectorAll('.season-xi-grid input:checked').length,
+          }));
+          assert.deepEqual(restored,{
+            formation:'4-4-2',pressing:'70',tempo:'80',starters:11,
+          },'Previous match preferences not restored');
+          rememberedVerified=true;
+        }
         await seasonClick('Рассчитать матч');
       }
       await waitSeason(value => value.status.startsWith('Результат рассчитан'), 'match preview');
@@ -340,6 +402,7 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   }
 
   assert.ok(pausedAt !== null, 'No interruption was exercised');
+  assert.equal(rememberedVerified,true,'Last XI was not checked');
   assert.equal(current.own, OWN);
   const before = await run(finalSnapshot);
   assert.ok(before.complete);

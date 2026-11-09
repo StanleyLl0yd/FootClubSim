@@ -349,6 +349,14 @@ async function run() {
         "Number(document.querySelector('.season-progress')?.value)");
       if(firstSeasonRevision<=1||firstSeasonRevision>=240)
         throw new Error('Opponent fixtures were not automatically committed');
+      const reportMatches=await evaluate(
+        "document.querySelectorAll('.season-match-centre select option').length");
+      if(reportMatches!==1)
+        throw new Error('First own match lacks a persisted report');
+      const shotsVisible=await evaluate(
+        "document.querySelectorAll('.season-report-stat').length");
+      if(shotsVisible!==7)
+        throw new Error('Verified match statistics not rendered');
 
       await send('Page.reload', { ignoreCache: true });
       await waitText('Создайте тренера, выберите клуб');

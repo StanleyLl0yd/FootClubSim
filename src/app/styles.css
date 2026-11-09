@@ -203,6 +203,49 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
   gap:.6rem;padding:.35rem;border-bottom:1px solid #e3ebe5;
 }
 .season-event-minute { font-weight:700; }
+/* Original fictional club badges, shared across the playable season. */
+.liga-club-label {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  vertical-align: middle;
+  min-width: 0;
+}
+.liga-club-label svg { flex: none; }
+.liga-club-label > span { min-width: 0; overflow-wrap: anywhere; }
+.season-club-pair {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem;
+  min-width: 0;
+}
+.season-report-score {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .6rem;
+}
+.season-report-score strong { white-space: nowrap; }
+.season-event-player {
+  display: flex;
+  flex-direction: column;
+  gap: .12rem;
+  min-width: 0;
+}
+.season-event-player > strong { overflow-wrap: anywhere; }
+.season-event-player .liga-club-label {
+  font-size: .78rem;
+  color: #52685e;
+}
+@media(max-width:550px) {
+  .season-report-events li {
+    grid-template-columns: 2.7rem minmax(0,1fr);
+    gap: .2rem .5rem;
+  }
+  .season-report-events li > span:last-child { grid-column: 2; }
+}
+
 @media(max-width:750px) {
   .season-columns, .season-scoreboard { grid-template-columns: 1fr; }
   .season-heading { flex-wrap: wrap; }

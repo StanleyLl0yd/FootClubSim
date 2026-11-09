@@ -2,6 +2,7 @@ import type {Fixture} from '../core/fixtures.js';
 import type {InitialCareerSave} from '../core/save.js';
 import type {M1V188Journal} from '../core/m1-v188-league-source-journal.js';
 import type {Position} from '../core/model.js';
+import {LigaClubLabel} from './LigaClubLabel.js';
 
 const POSITION_LABELS:Readonly<Record<Position,string>>={
   GK:'ВР',DL:'ЛЗ',DC:'ЦЗ',DR:'ПЗ',WBL:'ЛК',WBR:'ПК',
@@ -54,8 +55,12 @@ export function M1ClubOverview({career,journal,fixtures}:{
           <li key={fixture.id} className={entry?'season-played':'season-upcoming'}>
             <span className="subtle">Тур {fixture.round}</span>
             <span>{home?'Дома':'В гостях'}: {' '}
-              <strong>{nameByClub.get(home?
-                fixture.awayClubId:fixture.homeClubId)}</strong>
+              <strong>
+                <LigaClubLabel
+                  clubId={home?fixture.awayClubId:fixture.homeClubId}
+                  name={nameByClub.get(home?
+                    fixture.awayClubId:fixture.homeClubId)??''}/>
+              </strong>
             </span>
             <strong className={outcome?'season-form-'+outcome:undefined}>
               {mine===null||theirs===null?'—':mine+' : '+theirs}

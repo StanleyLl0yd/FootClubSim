@@ -1,5 +1,6 @@
 import type {M1V188Entry} from '../core/m1-v188-league-source-journal.js';
 import type {Catalog} from '../core/model.js';
+import {LigaClubLabel} from './LigaClubLabel.js';
 import {deriveM1V188MatchDetails}
   from '../core/m1-v188-match-details.js';
 
@@ -31,10 +32,12 @@ export function M1MatchReport({entry,catalog}:{
       right:(report.away.xgMilli/1000).toFixed(2)},
   ];
   return <div className="season-report" aria-label="Статистика сыгранного матча">
-    <p className="season-preview-score">
-      {teams.get(report.homeClubId)}{' '}
-      <strong>{report.home.goals} : {report.away.goals}</strong>{' '}
-      {teams.get(report.awayClubId)}
+    <p className="season-preview-score season-report-score">
+      <LigaClubLabel clubId={report.homeClubId}
+        name={teams.get(report.homeClubId)??report.homeClubId} size={32}/>
+      {' '}<strong>{report.home.goals} : {report.away.goals}</strong>{' '}
+      <LigaClubLabel clubId={report.awayClubId}
+        name={teams.get(report.awayClubId)??report.awayClubId} size={32}/>
     </p>
     <div className="season-report-stats">
       {rows.map(row=><div className="season-report-stat" key={row.name}>
@@ -45,16 +48,27 @@ export function M1MatchReport({entry,catalog}:{
     <h4>События матча</h4>
     {report.incidents.length?
       <ol className="season-report-events">
-        {report.incidents.map((event,index)=><li key={index}>
-          <span className="season-event-minute">
-            {Math.floor(event.time/60)+1}′
-          </span>
-          <span>{names.get(event.playerId)??event.playerId}</span>
-          <span>{incidentLabel[event.kind]}
-            {event.kind==='own-goal'?
-              ' (в пользу '+teams.get(event.teamId)+')':''}
-          </span>
-        </li>)}
+        {report.incidents.map((event,index)=>{
+          // An own goal credits the opposite side; the scorer plays
+          // for the defending club, not the beneficiary in teamId.
+          const actorClubId=event.kind==='own-goal'?
+            (event.teamId===report.homeClubId?
+              report.awayClubId:report.homeClubId):event.teamId;
+          return <li key={index}>
+            <span className="season-event-minute">
+              {Math.floor(event.time/60)+1}′
+            </span>
+            <span className="season-event-player">
+              <strong>{names.get(event.playerId)??event.playerId}</strong>
+              <LigaClubLabel clubId={actorClubId}
+                name={teams.get(actorClubId)??actorClubId} size={20}/>
+            </span>
+            <span>{incidentLabel[event.kind]}
+              {event.kind==='own-goal'?
+                ' (в пользу '+teams.get(event.teamId)+')':''}
+            </span>
+          </li>;
+        })}
       </ol>:<p className="subtle">Голов и дисциплинарных событий не было.</p>}
     <p className="subtle">Показаны только проверяемые события игрового
       движка. xG учитывает только удары с игры; владение, угловые,

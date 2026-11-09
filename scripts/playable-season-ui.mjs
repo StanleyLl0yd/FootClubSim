@@ -353,6 +353,17 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
         assert.equal(await evaluate(
           "document.querySelectorAll('.season-formation-line').length"),4,
         'Selected 4-4-2 is not displayed on pitch');
+        await seasonClick('Подобрать XI под схему');
+        const suggested=await run(()=>({
+          selected:document.querySelectorAll(
+            '.season-xi-grid input:checked').length,
+          fit:document.querySelector(
+            '.season-xi-advice [aria-live=polite]')?.textContent??'',
+        }));
+        assert.equal(suggested.selected,11,
+          'Formation adviser must choose eleven eligible players');
+        assert.match(suggested.fit,/Совпадение линий с амплуа: \d+%/,
+          'Formation adviser must show v2 role fit');
         await seasonClick('Настроить замену');
         assert.equal(await run(() => {
           const out = document.querySelector('#season-sub-out');

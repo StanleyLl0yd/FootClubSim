@@ -11,6 +11,7 @@ import {
 import { M1_CLOCK_MAX_EVENTS, M1_CLOCK_STEP_SECONDS, type M1PrematchInput } from './m1-clock.js';
 import type { MatchLedgerReport, ShotOutcome } from './match-contracts.js';
 import type { Player } from './model.js';
+import type { TacticalPlan } from './tactics.js';
 import { RNG_VERSION, SeededRng } from './rng.js';
 
 /**
@@ -251,6 +252,45 @@ export function computeM1V104ResearchPhaseShot(
   if (!validM1V104ResearchParameters(research)) throw Error('INVALID_V104_PARAMETERS');
   return computeM1ShotKernel(input, state, players, active, phase, rng, sequence, research);
 }
+/** Version 2 only. No extra RNG draws and no historical v1 tuning.
+ * Positional coverage is deliberately coarse until explicit XI slots exist.
+ */
+function tacticalShape(
+  plan: TacticalPlan, ids: readonly string[],
+  players: ReadonlyMap<string, Player>,
+): Readonly<{ attack: number; defense: number }> {
+  if (plan.schemaVersion !== 2) return { attack: 0, defense: 0 };
+  const lines = plan.formation.split('-').map(Number);
+  const expectedD = lines[0]!;
+  const expectedDM = lines.length === 4 ? lines[1]! : 0;
+  const expectedFW = lines[lines.length - 1]!;
+  const expectedM = 10 - expectedD - expectedDM - expectedFW;
+  let defenders = 0, holding = 0, midfield = 0, advanced = 0, strikers = 0;
+  for (const id of ids) {
+    const pos = players.get(id)!.primaryPosition;
+    if (pos === 'GK') continue;
+    if (['DL', 'DC', 'DR', 'WBL', 'WBR'].includes(pos)) defenders++;
+    else if (pos === 'DM') holding++;
+    else if (pos === 'ST') strikers++;
+    else if (pos.startsWith('AM')) advanced++;
+    else midfield++;
+  }
+  // Wide attacking midfielders may cover advanced forward slots; do not
+  // treat the unassigned schematic XI slots as verified player positions.
+  const forwardCover = Math.min(advanced, Math.max(0, expectedFW - strikers));
+  const coveredFW = strikers + forwardCover;
+  const coveredM = midfield + advanced - forwardCover;
+  const mismatch = Math.abs(expectedD - defenders) +
+    Math.abs(expectedDM - holding) + Math.abs(expectedM - coveredM) +
+    Math.abs(expectedFW - coveredFW);
+  const fit = Math.max(0, 1 - mismatch / 20);
+  return {
+    attack: clamp((expectedFW - 2) * 0.027 +
+      (fit - 0.75) * 0.032, -0.07, 0.07),
+    defense: clamp((expectedD - 4) * 0.023 +
+      (fit - 0.75) * 0.028, -0.07, 0.07),
+  };
+}
 function computeM1ShotKernel(
   input: M1PrematchInput, state: M1PlayerControlState,
   players: ReadonlyMap<string, Player>,
@@ -273,12 +313,16 @@ function computeM1ShotKernel(
     const awayMark = avg(awayIds, players, 'marking');
     const homeTactics = state.controlled.tactics.home;
     const awayTactics = state.controlled.tactics.away;
+    const homeShape = tacticalShape(homeTactics, homeIds, players);
+    const awayShape = tacticalShape(awayTactics, awayIds, players);
     const homePossession = clamp(
       0.535 + (homePass - awayPass) / 500 + (homeDec - awayDec) / 900 +
       (homeTactics.mentality - awayTactics.mentality) * 0.017, 0.27, 0.73,
     );
     const homeTeam = possession < homePossession;
     const attack = homeTeam ? homeTactics : awayTactics;
+    const attackShape = homeTeam ? homeShape : awayShape;
+    const defenseShape = homeTeam ? awayShape : homeShape;
     const activeIds = homeTeam ? homeIds : awayIds;
     const teamId = homeTeam ? input.fixture.homeClubId : input.fixture.awayClubId;
     const offense = homeTeam ? homePass : awayPass;
@@ -292,7 +336,8 @@ function computeM1ShotKernel(
       (attack.passingRisk - 50) * 0.001 +
       attack.mentality * 0.028 +
       (offense - defense) / 400 + (homeTeam ? 0.025 : 0) +
-      (attackFocus - defenseFocus) * 0.012 - phase * 0.002,
+      (attackFocus - defenseFocus) * 0.012 - phase * 0.002 +
+      attackShape.attack - defenseShape.defense,
       0.08, 0.75,
     );
     if (chanceDraw < (research ? clamp(chance * research.shotOpportunityMultiplier, 0, 1) : chance)) {
@@ -314,7 +359,9 @@ function computeM1ShotKernel(
           (player.attributes.composure - 50) * 1.2 -
           (keeper.attributes.reflexes - 50) * 0.9 +
           quality * 220 + zoneBonus + focusBonus) * fatigue / 1000 *
-          (research ? research.xgMultiplier : 1),
+          (research ? research.xgMultiplier : 1) *
+          clamp(1 + attackShape.attack * 1.8 -
+            defenseShape.defense * 1.5, 0.85, 1.15),
         20, 600,
       ));
       return {

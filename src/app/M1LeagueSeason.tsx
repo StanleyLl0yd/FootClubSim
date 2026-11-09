@@ -116,7 +116,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       xiPrematch.homeTactics:xiPrematch.awayTactics):null;
   const xiChoice:M1V188ManagedXI|undefined=xiSetup&&xiBaseTactics?{
     schemaVersion:1,clubId:career.selectedClubId,starters:starterIds,
-    tactics:{...xiBaseTactics,formation:xiFormation,
+    tactics:{...xiBaseTactics,schemaVersion:2 as const,formation:xiFormation,
       mentality:xiMentality,pressing:xiPressing,tempo:xiTempo},
   }:undefined;
   const xiPlayers=new Set(starterIds);

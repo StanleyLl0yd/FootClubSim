@@ -5,7 +5,8 @@ import type { ValidationError } from './validation.js';
  * Formation encodes ten outfield players, from defense to attack.
  */
 export interface TacticalPlan {
-  readonly schemaVersion: 1;
+  /** v1 is immutable historical behavior; v2 enables positional formation effects. */
+  readonly schemaVersion: 1 | 2;
   readonly clubId: string;
   readonly formation: string;
   readonly mentality: number; // integer -2..2
@@ -22,7 +23,8 @@ const within = (value: number, min: number, max: number): boolean =>
 /** Only structure is defined in M0; tactical efficacy must be calibrated in M1. */
 export function validateTacticalPlan(plan: TacticalPlan, expectedClubId: string): readonly ValidationError[] {
   const errors: ValidationError[] = [];
-  if (plan.schemaVersion !== 1 || plan.clubId !== expectedClubId) {
+  if ((plan.schemaVersion !== 1 && plan.schemaVersion !== 2) ||
+      plan.clubId !== expectedClubId) {
     errors.push({ code: 'INVALID_TACTICS_ID', at: 'tactics' });
   }
   const parts = typeof plan.formation === 'string' && /^\d(?:-\d){1,3}$/.test(plan.formation)

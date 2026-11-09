@@ -95,9 +95,17 @@ export function startM1Clock(input: unknown): M1ClockStart {
       input.engineVersion !== M1_ENGINE_VERSION) {
     return error('INVALID_M1_PREMATCH', 'input');
   }
+  // Reuse M0 structural validation without expanding the immutable M0
+  // tactical version. M1 preserves v2 in its own source; only this
+  // throwaway end-only preflight is projected into the historical v1 shape.
+  const oldShape = (value: unknown): unknown =>
+    isRecord(value) && value.schemaVersion === 2 ?
+      { ...value, schemaVersion: 1 } : value;
   const preflight = deriveMatchLedger({
     ...input,
     engineVersion: M0_ENGINE_VERSION,
+    homeTactics: oldShape(input.homeTactics),
+    awayTactics: oldShape(input.awayTactics),
     events: [{ id: 'm1-preflight-end', sequence: 1, elapsedSeconds: 5400, type: 'full-time' }],
   } as unknown as MatchLedgerInput);
   if (!preflight.ok) return { ok: false, errors: preflight.errors };

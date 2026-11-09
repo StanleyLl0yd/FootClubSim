@@ -9,6 +9,7 @@ import {startM1V188LeagueJournal,prepareM1V188LeagueMatch,
   from '../dist/core/m1-v188-league-source-journal.js';
 import {planM1V188NextOwnMatch}
   from '../dist/core/m1-v188-season-navigation.js';
+import {generateDoubleRoundRobin} from '../dist/core/fixtures.js';
 
 const catalog=createSyntheticRplScaleCatalog(2026);
 const career=createInitialCareer(catalog,catalog.clubs[1].id,42,
@@ -46,4 +47,22 @@ test('navigation rejects mismatched career and invalid revision',()=>{
     {...career,selectedClubId:'alien'},start.journal),null);
   assert.equal(planM1V188NextOwnMatch(
     career,{...start.journal,revision:1}),null);
+});
+
+test('after last managed match, finish every remaining opponent fixture',()=>{
+  const another=createInitialCareer(catalog,catalog.clubs[0].id,42,
+    'season-tail-automatic');
+  const first=startM1V188LeagueJournal(another);
+  assert.equal(first.ok,true);
+  const fixtures=generateDoubleRoundRobin(catalog.clubs.map(c=>c.id))
+    .flatMap(round=>round.fixtures);
+  const lastOwn=fixtures.findLastIndex(f=>f.homeClubId===another.selectedClubId||
+    f.awayClubId===another.selectedClubId);
+  assert.ok(lastOwn<239);
+  const afterOwn={...first.journal,revision:lastOwn+1,
+    entries:Array.from({length:lastOwn+1},()=>null)};
+  const tail=planM1V188NextOwnMatch(another,afterOwn);
+  assert.equal(tail?.targetRevision,240);
+  assert.equal(tail?.fixtureId,null);
+  assert.equal(tail?.automaticMatches,239-lastOwn);
 });

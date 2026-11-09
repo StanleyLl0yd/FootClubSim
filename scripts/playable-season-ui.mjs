@@ -27,7 +27,7 @@ function seasonState() {
     revision: panel.querySelector('progress')?.value ?? null,
     own: panel.querySelectorAll('.season-own-calendar .season-played').length,
     ownNext: buttons.some(button => button.textContent.trim() === 'Настроить стартовый состав'),
-    automatic: buttons.some(button => button.textContent.trim() === 'Перейти к своему матчу'),
+    automatic: Boolean(panel.querySelector('.season-advance')),
     stopping: buttons.some(button => button.textContent.trim() === 'Остановить переход'),
     status: panel.querySelector(':scope > [role=status]')?.textContent.trim() ?? '',
   };
@@ -144,7 +144,7 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   }, prefix, timeout);
   const waitSeason = (predicate, label, timeout) => waitFor(async () => {
     const current = await state();
-    if (current && /^(Не удалось|Не подтверждено|Запись не подтверждена|Матч пока невозможно|Переход остановлен:)/u.test(current.status))
+    if (current && /^(Не удалось|Не подтверждено|Запись не подтверждена|Матч пока невозможно|Автоматический расчёт не завершён:)/u.test(current.status))
       throw new Error('At revision ' + current.revision + ': ' + current.status);
     return current && predicate(current) ? current : null;
   }, label, timeout);
@@ -171,10 +171,13 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
       return true;
     }, selector, value), true, 'Unavailable input: ' + selector);
   }
-  async function openSeason(revision) {
+  async function openSeason(minimumRevision) {
     await seasonClick('Начать или продолжить сезон');
-    return waitSeason(current => current.revision === revision && current.status.includes('Сезон проверен'),
-      'verified IndexedDB revision ' + revision, COLD_REPLAY_TIMEOUT);
+    return waitSeason(current => current.revision >= minimumRevision &&
+      !current.automatic && !current.stopping &&
+      /^(Сезон проверен|Теперь очередь вашего клуба|Сезон завершён)/u.test(current.status),
+    'automatic opponents complete after loading revision ' + minimumRevision,
+    COLD_REPLAY_TIMEOUT);
   }
 
   const started = Date.now();
@@ -250,46 +253,12 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
 
   while (current.revision < TOTAL) {
     const before = current;
-    if (before.automatic) {
-      const shouldPause = pausedAt === null && before.revision >= 80 &&
-        await evaluate('Number(document.querySelector(".season-advance p").textContent.match(/\\d+/u)[0]) >= 3');
-      if (shouldPause) {
-        // Click Stop after the first opponent result is visibly committed.
-        await run(revision => {
-          const panel = document.querySelector('.season-panel');
-          const observer = new MutationObserver(() => {
-            if (panel.querySelector('progress').value <= revision) return;
-            const stop = [...panel.querySelectorAll('button')]
-              .find(button => button.textContent.trim() === 'Остановить переход');
-            if (stop && !stop.disabled) {
-              observer.disconnect();
-              stop.click();
-            }
-          });
-          observer.observe(panel, { childList: true, subtree: true, attributes: true });
-        }, before.revision);
-      }
-      await seasonClick('Перейти к своему матчу');
-      current = await waitSeason(value => value.revision > before.revision &&
-        !value.stopping && value.status.startsWith(shouldPause ? 'Переход остановлен.' : 'Теперь очередь вашего клуба.'),
-      'saved automatic opponents after revision ' + before.revision);
-      assert.equal(current.own, before.own, 'Automatic advance skipped a managed fixture');
-      if (shouldPause) {
-        assert.ok(current.automatic, 'Pause did not interrupt the batch');
-        pausedAt = current.revision;
-        await reload();
-        await waitPage('Создайте тренера, выберите клуб');
-        await waitFor(() => run(id => [...document.querySelector('#career-saved-select').options]
-          .some(option => option.value === id), careerId), 'saved career selector after interruption');
-        await setValue('#career-saved-select', careerId);
-        await click('Восстановить из браузера');
-        await waitPage('Стартовая карьера восстановлена');
-        current = await openSeason(pausedAt);
-        assert.equal(current.own, before.own);
-        console.log(browser + ': interrupted after saved fixture ' + pausedAt + ' and resumed after reload');
-      }
-    } else {
+    assert.equal(before.automatic,false,
+      'Opponent fixture remains exposed for manual action');
+    {
       const useHalfTime = before.ownNext && !tacticalFixture;
+      const shouldPause=pausedAt===null && before.revision>=80 && before.revision<200;
+
       if (useHalfTime) {
         await seasonClick('Настроить стартовый состав');
         await setValue('.season-tactics-grid select', '1');
@@ -310,10 +279,48 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
           .some(node => node.textContent.includes('Замена в перерыве включена'))), true,
         'No visible halftime-substitution confirmation');
       }
+      if(shouldPause){
+        // Interruption is optional for the player, but automatic results must
+        // remain durable after reload. Stop after the first opponent commit.
+        await run(revision => {
+          const panel=document.querySelector('.season-panel');
+          const observer=new MutationObserver(()=>{
+            if(panel.querySelector('progress')?.value<=revision)return;
+            const button=[...panel.querySelectorAll('button')]
+              .find(element=>element.textContent.trim()==='Остановить переход');
+            if(button&&!button.disabled){
+              observer.disconnect();
+              button.click();
+            }
+          });
+          observer.observe(panel,{childList:true,subtree:true,attributes:true});
+        },before.revision+1);
+      }
       await seasonClick('Подтвердить и сохранить');
-      current = await waitSeason(value => value.revision === before.revision + 1 &&
-        value.status.startsWith('Матч №' + (before.revision + 1) + ' записан'), 'explicit match commit');
-      assert.equal(current.own, before.own + Number(before.ownNext), 'Wrong managed-club calendar progression');
+      current = await waitSeason(value => value.revision > before.revision &&
+        value.own===before.own+1 && !value.stopping &&
+        (value.status.startsWith(shouldPause?
+          'Автоматический расчёт остановлен.':'Теперь очередь вашего клуба.') ||
+         value.status.startsWith('Сезон завершён.')),
+      'own match committed and opponents automatically resolved');
+      assert.equal(current.own,before.own+1,
+        'Opponent autopilot skipped or duplicated a managed fixture');
+      if(shouldPause){
+        assert.ok(current.automatic,'Stop did not leave pending opponents');
+        pausedAt=current.revision;
+        await reload();
+        await waitPage('Создайте тренера, выберите клуб');
+        await waitFor(()=>run(id=>[...document.querySelector('#career-saved-select').options]
+          .some(option=>option.value===id),careerId),
+        'saved career selector after interruption');
+        await setValue('#career-saved-select',careerId);
+        await click('Восстановить из браузера');
+        await waitPage('Стартовая карьера восстановлена');
+        current=await openSeason(pausedAt);
+        assert.equal(current.own,before.own+1);
+        console.log(browser+': automatic opponent batch interrupted after '+
+          pausedAt+' and recovered after reload');
+      }
     }
     if (Math.floor(current.revision / 40) > Math.floor(before.revision / 40))
       console.log(browser + ': committed ' + current.revision + '/' + TOTAL + ' fixtures through the UI');

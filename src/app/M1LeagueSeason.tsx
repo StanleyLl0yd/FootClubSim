@@ -152,6 +152,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       setJournal(loaded);
       setStatus('Сезон проверен и загружен. Сыграно матчей: '+
         loaded.revision+' из 240.');
+      await advanceOpponents(loaded);
     }catch(error){
       setJournal(null);
       setStatus('Не удалось открыть сезон: '+errorText(error)+
@@ -189,6 +190,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       setManagerSetup(null);setXiSetup(null);setStarterIds([]);
       setStatus('Матч №'+updated.revision+
         ' записан в браузер. Результат и таблица обновлены.');
+      await advanceOpponents(updated);
     }catch(error){
       try{
         const reloaded=await loadM1V188PersistedLeague(career.careerId);
@@ -248,20 +250,25 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     }
   }
 
-  async function advanceToMyMatch():Promise<void>{
-    if(busy||disabled||!journal||!navigation||
-        navigation.automaticMatches===0||preview)return;
-    setBusy(true);setAdvancing(true);
-    setPreview(null);setManagerSetup(null);setXiSetup(null);
+  /** Continue durably until the next user-managed fixture (or season end).
+   * Only a confirmed user match or explicit season load starts this task.
+   * Never rely on an effect to commit twice under React StrictMode.
+   */
+  async function advanceOpponents(start:M1V188Journal):Promise<void>{
+    const plan=planM1V188NextOwnMatch(career,start);
+    if(!plan||plan.automaticMatches===0)return;
+    setAdvancing(true);setPreview(null);
+    setManagerSetup(null);setXiSetup(null);
+    setStatus('Автоматически рассчитываются матчи остальных клубов.');
     stopRequested.current=false;
     try{
       const stored=await loadInitialCareer(career.careerId);
       if(!sameCanonicalValue(stored,career))
         throw Error('Начальное сохранение изменено; продолжение отменено.');
       let current=await loadM1V188PersistedLeague(career.careerId);
-      if(!sameCanonicalValue(current,journal))
+      if(!sameCanonicalValue(current,start))
         throw Error('Сезон изменён в другом окне; требуется обновление.');
-      const target=navigation.targetRevision;
+      const target=plan.targetRevision;
       while(current.revision<target&&!stopRequested.current){
         const expectedFixture=fixtures[current.revision];
         const proposal=prepareM1V188LeagueMatch(career,current);
@@ -281,22 +288,32 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         await new Promise<void>(resolve=>window.setTimeout(resolve,0));
       }
       setStatus(stopRequested.current?
-        'Переход остановлен. Все завершённые матчи сохранены.':
-        'Теперь очередь вашего клуба. Остальные матчи сохранены.');
+        'Автоматический расчёт остановлен. Все завершённые матчи сохранены.':
+        target===240?
+          'Сезон завершён. Все 240 матчей сохранены.':
+          'Теперь очередь вашего клуба. Остальные матчи сохранены.');
     }catch(error){
       try{
         const current=await loadM1V188PersistedLeague(career.careerId);
         setJournal(current);
-        setStatus('Переход остановлен: '+errorText(error)+
+        setStatus('Автоматический расчёт не завершён: '+errorText(error)+
           '. Показано проверенное сохранение.');
       }catch(reloadError){
         setJournal(null);
-        setStatus('Переход остановлен: '+errorText(error)+
+        setStatus('Автоматический расчёт не завершён: '+errorText(error)+
           '. Невозможно подтвердить сохранение: '+errorText(reloadError));
       }
     }finally{
-      setAdvancing(false);setBusy(false);stopRequested.current=false;
+      setAdvancing(false);stopRequested.current=false;
     }
+  }
+
+  /** Recovery-only control after a deliberate stop or interrupted write. */
+  async function resumeOpponents():Promise<void>{
+    if(busy||disabled||!journal||preview)return;
+    setBusy(true);
+    try{await advanceOpponents(journal);}
+    finally{setBusy(false);}
   }
 
   return <section className="panel season-panel" aria-labelledby="season-title">
@@ -341,22 +358,26 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         {next&&navigation&&navigation.automaticMatches>0&&
           <div className="season-advance">
             <div>
-              <strong>Ближайший матч вашего клуба</strong>
-              <p className="subtle">Перед ним осталось {navigation.automaticMatches}
-                {' '}матчей других команд. Они будут рассчитаны и сохранены по очереди.</p>
+              <strong>{navigation.targetRevision===240?
+                'Завершение сезона':'До следующего матча вашего клуба'}</strong>
+              <p className="subtle">{advancing?
+                'Идёт автоматический расчёт и сохранение матчей других клубов.':
+                'Осталось матчей других клубов: '+navigation.automaticMatches+
+                  '. Вы можете возобновить расчёт.'}</p>
             </div>
             <div className="button-stack">
-              <button type="button" disabled={busy||disabled||!!preview}
-                onClick={()=>void advanceToMyMatch()}>
-                Перейти к своему матчу
-              </button>
-              {advancing&&<button type="button" className="secondary-button"
-                onClick={()=>{stopRequested.current=true;}}>
-                Остановить переход
-              </button>}
+              {advancing?
+                <button type="button" className="secondary-button"
+                  onClick={()=>{stopRequested.current=true;}}>
+                  Остановить переход
+                </button>:
+                <button type="button" disabled={busy||disabled||!!preview}
+                  onClick={()=>void resumeOpponents()}>
+                  Продолжить автоматический расчёт
+                </button>}
             </div>
           </div>}
-        {next&&<div className="season-next">
+        {next&&ownNextNow&&<div className="season-next">
           <span className="subtle">Следующая игра · тур {next.round}</span>
           <strong>{clubs.get(next.homeClubId)} — {clubs.get(next.awayClubId)}</strong>
           <div className="button-stack">

@@ -328,6 +328,43 @@ async function run() {
         "document.querySelector('#season-formation')?.value");
       if(formationShown!=='4-2-3-1')
         throw new Error('Default formation selection missing');
+      // Prevent fields, formation pitch or labels from overlapping after
+      // resizing the same real browser to mobile, tablet and desktop widths.
+      for(const width of [390,768,1280]){
+        await send('Emulation.setDeviceMetricsOverride',{
+          width,height:900,deviceScaleFactor:1,mobile:false,
+        });
+        const layout=await evaluate(`(() => {
+          const root=document.querySelector('.season-substitution');
+          const labels=[...root.querySelectorAll('.season-tactics-grid > label')];
+          const box=node=>node.getBoundingClientRect();
+          const intersects=(a,b)=>{
+            const x=box(a),y=box(b);
+            return x.left<y.right-1&&y.left<x.right-1&&
+              x.top<y.bottom-1&&y.top<x.bottom-1;
+          };
+          const controls=labels.map(label=>label.querySelector('select,input'));
+          const outside=labels.some((label,index)=>{
+            const a=box(label),b=box(controls[index]);
+            return b.left<a.left-1||b.right>a.right+1;
+          });
+          return{
+            overlap:labels.some((label,index)=>labels.slice(index+1)
+              .some(other=>intersects(label,other))),
+            outside,
+            overflow:document.documentElement.scrollWidth>window.innerWidth+2,
+            pitch:root.querySelector('.season-formation-pitch')
+              .getBoundingClientRect().width,
+            grid:root.querySelector('.season-xi-grid')
+              .getBoundingClientRect().width,
+          };
+        })()`);
+        if(layout.overlap||layout.outside||layout.overflow||
+            layout.pitch<=0||layout.grid<=0)
+          throw new Error('XI layout overlap at '+width+'px: '+
+            JSON.stringify(layout));
+      }
+      await send('Emulation.clearDeviceMetricsOverride');
       await clickSeason('Рассчитать матч');
       await waitText('Стартовый состав и тактика выбраны тренером');
       await waitText('Результат рассчитан. Подтвердите запись');

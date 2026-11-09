@@ -25,7 +25,10 @@ if(seeds.length<2||seeds.length>24||new Set(seeds).size!==seeds.length)
   throw Error('Provide 2–24 distinct uint32 seeds');
 const catalog=createLigaPrikolovPreviewCatalog(2026);
 assert.equal(catalog.clubs.length,16);
-const clubName=new Map(catalog.clubs.map(c=>[c.id,c.name]));
+assert.ok(catalog.clubs.every(c=>
+  typeof c.displayName==='string'&&c.displayName.trim().length>0),
+  'Every preview club must have a display name');
+const clubName=new Map(catalog.clubs.map(c=>[c.id,c.displayName]));
 const results=[];
 for(const seed of seeds){
   const start=performance.now();
@@ -90,7 +93,7 @@ const uniqueOrderings=new Set(results.map(r=>r.ordering.join('|'))).size;
 const uniqueResultDigests=new Set(results.map(r=>r.finalTableHash)).size;
 const rankSpans=catalog.clubs.map(club=>{
   const positions=results.map(r=>r.ordering.indexOf(club.id)+1);
-  return{club:club.name,minRank:Math.min(...positions),
+  return{club:club.displayName,minRank:Math.min(...positions),
     maxRank:Math.max(...positions)};
 });
 const report={

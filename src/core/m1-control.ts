@@ -109,7 +109,8 @@ function readPlan(candidate: unknown, expectedClubId: string): TacticalPlan | nu
   if (!isRecord(candidate) || !keysMatch(candidate, TACTICS_KEYS) ||
       validateTacticalPlan(candidate as unknown as TacticalPlan, expectedClubId).length) return null;
   return {
-    schemaVersion: 1, clubId: expectedClubId,
+    schemaVersion: candidate.schemaVersion as 1 | 2,
+    clubId: expectedClubId,
     formation: candidate.formation as string, mentality: candidate.mentality as number,
     pressing: candidate.pressing as number, compactness: candidate.compactness as number,
     defensiveLine: candidate.defensiveLine as number,

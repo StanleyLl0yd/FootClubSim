@@ -253,3 +253,43 @@ test('unrecognized v5 event fields/order/phase/foreign schema fail ledger deriva
     run.events.map(e => e === sub ? { ...sub, command: { ...sub.command, stoppage: 'half-time' } } : e)
   ).ok, false);
 });
+
+test('formation-sensitive v2 changes events across paired seeds; v1 replay unchanged', () => {
+  let changedV2 = 0;
+  const total = { aShots: 0, bShots: 0, aXg: 0, bXg: 0 };
+  for (let seed = 1; seed <= 96; seed++) {
+    const original = { ...initial, rngSeed: seed };
+    const legacyA = good(simulateM1V5Phases({
+      ...original, homeTactics: { ...initial.homeTactics, formation: '4-4-2' },
+    }, policy));
+    const legacyB = good(simulateM1V5Phases({
+      ...original, homeTactics: { ...initial.homeTactics, formation: '4-3-3' },
+    }, policy));
+    assert.deepEqual(legacyA.events, legacyB.events,
+      'v1 formations are historical display-only inputs and must not change');
+    assert.deepEqual(legacyA.report, legacyB.report);
+    const aInput = { ...original, homeTactics: {
+      ...initial.homeTactics, schemaVersion: 2, formation: '4-4-2',
+    }};
+    const bInput = { ...original, homeTactics: {
+      ...initial.homeTactics, schemaVersion: 2, formation: '4-3-3',
+    }};
+    const a = good(simulateM1V5Phases(aInput, policy));
+    const b = good(simulateM1V5Phases(bInput, policy));
+    assert.equal(a.rngState, b.rngState,
+      'formation choice must not consume or reshuffle PRNG draws');
+    if (JSON.stringify(a.events) !== JSON.stringify(b.events)) changedV2++;
+    total.aShots += a.report.home.shots;
+    total.bShots += b.report.home.shots;
+    total.aXg += a.report.home.xgMilli;
+    total.bXg += b.report.home.xgMilli;
+    if (seed === 1) {
+      assert.deepEqual(a, good(simulateM1V5Phases(structuredClone(aInput), policy)));
+      assert.equal(deriveM1V5Ledger(aInput, policy, a.events).ok, true);
+    }
+  }
+  assert.ok(changedV2 >= 10,
+    'v2 formation must change real recorded events across fixed seeds');
+  assert.notEqual(total.aXg, total.bXg,
+    'v2 role/formation should change aggregate source-derived xG');
+});

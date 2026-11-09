@@ -239,3 +239,12 @@ test('versioned match events reject undeclared fields and missing required field
     if (!result.ok) assert.ok(result.errors.some(e => e.code === 'INVALID_EVENT_SHAPE'));
   }
 });
+
+test('frozen M0 ledger refuses version-2 tactical plans', () => {
+  const v2 = { ...base.homeTactics, schemaVersion: 2, formation: '4-3-3' };
+  const result = deriveMatchLedger({ ...base, homeTactics: v2 });
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.ok(result.errors.some(e =>
+    e.code === 'INVALID_TACTICS_ID'));
+  assert.equal(deriveMatchLedger(base).ok, true);
+});

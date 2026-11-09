@@ -137,6 +137,11 @@ export function deriveMatchLedger(input: MatchLedgerInput): MatchLedgerResult {
     return { ok: false, errors: [...errors, fail('INVALID_EVENT_COUNT', 'events')] };
   }
 
+  // M0 ledger remains a frozen v1 contract. A v2 tactical plan is valid
+  // only in its explicitly versioned M1 simulation, never as M0 evidence.
+  if (input.homeTactics.schemaVersion !== 1 || input.awayTactics.schemaVersion !== 1) {
+    errors.push(fail('INVALID_TACTICS_ID', 'tactics.schemaVersion'));
+  }
   errors.push(...validateTacticalPlan(input.homeTactics, fixture.homeClubId));
   errors.push(...validateTacticalPlan(input.awayTactics, fixture.awayClubId));
   const catalogErrors = validateCatalog(catalog);

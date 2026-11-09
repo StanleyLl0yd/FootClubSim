@@ -97,7 +97,8 @@ function readTactics(value: unknown, clubId: string): TacticalPlan | null {
   if (!isRecord(value) || !keysMatch(value, [
     'schemaVersion', 'clubId', 'formation', 'mentality', 'pressing',
     'compactness', 'defensiveLine', 'passingRisk', 'tempo',
-  ]) || validateTacticalPlan(value as unknown as TacticalPlan, clubId).length) return null;
+  ]) || value.schemaVersion !== 1 ||
+      validateTacticalPlan(value as unknown as TacticalPlan, clubId).length) return null;
 
   return {
     schemaVersion: 1, clubId, formation: value.formation as string,

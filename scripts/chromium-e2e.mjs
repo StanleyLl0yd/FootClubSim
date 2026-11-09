@@ -331,16 +331,20 @@ async function run() {
       const firstCommit=await until(async()=>{
         const value=await evaluate(
           "document.querySelector('.season-panel > p[role=status]')?.innerText ?? ''");
-        return value.includes('Матч №1 записан')||
-          value.includes('Запись не подтверждена')||
-          value.includes('Не удалось записать')?value:null;
-      },'managed XI commit result');
-      if(!firstCommit.includes('Матч №1 записан'))
-        throw new Error('Manual XI commit rejected: '+firstCommit);
-      const playedOwn=await evaluate(
-        "document.querySelectorAll('.season-own-calendar .season-played').length");
-      if(playedOwn!==1)
-        throw new Error('Club calendar did not show committed first fixture');
+        if(value.includes('Запись не подтверждена')||
+           value.includes('Автоматический расчёт не завершён'))
+          throw new Error('Manual XI commit failed: '+value);
+        const own=await evaluate(
+          "document.querySelectorAll('.season-own-calendar .season-played').length");
+        return own===1&&value.includes('Теперь очередь вашего клуба')?
+          value:null;
+      },'managed XI commit and automatic opponents');
+      if(!firstCommit.includes('Теперь очередь вашего клуба'))
+        throw new Error('Automatic opponent calculation did not complete');
+      const firstSeasonRevision=await evaluate(
+        "Number(document.querySelector('.season-progress')?.value)");
+      if(firstSeasonRevision<=1||firstSeasonRevision>=240)
+        throw new Error('Opponent fixtures were not automatically committed');
 
       await send('Page.reload', { ignoreCache: true });
       await waitText('Создайте тренера, выберите клуб');
@@ -366,7 +370,8 @@ async function run() {
         throw new Error('Approved fictional club not restored');
       }
       await clickSeason('Начать или продолжить сезон');
-      await waitText('Сезон проверен и загружен. Сыграно матчей: 1 из 240.');
+      await waitText('Сезон проверен и загружен. Сыграно матчей: '+
+        firstSeasonRevision+' из 240.');
       console.log('PASS: approved Liga Prikolov synthetic club career persisted and restored');
 
       // A downloaded full archive must bring back the ACTUAL v188 season
@@ -388,8 +393,10 @@ async function run() {
       if (savedManager?.skills.tacticalKnowledge !== 15 ||
           savedManager.skills.mediaCommunication !== 5 || savedManager.origin !== 'custom')
         throw new Error('Full archive lost custom manager skills');
-      if(savedFullJournal.revision!==1||fullEnvelope.careerId!==ligaId)
-        throw new Error('Export skipped a played fixture or changed career ID');
+      if(savedFullJournal.revision!==firstSeasonRevision||
+         fullEnvelope.careerId!==ligaId||
+         savedFullJournal.entries.length!==firstSeasonRevision)
+        throw new Error('Export skipped automatically played fixtures or changed career ID');
       await send('Storage.clearDataForOrigin',{
         origin:new URL(targetUrl).origin,storageTypes:'indexeddb',
       });
@@ -403,10 +410,12 @@ async function run() {
       await send('DOM.setFileInputFiles',{
         nodeId:fullInput.nodeId,files:[fullPath],
       });
-      await waitText('Полная карьера восстановлена. Сыграно матчей: 1 из 240.');
+      await waitText('Полная карьера восстановлена. Сыграно матчей: '+
+        firstSeasonRevision+' из 240.');
       await verifyManager();
       await clickSeason('Начать или продолжить сезон');
-      await waitText('Сезон проверен и загружен. Сыграно матчей: 1 из 240.');
+      await waitText('Сезон проверен и загружен. Сыграно матчей: '+
+        firstSeasonRevision+' из 240.');
       const corruptedFull={...fullEnvelope,journalChecksum:'0'.repeat(64)};
       const corruptedPath=join(profile,'full-career-corrupted.json');
       await writeFile(corruptedPath,JSON.stringify(corruptedFull),'utf8');
@@ -451,7 +460,8 @@ async function run() {
       await click('Восстановить из браузера');
       await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
       await clickSeason('Начать или продолжить сезон');
-      await waitText('Сезон проверен и загружен. Сыграно матчей: 1 из 240.');
+      await waitText('Сезон проверен и загружен. Сыграно матчей: '+
+        firstSeasonRevision+' из 240.');
       console.log('PASS: two independent Liga careers coexist without losing first season history');
       await click('Новая карьера');
       await setupManager('Тренер деморежима');
@@ -574,9 +584,9 @@ async function run() {
     // Player-facing career: automatic opponent game, owned-team
     // halftime coaching decision, verified two-team table and durable reload.
     await clickSeason('Начать или продолжить сезон');
-    await waitText('Сезон проверен и загружен. Сыграно матчей: 0 из 240.');
-    await clickSeason('Перейти к своему матчу');
     await waitText('Теперь очередь вашего клуба. Остальные матчи сохранены.');
+    if(await evaluate("Boolean(document.querySelector('.season-advance'))"))
+      throw new Error('Opponent fixture not automatically finished on season open');
     const tablePlayed = await evaluate(`(() => {
       return Array.from(document.querySelectorAll('.season-table tbody tr'))
         .filter(row => Number(row.querySelectorAll('td')[1]?.textContent) === 1)
@@ -603,7 +613,11 @@ async function run() {
       throw new Error('Player-facing v188 preview did not show a score');
     }
     await clickSeason('Подтвердить и сохранить');
-    await waitText('Матч №2 записан в браузер');
+    await waitText('Теперь очередь вашего клуба. Остальные матчи сохранены.');
+    const secondSeasonRevision=await evaluate(
+      "Number(document.querySelector('.season-progress')?.value)");
+    if(secondSeasonRevision<=2)
+      throw new Error('Opponents did not advance after owned halftime match');
     const storedChange = await evaluate(`new Promise((resolve, reject) => {
       const opening = indexedDB.open('footclubsim-m1-v188', 1);
       opening.onerror = () => reject(opening.error);
@@ -625,7 +639,7 @@ async function run() {
         tx.onabort = () => { db.close(); reject(tx.error); };
       };
     })`);
-    if (storedChange?.revision !== 2 ||
+    if (storedChange?.revision !== secondSeasonRevision ||
         storedChange.change?.outPlayerId !== seasonChoice.outgoing ||
         storedChange.change?.inPlayerId !== seasonChoice.incoming ||
         storedChange.change?.elapsedSeconds !== 2700) {
@@ -636,7 +650,8 @@ async function run() {
     await click('Восстановить из браузера');
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await clickSeason('Начать или продолжить сезон');
-    await waitText('Сезон проверен и загружен. Сыграно матчей: 2 из 240.');
+    await waitText('Сезон проверен и загружен. Сыграно матчей: '+
+      secondSeasonRevision+' из 240.');
     await assertNondefaultCareer('v188 game season CAS and reload');
     console.log('PASS: own halftime substitution, opponent autopilot, table and reload');
 

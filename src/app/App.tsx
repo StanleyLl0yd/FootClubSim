@@ -97,7 +97,10 @@ export function App() {
     try {
       const careerId=mode==='liga'?
         'lp-career-'+crypto.randomUUID():CAREER_ID;
-      const next=createInitialCareer(catalog,selectedClubId,42,careerId,manager);
+      // Secure per-career seed, persisted inside the immutable initial snapshot.
+      // Old saves keep their original seed and exact source-replayed results.
+      const seed=crypto.getRandomValues(new Uint32Array(1))[0]||1;
+      const next=createInitialCareer(catalog,selectedClubId,seed,careerId,manager);
       setManager(null);
       setStoredId(careerId);
       setCareer(next);

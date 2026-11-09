@@ -465,7 +465,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           <p className="subtle">Выберите 11 игроков, включая ровно
             одного вратаря. Дисквалифицированные и недоступные
             футболисты исключены.</p>
-          <div className="season-xi-grid">
+          <div className="season-xi-layout">
+            <div className="season-xi-grid">
             {xiAvailable.map(id=><label key={id}>
               <input type="checkbox" checked={xiPlayers.has(id)}
                 onChange={event=>{
@@ -477,7 +478,38 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               <span>{playerNames.get(id)??id} ·
                 {' '}{playersById.get(id)?.primaryPosition}</span>
             </label>)}
+            </div>
+          <figure className="season-formation-board"
+            aria-label={'Предварительная расстановка '+xiFormation}>
+            <figcaption>Расстановка · {xiFormation}</figcaption>
+            <div className="season-formation-pitch">
+              {[...boardLines].reverse().map((line,lineIndex)=>
+                <div className="season-formation-line" key={lineIndex}>
+                  {line.map((id,slotIndex)=>
+                    <span className={id?'season-formation-player':
+                      'season-formation-empty'} key={slotIndex}
+                      title={id?playerNames.get(id)??id:'Позиция не выбрана'}>
+                      {id?playerNames.get(id)??id:'Свободно'}
+                    </span>)}
+                </div>)}
+              <div className="season-formation-line">
+                <span className={boardGoalkeeper?
+                  'season-formation-player':'season-formation-empty'}
+                  title={boardGoalkeeper?
+                    playerNames.get(boardGoalkeeper)??boardGoalkeeper:
+                    'Выберите вратаря'}>
+                  {boardGoalkeeper?
+                    playerNames.get(boardGoalkeeper)??boardGoalkeeper:
+                    'Вратарь'}
+                </span>
+              </div>
+            </div>
+            <p className="subtle">Позиции игроков показаны условно.
+              Выбранная схема сохраняется в тактике матча;
+              индивидуальные роли на поле пока не назначаются.</p>
+          </figure>
           </div>
+          <h4 className="season-editor-title">Тактика на матч</h4>
           <div className="season-tactics-grid">
             <label>Настрой
               <select value={xiMentality}
@@ -510,35 +542,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 onChange={event=>setXiTempo(Number(event.target.value))}/>
             </label>
           </div>
-          <figure className="season-formation-board"
-            aria-label={'Предварительная расстановка '+xiFormation}>
-            <figcaption>Расстановка · {xiFormation}</figcaption>
-            <div className="season-formation-pitch">
-              {[...boardLines].reverse().map((line,lineIndex)=>
-                <div className="season-formation-line" key={lineIndex}>
-                  {line.map((id,slotIndex)=>
-                    <span className={id?'season-formation-player':
-                      'season-formation-empty'} key={slotIndex}
-                      title={id?playerNames.get(id)??id:'Позиция не выбрана'}>
-                      {id?playerNames.get(id)??id:'Свободно'}
-                    </span>)}
-                </div>)}
-              <div className="season-formation-line">
-                <span className={boardGoalkeeper?
-                  'season-formation-player':'season-formation-empty'}
-                  title={boardGoalkeeper?
-                    playerNames.get(boardGoalkeeper)??boardGoalkeeper:
-                    'Выберите вратаря'}>
-                  {boardGoalkeeper?
-                    playerNames.get(boardGoalkeeper)??boardGoalkeeper:
-                    'Вратарь'}
-                </span>
-              </div>
-            </div>
-            <p className="subtle">Позиции игроков показаны условно.
-              Выбранная схема сохраняется в тактике матча;
-              индивидуальные роли на поле пока не назначаются.</p>
-          </figure>
+
           {!xiLegal&&<p role="alert" className="subtle">
             Проверьте 11 игроков, вратаря и лимит легионеров.
           </p>}

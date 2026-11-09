@@ -261,7 +261,7 @@ async function run() {
           }, 'native browser full-season archive download');
           return { filename, json, path };
         },
-        importArchive: async ({ path, filename, json }) => {
+        importArchive: async ({ path, filename, json, selector = '#import-full-file' }) => {
           let uploadPath = path;
           if (!uploadPath) {
             if (filename !== 'footclubsim-tampered-full-career.json' ||
@@ -272,7 +272,7 @@ async function run() {
           }
           const doc = await send('DOM.getDocument');
           const input = await send('DOM.querySelector', {
-            nodeId: doc.root.nodeId, selector: '#import-full-file',
+            nodeId: doc.root.nodeId, selector,
           });
           if (!input.nodeId) throw new Error('Full-career input unavailable');
           await send('DOM.setFileInputFiles', { nodeId: input.nodeId, files: [uploadPath] });

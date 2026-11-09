@@ -16,7 +16,7 @@ import { createInitialCareer, exportInitialCareer, importInitialCareer, type Ini
 import { CareerStorageError, loadInitialCareer, saveNewInitialCareer,
   listStoredInitialCareerIds } from '../browser/initial-career-store.js';
 import {exportM1V188FullCareerBackup,restoreM1V188FullCareerBackup,
-  M1V188FullBackupError}
+  decodeM1V188FullCareerBackup,M1V188FullBackupError}
   from '../browser/m1-v188-full-career-backup.js';
 
 const CAREER_ID = 'm0-ui-initial-career';
@@ -212,6 +212,28 @@ export function App() {
     }finally{setWorking(false);}
   }
 
+  /** Inspect an OS-selected file before any restore; never write to IndexedDB. */
+  async function verifyFullCareer(event:ChangeEvent<HTMLInputElement>):Promise<void>{
+    const file=event.currentTarget.files?.[0];
+    event.currentTarget.value='';
+    if(!file||working)return;
+    if(file.size>150_000_000){
+      setMessage('Проверка полного архива отклонена: файл слишком большой. Данные не изменены.');
+      return;
+    }
+    setWorking(true);
+    try{
+      const result=await decodeM1V188FullCareerBackup(
+        await file.text(),[legacyCatalog,ligaCatalog]);
+      setMessage('Выбранный полный архив проверен: '+
+        result.journal.revision+' из 240 матчей. SHA-256 и журнал совпали. '+
+        'Данные браузера не изменены. Проверка не подтверждает, что Safari сохранил файл на диске.');
+    }catch(error){
+      setMessage('Проверка полного архива отклонена: '+
+        errorMessage(error)+'. Данные браузера не изменены.');
+    }finally{setWorking(false);}
+  }
+
   async function importFullCareer(event:ChangeEvent<HTMLInputElement>):Promise<void>{
     const file=event.currentTarget.files?.[0];
     event.currentTarget.value='';
@@ -350,6 +372,9 @@ export function App() {
           </div>
           <label className="file-label" htmlFor="import-file">Импортировать JSON</label>
           <input id="import-file" type="file" accept=".json,application/json" onChange={event => void importCareer(event)} disabled={working} />
+          <label className="file-label" htmlFor="verify-full-file">Проверить скачанный полный архив без восстановления</label>
+          <input id="verify-full-file" type="file" accept=".json,application/json" onChange={event => void verifyFullCareer(event)} disabled={working} />
+          <p className="subtle">Выберите файл, который действительно появился в загрузках Safari или другого браузера. Проверка не изменяет сохранения.</p>
           <label className="file-label" htmlFor="import-full-file">Восстановить полную карьеру</label>
           <input id="import-full-file" type="file" accept=".json,application/json" onChange={event => void importFullCareer(event)} disabled={working} />
         </section>

@@ -1,6 +1,6 @@
 # FootClubSim roadmap
 
-> Planning document, updated **2026-11-09**. **M0 closed 2026-10-15**; M1 and formal M2 exit #4 remain OPEN. The single-season Playable Preview is publicly accessible on [GitHub Pages](https://stanleyll0yd.github.io/FootClubSim/) as a **test preview**, not an accepted stable/playable release. Owner manual acceptance [#488](https://github.com/StanleyLl0yd/FootClubSim/issues/488) is OPEN. [Final acceptance ADR-0010](docs/adr/0010-m0-final-acceptance.md). The owner-approved [M0/M2 gate boundary](docs/adr/0006-m0-m2-acceptance-boundary.md) separates M0 source/contracts acceptance from M2 playable rosters and executable authentic rules.
+> Planning document, updated **2026-11-09**. **M0 closed 2026-10-15**; M1 and formal M2 exit #4 remain OPEN. The single-season Playable Preview is publicly accessible on [GitHub Pages](https://stanleyll0yd.github.io/FootClubSim/) as a **test preview**, not an accepted stable/playable release. Owner manual acceptance [#488](https://github.com/StanleyLl0yd/FootClubSim/issues/488) is **ACCEPTED / CLOSED** (single-season product prototype only). [Final acceptance ADR-0010](docs/adr/0010-m0-final-acceptance.md). The owner-approved [M0/M2 gate boundary](docs/adr/0006-m0-m2-acceptance-boundary.md) separates M0 source/contracts acceptance from M2 playable rosters and executable authentic rules.
 
 ## Product-first reorientation · 2026-11-05
 
@@ -10,13 +10,13 @@ The owner directed active development toward a **working game**, not more low-fr
 
 **Deferred until a functioning playable preview:** rare Law 5 returns, clinical authority edge cases, KDK appeals/cancellations, unusual late rescheduling, and research-level statistical calibration. Preserve existing implementation, regression checks, original save formats and rights boundaries; do not merge a failing PR. Open historic P3/P5 gates stay OPEN, not artificially accepted. This decision authorizes **M1 player-facing prototype work** now, without falsely signing off M1 exit #3 or M2 release compliance. Any changed formal milestone gates require an explicit documented re-baseline, not silent checklist edits.
 
-**The next decision is owner product acceptance, not an automatic M1 or M2 exit:** automated full seasons have passed in Windows Chrome/Edge and macOS Safari, and the owner has played complete seasons and reported follow-up defects. The nine owner checklist items are **not signed off**. Real Safari lifecycle/download and quota/eviction coverage remain open in [#155](https://github.com/StanleyLl0yd/FootClubSim/issues/155).
+**Owner product acceptance was explicitly granted on 2026-11-09:** [#488](https://github.com/StanleyLl0yd/FootClubSim/issues/488#issuecomment-6750231567). Do not claim every manual checkbox was independently run. This product sign-off neither closes M1/M2 nor satisfies real Safari lifecycle/download and quota/eviction checks [#155](https://github.com/StanleyLl0yd/FootClubSim/issues/155).
 
 ## Player-facing navigation · 2026-11-09
 
 Two in-page workspaces: **«Тренер и клуб»** for onboarding and club selection, **«Сезон»** for active competition. The canonical v188 season stays mounted while hidden; save/restore and full archive controls are shared in an expandable panel. Creating, loading or importing a career opens the season automatically; starting a new career returns to setup. No browser routes, persistence schema migrations or match-engine changes.
 
-Extend the same workspace navigation with dedicated **transfers, finances, contracts and staff** sections only when their M3 game functionality is implemented. Avoid dead tabs or an ever-growing season page. Verify keyboard tab access, responsive layout and an entire v188 season with reload and full archive restore; manual product acceptance [#488](https://github.com/StanleyLl0yd/FootClubSim/issues/488) remains OPEN.
+Extend the same workspace navigation with dedicated **transfers, finances, contracts and staff** sections only when their M3 game functionality is implemented. Avoid dead tabs or an ever-growing season page. Verify keyboard tab access, responsive layout and an entire v188 season with reload and full archive restore; manual product acceptance [#488](https://github.com/StanleyLl0yd/FootClubSim/issues/488) is ACCEPTED for the prior preview baseline.
 
 ## Playable Preview: published state and owner-feedback backlog · 2026-11-09
 
@@ -47,12 +47,12 @@ Extend the same workspace navigation with dedicated **transfers, finances, contr
 
 ## Independent acceptance tracks · owner approved 2026-11-09
 
-The [Playable Preview acceptance specification](docs/PLAYABLE_PREVIEW_ACCEPTANCE.md) defines the nine agreed product criteria and owner manual walkthrough. **Criteria are approved; the preview itself is not yet signed off.** This product gate does not amend the formal milestone requirements.
+The [Playable Preview acceptance specification](docs/PLAYABLE_PREVIEW_ACCEPTANCE.md) defines the nine agreed product criteria and owner manual walkthrough. **The preview is ACCEPTED by the owner (#488); the manual checklist records only specifically observed actions.** This product gate does not amend the formal milestone requirements.
 
 | Track | Acceptance basis | Current status |
 | --- | --- | --- |
 | **M1 technical engine** | All P1–P5 criteria, P3/P5 matrix and two full whole-repository exit audit passes in [#3](https://github.com/StanleyLl0yd/FootClubSim/issues/3) | OPEN; P3/P5 1/9 accepted, exit audits not completed |
-| **Playable Preview product** | Coherent single-season manager journey, save/recovery, real-browser evidence and separate owner manual sign-off | Scope approved; automation demonstrated; manual sign-off pending |
+| **Playable Preview product** | Coherent single-season manager journey, save/recovery, real-browser evidence and separate owner manual sign-off | **ACCEPTED / CLOSED #488**, independent of M1/M2 and release gate #155 |
 | **M2 formal competition** | Verified sporting rules/provenance/rights, league restrictions, full M2 acceptance and two exit audit passes in [#4](https://github.com/StanleyLl0yd/FootClubSim/issues/4) | OPEN; not inferred from the prototype |
 
 A Playable Preview may be internally accepted while M1 stays open under ADR-0011, but it does not close M1, M2 or [release/storage gate #155](https://github.com/StanleyLl0yd/FootClubSim/issues/155). No public playable or stable release is authorized by approving preview criteria.

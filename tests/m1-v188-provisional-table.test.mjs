@@ -18,7 +18,9 @@ test('player table starts empty, with all sixteen clubs',()=>{
   assert.equal(table?.length,16);
   assert.deepEqual(new Set(table.map(row=>row.clubId)),
     new Set(catalog.clubs.map(club=>club.id)));
-  assert.ok(table.every(row=>row.played===0&&row.points===0));
+  assert.ok(table.every(row=>
+    row.played===0&&row.won===0&&row.drawn===0&&
+    row.lost===0&&row.points===0));
 });
 
 test('played fixture updates both clubs, never mutating saved journal',()=>{
@@ -32,6 +34,13 @@ test('played fixture updates both clubs, never mutating saved journal',()=>{
   const table=deriveM1V188ProvisionalTable(career,next.journal);
   assert.equal(table?.length,16);
   assert.equal(table.reduce((sum,row)=>sum+row.played,0),2);
+  assert.equal(table.reduce((sum,row)=>sum+row.won,0)+
+    table.reduce((sum,row)=>sum+row.drawn,0),1);
+  assert.equal(table.reduce((sum,row)=>sum+row.lost,0),
+    table.reduce((sum,row)=>sum+row.won,0));
+  assert.ok(table.every(row=>
+    row.played===row.won+row.drawn+row.lost&&
+    row.points===row.won*3+row.drawn));
   const home=table.find(row=>row.clubId===proposed.fixture.homeClubId);
   const away=table.find(row=>row.clubId===proposed.fixture.awayClubId);
   assert.ok(home&&away);

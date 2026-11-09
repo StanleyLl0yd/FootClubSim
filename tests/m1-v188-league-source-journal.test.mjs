@@ -164,7 +164,8 @@ test('v188 manual starting XI is replay-safe and club-bound',()=>{
     career.selectedClubId?auto.request.prematch.homeTactics:
     auto.request.prematch.awayTactics;
   const choice={schemaVersion:1,clubId:career.selectedClubId,starters,
-    tactics:{...defaultTactics,mentality:1,pressing:70,tempo:80}};
+    tactics:{...defaultTactics,formation:'4-4-2',mentality:1,
+      pressing:70,tempo:80}};
   const prepared=prepareM1V188LeagueMatch(
     career,zero.journal,[],undefined,undefined,choice);
   assert.equal(prepared?.ok,true);
@@ -176,6 +177,8 @@ test('v188 manual starting XI is replay-safe and club-bound',()=>{
     career.selectedClubId?
     prepared.request.prematch.homeTactics:
     prepared.request.prematch.awayTactics;
+  assert.equal(changedTactics.formation,'4-4-2');
+  assert.equal(prepared.request.managedXI.tactics.formation,'4-4-2');
   assert.equal(changedTactics.tempo,80);
   assert.equal(changedTactics.pressing,70);
   assert.equal(changedTactics.mentality,1);
@@ -191,6 +194,7 @@ test('v188 manual starting XI is replay-safe and club-bound',()=>{
     {...choice,schemaVersion:2},
     {...choice,privilege:'override'},
     {...choice,starters:starters.filter(id=>pos.get(id)!=='GK')},
+    {...choice,tactics:{...choice.tactics,formation:'4-4-3'}},
     {...choice,tactics:{...choice.tactics,tempo:101}},
     {...choice,tactics:{...choice.tactics,clubId:'alien'}},
     {...choice,tactics:{...choice.tactics,privilege:'override'}},

@@ -81,11 +81,13 @@ function verifyArchive(json, careerId, snapshot) {
   assert.equal(new Set(journal.entries.map(entry => entry.fixtureId)).size, TOTAL);
 
   const clubs = new Map(initial.catalog.clubs.map(club => [club.id, {
-    id: club.id, name: club.displayName, played: 0, goals: 0, difference: 0, points: 0,
+    id: club.id, name: club.displayName, played: 0,won: 0,drawn: 0,lost: 0,
+    goals: 0, difference: 0, points: 0,
   }]));
   const calendar = [];
   const finalRound = [];
   let ownWithTactics = 0;
+  let ownWithFormation = 0;
   let ownWithHalfTime = 0;
   for (const entry of journal.entries) {
     const fixture = entry.source.prematch.fixture;
@@ -101,12 +103,17 @@ function verifyArchive(json, careerId, snapshot) {
     away.difference += ag - hg;
     home.points += hg > ag ? 3 : Number(hg === ag);
     away.points += ag > hg ? 3 : Number(hg === ag);
+    if(hg>ag){home.won++;away.lost++;}
+    else if(hg<ag){away.won++;home.lost++;}
+    else{home.drawn++;away.drawn++;}
     if (fixture.homeClubId === clubId || fixture.awayClubId === clubId) {
       const atHome = fixture.homeClubId === clubId;
       calendar.push(['Тур ' + entry.round,
         atHome ? 'Дома: ' + away.name : 'В гостях: ' + home.name,
         (atHome ? hg + ' : ' + ag : ag + ' : ' + hg)]);
       if (entry.source.managedXI?.tactics.mentality === 1) ownWithTactics++;
+      if (entry.source.managedXI?.tactics.formation === '4-4-2')
+        ownWithFormation++;
       if (entry.source.plannedCommands.some(command => command?.kind === 'substitute-normal' &&
         command.actor?.kind === 'player' && command.teamId === clubId &&
         command.elapsedSeconds === 2700)) ownWithHalfTime++;
@@ -115,6 +122,7 @@ function verifyArchive(json, careerId, snapshot) {
   }
   assert.equal(calendar.length, OWN);
   assert.equal(ownWithTactics, 1);
+  assert.equal(ownWithFormation,1,'Chosen formation missing from source journal');
   assert.equal(ownWithHalfTime, 1, 'Halftime manager substitution missing from canonical journal');
   assert.equal(finalRound.length, 8);
   assert.equal(clubs.size, 16);
@@ -122,7 +130,8 @@ function verifyArchive(json, careerId, snapshot) {
   const table = [...clubs.values()].sort((a, b) =>
     b.points - a.points || b.difference - a.difference || b.goals - a.goals ||
     a.id.localeCompare(b.id)).map((row, index) => [
-    String(index + 1), row.name, String(row.played),
+    String(index + 1), row.name, String(row.played),String(row.won),
+    String(row.drawn),String(row.lost),
     (row.difference > 0 ? '+' : '') + row.difference, String(row.points),
   ]);
   assert.deepEqual(snapshot.table, table);
@@ -262,6 +271,10 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
       if (useHalfTime) {
         await seasonClick('Настроить стартовый состав');
         await setValue('.season-tactics-grid select', '1');
+        await setValue('#season-formation','4-4-2');
+        assert.equal(await evaluate(
+          "document.querySelectorAll('.season-formation-line').length"),4,
+        'Selected 4-4-2 is not displayed on pitch');
         await seasonClick('Настроить замену');
         assert.equal(await run(() => {
           const out = document.querySelector('#season-sub-out');

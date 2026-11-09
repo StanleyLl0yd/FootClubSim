@@ -1,0 +1,62 @@
+name: Playable season seed diversity
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-v188-season-diversity.mjs'
+      - '.github/workflows/season-diversity.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  four-seasons:
+    name: Four independently seeded full seasons
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build domain modules
+        run: npm run build:core
+      - name: Compare independent full-season standings
+        run: |
+          node scripts/m1-v188-season-diversity.mjs \
+            --seeds=11,41,71,101 \
+            --output=season-diversity-report.json
+      - name: Summarize evidence
+        shell: bash
+        run: |
+          node --input-type=module -e '
+            import {readFileSync,appendFileSync} from "node:fs";
+            const j=JSON.parse(readFileSync("season-diversity-report.json","utf8"));
+            const lines=[
+              "## Playable season diversity (diagnostic only)",
+              "Seeds: "+j.seeds.join(", "),
+              "Distinct final club orderings: "+j.uniqueOrderings+"/"+j.sampleSize,
+              "Distinct full-result hashes: "+j.uniqueResultDigests+"/"+j.sampleSize,
+              "Clubs changing position: "+j.movedClubs+"/16",
+              "Distinct provisional champions: "+j.champions.length,
+              "Selected-club ranks: "+j.results.map(r=>r.selectedClubRank).join(", "),
+              "",
+              "**Not** a statistical realism or formal M1-P5 calibration gate."
+            ];
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join("\n")+"\n");
+          '
+      - name: Upload reproducible anonymized result tables
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: season-diversity-cohort
+          path: season-diversity-report.json
+          retention-days: 14

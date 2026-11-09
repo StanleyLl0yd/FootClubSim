@@ -374,7 +374,7 @@ def main():
             click(session, "Подтвердить тренера")
             select_nondefault_club(session)
             click(session, "Создать стартовую карьеру")
-            wait_for_text(session, "Карьера создана. Сохраните её в браузере")
+            wait_for_text(session, "Карьера создана. При запуске сезона она автоматически сохранится в браузере.")
             assert_restored_club(session)
             click(session, "Сохранить в браузере")
             wait_for_text(session, "Начальная карьера записана в IndexedDB")

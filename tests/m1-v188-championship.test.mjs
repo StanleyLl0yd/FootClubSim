@@ -48,3 +48,67 @@ test('tampered source fixture order cannot award a title',()=>{
   wrong.entries[0]={...wrong.entries[0],fixtureId:'wrong'};
   assert.equal(deriveM1V188Champion(career,wrong),null);
 });
+
+
+function simulatedAt(n,goals) {
+  return{...zero.journal,revision:n,entries:fixtures.slice(0,n).map(
+    fixture=>{
+      const [hg,ag]=goals(fixture);
+      return{fixtureId:fixture.id,round:fixture.round,
+        result:{report:{home:{goals:hg},away:{goals:ag}}}};
+    })};
+}
+
+test('title won on the final fixture is celebrated, not only early clinches',()=>{
+  const last=fixtures.at(-1);
+  const result=fixture=>fixture.id===last.id?[1,0]:[0,0];
+  assert.equal(deriveM1V188Champion(career,simulatedAt(239,result)),null);
+  const champion=deriveM1V188Champion(career,simulatedAt(240,result));
+  assert.equal(champion?.clubId,last.homeClubId);
+  assert.equal(champion?.clinchedRound,30);
+  assert.equal(champion?.remainingRounds,0);
+  assert.equal(champion?.seasonComplete,true);
+  assert.equal(champion?.provisionalTieBreak,undefined);
+});
+
+test('equal final points with a higher goal difference wins the provisional table',()=>{
+  const first=catalog.clubs[0].id;
+  const outcomes=fixture=>{
+    const a=first,b=catalog.clubs[1].id;
+    if(fixture.homeClubId===a&&fixture.awayClubId===b)return[3,0];
+    if(fixture.homeClubId===b&&fixture.awayClubId===a)return[1,0];
+    if(fixture.homeClubId===a)return[2,0];
+    if(fixture.awayClubId===a)return[0,2];
+    if(fixture.homeClubId===b)return[1,0];
+    if(fixture.awayClubId===b)return[0,1];
+    return[0,0];
+  };
+  const winner=deriveM1V188Champion(career,simulatedAt(240,outcomes));
+  assert.equal(winner?.clubId,first);
+  assert.equal(winner?.points,87);
+  assert.equal(winner?.clinchedRound,30);
+  assert.equal(winner?.provisionalTieBreak,'goal-difference');
+  assert.equal(deriveM1V188Champion(career,simulatedAt(239,outcomes)),null);
+});
+
+test('goals scored distinguish teams with tied points and goal difference',()=>{
+  const a=catalog.clubs[0].id,b=catalog.clubs[1].id;
+  const outcomes=fixture=>{
+    const {homeClubId:h,awayClubId:v}=fixture;
+    if((h===a&&v===b)||(h===b&&v===a))return[1,0];
+    if(h===a)return[2,1];
+    if(v===a)return[1,2];
+    if(h===b)return[1,0];
+    if(v===b)return[0,1];
+    return[0,0];
+  };
+  const champion=deriveM1V188Champion(career,simulatedAt(240,outcomes));
+  assert.equal(champion?.clubId,a);
+  assert.equal(champion?.provisionalTieBreak,'goals-scored');
+  assert.equal(champion?.seasonComplete,true);
+});
+
+test('club-id sorting alone never certifies an unresolved tied title',()=>{
+  const allDraws=()=>[0,0];
+  assert.equal(deriveM1V188Champion(career,simulatedAt(240,allDraws)),null);
+});

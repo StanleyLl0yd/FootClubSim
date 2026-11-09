@@ -393,15 +393,36 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         {champion&&champion.clubId===career.selectedClubId&&
           <section className="season-champion" aria-label="Чемпионство">
             <h3>🏆 Поздравляем! {clubs.get(champion.clubId)}
-              {' '}— чемпион «Лиги приколов»!</h3>
-            <p>{champion.remainingRounds>0?
-              'Титул гарантирован досрочно в '+champion.clinchedRound+
-                '-м туре, за '+champion.remainingRounds+' туров до конца.':
-              'Победа в чемпионате подтверждена по очкам.'}
-              {' '}Ни один соперник уже не мог догнать вашу команду,
-              даже выиграв все оставшиеся встречи.</p>
+              {' '}— {champion.provisionalTieBreak?
+                'первый в «Лиге приколов» по предварительной таблице!':
+                'чемпион «Лиги приколов»!'}</h3>
+            {champion.provisionalTieBreak?
+              <p>После 30 туров очков поровну, но ваш клуб выше по
+                {' '}{champion.provisionalTieBreak==='goal-difference'?
+                  'разнице мячей':'числу забитых мячей'}.
+                {' '}Это предварительный порядок таблицы: официальные
+                критерии равенства очков пока не реализованы.</p>:
+              <p>{champion.remainingRounds>0?
+                'Титул гарантирован досрочно в '+champion.clinchedRound+
+                  '-м туре, за '+champion.remainingRounds+' туров до конца.':
+                'Победа подтверждена по очкам после 30 туров.'}
+                {' '}Ни один соперник уже не мог догнать вашу команду
+                по очкам.</p>}
             {champion.seasonComplete&&
-              <p>Сезон завершён: {champion.points} очков. Кубок ваш!</p>}
+              <p>Сезон завершён: {champion.points} очков.
+                {' '}{champion.provisionalTieBreak?
+                  'Первое место ваше по предварительной таблице!':
+                  'Кубок ваш!'}</p>}
+          </section>}
+        {journal.revision===240&&!champion&&
+          table?.[0]?.clubId===career.selectedClubId&&
+          <section className="season-champion"
+            aria-label="Первое место в предварительной таблице">
+            <h3>Первое место в предварительной таблице</h3>
+            <p>Сезон завершён, но у лидеров совпали очки, разница
+              мячей и количество голов. Порядок по идентификатору
+              клуба не подтверждает чемпионство: официальные
+              критерии равенства очков пока не реализованы.</p>
           </section>}
         <div className="season-scoreboard">
           <div>

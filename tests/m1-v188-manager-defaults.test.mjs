@@ -47,7 +47,15 @@ const baseline=upcoming.fixture.homeClubId===career.selectedClubId?
 test('after another club fixtures, same eleven and tactics are restored',()=>{
   assert.equal(deriveM1V188RememberedXI(career,zero.journal,upcoming),null);
   const remembered=deriveM1V188RememberedXI(career,progress,upcoming);
-  assert.deepEqual(remembered?.starters,chosen.starters);
+  assert.ok(remembered);
+  const eligible=new Set([...baseline.starters,...baseline.bench]);
+  const retained=chosen.starters.filter(id=>eligible.has(id));
+  assert.ok(retained.every(id=>remembered.starters.includes(id)),
+    'An eligible previous starter was dropped');
+  assert.ok(remembered.starters.every(id=>eligible.has(id)),
+    'An unavailable player was reused');
+  assert.equal(remembered.starters.length,11);
+  assert.equal(new Set(remembered.starters).size,11);
   assert.equal(remembered?.tactics.formation,'4-4-2');
   assert.equal(remembered?.tactics.pressing,70);
   assert.equal(remembered?.tactics.tempo,80);

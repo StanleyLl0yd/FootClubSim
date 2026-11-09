@@ -209,9 +209,23 @@ function verifyArchive(json, careerId, snapshot) {
   const ranked=[...clubs.values()].sort((a,b)=>
     b.points-a.points||b.difference-a.difference||
     b.goals-a.goals||a.id.localeCompare(b.id));
-  if(ranked[0].id===clubId&&ranked[0].points>ranked[1].points)
+  const leader=ranked[0],runner=ranked[1];
+  const winsPoints=leader.points>runner.points;
+  const provisionalWinner=leader.points===runner.points&&(
+    leader.difference>runner.difference||
+    leader.difference===runner.difference&&leader.goals>runner.goals);
+  if(leader.id===clubId&&winsPoints){
     assert.ok(snapshot.title?.includes('чемпион'),'No title celebration');
-  else assert.equal(snapshot.title,null);
+  }else if(leader.id===clubId&&provisionalWinner){
+    assert.ok(snapshot.title?.includes('первый в «Лиге приколов»'),
+      'Goal-difference or goals-scored winner must be congratulated');
+    assert.ok(snapshot.title?.includes('предварительной таблице'),
+      'Tie-break must not be advertised as official RPL champion');
+  }else if(leader.id===clubId){
+    assert.ok(snapshot.title?.includes(
+      'Первое место в предварительной таблице'),
+    'Unresolved all-equal tie must not invent official champion');
+  }else assert.equal(snapshot.title,null);
 }
 
 export async function exercisePlayableSeason({ evaluate, reload, download, importArchive, browser }) {
@@ -353,6 +367,17 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
         assert.equal(await evaluate(
           "document.querySelectorAll('.season-formation-line').length"),4,
         'Selected 4-4-2 is not displayed on pitch');
+        await seasonClick('Подобрать XI под схему');
+        const suggested=await run(()=>({
+          selected:document.querySelectorAll(
+            '.season-xi-grid input:checked').length,
+          fit:document.querySelector(
+            '.season-xi-advice [aria-live=polite]')?.textContent??'',
+        }));
+        assert.equal(suggested.selected,11,
+          'Formation adviser must choose eleven eligible players');
+        assert.match(suggested.fit,/Совпадение линий с амплуа: \d+%/,
+          'Formation adviser must show v2 role fit');
         await seasonClick('Настроить замену');
         assert.equal(await run(() => {
           const out = document.querySelector('#season-sub-out');

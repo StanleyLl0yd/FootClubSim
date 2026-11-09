@@ -358,6 +358,18 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
   .season-own-calendar li { grid-template-columns: 3.5rem minmax(0,1fr) 3rem; gap: .35rem; }
 }
 
+.season-xi-advice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .55rem 1rem;
+  margin: .7rem 0;
+}
+.season-xi-advice > p {
+  flex: 1 1 16rem;
+  min-width: 0;
+  margin: 0;
+}
 .season-xi-layout {
   display: grid;
   grid-template-columns: minmax(0,1.2fr) minmax(0,1fr);

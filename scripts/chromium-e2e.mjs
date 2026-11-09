@@ -1107,6 +1107,17 @@ async function run() {
       await assertNondefaultCareer('v128 source-held manual continuation restart');
       console.log('PASS: manual v128 next-match XI/bench excludes verified holds');
 
+      // An injury may legitimately expire after one missed fixture. Check
+      // only source-verified holds still active for the next match; the
+      // initial "held" set also contains already-expired historical injuries.
+      const activeBeforeSecond=await evaluate(`[...document.querySelectorAll(
+        '[aria-label="Вымышленные межматчевые ограничения"] li')]
+        .map(node=>node.textContent.trim().split(' · ')[0].trim())`);
+      if(!Array.isArray(activeBeforeSecond)||
+          activeBeforeSecond.some(id=>!held.has(id))){
+        throw new Error('Source-verified active hold list lost its provenance');
+      }
+
       // A second generated virtual-referee fixture must use the same exact
       // v124 source namespace after source-verified v128 held-player admission.
       await click('Следующий матч с виртуальным арбитром и ограничениями');
@@ -1133,13 +1144,37 @@ async function run() {
           tx.onabort=()=>{db.close();reject(tx.error);};
         };
       })`);
-      if(!secondVirtual||
-          secondVirtual.commandId!=='v124-virtual-referee-'+secondVirtual.fixtureId||
-          secondVirtual.rngDraws!==270||
-          !Array.isArray(secondVirtual.commands)||
-          [...held].some(id=>secondVirtual.lineup.starters.includes(id)||
-            secondVirtual.lineup.bench.includes(id))){
-        throw new Error('Repeated virtual referee bypassed historical hold or source namespace');
+      const secondVirtualErrors=[];
+      if(!secondVirtual)secondVirtualErrors.push('missing-revision-5');
+      else{
+        if(secondVirtual.commandId!==
+            'v124-virtual-referee-'+secondVirtual.fixtureId)
+          secondVirtualErrors.push('source-command-id');
+        if(secondVirtual.rngDraws!==270)
+          secondVirtualErrors.push('rng-draws');
+        if(!Array.isArray(secondVirtual.commands))
+          secondVirtualErrors.push('planned-commands');
+        if(!Array.isArray(secondVirtual.lineup?.starters)||
+            !Array.isArray(secondVirtual.lineup?.bench))
+          secondVirtualErrors.push('lineup-shape');
+        else{
+          const unexpectedlyActive=activeBeforeSecond.filter(id=>
+            secondVirtual.lineup.starters.includes(id)||
+            secondVirtual.lineup.bench.includes(id));
+          if(unexpectedlyActive.length)
+            secondVirtualErrors.push('held-in-lineup:'+unexpectedlyActive.join(','));
+        }
+      }
+      if(secondVirtualErrors.length){
+        throw new Error('Repeated virtual referee bypassed historical hold or '+
+          'source namespace: '+JSON.stringify({reasons:secondVirtualErrors,
+            source:secondVirtual&&{fixtureId:secondVirtual.fixtureId,
+              commandId:secondVirtual.commandId,
+              rngDraws:secondVirtual.rngDraws,
+              commandCount:secondVirtual.commands?.length,
+              starters:secondVirtual.lineup?.starters?.length,
+              bench:secondVirtual.lineup?.bench?.length},
+            activeBeforeSecond,originalIncidentHolds:[...held]}));
       }
       await send('Page.reload',{ignoreCache:true});
       await waitText('Создайте тренера, выберите клуб');

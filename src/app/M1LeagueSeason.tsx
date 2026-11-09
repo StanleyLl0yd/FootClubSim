@@ -15,6 +15,10 @@ import {inspectM1V188LeagueCalendar,prepareM1V188LeagueMatch,
   from '../core/m1-v188-league-source-journal.js';
 import type {M1V105Run} from '../core/m1-v105-special-goal-chronology.js';
 import {validateLineup} from '../core/validation.js';
+import {inspectM1V2FormationFit,m1V2PositionGroup}
+  from '../core/m1-v2-formation-fit.js';
+import {suggestM1V2FormationXI}
+  from '../core/m1-v2-lineup-advisor.js';
 import type {InitialCareerSave} from '../core/save.js';
 import {CareerStorageError,loadInitialCareer,saveNewInitialCareer}
   from '../browser/initial-career-store.js';
@@ -124,8 +128,16 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   // while individual player-to-slot assignments are not yet modelled.
   const boardGoalkeeper=starterIds.find(id=>
     playersById.get(id)?.primaryPosition==='GK')??null;
+  const groupRank={defenders:0,holding:1,midfield:2,
+    advanced:3,strikers:4};
+  const boardRank=(id:string)=>{
+    const pos=playersById.get(id)?.primaryPosition;
+    const group=pos?m1V2PositionGroup(pos):null;
+    return group===null?5:groupRank[group];
+  };
   const boardOutfield=starterIds.filter(id=>
-    playersById.get(id)?.primaryPosition!=='GK');
+    playersById.get(id)?.primaryPosition!=='GK').sort(
+      (a,b)=>boardRank(a)-boardRank(b));
   let boardOffset=0;
   const boardLines=xiFormation.split('-').map(part=>{
     const size=Number(part);
@@ -142,6 +154,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     starterCount:11,maxBench:12,maxForeignersOnField:7,
   }):[];
   const xiLegal=!xiSetup||xiErrors.length===0;
+  const xiFit=xiSetup&&starterIds.length===11?
+    inspectM1V2FormationFit(xiFormation,starterIds,playersById):null;
 
   async function connect():Promise<void>{
     if(busy||disabled)return;
@@ -270,6 +284,21 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     setStatus(remembered?
       'Восстановлены состав и тактика прошлого матча. Проверьте доступность игроков.':
       'Выберите 11 игроков для ближайшего матча своего клуба.');
+  }
+  function autoChooseXI():void{
+    if(busy||disabled||!xiSetup||!xiBase||preview)return;
+    const suggested=suggestM1V2FormationXI(
+      xiFormation,xiAvailable,playersById,starterIds);
+    if(!suggested){
+      setStatus('Нет доступного законного состава для выбранной схемы. '+
+        'Проверьте вратаря и лимит легионеров.');
+      return;
+    }
+    setStarterIds([...suggested.starters]);
+    setManagerSetup(null);
+    setStatus('Подобраны 11 доступных футболистов под схему '+xiFormation+
+      '. Совпадение линий с амплуа: '+
+      Math.round(suggested.fit.fit*100)+'%. Проверьте состав перед матчем.');
   }
   function clearXI():void{
     setXiSetup(null);setStarterIds([]);setManagerSetup(null);
@@ -501,6 +530,20 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           <p className="subtle">Выберите 11 игроков, включая ровно
             одного вратаря. Дисквалифицированные и недоступные
             футболисты исключены.</p>
+          <div className="season-xi-advice">
+            <button type="button" className="secondary-button"
+              onClick={autoChooseXI}>Подобрать XI под схему</button>
+            <p aria-live="polite" className="subtle">
+              {xiFit?
+                'Совпадение линий с амплуа: '+
+                  Math.round(xiFit.fit*100)+'%'+
+                  (xiFit.mismatch?
+                    ' · есть позиционные несоответствия':
+                    ' · амплуа подходят выбранным линиям'):
+                'Выберите 11 игроков, чтобы увидеть соответствие схеме.'}
+              {' '}Это не вероятность победы и не назначение точных ролей.
+            </p>
+          </div>
           <div className="season-xi-layout">
             <div className="season-xi-grid">
             {xiAvailable.map(id=><label key={id}>
@@ -540,9 +583,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 </span>
               </div>
             </div>
-            <p className="subtle">Позиции игроков показаны условно.
-              Выбранная схема сохраняется в тактике матча;
-              индивидуальные роли на поле пока не назначаются.</p>
+            <p className="subtle">Игроки группируются по основному амплуа.
+              Их расположение на схеме условное: точные роли и
+              персональные места на поле пока не назначаются.</p>
           </figure>
           </div>
           <h4 className="season-editor-title">Тактика на матч</h4>

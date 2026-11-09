@@ -1107,6 +1107,17 @@ async function run() {
       await assertNondefaultCareer('v128 source-held manual continuation restart');
       console.log('PASS: manual v128 next-match XI/bench excludes verified holds');
 
+      // An injury may legitimately expire after one missed fixture. Check
+      // only source-verified holds still active for the next match; the
+      // initial "held" set also contains already-expired historical injuries.
+      const activeBeforeSecond=await evaluate(`[...document.querySelectorAll(
+        '[aria-label="Вымышленные межматчевые ограничения"] li')]
+        .map(node=>node.textContent.trim().split(' · ')[0].trim())`);
+      if(!Array.isArray(activeBeforeSecond)||
+          activeBeforeSecond.some(id=>!held.has(id))){
+        throw new Error('Source-verified active hold list lost its provenance');
+      }
+
       // A second generated virtual-referee fixture must use the same exact
       // v124 source namespace after source-verified v128 held-player admission.
       await click('Следующий матч с виртуальным арбитром и ограничениями');
@@ -1147,7 +1158,7 @@ async function run() {
             !Array.isArray(secondVirtual.lineup?.bench))
           secondVirtualErrors.push('lineup-shape');
         else{
-          const unexpectedlyActive=[...held].filter(id=>
+          const unexpectedlyActive=activeBeforeSecond.filter(id=>
             secondVirtual.lineup.starters.includes(id)||
             secondVirtual.lineup.bench.includes(id));
           if(unexpectedlyActive.length)
@@ -1163,7 +1174,7 @@ async function run() {
               commandCount:secondVirtual.commands?.length,
               starters:secondVirtual.lineup?.starters?.length,
               bench:secondVirtual.lineup?.bench?.length},
-            held:[...held]}));
+            activeBeforeSecond,originalIncidentHolds:[...held]}));
       }
       await send('Page.reload',{ignoreCache:true});
       await waitText('Создайте тренера, выберите клуб');

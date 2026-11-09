@@ -1,6 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {M1ClubOverview} from './M1ClubOverview.js';
 import {M1MatchReport} from './M1MatchReport.js';
+import {LigaClubLabel} from './LigaClubLabel.js';
 import {deriveM1V188Champion} from '../core/m1-v188-championship.js';
 import {deriveM1V188RememberedXI} from '../core/m1-v188-manager-defaults.js';
 import {sameCanonicalValue} from '../core/canonical-value.js';
@@ -405,17 +406,25 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         <div className="season-scoreboard">
           <div>
             <span className="subtle">Ваш следующий матч</span>
-            <strong>{ownNext?
-              'Тур '+ownNext.round+': '+
-              clubs.get(ownNext.homeClubId)+' — '+
-              clubs.get(ownNext.awayClubId):'Все матчи клуба сыграны'}</strong>
+            <strong>{ownNext?<span className="season-club-pair">
+              Тур {ownNext.round}:
+              <LigaClubLabel clubId={ownNext.homeClubId}
+                name={clubs.get(ownNext.homeClubId)??ownNext.homeClubId}/>
+              {' — '}
+              <LigaClubLabel clubId={ownNext.awayClubId}
+                name={clubs.get(ownNext.awayClubId)??ownNext.awayClubId}/>
+            </span>:'Все матчи клуба сыграны'}</strong>
           </div>
           {last&&lastFixture&&<div>
             <span className="subtle">Последний результат</span>
-            <strong>{clubs.get(lastFixture.homeClubId)} {' '}
-              {last.result.report.home.goals} :{' '}
-              {last.result.report.away.goals} {' '}
-              {clubs.get(lastFixture.awayClubId)}</strong>
+            <strong className="season-club-pair">
+              <LigaClubLabel clubId={lastFixture.homeClubId}
+                name={clubs.get(lastFixture.homeClubId)??lastFixture.homeClubId}/>
+              {' '}{last.result.report.home.goals} :{' '}
+              {last.result.report.away.goals}{' '}
+              <LigaClubLabel clubId={lastFixture.awayClubId}
+                name={clubs.get(lastFixture.awayClubId)??lastFixture.awayClubId}/>
+            </strong>
           </div>}
         </div>
         {next&&navigation&&navigation.automaticMatches>0&&
@@ -442,7 +451,13 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           </div>}
         {next&&ownNextNow&&<div className="season-next">
           <span className="subtle">Следующая игра · тур {next.round}</span>
-          <strong>{clubs.get(next.homeClubId)} — {clubs.get(next.awayClubId)}</strong>
+          <strong className="season-club-pair">
+            <LigaClubLabel clubId={next.homeClubId}
+              name={clubs.get(next.homeClubId)??next.homeClubId}/>
+            {' — '}
+            <LigaClubLabel clubId={next.awayClubId}
+              name={clubs.get(next.awayClubId)??next.awayClubId}/>
+          </strong>
           <div className="button-stack">
             <button type="button" disabled={busy||disabled||!!preview||!xiLegal}
               onClick={()=>calculate()}>Рассчитать матч</button>
@@ -579,11 +594,15 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         {preview&&previewResult&&<div className="season-preview"
           aria-label="Предварительный результат">
           <span className="subtle">Результат · тур {preview.fixture.round}</span>
-          <p className="season-preview-score">
-            {clubs.get(preview.fixture.homeClubId)}{' '}
+          <p className="season-preview-score season-report-score">
+            <LigaClubLabel clubId={preview.fixture.homeClubId}
+              name={clubs.get(preview.fixture.homeClubId)??preview.fixture.homeClubId}
+              size={28}/>{' '}
             <strong>{previewResult.report.home.goals} :{' '}
               {previewResult.report.away.goals}</strong>{' '}
-            {clubs.get(preview.fixture.awayClubId)}
+            <LigaClubLabel clubId={preview.fixture.awayClubId}
+              name={clubs.get(preview.fixture.awayClubId)??preview.fixture.awayClubId}
+              size={28}/>
           </p>
           <p className="subtle">
             Удары {previewResult.report.home.shots} :{' '}
@@ -638,7 +657,13 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 return <li key={f.id}>
                   <span className={f.homeClubId===career.selectedClubId||
                     f.awayClubId===career.selectedClubId?'my-club-fixture':''}>
-                    {clubs.get(f.homeClubId)} — {clubs.get(f.awayClubId)}
+                    <span className="season-club-pair">
+                      <LigaClubLabel clubId={f.homeClubId}
+                        name={clubs.get(f.homeClubId)??f.homeClubId}/>
+                      {' — '}
+                      <LigaClubLabel clubId={f.awayClubId}
+                        name={clubs.get(f.awayClubId)??f.awayClubId}/>
+                    </span>
                   </span>
                   <strong>{entry?
                     entry.result.report.home.goals+' : '+
@@ -666,7 +691,10 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                     className={row.clubId===career.selectedClubId?
                       'season-my-row':undefined}>
                     <td>{index+1}</td>
-                    <th scope="row">{clubs.get(row.clubId)}</th>
+                    <th scope="row">
+                      <LigaClubLabel clubId={row.clubId}
+                        name={clubs.get(row.clubId)??row.clubId}/>
+                    </th>
                     <td>{row.played}</td>
                     <td>{row.won}</td>
                     <td>{row.drawn}</td>

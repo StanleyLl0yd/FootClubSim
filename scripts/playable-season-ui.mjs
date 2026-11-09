@@ -34,7 +34,12 @@ function seasonState() {
 }
 
 function finalSnapshot() {
-  const text = node => node.textContent.trim().replace(/\s+/g, ' ');
+  const text = node => {
+    // Original SVG badge glyphs are artwork, not part of table cell text.
+    const clone=node.cloneNode(true);
+    clone.querySelectorAll('svg').forEach(svg=>svg.remove());
+    return clone.textContent.trim().replace(/\s+/g, ' ');
+  };
   const rows = (selector, cells) => [...document.querySelectorAll(selector)]
     .map(row => [...row.querySelectorAll(cells)].map(text));
   return {
@@ -44,12 +49,24 @@ function finalSnapshot() {
     table: rows('.season-columns .season-table tbody tr', 'td, th'),
     own: rows('.season-own-calendar li', ':scope > span, :scope > strong'),
     finalRound: rows('.season-fixtures li', ':scope > span, :scope > strong'),
+    tableBadges:document.querySelectorAll(
+      '.season-columns .season-table tbody tr svg[role=img]').length,
+    fixtureBadges:document.querySelectorAll(
+      '.season-fixtures li svg[role=img]').length,
     complete: Boolean(document.querySelector('.season-complete')),
     title: document.querySelector('.season-champion')?.textContent.trim()??null,
     report: {
       options:document.querySelectorAll('.season-match-centre select option').length,
-      score:document.querySelector('.season-match-centre .season-preview-score')
-        ?.textContent.trim().replace(/\s+/g,' ')??null,
+      score:text(document.querySelector('.season-match-centre .season-preview-score')),
+      clubBadges:[...document.querySelectorAll(
+        '.season-match-centre .season-report-score svg[role=img]')]
+        .map(svg=>svg.getAttribute('aria-label')),
+      actorBadges:[...document.querySelectorAll(
+        '.season-report-events li .season-event-player svg[role=img]')]
+        .map(svg=>svg.getAttribute('aria-label')),
+      actorTeams:[...document.querySelectorAll(
+        '.season-report-events li .season-event-player .liga-club-label')]
+        .map(node=>text(node)),
       rows:rows('.season-report-stat','strong, span'),
       events:[...document.querySelectorAll('.season-report-events li')]
         .map(node=>node.textContent.trim().replace(/\s+/g,' ')),
@@ -153,6 +170,10 @@ function verifyArchive(json, careerId, snapshot) {
   assert.deepEqual(snapshot.table, table);
   assert.deepEqual(snapshot.own, calendar);
   assert.deepEqual(snapshot.finalRound, finalRound);
+  assert.equal(snapshot.tableBadges,16,
+    'The standings must use all approved fictional club badges');
+  assert.equal(snapshot.fixtureBadges,16,
+    'Each final-round fixture must show both clubs');
   assert.equal(snapshot.report.options,OWN);
   const lastPrematch=lastOwn.source.prematch.fixture;
   const lastResult=lastOwn.result.report;
@@ -162,6 +183,16 @@ function verifyArchive(json, careerId, snapshot) {
     snapshot.report.score.includes(expectedScore[1]));
   assert.ok(snapshot.report.score.includes(
     lastResult.home.goals+' : '+lastResult.away.goals));
+  assert.deepEqual(snapshot.report.clubBadges,
+    expectedScore.map(name=>'Эмблема: '+name),
+    'Match centre must identify both clubs');
+  assert.equal(snapshot.report.actorBadges.length,snapshot.report.events.length);
+  assert.equal(snapshot.report.actorTeams.length,snapshot.report.events.length);
+  assert.ok(snapshot.report.actorTeams.every(name=>expectedScore.includes(name)),
+    'Every event actor must have an identifiable club');
+  assert.ok(snapshot.report.actorBadges.every(label=>
+    expectedScore.some(name=>label==='Эмблема: '+name)),
+  'Every event actor must have an approved club badge');
   assert.deepEqual(snapshot.report.rows[0],[
     String(lastResult.home.shots),'Удары',String(lastResult.away.shots)]);
   assert.deepEqual(snapshot.report.rows[1],[

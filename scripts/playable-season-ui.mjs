@@ -209,9 +209,23 @@ function verifyArchive(json, careerId, snapshot) {
   const ranked=[...clubs.values()].sort((a,b)=>
     b.points-a.points||b.difference-a.difference||
     b.goals-a.goals||a.id.localeCompare(b.id));
-  if(ranked[0].id===clubId&&ranked[0].points>ranked[1].points)
+  const leader=ranked[0],runner=ranked[1];
+  const winsPoints=leader.points>runner.points;
+  const provisionalWinner=leader.points===runner.points&&(
+    leader.difference>runner.difference||
+    leader.difference===runner.difference&&leader.goals>runner.goals);
+  if(leader.id===clubId&&winsPoints){
     assert.ok(snapshot.title?.includes('чемпион'),'No title celebration');
-  else assert.equal(snapshot.title,null);
+  }else if(leader.id===clubId&&provisionalWinner){
+    assert.ok(snapshot.title?.includes('первый в «Лиге приколов»'),
+      'Goal-difference or goals-scored winner must be congratulated');
+    assert.ok(snapshot.title?.includes('предварительной таблице'),
+      'Tie-break must not be advertised as official RPL champion');
+  }else if(leader.id===clubId){
+    assert.ok(snapshot.title?.includes(
+      'Первое место в предварительной таблице'),
+    'Unresolved all-equal tie must not invent official champion');
+  }else assert.equal(snapshot.title,null);
 }
 
 export async function exercisePlayableSeason({ evaluate, reload, download, importArchive, browser }) {

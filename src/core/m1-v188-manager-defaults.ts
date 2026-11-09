@@ -19,11 +19,11 @@ export function deriveM1V188RememberedXI(
       upcoming.fixture.homeClubId!==clubId&&
       upcoming.fixture.awayClubId!==clubId)return null;
   const own=journal.entries.findLast(entry=>{
-    const fixture=entry.source.prematch.fixture;
+    const fixture=(entry.source.prematch as unknown as M1PrematchInput).fixture;
     return fixture.homeClubId===clubId||fixture.awayClubId===clubId;
   });
   if(!own)return null;
-  const previous=own.source.prematch;
+  const previous=own.source.prematch as unknown as M1PrematchInput;
   const atHome=previous.fixture.homeClubId===clubId;
   const lastLineup=atHome?previous.homeLineup:previous.awayLineup;
   const lastTactics=atHome?previous.homeTactics:previous.awayTactics;

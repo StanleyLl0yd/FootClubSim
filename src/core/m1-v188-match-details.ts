@@ -1,4 +1,5 @@
 import type {M1V188Entry} from './m1-v188-league-source-journal.js';
+import type {M1PrematchInput} from './m1-clock.js';
 
 /** Read-only from the accepted v188 source-replayed entry. No estimates
  * for possession, corners, offside or fouls: they are not source events.
@@ -19,7 +20,8 @@ export type M1V188MatchDetails=Readonly<{
 export function deriveM1V188MatchDetails(
   entry:M1V188Entry,
 ):M1V188MatchDetails|null{
-  const fixture=entry.source.prematch.fixture,report=entry.result.report;
+  const fixture=(entry.source.prematch as unknown as M1PrematchInput).fixture;
+  const report=entry.result.report;
   if(fixture.id!==entry.fixtureId)return null;
   const home={...report.home,saves:0,penalties:report.home.penaltiesTaken,
     yellow:0,red:0};

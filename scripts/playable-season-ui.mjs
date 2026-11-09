@@ -235,11 +235,16 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   await click('Подтвердить тренера');
   await setValue('#club-select', clubId);
   await click('Создать стартовую карьеру');
-  await click('Сохранить в браузере');
-  await waitPage('Начальная карьера записана в IndexedDB');
   const careerId = await evaluate('document.querySelector("#career-saved-select").value');
   assert.match(careerId, /^lp-career-/u);
+  // Regression: launch directly after career creation without manual save.
+  // The app must commit the initial snapshot, and must not replace it on retry.
   let current = await openSeason(0);
+  await waitFor(() => run(id => [...document.querySelector('#career-saved-select').options]
+    .some(option => option.value === id && option.textContent.includes('Лига приколов')),
+  careerId), 'automatically saved career appears in stored selector');
+  await click('Сохранить в браузере');
+  await waitPage('Эта карьера уже сохранена в браузере. Данные не перезаписывались.');
   let pausedAt = null;
   let tacticalFixture = false;
 

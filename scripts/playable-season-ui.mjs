@@ -150,6 +150,7 @@ function verifyArchive(json, careerId, snapshot) {
   let ownWithTactics = 0;
   let ownWithFormation = 0;
   let ownWithHalfTime = 0;
+  let ownWithCoachOrders = 0;
   let ownWithRememberedPlan = 0;
   let lastOwn=null;
   for (const entry of journal.entries) {
@@ -183,6 +184,12 @@ function verifyArchive(json, careerId, snapshot) {
       if (entry.source.plannedCommands.some(command => command?.kind === 'substitute-normal' &&
         command.actor?.kind === 'player' && command.teamId === clubId &&
         command.elapsedSeconds === 2700)) ownWithHalfTime++;
+      if (entry.source.inMatchOrdersVersion === 1) {
+        const actual = entry.source.plannedCommands.filter(c=>c.kind==='set-tactics');
+        assert.deepEqual(actual.map(c=>c.elapsedSeconds),[2700,3600],
+          'Paused match must retain both verified in-play tactical changes');
+        ownWithCoachOrders++;
+      }
     }
     if (entry.round === 30) finalRound.push([home.name + ' — ' + away.name, hg + ' : ' + ag]);
   }
@@ -192,6 +199,8 @@ function verifyArchive(json, careerId, snapshot) {
   assert.equal(ownWithRememberedPlan,OWN,
     'Pressing and tempo were reset between managed fixtures');
   assert.equal(ownWithHalfTime, 1, 'Halftime manager substitution missing from canonical journal');
+  assert.equal(ownWithCoachOrders,1,
+    'Two-pause coach commands not saved in the canonical career');
   assert.equal(finalRound.length, 8);
   assert.equal(clubs.size, 16);
   assert.ok([...clubs.values()].every(row => row.played === OWN));
@@ -418,6 +427,7 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
       'Opponent fixture remains exposed for manual action');
     {
       const useHalfTime = before.ownNext && !tacticalFixture;
+      const useInteractivePauses=before.ownNext && before.own===1;
       const shouldPause=pausedAt===null && before.revision>=80 && before.revision<200;
 
       if(before.own===1){
@@ -471,9 +481,48 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
           },'Previous match preferences not restored');
           rememberedVerified=true;
         }
-        await seasonClick('Рассчитать матч');
+        if(useInteractivePauses){
+          await seasonClick('Играть до паузы');
+          await waitSeason(value=>value.status.startsWith(
+            'Матч рассчитан до выбранной паузы'),'first live pause');
+          assert.equal(await run(()=>document.querySelector(
+            'section[aria-label="Пауза матча"] h3')?.textContent.trim()),
+          'Пауза · 45′');
+          const enableCoach=async()=>{
+            const enabled=await run(()=>{
+              const input=document.querySelector(
+                'section[aria-label="Пауза матча"] fieldset input[type=checkbox]');
+              if(!input||input.checked)return false;
+              input.click();
+              return true;
+            });
+            assert.ok(enabled,'Tactical controls cannot be enabled at a pause');
+          };
+          await enableCoach();
+          await setValue(
+            'section[aria-label="Пауза матча"] .season-tactics-grid label:nth-child(1) select',
+            '3-4-3');
+          await setValue(
+            'section[aria-label="Пауза матча"] .season-tactics-grid label:nth-child(2) select',
+            '2');
+          await seasonClick('Продолжить до следующей паузы');
+          await waitSeason(value=>value.status.startsWith(
+            'Игра продолжена до 60-й минуты'),'second live pause');
+          assert.equal(await run(()=>document.querySelector(
+            'section[aria-label="Пауза матча"] h3')?.textContent.trim()),
+          'Пауза · 60′');
+          await enableCoach();
+          await setValue(
+            'section[aria-label="Пауза матча"] .season-tactics-grid label:nth-child(2) select',
+            '-2');
+          await seasonClick('До финального свистка');
+        }else await seasonClick('Рассчитать матч');
       }
-      await waitSeason(value => value.status.startsWith('Результат рассчитан'), 'match preview');
+      await waitSeason(value =>
+        value.status.startsWith('Результат рассчитан')||
+        useInteractivePauses&&value.status.startsWith(
+          'Матч завершён без изменения сыгранного отрезка'),
+        'match preview');
       if (useHalfTime) {
         assert.equal(await run(() => [...document.querySelectorAll('.season-preview p')]
           .some(node => node.textContent.includes('Замена в перерыве включена'))), true,

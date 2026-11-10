@@ -238,7 +238,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       if(prepared===null){
         setStatus('Сезон завершён. Все 240 матчей уже сохранены.');
       }else if(!prepared.ok){
-        setStatus('Матч пока невозможно провести: '+prepared.error);
+        setStatus('Матч пока невозможно провести: '+prepared.error+
+          (prepared.stage?' ['+prepared.stage+
+            (prepared.cause?':'+prepared.cause:'')+']':''));
       }else{
         setPreview(prepared);
         setStatus('Результат рассчитан. Подтвердите запись или отмените просмотр.');

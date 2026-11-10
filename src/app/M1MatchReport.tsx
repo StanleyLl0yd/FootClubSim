@@ -15,6 +15,29 @@ export function M1MatchReport({entry,catalog}:{
   if(!report||!exposure)return <p role="alert">Не удалось проверить протокол матча.</p>;
   const teams=new Map(catalog.clubs.map(team=>[team.id,team.displayName]));
   const names=new Map(catalog.players.map(player=>[player.id,player.displayName]));
+  // This presentation is read from the already source-verified v188 entry;
+  // it does not claim a referee-authorized interruption.
+  const coaching=entry.source.inMatchOrdersVersion===1?
+    entry.source.plannedCommands.flatMap(raw=>{
+      if(!raw||typeof raw!=='object'||Array.isArray(raw))return [];
+      const order=raw as Record<string,unknown>;
+      if(typeof order.elapsedSeconds!=='number')return [];
+      if(order.kind==='set-tactics'&&order.plan&&
+          typeof order.plan==='object'&&!Array.isArray(order.plan)){
+        const p=order.plan as Record<string,unknown>;
+        return [{elapsedSeconds:order.elapsedSeconds,
+          label:'Тактика: '+p.formation+', настрой '+p.mentality+
+            ', прессинг '+p.pressing+', темп '+p.tempo}];
+      }
+      if(order.kind==='set-player-focus'){
+        const focus=order.focus==='attack'?'атака':
+          order.focus==='defend'?'защита':'баланс';
+        return [{elapsedSeconds:order.elapsedSeconds,
+          label:'Указание '+(names.get(String(order.playerId))??
+            String(order.playerId))+': '+focus}];
+      }
+      return [];
+    }):[];
   const incidentLabel={
     'goal':'гол','penalty-goal':'пенальти, гол',
     'own-goal':'автогол','penalty-saved':'пенальти отражён',
@@ -73,11 +96,25 @@ export function M1MatchReport({entry,catalog}:{
           </li>;
         })}
       </ol>:<p className="subtle">Голов и дисциплинарных событий не было.</p>}
+    {coaching.length>0&&<details className="season-club-details">
+      <summary>Решения тренера по ходу игры ({coaching.length})</summary>
+      <ol className="season-report-events">
+        {coaching.map((order,index)=><li key={index}>
+          <span className="season-event-minute">
+            {Math.floor(order.elapsedSeconds/60)+1}′
+          </span>
+          <span>{order.label}</span>
+        </li>)}
+      </ol>
+      <p className="subtle">Изменения проверены по источнику матча
+        и влияют только на последующие игровые эпизоды.</p>
+    </details>}
     <details className="season-club-details">
       <summary>Время футболистов на поле</summary>
       <p className="subtle">Только игровое время из журнала физических
-        составов, без перерыва и остановок. Усталость и восстановление
-        между матчами ещё не рассчитываются.</p>
+        составов, без перерыва и остановок. В модели сезона эти секунды
+        влияют на условное восстановление и физическое состояние игроков,
+        но не являются медицинским заключением.</p>
       <div className="season-table-scroll">
         <table className="season-table">
           <thead><tr>

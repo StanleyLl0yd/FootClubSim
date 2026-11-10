@@ -1479,7 +1479,16 @@ async function run() {
       })()`),'double substitute-of-substitute selector');
       await click('Провести две выбранные замены в плотном матче');
       try{
-        await waitText('v120: две выбранные замены, плотный матч атомарно записан, 270 PRNG draws, ревизия 10 из 30.');
+        // The dense diagnostic panel can be collapsed while the source-CAS
+        // commit finishes. Read its scoped live-region text, not body.innerText
+        // (which excludes collapsed panel text in some native browsers).
+        const committed='v120: две выбранные замены, плотный матч атомарно записан, 270 PRNG draws, ревизия 10 из 30.';
+        await until(async()=>await evaluate(`(() => {
+          const status=document.querySelector('#m1-dense-title')
+            ?.closest('.panel')?.querySelector('[role="status"]')
+            ?.textContent??'';
+          return status.includes(${JSON.stringify(committed)});
+        })()`),'v120 chained double substitution source-CAS status');
       }catch(error){
         const detail=await evaluate(`(() => ({
           status:document.querySelector('#m1-dense-title')?.closest('.panel')?.querySelector('[role="status"]')?.textContent,

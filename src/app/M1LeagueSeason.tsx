@@ -3,6 +3,8 @@ import {M1ClubOverview} from './M1ClubOverview.js';
 import {M1MatchReport} from './M1MatchReport.js';
 import {LigaClubLabel} from './LigaClubLabel.js';
 import {deriveM1V188Champion} from '../core/m1-v188-championship.js';
+import {deriveM1V188HalfTimeScore,sameM1V188FirstHalfSource}
+  from '../core/m1-v188-half-time.js';
 import {inspectM1V188ClubCondition}
   from '../core/m1-v188-condition.js';
 import {deriveM1V188RememberedXI} from '../core/m1-v188-manager-defaults.js';
@@ -56,6 +58,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       saved.revision===0?
         2:saved.entries[0]?.source.specialGoalSourceVersion,coaching);
   const [preview,setPreview]=useState<Ready|null>(null);
+  const [halfTime,setHalfTime]=useState<Ready|null>(null);
   const [busy,setBusy]=useState(false);
   const [advancing,setAdvancing]=useState(false);
   const [managerSetup,setManagerSetup]=useState<Ready|null>(null);
@@ -152,19 +155,31 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       mentality:xiMentality,pressing:xiPressing,tempo:xiTempo},
   }:undefined;
   const xiPlayers=new Set(starterIds);
-  const focusCandidates=starterIds.filter(id=>
+  const halfTimeInput=halfTime?.request.prematch as
+    M1PrematchInput|undefined;
+  const halfTimeOwn=halfTimeInput?(
+    halfTimeInput.fixture.homeClubId===career.selectedClubId?
+      halfTimeInput.homeLineup:halfTimeInput.awayLineup):null;
+  const halfTimeTactics=halfTimeInput?(
+    halfTimeInput.fixture.homeClubId===career.selectedClubId?
+      halfTimeInput.homeTactics:halfTimeInput.awayTactics):null;
+  const focusCandidates=(halfTimeOwn?.starters??starterIds).filter(id=>
     playersById.get(id)?.primaryPosition!=='GK');
   const actualFocusId=focusCandidates.includes(focusId)?
     focusId:focusCandidates[0]??'';
-  const coachingChoices=coachEnabled&&xiChoice?[{
-    kind:'team-tactics',elapsedSeconds:coachMinute*60,
-    plan:{...xiChoice.tactics,schemaVersion:2 as const,
+  const coachedPlan=xiChoice?.tactics??halfTimeTactics;
+  const coachingChoices=coachEnabled&&coachedPlan?[{
+    kind:'team-tactics',elapsedSeconds:(halfTime?45:coachMinute)*60,
+    plan:{...coachedPlan,schemaVersion:2 as const,
       formation:coachFormation,mentality:coachMentality,
       pressing:coachPressing,tempo:coachTempo},
   },...(focusEnabled&&actualFocusId?[{
-    kind:'player-focus',elapsedSeconds:coachMinute*60,
+    kind:'player-focus',elapsedSeconds:(halfTime?45:coachMinute)*60,
     playerId:actualFocusId,focus:focusMode,
   }]:[])]:[];
+  const halfTimeScore=halfTime&&halfTimeInput?
+    deriveM1V188HalfTimeScore(halfTimeInput,
+      halfTime.request.result as Good):null;
   // A read-only pitch preview. The tactical formation is persisted in v188,
   // while individual player-to-slot assignments are not yet modelled.
   const boardGoalkeeper=starterIds.find(id=>
@@ -200,7 +215,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
 
   async function connect():Promise<void>{
     if(busy||disabled)return;
-    setBusy(true);setPreview(null);setManagerSetup(null);
+    setBusy(true);setPreview(null);setHalfTime(null);setManagerSetup(null);
     setXiSetup(null);setStarterIds([]);
     setCoachEnabled(false);setFocusEnabled(false);
     setForceAutoXI(false);setMatchInspectId('');
@@ -250,7 +265,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   }
 
   function calculate(changes:readonly HalfTimeChange[]=[]):void{
-    if(busy||disabled||!journal||preview||!xiLegal)return;
+    if(busy||disabled||!journal||preview||halfTime||!xiLegal)return;
     try{
       const base=prepareSource(journal,changes,undefined,coachingChoices);
       const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
@@ -272,6 +287,63 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     }
   }
 
+  function startHalfTime():void{
+    if(busy||disabled||!journal||preview||halfTime||
+        !ownNextNow||!xiLegal)return;
+    try{
+      const base=prepareSource(journal);
+      const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
+        deriveM1V188RememberedXI(career,journal,
+          base.request.prematch as M1PrematchInput):null;
+      const prepared=xiChoice||remembered?
+        prepareSource(journal,[],xiChoice??remembered):base;
+      if(!prepared?.ok){
+        setStatus('Первый тайм не рассчитан: '+
+          (prepared?.error??'SEASON_COMPLETE'));
+        return;
+      }
+      const input=prepared.request.prematch as M1PrematchInput;
+      const tactics=input.fixture.homeClubId===career.selectedClubId?
+        input.homeTactics:input.awayTactics;
+      setCoachMinute(45);setCoachEnabled(true);setFocusEnabled(false);
+      setCoachFormation(tactics.formation);
+      setCoachMentality(tactics.mentality);
+      setCoachPressing(tactics.pressing);setCoachTempo(tactics.tempo);
+      setHalfTime(prepared);setManagerSetup(null);
+      setStatus('Первый тайм рассчитан. Выберите изменения в перерыве. '+
+        'Результат второго тайма ещё не показан.');
+    }catch(error){
+      setStatus('Первый тайм не рассчитан: '+errorText(error));
+    }
+  }
+  function finishHalfTime():void{
+    if(busy||disabled||!journal||!halfTime||!halfTimeInput)return;
+    try{
+      const prepared=prepareSource(journal,[],
+        halfTime.request.managedXI,coachingChoices);
+      if(!prepared?.ok){
+        setStatus('Продолжение матча отклонено: '+
+          (prepared?.error??'SEASON_COMPLETE'));
+        return;
+      }
+      if(prepared.request.expectedRevision!==
+          halfTime.request.expectedRevision||
+          !sameCanonicalValue(prepared.request.prematch,
+            halfTime.request.prematch)||
+          !sameM1V188FirstHalfSource(
+            halfTime.request.result as Good,
+            prepared.request.result as Good)){
+        setStatus('Продолжение запрещено: уже сыгранный первый тайм '+
+          'отличается от проверенного источника.');
+        return;
+      }
+      setHalfTime(null);setPreview(prepared);
+      setStatus('Второй тайм рассчитан без изменения первого. '+
+        'Проверьте итоговый результат перед сохранением.');
+    }catch(error){
+      setStatus('Не удалось продолжить матч: '+errorText(error));
+    }
+  }
   async function commit():Promise<void>{
     if(busy||disabled||!journal||!preview)return;
     const expected=journal.revision;
@@ -302,7 +374,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   }
 
   function configureXI():void{
-    if(busy||disabled||!journal||!ownNextNow||preview)return;
+    if(busy||disabled||!journal||!ownNextNow||preview||halfTime)return;
     const prepared=prepareSource(journal);
     if(!prepared?.ok){
       setStatus('Не удалось открыть состав: '+
@@ -356,7 +428,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   }
 
   function configureHalfTime():void{
-    if(busy||disabled||!journal||!ownNextNow||preview)return;
+    if(busy||disabled||!journal||!ownNextNow||preview||halfTime)return;
     try{
       if(!xiLegal)return;
       const base=prepareSource(journal,[],undefined,coachingChoices);
@@ -386,7 +458,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   async function advanceOpponents(start:M1V188Journal):Promise<void>{
     const plan=planM1V188NextOwnMatch(career,start);
     if(!plan||plan.automaticMatches===0)return;
-    setAdvancing(true);setPreview(null);
+    setAdvancing(true);setPreview(null);setHalfTime(null);
     setManagerSetup(null);setXiSetup(null);
     setStatus('Автоматически рассчитываются матчи остальных клубов.');
     stopRequested.current=false;

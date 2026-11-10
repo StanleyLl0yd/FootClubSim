@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {writeFileSync} from 'node:fs';
 import {performance} from 'node:perf_hooks';
+import {summarizeM1P5ScorelineOutcomes}
+  from './m1-p5-scoreline-outcomes.mjs';
 import {createLigaPrikolovPreviewCatalog}
   from '../dist/app/ligaPrikolovPreviewCatalog.js';
 import {createInitialCareer} from '../dist/core/save.js';
@@ -80,6 +82,11 @@ for(const seed of seeds){
     [e.fixtureId,e.result.report.home.goals,e.result.report.away.goals]);
   const digest=createHash('sha256')
     .update(JSON.stringify(matchResults)).digest('hex');
+  const outcomeTotals=summarizeM1P5ScorelineOutcomes(matchResults);
+  assert.equal(outcomeTotals.matches,240);
+  assert.equal(outcomeTotals.draws,
+    table.reduce((sum,t)=>sum+t.drawn,0)/2,
+    'Replayed scoreline draws must match independent final standings');
   // This is an observational census of the already replay-verified v188
   // journal, not an external referee, provider or clinical benchmark.
   const eventTotals={goals:0,openPlayGoals:0,penaltiesTaken:0,
@@ -146,9 +153,12 @@ for(const seed of seeds){
     selectedClubRank:table.findIndex(t=>
       t.clubId===career.selectedClubId)+1,
     totalGoals:table.reduce((sum,t)=>sum+t.goalsFor,0),
-    eventTotals,
+    eventTotals,outcomeTotals,
     perMatch:{
       goals:eventTotals.goals/240,
+      homeWins:outcomeTotals.homeWins/240,
+      draws:outcomeTotals.draws/240,
+      awayWins:outcomeTotals.awayWins/240,
       shots:eventTotals.shots/240,
       cautions:eventTotals.cautions/240,
       dismissals:(eventTotals.straightReds+

@@ -50,14 +50,15 @@ type MutableStats={-readonly [K in keyof M1V7TeamReport]:M1V7TeamReport[K]};
 export function simulateM1V105SpecialGoalChronology(
   prematch:unknown,policy:unknown,plannedCommands:unknown=[],
   checkpointMedical:unknown=[],intraphaseMedical:unknown=[],
-  trustedDecisions:unknown=[],
+  trustedDecisions:unknown=[],shotParameters:unknown=undefined,
 ):M1V105Run{
   if(![prematch,policy,plannedCommands,checkpointMedical,
       intraphaseMedical,trustedDecisions].every(isPlainJsonTree)||
       !Array.isArray(trustedDecisions)||trustedDecisions.length>18)
     return {ok:false,error:'INVALID_INPUT'};
   const physical=simulateM1V103IntraphaseMedical(prematch,policy,
-    plannedCommands,checkpointMedical,intraphaseMedical);
+    plannedCommands,checkpointMedical,intraphaseMedical,
+    shotParameters);
   if(!physical.ok)return {ok:false,error:'V103_SOURCE_REJECTED'};
   const adjudicated=simulateM1V8MedicalPhases(prematch,policy,
     plannedCommands,trustedDecisions,checkpointMedical);
@@ -198,9 +199,11 @@ export function verifyM1V105SpecialGoalChronology(
   prematch:unknown,policy:unknown,plannedCommands:unknown,
   checkpointMedical:unknown,intraphaseMedical:unknown,
   trustedDecisions:unknown,candidate:unknown,
+  shotParameters:unknown=undefined,
 ):boolean{
   if(!isPlainJsonTree(candidate))return false;
   const replay=simulateM1V105SpecialGoalChronology(prematch,policy,
-    plannedCommands,checkpointMedical,intraphaseMedical,trustedDecisions);
+    plannedCommands,checkpointMedical,intraphaseMedical,trustedDecisions,
+    shotParameters);
   return replay.ok&&sameCanonicalValue(replay,candidate);
 }

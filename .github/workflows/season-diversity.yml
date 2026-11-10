@@ -49,6 +49,14 @@ jobs:
               "Clubs changing position: "+j.movedClubs+"/16",
               "Distinct provisional champions: "+j.champions.length,
               "Selected-club ranks: "+j.results.map(r=>r.selectedClubRank).join(", "),
+              "Goals per 240-match season: "+j.results.map(r=>r.eventTotals.goals).join(", "),
+              "Penalty attempts per season: "+j.results.map(r=>r.eventTotals.penaltiesTaken).join(", "),
+              "Own goals awarded per season: "+j.results.map(r=>r.eventTotals.ownGoalsFor).join(", "),
+              "Cautions per season: "+j.results.map(r=>r.eventTotals.cautions).join(", "),
+              "Dismissals per season: "+j.results.map(r=>r.eventTotals.straightReds+r.eventTotals.secondYellowDismissals).join(", "),
+              "Fictional injury withdrawals per season: "+j.results.map(r=>r.eventTotals.fictionalInjuryWithdrawals).join(", "),
+              "",
+              "Special-goal decision generator not connected to v188: these are observed source counts, not calibrated RPL rates.",
               "",
               "**Not** a statistical realism or formal M1-P5 calibration gate."
             ];

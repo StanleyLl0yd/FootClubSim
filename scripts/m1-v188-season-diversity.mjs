@@ -71,6 +71,60 @@ for(const seed of seeds){
     [e.fixtureId,e.result.report.home.goals,e.result.report.away.goals]);
   const digest=createHash('sha256')
     .update(JSON.stringify(matchResults)).digest('hex');
+  // This is an observational census of the already replay-verified v188
+  // journal, not an external referee, provider or clinical benchmark.
+  const eventTotals={goals:0,openPlayGoals:0,penaltiesTaken:0,
+    penaltyGoals:0,ownGoalsFor:0,shots:0,cautions:0,
+    straightReds:0,secondYellowDismissals:0,
+    fictionalInjuryWithdrawals:0,matchesWithSpecialDecisions:0};
+  for(const entry of journal.entries){
+    const report=entry.result.report;
+    for(const side of ['home','away']){
+      const team=report[side];
+      assert.equal(team.goals,
+        team.openPlayGoals+team.penaltyGoals+team.ownGoalsFor,
+        'Every goal must have one source type');
+      assert.ok(team.penaltyGoals<=team.penaltiesTaken,
+        'Cannot score more penalty goals than attempts');
+      eventTotals.goals+=team.goals;
+      eventTotals.openPlayGoals+=team.openPlayGoals;
+      eventTotals.penaltiesTaken+=team.penaltiesTaken;
+      eventTotals.penaltyGoals+=team.penaltyGoals;
+      eventTotals.ownGoalsFor+=team.ownGoalsFor;
+      eventTotals.shots+=team.shots;
+    }
+    const fromEvents=entry.result.events.filter(event=>
+      event.type==='adjudication');
+    assert.equal(entry.result.specialDecisionCount,fromEvents.length,
+      'Decision counter must match replayed event chronology');
+    const openPlayFromEvents=entry.result.events.filter(event=>
+      event.type==='source'&&event.source.type==='shot'&&
+      event.source.outcome==='goal').length;
+    assert.equal(openPlayFromEvents,
+      report.home.openPlayGoals+report.away.openPlayGoals,
+      'Score must reconcile with generated shots');
+    eventTotals.matchesWithSpecialDecisions+=Number(fromEvents.length>0);
+    const cards=new Map();
+    for(const command of entry.source.plannedCommands){
+      if(command.kind==='caution'){
+        eventTotals.cautions++;
+        const k=JSON.stringify([command.teamId,command.playerId]);
+        const count=(cards.get(k)??0)+1;
+        cards.set(k,count);
+        if(count===2)eventTotals.secondYellowDismissals++;
+      }else if(command.kind==='direct-red'){
+        eventTotals.straightReds++;
+      }else if(command.kind==='injury-withdrawal'){
+        eventTotals.fictionalInjuryWithdrawals++;
+      }
+    }
+  }
+  assert.equal(eventTotals.goals,
+    eventTotals.openPlayGoals+eventTotals.penaltyGoals+
+      eventTotals.ownGoalsFor,'League goal type totals must reconcile');
+  assert.equal(eventTotals.goals,
+    table.reduce((sum,t)=>sum+t.goalsFor,0),
+    'League event goals must reconcile with the final standings');
   const ranks=table.map((t,i)=>({
     rank:i+1,clubId:t.clubId,club:clubName.get(t.clubId),
     points:t.points,wins:t.won,draws:t.drawn,losses:t.lost,
@@ -83,6 +137,14 @@ for(const seed of seeds){
     selectedClubRank:table.findIndex(t=>
       t.clubId===career.selectedClubId)+1,
     totalGoals:table.reduce((sum,t)=>sum+t.goalsFor,0),
+    eventTotals,
+    perMatch:{
+      goals:eventTotals.goals/240,
+      shots:eventTotals.shots/240,
+      cautions:eventTotals.cautions/240,
+      dismissals:(eventTotals.straightReds+
+        eventTotals.secondYellowDismissals)/240,
+    },
     elapsedSeconds:Number(((performance.now()-start)/1000).toFixed(2)),
     ranks});
   console.log('complete: seed='+seed+', champion='+
@@ -105,6 +167,9 @@ const report={
   rankSpans,results,
   caveat:'Reproducible prototype smoke, NOT competition realism calibration, '+
     'source rights clearance or owner acceptance.',
+  specialGoalDecisionSource:'UNCONNECTED_IN_CURRENT_V188_GENERATOR',
+  refereeEventAuthorityAuthenticated:false,
+  independentExternalRateComparison:false,
 };
 assert.ok(uniqueResultDigests>1,
   'Different career seeds must not produce identical entire match journals');

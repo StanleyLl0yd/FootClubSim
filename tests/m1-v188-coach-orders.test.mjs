@@ -124,6 +124,40 @@ test('individual focus order is admitted into physical source and CAS',()=>{
   assert.equal(validateM1V188LeagueJournal(career,applied.journal).ok,true);
 });
 
+test('half-time substitution and tactical change share a canonical source',()=>{
+  const {career,journal}=setup(919);
+  const base=prepareM1V188LeagueMatch(career,journal);
+  assert.ok(base?.ok);
+  const prematch=base.request.prematch;
+  const lineup=prematch.fixture.homeClubId===selected?
+    prematch.homeLineup:prematch.awayLineup;
+  const positions=new Map(catalog.players.map(p=>[p.id,p.primaryPosition]));
+  const outgoing=lineup.starters.filter(id=>
+    positions.get(id)!=='GK');
+  const incoming=lineup.bench.filter(id=>positions.get(id)!=='GK');
+  let combined=null;
+  for(const outPlayerId of outgoing){
+    for(const inPlayerId of incoming){
+      const attempted=prepareM1V188LeagueMatch(career,journal,
+        [{outPlayerId,inPlayerId,elapsedSeconds:2700}],
+        undefined,undefined,undefined,undefined,[{
+          kind:'team-tactics',elapsedSeconds:2700,
+          plan:plan(prematch),
+        }]);
+      if(attempted?.ok){combined=attempted;break;}
+    }
+    if(combined)break;
+  }
+  assert.ok(combined,'a legal half-time substitution must coexist with tactics');
+  assert.equal(combined.request.inMatchOrdersVersion,1);
+  assert.equal(combined.request.plannedCommands.filter(c=>
+    c.kind==='substitute-normal').length,1);
+  assert.equal(readOrders(combined).length,1);
+  const applied=applyM1V188LeagueMatch(career,journal,combined.request);
+  assert.ok(applied.ok);
+  assert.equal(validateM1V188LeagueJournal(career,applied.journal).ok,true);
+});
+
 test('orders fail closed on foreign team, duplicate, malformed or forged data',()=>{
   const {career,journal}=setup(717);
   const baseline=prepareM1V188LeagueMatch(career,journal);

@@ -1,4 +1,7 @@
 import {sameCanonicalValue} from './canonical-value.js';
+import {advanceM1V188Condition,startM1V188Condition,
+  selectM1V188ConditionLineup}
+  from './m1-v188-condition.js';
 import {generateDoubleRoundRobin,type Fixture} from './fixtures.js';
 import {deriveM1FixtureSeed} from './m1-fixture-seed.js';
 import {MATCH_LEDGER_VERSION,M0_RULES_PACK_ID,M0_RULES_PACK_VERSION}
@@ -64,7 +67,7 @@ type Source={managedXI?:M1V188ManagedXI;
   plannedCommands:unknown[];checkpointMedical:unknown[];
   disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
-  specialGoalSourceVersion?:1|2};
+  specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1};
 export type M1V188Entry={fixtureId:string;round:number;
   commandId:string;source:Source;result:Good};
 export type M1V188Journal={schemaVersion:188;careerId:string;
@@ -77,7 +80,7 @@ export type M1V188Request={schemaVersion:188;careerId:string;
   checkpointMedical:unknown[];result:unknown;
   medicalPolicyVersion?:2|3|4|5;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
-  specialGoalSourceVersion?:1|2};
+  specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1};
 export type M1V188Error='INVALID_INITIAL'|'INVALID_JOURNAL'|
   'INVALID_REQUEST'|'WRONG_CAREER'|'STALE_REVISION'|
   'WRONG_FIXTURE'|'UNTRUSTED_CATALOG'|'SOURCE_MISMATCH'|
@@ -114,9 +117,12 @@ const sourceKeysV2=[...sourceKeys,'disciplinePolicyVersion'];
 const sourceKeysMedical=[...sourceKeysV2,'medicalPolicyVersion'];
 const sourceKeysMedicalV5=[...sourceKeysMedical,'autonomousMedicalOrigin'];
 const goalShape=(value:Record<string,unknown>,keys:readonly string[])=>
-  hasManagedShape(value,
-    value.specialGoalSourceVersion===1||value.specialGoalSourceVersion===2?
-      [...keys,'specialGoalSourceVersion']:keys);
+  hasManagedShape(value,[
+    ...keys,
+    ...(value.specialGoalSourceVersion===1||
+        value.specialGoalSourceVersion===2?['specialGoalSourceVersion']:[]),
+    ...(value.conditionPolicyVersion===1?['conditionPolicyVersion']:[]),
+  ]);
 const requestKeys=['schemaVersion','careerId','expectedRevision',
   'commandId','prematch','policy','plannedCommands',
   'checkpointMedical','result'];
@@ -252,16 +258,21 @@ function excluded(team:string,index:number,holds:Hold[],
   return excluded;
 }
 function canonicalPrematch(i:InitialCareerSave,f:Fixture,
-  index:number,holds:Hold[],schedule:readonly Fixture[]):
+  index:number,holds:Hold[],schedule:readonly Fixture[],
+  condition:ReadonlyMap<string,number>,useCondition:boolean):
   M1PrematchInput|null{
   const teams=new Map(i.catalog.clubs.map(c=>[c.id,c]));
   const players=new Map(i.catalog.players.map(p=>[p.id,p]));
   const home=teams.get(f.homeClubId),away=teams.get(f.awayClubId);
   if(!home||!away)return null;
-  const homeLineup=selectM1V96EligibleRegisteredLineup(
-    home,players,excluded(home.id,index,holds,schedule),RULES);
-  const awayLineup=selectM1V96EligibleRegisteredLineup(
-    away,players,excluded(away.id,index,holds,schedule),RULES);
+  const lineup=(club:typeof home)=>
+    useCondition?
+      selectM1V188ConditionLineup(club,players,
+        excluded(club.id,index,holds,schedule),RULES,condition):
+      selectM1V96EligibleRegisteredLineup(club,players,
+        excluded(club.id,index,holds,schedule),RULES);
+  const homeLineup=lineup(home);
+  const awayLineup=lineup(away);
   if(!homeLineup||!awayLineup)return null;
   return{schemaVersion:MATCH_LEDGER_VERSION,
     engineVersion:M1_ENGINE_VERSION,rulesPackId:M0_RULES_PACK_ID,
@@ -363,7 +374,7 @@ function replayedPhysicalClock(input:M1PrematchInput,result:Good,
 
 function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
   f:Fixture,index:number,holds:Hold[],schedule:readonly Fixture[],
-  allowLegacy=true){
+  condition:ReadonlyMap<string,number>,allowLegacy=true){
   if(!rec(e)||!exact(e,entryKeys)||
       e.fixtureId!==f.id||e.round!==f.round||
       e.commandId!=='v188-league-'+f.id||
@@ -386,7 +397,8 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       !Array.isArray(e.source.plannedCommands)||
       !Array.isArray(e.source.checkpointMedical)||
       !rec(e.result))return false;
-  const baseline=canonicalPrematch(i,f,index,holds,schedule);
+  const baseline=canonicalPrematch(i,f,index,holds,schedule,
+    condition,e.source.conditionPolicyVersion===1);
   const input=baseline?managedPrematch(
     baseline,i.selectedClubId,e.source.managedXI):null;
   if(!input)return false;
@@ -449,11 +461,11 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
  * No checksum or client-supplied attestation can mint authority.
  */
 type VerifiedPrefix=Readonly<{initialBytes:string;journalBytes:string;
-  holds:readonly Hold[]}>;
+  holds:readonly Hold[];condition:readonly (readonly [string,number])[]}>;
 const VERIFIED_PREFIX_CACHE_LIMIT=2;
 const verifiedPrefixes=new Map<string,VerifiedPrefix>();
 function rememberVerified(i:InitialCareerSave,j:M1V188Journal,
-  holds:readonly Hold[]):void{
+  holds:readonly Hold[],condition:ReadonlyMap<string,number>):void{
   const initialBytes=JSON.stringify(i);
   const journalBytes=JSON.stringify(j);
   if(initialBytes.length>10_000_000||
@@ -461,6 +473,7 @@ function rememberVerified(i:InitialCareerSave,j:M1V188Journal,
   verifiedPrefixes.delete(i.careerId);
   verifiedPrefixes.set(i.careerId,{
     initialBytes,journalBytes,holds:holds.map(h=>({...h})),
+    condition:[...condition],
   });
   if(verifiedPrefixes.size>VERIFIED_PREFIX_CACHE_LIMIT){
     const oldest=verifiedPrefixes.keys().next().value;
@@ -484,28 +497,35 @@ function read(i:InitialCareerSave,value:unknown){
   if(cached&&cached.initialBytes===JSON.stringify(i)&&
       cached.journalBytes===JSON.stringify(journal))
     return{journal,holds:cached.holds.map(h=>({...h})),
-      schedule:calendar(i)};
+      condition:new Map(cached.condition),schedule:calendar(i)};
   const schedule=calendar(i),holds:Hold[]=[];
+  let condition=startM1V188Condition(i);
   if(schedule.length!==LIMIT)return null;
-  let versionedSeen=false,medicalVersionSeen:0|2|3|4|5=0;
+  let versionedSeen=false,conditionSeen=false,
+    medicalVersionSeen:0|2|3|4|5=0;
   let specialGoalVersion:0|1|2|null=null;
   for(let n=0;n<journal.entries.length;n++){
     const entry=journal.entries[n]!;
     const versioned=entry.source?.disciplinePolicyVersion===2;
     const medical=entry.source?.medicalPolicyVersion??0;
     const special=entry.source?.specialGoalSourceVersion??0;
+    const conditioned=entry.source?.conditionPolicyVersion===1;
     if(specialGoalVersion!==null&&special!==specialGoalVersion||
-       versionedSeen&&!versioned||medical<medicalVersionSeen)
-      return null;
+       versionedSeen&&!versioned||medical<medicalVersionSeen||
+       conditionSeen&&!conditioned)return null;
     if(copy(entry,MAX_REQUEST)===null||
-        !verifyEntry(i,entry,schedule[n]!,n,holds,schedule))
+        !verifyEntry(i,entry,schedule[n]!,n,holds,schedule,condition))
       return null;
+    const updated=advanceM1V188Condition(i,condition,entry);
+    if(!updated)return null;
+    condition=updated;
     if(versioned)versionedSeen=true;
+    if(conditioned)conditionSeen=true;
     specialGoalVersion=special;
     medicalVersionSeen=medical;
   }
-  rememberVerified(i,journal,holds);
-  return{journal,holds,schedule};
+  rememberVerified(i,journal,holds,condition);
+  return{journal,holds,schedule,condition};
 }
 function good(journal:M1V188Journal):M1V188Gate{
   return{ok:true,schemaVersion:188,
@@ -576,7 +596,7 @@ export function prepareM1V188LeagueMatch(
   if(managerCommandsForFixture===null)
     return {ok:false,error:'UNAUTHORIZED_MANAGER'};
   const baseline=canonicalPrematch(initial,f,index,
-    accepted.holds,accepted.schedule);
+    accepted.holds,accepted.schedule,accepted.condition,true);
   if(!baseline)return {ok:false,error:'NO_LEGAL_LINEUP'};
   const prematch=managedPrematch(baseline,
     initial.selectedClubId,managedXI);
@@ -607,7 +627,7 @@ export function prepareM1V188LeagueMatch(
     ...(managedXI!==undefined?{managedXI:managedXI as M1V188ManagedXI}:{}),
     plannedCommands:generated.plannedCommands,
     checkpointMedical:generated.checkpointMedical,
-    result,
+    result,conditionPolicyVersion:1,
     ...(specialGoalSourceVersion===1||specialGoalSourceVersion===2?
       {specialGoalSourceVersion}:{}),
     ...(effective?{medicalPolicyVersion:effective}:{}),
@@ -650,6 +670,8 @@ export function applyM1V188LeagueMatch(
     return fail('SOURCE_MISMATCH');
   const priorMedical=accepted.journal.entries.at(-1)?.
     source.medicalPolicyVersion;
+  if(accepted.journal.entries.at(-1)?.source.conditionPolicyVersion===1&&
+      raw.conditionPolicyVersion!==1)return fail('SOURCE_MISMATCH');
   if(priorMedical===5&&raw.medicalPolicyVersion!==5||
       priorMedical===4&&raw.medicalPolicyVersion!==4&&
         raw.medicalPolicyVersion!==5||
@@ -678,6 +700,8 @@ export function applyM1V188LeagueMatch(
       plannedCommands:raw.plannedCommands,
       checkpointMedical:raw.checkpointMedical,
       disciplinePolicyVersion:2,
+      ...(raw.conditionPolicyVersion===1?
+        {conditionPolicyVersion:1 as const}:{}),
       ...(raw.specialGoalSourceVersion===1?
         {specialGoalSourceVersion:1 as const}:
         raw.specialGoalSourceVersion===2?
@@ -693,12 +717,14 @@ export function applyM1V188LeagueMatch(
   const holds=[...accepted.holds];
   // New commits cannot claim the legacy shot/referee authority.
   if(!verifyEntry(initial,entry,f,n,holds,
-      accepted.schedule,false))return fail('SOURCE_MISMATCH');
+      accepted.schedule,accepted.condition,false))return fail('SOURCE_MISMATCH');
+  const condition=advanceM1V188Condition(initial,accepted.condition,entry);
+  if(!condition)return fail('SOURCE_MISMATCH');
   const next:M1V188Journal={...accepted.journal,revision:n+1,
     entries:[...accepted.journal.entries,entry]};
   if(JSON.stringify(next).length>MAX_BYTES)
     return fail('JOURNAL_SIZE_LIMIT');
-  rememberVerified(initial,next,holds);
+  rememberVerified(initial,next,holds,condition);
   return good(next);
 }
 /** A replay-derived, read-only audit of the EXACT playable journal.

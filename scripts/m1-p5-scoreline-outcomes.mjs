@@ -14,6 +14,10 @@ export function summarizeM1P5ScorelineOutcomes(rows){
     ids.add(row[0]);
     const home=row[1],away=row[2];
     homeGoals+=home;awayGoals+=away;
+    if(!Number.isSafeInteger(homeGoals)||
+        !Number.isSafeInteger(awayGoals)||
+        !Number.isSafeInteger(homeGoals+awayGoals))
+      throw Error('INVALID_MATCH_OUTCOME_ROWS');
     if(home>away)homeWins++;
     else if(away>home)awayWins++;
     else{draws++;if(home===0)scorelessDraws++;}

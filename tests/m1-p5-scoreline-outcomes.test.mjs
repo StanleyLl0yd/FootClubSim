@@ -19,3 +19,11 @@ test('outcomes reject duplicate fixtures and forged score formats',()=>{
     [['a',0,'0']],[[null,0,0]]
   ])assert.throws(()=>count(rows),/INVALID_MATCH_OUTCOME_ROWS/);
 });
+test('outcome totals reject safe-integer overflow across fixtures and sides',()=>{
+  const big=Number.MAX_SAFE_INTEGER;
+  for(const rows of [
+    [['a',big,0],['b',1,0]],
+    [['a',0,big],['b',0,1]],
+    [['a',big,0],['b',0,1]],
+  ])assert.throws(()=>count(rows),/INVALID_MATCH_OUTCOME_ROWS/);
+});

@@ -60,6 +60,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const [preview,setPreview]=useState<Ready|null>(null);
   const [halfTime,setHalfTime]=useState<Ready|null>(null);
   const [pauseMinute,setPauseMinute]=useState(45);
+  const [nextPauseMinute,setNextPauseMinute]=useState(60);
+  const [inGameChoices,setInGameChoices]=useState<unknown[]>([]);
   const [busy,setBusy]=useState(false);
   const [advancing,setAdvancing]=useState(false);
   const [managerSetup,setManagerSetup]=useState<Ready|null>(null);
@@ -216,7 +218,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
 
   async function connect():Promise<void>{
     if(busy||disabled)return;
-    setBusy(true);setPreview(null);setHalfTime(null);setManagerSetup(null);
+    setBusy(true);setPreview(null);setHalfTime(null);
+    setInGameChoices([]);setManagerSetup(null);
     setXiSetup(null);setStarterIds([]);
     setCoachEnabled(false);setFocusEnabled(false);
     setForceAutoXI(false);setMatchInspectId('');
@@ -310,18 +313,26 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       setCoachFormation(tactics.formation);
       setCoachMentality(tactics.mentality);
       setCoachPressing(tactics.pressing);setCoachTempo(tactics.tempo);
-      setHalfTime(prepared);setManagerSetup(null);
+      setHalfTime(prepared);setInGameChoices([]);
+      setNextPauseMinute(Math.min(85,pauseMinute+15));
+      setManagerSetup(null);
       setStatus('Матч рассчитан до выбранной паузы. '+
         'Выберите указания на оставшуюся часть игры.');
     }catch(error){
       setStatus('Первый тайм не рассчитан: '+errorText(error));
     }
   }
-  function finishHalfTime():void{
+  function finishHalfTime(nextMinute:number|null):void{
     if(busy||disabled||!journal||!halfTime||!halfTimeInput)return;
+    if(nextMinute!==null&&(nextMinute<=pauseMinute||nextMinute>85||
+        nextMinute%5!==0)){
+      setStatus('Следующая пауза должна быть позже текущей и кратна 5 минутам.');
+      return;
+    }
     try{
+      const choices=[...inGameChoices,...coachingChoices];
       const prepared=prepareSource(journal,[],
-        halfTime.request.managedXI,coachingChoices);
+        halfTime.request.managedXI,choices);
       if(!prepared?.ok){
         setStatus('Продолжение матча отклонено: '+
           (prepared?.error??'SEASON_COMPLETE'));
@@ -338,9 +349,18 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           'отличаются от проверенного источника.');
         return;
       }
-      setHalfTime(null);setPreview(prepared);
-      setStatus('Матч продолжен без изменения сыгранного отрезка. '+
-        'Проверьте итоговый результат перед сохранением.');
+      if(nextMinute!==null){
+        setInGameChoices(choices);setHalfTime(prepared);
+        setPauseMinute(nextMinute);
+        setNextPauseMinute(Math.min(85,nextMinute+15));
+        setCoachEnabled(false);setFocusEnabled(false);
+        setStatus('Игра продолжена до '+nextMinute+'-й минуты. '+
+          'Предыдущие события не изменены. Можно дать новый приказ.');
+      }else{
+        setInGameChoices([]);setHalfTime(null);setPreview(prepared);
+        setStatus('Матч завершён без изменения сыгранного отрезка. '+
+          'Проверьте результат перед сохранением.');
+      }
     }catch(error){
       setStatus('Не удалось продолжить матч: '+errorText(error));
     }
@@ -349,7 +369,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     if(busy||disabled||!journal||!preview)return;
     const expected=journal.revision;
     const request=preview.request;
-    setBusy(true);setPreview(null);
+    setBusy(true);setPreview(null);setInGameChoices([]);
     try{
       const updated=await commitM1V188PersistedLeagueMatch(
         career.careerId,expected,request);
@@ -460,7 +480,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     const plan=planM1V188NextOwnMatch(career,start);
     if(!plan||plan.automaticMatches===0)return;
     setAdvancing(true);setPreview(null);setHalfTime(null);
-    setManagerSetup(null);setXiSetup(null);
+    setInGameChoices([]);setManagerSetup(null);setXiSetup(null);
     setStatus('Автоматически рассчитываются матчи остальных клубов.');
     stopRequested.current=false;
     try{
@@ -641,7 +661,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               <select value={pauseMinute} disabled={busy||disabled||
                 !!preview||!!halfTime}
                 onChange={e=>setPauseMinute(Number(e.target.value))}>
-                {[15,30,45,60,75,85].map(minute=>
+                {Array.from({length:17},(_,i)=>(i+1)*5).map(minute=>
                   <option value={minute} key={minute}>{minute}-я</option>)}
               </select>
             </label>
@@ -939,10 +959,25 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               {' '}{pauseMinute}-й минуте. Уже сыгранные эпизоды
               остаются неизменными.</p>
             <div className="button-stack">
+              {pauseMinute<85&&<>
+                <label>Следующая пауза
+                  <select value={nextPauseMinute}
+                    onChange={e=>setNextPauseMinute(Number(e.target.value))}>
+                    {Array.from({length:17},(_,i)=>(i+1)*5)
+                      .filter(minute=>minute>pauseMinute)
+                      .map(minute=><option key={minute} value={minute}>
+                        {minute}-я минута</option>)}
+                  </select>
+                </label>
+                <button type="button" disabled={busy||disabled}
+                  onClick={()=>finishHalfTime(nextPauseMinute)}>
+                  Продолжить до следующей паузы
+                </button>
+              </>}
               <button type="button" disabled={busy||disabled}
-                onClick={finishHalfTime}>Продолжить матч</button>
+                onClick={()=>finishHalfTime(null)}>До финального свистка</button>
               <button type="button" className="secondary-button"
-                onClick={()=>{setHalfTime(null);
+                onClick={()=>{setHalfTime(null);setInGameChoices([]);
                   setCoachEnabled(false);setFocusEnabled(false);
                   setStatus('Перерыв отменён. Сохранение не изменено.');}}>
                 Отменить просмотр

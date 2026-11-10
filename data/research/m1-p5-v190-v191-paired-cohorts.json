@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "status": "OBSERVED_REPLAYED_FICTIONAL_COHORT_NOT_CALIBRATION",
+  "artifactJsonSha256": {
+    "source1": "7a5139129e84e21572974f37acc62cf328433061c5af8f3fe789c0cbde886601",
+    "source2": "97b744d1408403dbdd9b6ee47592fb1ac582bd375236f32ba953e8ee09ce5c0a"
+  },
+  "actionsRunUrl": {
+    "source1": "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/42810758774",
+    "source2": "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/42815332443"
+  },
+  "artifactIds": {
+    "source1": 13764597863,
+    "source2": 13767725503
+  },
+  "source1": {
+    "catalogId": "liga-prikolov-preview",
+    "specialGoalSourceVersion": 1,
+    "sampleSize": 4,
+    "seeds": [
+      11,
+      41,
+      71,
+      101
+    ],
+    "refereeEventAuthorityAuthenticated": false,
+    "independentExternalRateComparison": false,
+    "results": [
+      {
+        "seed": 11,
+        "fixtureCount": 240,
+        "totalGoals": 980,
+        "finalTableHash": "53274a586875bd9485d1e1b1c77d3ed23673c4284ece5907146a29d03949f6b5",
+        "eventTotals": {
+          "goals": 980,
+          "openPlayGoals": 915,
+          "shots": 5090,
+          "penaltiesTaken": 67,
+          "penaltyGoals": 49,
+          "ownGoalsFor": 16,
+          "cautions": 758,
+          "straightReds": 40,
+          "secondYellowDismissals": 45,
+          "fictionalInjuryWithdrawals": 74,
+          "matchesWithSpecialDecisions": 79
+        }
+      },
+      {
+        "seed": 41,
+        "fixtureCount": 240,
+        "totalGoals": 962,
+        "finalTableHash": "aab4a33fac52d22f26647fe0b0e091bddec0ea65b5c69e5dec64a777da392901",
+        "eventTotals": {
+          "goals": 962,
+          "openPlayGoals": 895,
+          "shots": 5112,
+          "penaltiesTaken": 56,
+          "penaltyGoals": 43,
+          "ownGoalsFor": 24,
+          "cautions": 712,
+          "straightReds": 45,
+          "secondYellowDismissals": 43,
+          "fictionalInjuryWithdrawals": 82,
+          "matchesWithSpecialDecisions": 75
+        }
+      },
+      {
+        "seed": 71,
+        "fixtureCount": 240,
+        "totalGoals": 959,
+        "finalTableHash": "99407f85de83510eb37a6d019a2d61febccfa17d0340b805a4013aca777a4bbc",
+        "eventTotals": {
+          "goals": 959,
+          "openPlayGoals": 892,
+          "shots": 5178,
+          "penaltiesTaken": 72,
+          "penaltyGoals": 55,
+          "ownGoalsFor": 12,
+          "cautions": 751,
+          "straightReds": 34,
+          "secondYellowDismissals": 47,
+          "fictionalInjuryWithdrawals": 93,
+          "matchesWithSpecialDecisions": 80
+        }
+      },
+      {
+        "seed": 101,
+        "fixtureCount": 240,
+        "totalGoals": 932,
+        "finalTableHash": "70de123345218890cafe4760b56aed111b4fad2c85d3932b4d4e99bed17f18d0",
+        "eventTotals": {
+          "goals": 932,
+          "openPlayGoals": 882,
+          "shots": 5225,
+          "penaltiesTaken": 55,
+          "penaltyGoals": 38,
+          "ownGoalsFor": 12,
+          "cautions": 718,
+          "straightReds": 37,
+          "secondYellowDismissals": 43,
+          "fictionalInjuryWithdrawals": 100,
+          "matchesWithSpecialDecisions": 65
+        }
+      }
+    ]
+  },
+  "source2": {
+    "catalogId": "liga-prikolov-preview",
+    "specialGoalSourceVersion": 2,
+    "sampleSize": 4,
+    "seeds": [
+      11,
+      41,
+      71,
+      101
+    ],
+    "refereeEventAuthorityAuthenticated": false,
+    "independentExternalRateComparison": false,
+    "results": [
+      {
+        "seed": 11,
+        "fixtureCount": 240,
+        "totalGoals": 652,
+        "finalTableHash": "9cd833fabf7c9075c499d9d657b5516eb2609eefac28d913e6de040cbe24b8b6",
+        "eventTotals": {
+          "goals": 652,
+          "openPlayGoals": 587,
+          "shots": 5480,
+          "penaltiesTaken": 67,
+          "penaltyGoals": 49,
+          "ownGoalsFor": 16,
+          "cautions": 758,
+          "straightReds": 40,
+          "secondYellowDismissals": 45,
+          "fictionalInjuryWithdrawals": 74,
+          "matchesWithSpecialDecisions": 79
+        }
+      },
+      {
+        "seed": 41,
+        "fixtureCount": 240,
+        "totalGoals": 654,
+        "finalTableHash": "461ea4890ae4ce2341fec9c60fbf25069c9e514843fc1847b46b26321d6e982c",
+        "eventTotals": {
+          "goals": 654,
+          "openPlayGoals": 587,
+          "shots": 5548,
+          "penaltiesTaken": 56,
+          "penaltyGoals": 43,
+          "ownGoalsFor": 24,
+          "cautions": 712,
+          "straightReds": 45,
+          "secondYellowDismissals": 43,
+          "fictionalInjuryWithdrawals": 82,
+          "matchesWithSpecialDecisions": 75
+        }
+      },
+      {
+        "seed": 71,
+        "fixtureCount": 240,
+        "totalGoals": 623,
+        "finalTableHash": "81526f27c04f77c6dc5fba7c6a918b6b66c8a19ae7d9093834b28de0c65ff11c",
+        "eventTotals": {
+          "goals": 623,
+          "openPlayGoals": 556,
+          "shots": 5595,
+          "penaltiesTaken": 72,
+          "penaltyGoals": 55,
+          "ownGoalsFor": 12,
+          "cautions": 751,
+          "straightReds": 34,
+          "secondYellowDismissals": 47,
+          "fictionalInjuryWithdrawals": 93,
+          "matchesWithSpecialDecisions": 80
+        }
+      },
+      {
+        "seed": 101,
+        "fixtureCount": 240,
+        "totalGoals": 611,
+        "finalTableHash": "8513c25a45ab6dd13e85c4880e6ebadbc36e4cca9b2aa91c75ad75a7b1793c35",
+        "eventTotals": {
+          "goals": 611,
+          "openPlayGoals": 561,
+          "shots": 5615,
+          "penaltiesTaken": 55,
+          "penaltyGoals": 38,
+          "ownGoalsFor": 12,
+          "cautions": 718,
+          "straightReds": 37,
+          "secondYellowDismissals": 43,
+          "fictionalInjuryWithdrawals": 100,
+          "matchesWithSpecialDecisions": 65
+        }
+      }
+    ]
+  },
+  "caveat": "Compact transcription of immutable CI artifacts and their original result digests. Not the full source journal, a signature, externally calibrated football events or legal clearance."
+}

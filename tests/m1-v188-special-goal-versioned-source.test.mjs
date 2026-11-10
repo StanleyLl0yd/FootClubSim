@@ -89,3 +89,35 @@ test('versioned full archive roundtrip preserves result and old snapshot',async(
   assert.equal(decoded.journal.entries[0].source.specialGoalSourceVersion,1);
   assert.equal(decoded.initial.careerId,initial.careerId);
 });
+
+test('new v191 source option is deterministic and version-gated independently',()=>{
+  const {initial,journal}=start(41,'m1-v191-new-career');
+  const v1=prepare(initial,journal,1);
+  const v2=prepare(initial,journal,2);
+  assert.equal(v1?.ok,true,JSON.stringify(v1).slice(0,240));
+  assert.equal(v2?.ok,true,JSON.stringify(v2).slice(0,240));
+  if(!v1?.ok||!v2?.ok)return;
+  assert.equal(v2.request.specialGoalSourceVersion,2);
+  assert.equal(v2.request.result.rngDraws,v1.request.result.rngDraws);
+  assert.equal(v2.request.result.rngState,v1.request.result.rngState);
+  assert.deepEqual(prepare(initial,journal,2)?.request.result,
+    v2.request.result,'same seed/source must replay identically');
+  const saved=applyM1V188LeagueMatch(initial,journal,v2.request);
+  assert.equal(saved.ok,true,JSON.stringify(saved).slice(0,240));
+  if(!saved.ok)return;
+  assert.equal(validateM1V188LeagueJournal(initial,saved.journal).ok,true);
+  assert.equal(saved.journal.entries[0].source.specialGoalSourceVersion,2);
+  assert.equal(prepare(initial,saved.journal,2)?.ok,true);
+  assert.deepEqual(prepare(initial,saved.journal,1),
+    {ok:false,error:'INVALID_REQUEST'});
+  assert.deepEqual(prepare(initial,saved.journal,undefined),
+    {ok:false,error:'INVALID_REQUEST'});
+  const forged=structuredClone(v2.request);
+  forged.specialGoalSourceVersion=1;
+  assert.deepEqual(applyM1V188LeagueMatch(initial,journal,forged),
+    {ok:false,error:'SOURCE_MISMATCH'});
+  const forgedGoal=structuredClone(v2.request);
+  forgedGoal.result.report.home.goals++;
+  assert.deepEqual(applyM1V188LeagueMatch(initial,journal,forgedGoal),
+    {ok:false,error:'SOURCE_MISMATCH'});
+});

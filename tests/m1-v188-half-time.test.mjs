@@ -130,3 +130,33 @@ test('15/30/60/75-minute interactive pauses preserve prior source',()=>{
   assert.equal(sameM1V188CheckpointPrefix(
     previous.request.result,previous.request.result,123),false);
 });
+
+test('two consecutive coaching pauses retain both previously played prefixes',()=>{
+  const career=createInitialCareer(catalog,chosen,7070,'two-pauses');
+  const first=startM1V188LeagueJournal(career);
+  assert.ok(first.ok);
+  const baseline=prepareM1V188LeagueMatch(career,first.journal);
+  assert.ok(baseline?.ok);
+  const opening=plan(baseline.request.prematch);
+  const firstOrders=[{kind:'team-tactics',elapsedSeconds:900,plan:opening}];
+  const atFifteen=prepareM1V188LeagueMatch(career,first.journal,[],
+    undefined,undefined,undefined,undefined,firstOrders);
+  assert.ok(atFifteen?.ok);
+  assert.ok(sameM1V188CheckpointPrefix(
+    baseline.request.result,atFifteen.request.result,900));
+  const secondOrders=[...firstOrders,{kind:'team-tactics',
+    elapsedSeconds:2700,plan:{...opening,formation:'4-4-2',
+      mentality:-2,pressing:0,tempo:20}}];
+  const atFortyFive=prepareM1V188LeagueMatch(career,first.journal,[],
+    undefined,undefined,undefined,undefined,secondOrders);
+  assert.ok(atFortyFive?.ok);
+  assert.equal(atFortyFive.request.plannedCommands.filter(
+    c=>c.kind==='set-tactics').length,2);
+  assert.ok(sameM1V188CheckpointPrefix(
+    atFifteen.request.result,atFortyFive.request.result,2700));
+  assert.ok(sameM1V188CheckpointPrefix(
+    baseline.request.result,atFortyFive.request.result,900));
+  const applied=applyM1V188LeagueMatch(career,first.journal,
+    atFortyFive.request);
+  assert.ok(applied.ok,'cumulative orders must remain fully source-replayable');
+});

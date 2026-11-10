@@ -5,7 +5,9 @@ on:
     paths:
       - 'scripts/m1-v188-season-diversity.mjs'
       - 'src/core/m1-v188-league-source-journal.ts'
-      - 'src/core/m1-v190-experimental-special-goals.ts'\n      - 'src/core/m1-v103-intraphase-medical.ts'\n      - 'src/core/m1-v105-special-goal-chronology.ts'
+      - 'src/core/m1-v190-experimental-special-goals.ts'
+      - 'src/core/m1-v103-intraphase-medical.ts'
+      - 'src/core/m1-v105-special-goal-chronology.ts'
       - '.github/workflows/m1-p5-v191-new-career-cohort.yml'
   workflow_dispatch:
 

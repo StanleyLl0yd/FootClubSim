@@ -3,13 +3,16 @@ import type {Catalog} from '../core/model.js';
 import {LigaClubLabel} from './LigaClubLabel.js';
 import {deriveM1V188MatchDetails}
   from '../core/m1-v188-match-details.js';
+import {deriveM1V188PhysicalExposure}
+  from '../core/m1-v188-physical-exposure.js';
 
 /** Source-backed match centre, not a synthetic dashboard of invented metrics. */
 export function M1MatchReport({entry,catalog}:{
   readonly entry:M1V188Entry;readonly catalog:Catalog;
 }){
   const report=deriveM1V188MatchDetails(entry);
-  if(!report)return <p role="alert">Не удалось проверить протокол матча.</p>;
+  const exposure=deriveM1V188PhysicalExposure(entry);
+  if(!report||!exposure)return <p role="alert">Не удалось проверить протокол матча.</p>;
   const teams=new Map(catalog.clubs.map(team=>[team.id,team.displayName]));
   const names=new Map(catalog.players.map(player=>[player.id,player.displayName]));
   const incidentLabel={
@@ -70,6 +73,29 @@ export function M1MatchReport({entry,catalog}:{
           </li>;
         })}
       </ol>:<p className="subtle">Голов и дисциплинарных событий не было.</p>}
+    <details className="season-club-details">
+      <summary>Время футболистов на поле</summary>
+      <p className="subtle">Только игровое время из журнала физических
+        составов, без перерыва и остановок. Усталость и восстановление
+        между матчами ещё не рассчитываются.</p>
+      <div className="season-table-scroll">
+        <table className="season-table">
+          <thead><tr>
+            <th scope="col">Команда</th>
+            <th scope="col">Футболист</th>
+            <th scope="col">Участие</th>
+            <th scope="col">Минут</th>
+          </tr></thead>
+          <tbody>{exposure.players.map(player=><tr
+            key={player.teamId+'-'+player.playerId}>
+            <td>{teams.get(player.teamId)??player.teamId}</td>
+            <td>{names.get(player.playerId)??player.playerId}</td>
+            <td>{player.started?'Основа':'Выход на замену'}</td>
+            <td>{(player.physicalSeconds/60).toFixed(1)}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+    </details>
     <p className="subtle">Показаны только проверяемые события игрового
       движка. xG учитывает только удары с игры; владение, угловые,
       фолы и офсайды пока не рассчитываются.</p>

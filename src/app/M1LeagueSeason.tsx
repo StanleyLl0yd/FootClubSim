@@ -50,11 +50,11 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   // New careers use the experimental sourced-penalty model. An already
   // started career keeps the first entry's source model for all 240 fixtures.
   const prepareSource=(saved:M1V188Journal,manager:unknown=[],
-    selection:unknown=undefined)=>
+    selection:unknown=undefined,coaching:unknown=[])=>
     prepareM1V188LeagueMatch(career,saved,manager,
       undefined,undefined,selection,
       saved.revision===0?
-        2:saved.entries[0]?.source.specialGoalSourceVersion);
+        2:saved.entries[0]?.source.specialGoalSourceVersion,coaching);
   const [preview,setPreview]=useState<Ready|null>(null);
   const [busy,setBusy]=useState(false);
   const [advancing,setAdvancing]=useState(false);
@@ -67,6 +67,15 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const [xiMentality,setXiMentality]=useState(0);
   const [xiPressing,setXiPressing]=useState(50);
   const [xiTempo,setXiTempo]=useState(50);
+  const [coachEnabled,setCoachEnabled]=useState(false);
+  const [coachMinute,setCoachMinute]=useState(45);
+  const [coachFormation,setCoachFormation]=useState('4-2-3-1');
+  const [coachMentality,setCoachMentality]=useState(0);
+  const [coachPressing,setCoachPressing]=useState(50);
+  const [coachTempo,setCoachTempo]=useState(50);
+  const [focusEnabled,setFocusEnabled]=useState(false);
+  const [focusId,setFocusId]=useState('');
+  const [focusMode,setFocusMode]=useState('attack');
   const [outId,setOutId]=useState('');
   const [inId,setInId]=useState('');
   const stopRequested=useRef(false);
@@ -143,6 +152,19 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       mentality:xiMentality,pressing:xiPressing,tempo:xiTempo},
   }:undefined;
   const xiPlayers=new Set(starterIds);
+  const focusCandidates=starterIds.filter(id=>
+    playersById.get(id)?.primaryPosition!=='GK');
+  const actualFocusId=focusCandidates.includes(focusId)?
+    focusId:focusCandidates[0]??'';
+  const coachingChoices=coachEnabled&&xiChoice?[{
+    kind:'team-tactics',elapsedSeconds:coachMinute*60,
+    plan:{...xiChoice.tactics,schemaVersion:2 as const,
+      formation:coachFormation,mentality:coachMentality,
+      pressing:coachPressing,tempo:coachTempo},
+  },...(focusEnabled&&actualFocusId?[{
+    kind:'player-focus',elapsedSeconds:coachMinute*60,
+    playerId:actualFocusId,focus:focusMode,
+  }]:[])]:[];
   // A read-only pitch preview. The tactical formation is persisted in v188,
   // while individual player-to-slot assignments are not yet modelled.
   const boardGoalkeeper=starterIds.find(id=>
@@ -180,6 +202,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     if(busy||disabled)return;
     setBusy(true);setPreview(null);setManagerSetup(null);
     setXiSetup(null);setStarterIds([]);
+    setCoachEnabled(false);setFocusEnabled(false);
     setForceAutoXI(false);setMatchInspectId('');
     try{
       let stored:InitialCareerSave;
@@ -229,12 +252,13 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   function calculate(changes:readonly HalfTimeChange[]=[]):void{
     if(busy||disabled||!journal||preview||!xiLegal)return;
     try{
-      const base=prepareSource(journal,changes);
+      const base=prepareSource(journal,changes,undefined,coachingChoices);
       const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
         deriveM1V188RememberedXI(
           career,journal,base.request.prematch as M1PrematchInput):null;
       const prepared=xiChoice||remembered?
-        prepareSource(journal,changes,xiChoice??remembered):base;
+        prepareSource(journal,changes,xiChoice??remembered,
+          coachingChoices):base;
       if(prepared===null){
         setStatus('Сезон завершён. Все 240 матчей уже сохранены.');
       }else if(!prepared.ok){
@@ -258,6 +282,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         career.careerId,expected,request);
       setJournal(updated);
       setManagerSetup(null);setXiSetup(null);setStarterIds([]);
+      setCoachEnabled(false);setFocusEnabled(false);
       setForceAutoXI(false);
       setStatus('Матч №'+updated.revision+
         ' записан в браузер. Результат и таблица обновлены.');
@@ -298,6 +323,11 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     setXiMentality(tactics.mentality);
     setXiPressing(tactics.pressing);
     setXiTempo(tactics.tempo);setForceAutoXI(false);
+    setCoachEnabled(false);setFocusEnabled(false);
+    setCoachFormation(tactics.formation);
+    setCoachMentality(tactics.mentality);
+    setCoachPressing(tactics.pressing);
+    setCoachTempo(tactics.tempo);
     setManagerSetup(null);
     setStatus(remembered?
       'Восстановлены состав и тактика прошлого матча. Проверьте доступность игроков.':
@@ -320,6 +350,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   }
   function clearXI():void{
     setXiSetup(null);setStarterIds([]);setManagerSetup(null);
+    setCoachEnabled(false);setFocusEnabled(false);
     setForceAutoXI(true);
     setStatus('Для этого матча выбран автоматический стартовый состав.');
   }
@@ -328,12 +359,13 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     if(busy||disabled||!journal||!ownNextNow||preview)return;
     try{
       if(!xiLegal)return;
-      const base=prepareSource(journal);
+      const base=prepareSource(journal,[],undefined,coachingChoices);
       const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
         deriveM1V188RememberedXI(
           career,journal,base.request.prematch as M1PrematchInput):null;
       const prepared=xiChoice||remembered?
-        prepareSource(journal,[],xiChoice??remembered):base;
+        prepareSource(journal,[],xiChoice??remembered,
+          coachingChoices):base;
       if(!prepared?.ok){
         setStatus('Подготовка состава отклонена: '+
           (prepared?.error??'SEASON_COMPLETE'));
@@ -538,6 +570,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               {xiSetup?'Вернуть автосостав':'Настроить стартовый состав'}
             </button>}
             {ownNextNow&&<button type="button" className="secondary-button"
+              disabled={busy||disabled||!!preview}
+              onClick={configureXI}>Настроить тактику по ходу матча</button>}
+            {ownNextNow&&<button type="button" className="secondary-button"
               disabled={busy||disabled||!!preview||!xiLegal}
               onClick={configureHalfTime}>Настроить замену</button>}
             <button type="button" disabled={busy||disabled||!!preview}
@@ -645,6 +680,73 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             </label>
           </div>
 
+          <h4 className="season-editor-title">Изменение тактики в игре</h4>
+          <label>
+            <input type="checkbox" checked={coachEnabled}
+              onChange={e=>setCoachEnabled(e.target.checked)}/>
+            {' '}Запланировать тактический приказ на пятиминутной границе
+          </label>
+          {coachEnabled&&<div className="season-tactics-grid">
+            <label>Минута изменения
+              <select value={coachMinute}
+                onChange={e=>setCoachMinute(Number(e.target.value))}>
+                {[15,30,45,60,75,85].map(minute=>
+                  <option key={minute} value={minute}>{minute}-я</option>)}
+              </select>
+            </label>
+            <label>Новая схема
+              <select value={coachFormation}
+                onChange={e=>setCoachFormation(e.target.value)}>
+                {FORMATIONS.map(v=><option key={v} value={v}>{v}</option>)}
+              </select>
+            </label>
+            <label>Новый настрой
+              <select value={coachMentality}
+                onChange={e=>setCoachMentality(Number(e.target.value))}>
+                <option value={-2}>Осторожный</option>
+                <option value={-1}>Сдержанный</option>
+                <option value={0}>Сбалансированный</option>
+                <option value={1}>Атакующий</option>
+                <option value={2}>Всё вперёд</option>
+              </select>
+            </label>
+            <label>Новый прессинг · {coachPressing}
+              <input type="range" min="0" max="100" step="10"
+                value={coachPressing}
+                onChange={e=>setCoachPressing(Number(e.target.value))}/>
+            </label>
+            <label>Новый темп · {coachTempo}
+              <input type="range" min="0" max="100" step="10"
+                value={coachTempo}
+                onChange={e=>setCoachTempo(Number(e.target.value))}/>
+            </label>
+            <label>
+              <input type="checkbox" checked={focusEnabled}
+                onChange={e=>setFocusEnabled(e.target.checked)}/>
+              {' '}Индивидуальное указание
+            </label>
+            {focusEnabled&&<>
+              <label>Игрок
+                <select value={actualFocusId}
+                  onChange={e=>setFocusId(e.target.value)}>
+                  {focusCandidates.map(id=><option key={id} value={id}>
+                    {playerNames.get(id)??id}</option>)}
+                </select>
+              </label>
+              <label>Приоритет
+                <select value={focusMode}
+                  onChange={e=>setFocusMode(e.target.value)}>
+                  <option value="attack">Атака</option>
+                  <option value="balanced">Баланс</option>
+                  <option value="defend">Защита</option>
+                </select>
+              </label>
+            </>}
+          </div>}
+          {coachEnabled&&<p className="subtle">Приказ вступает в силу
+            только с выбранной минуты и влияет на последующие эпизоды.
+            Если футболист к этому моменту удалён или недоступен,
+            индивидуальный приказ будет отклонён.</p>}
           <p className="subtle">Готовность рассчитана по реальным игровым
             минутам предыдущих матчей, с условным восстановлением перед
             следующим туром. Усталость влияет на автоматическую ротацию
@@ -705,6 +807,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           {preview.request.managedXI&&
             <p className="subtle">Стартовый состав и тактика выбраны тренером
               и включены в проверяемый расчёт.</p>}
+          {preview.request.inMatchOrdersVersion===1&&
+            <p className="subtle">Изменение тактики и индивидуальное указание
+              включены в проверяемый протокол по ходу матча.</p>}
           {preview.request.plannedCommands.some(command=>
             command!==null&&typeof command==='object'&&
             'kind' in command&&command.kind==='substitute-normal')&&

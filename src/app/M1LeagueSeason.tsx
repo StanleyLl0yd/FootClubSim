@@ -45,6 +45,14 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   readonly onCareerStored:()=>void;
 }){
   const [journal,setJournal]=useState<M1V188Journal|null>(null);
+  // New careers use the experimental sourced-penalty model. An already
+  // started career keeps the first entry's source model for all 240 fixtures.
+  const prepareSource=(saved:M1V188Journal,manager:unknown=[],
+    selection:unknown=undefined)=>
+    prepareM1V188LeagueMatch(career,saved,manager,
+      undefined,undefined,selection,
+      saved.revision===0||saved.entries[0]?.source.specialGoalSourceVersion===1?
+        1:undefined);
   const [preview,setPreview]=useState<Ready|null>(null);
   const [busy,setBusy]=useState(false);
   const [advancing,setAdvancing]=useState(false);
@@ -211,13 +219,12 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   function calculate(changes:readonly HalfTimeChange[]=[]):void{
     if(busy||disabled||!journal||preview||!xiLegal)return;
     try{
-      const base=prepareM1V188LeagueMatch(career,journal,changes);
+      const base=prepareSource(journal,changes);
       const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
         deriveM1V188RememberedXI(
           career,journal,base.request.prematch as M1PrematchInput):null;
       const prepared=xiChoice||remembered?
-        prepareM1V188LeagueMatch(career,journal,changes,
-          undefined,undefined,xiChoice??remembered):base;
+        prepareSource(journal,changes,xiChoice??remembered):base;
       if(prepared===null){
         setStatus('Сезон завершён. Все 240 матчей уже сохранены.');
       }else if(!prepared.ok){
@@ -261,7 +268,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
 
   function configureXI():void{
     if(busy||disabled||!journal||!ownNextNow||preview)return;
-    const prepared=prepareM1V188LeagueMatch(career,journal);
+    const prepared=prepareSource(journal);
     if(!prepared?.ok){
       setStatus('Не удалось открыть состав: '+
         (prepared?.error??'SEASON_COMPLETE'));
@@ -311,13 +318,12 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     if(busy||disabled||!journal||!ownNextNow||preview)return;
     try{
       if(!xiLegal)return;
-      const base=prepareM1V188LeagueMatch(career,journal);
+      const base=prepareSource(journal);
       const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
         deriveM1V188RememberedXI(
           career,journal,base.request.prematch as M1PrematchInput):null;
       const prepared=xiChoice||remembered?
-        prepareM1V188LeagueMatch(career,journal,[],
-          undefined,undefined,xiChoice??remembered):base;
+        prepareSource(journal,[],xiChoice??remembered):base;
       if(!prepared?.ok){
         setStatus('Подготовка состава отклонена: '+
           (prepared?.error??'SEASON_COMPLETE'));
@@ -352,7 +358,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       const target=plan.targetRevision;
       while(current.revision<target&&!stopRequested.current){
         const expectedFixture=fixtures[current.revision];
-        const proposal=prepareM1V188LeagueMatch(career,current);
+        const proposal=prepareSource(current);
         if(!proposal?.ok)
           throw Error('Невозможно рассчитать матч: '+
             (proposal?.error??'SEASON_COMPLETE'));

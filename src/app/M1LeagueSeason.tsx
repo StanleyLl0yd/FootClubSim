@@ -3,6 +3,8 @@ import {M1ClubOverview} from './M1ClubOverview.js';
 import {M1MatchReport} from './M1MatchReport.js';
 import {LigaClubLabel} from './LigaClubLabel.js';
 import {deriveM1V188Champion} from '../core/m1-v188-championship.js';
+import {inspectM1V188ClubCondition}
+  from '../core/m1-v188-condition.js';
 import {deriveM1V188RememberedXI} from '../core/m1-v188-manager-defaults.js';
 import {sameCanonicalValue} from '../core/canonical-value.js';
 import {deriveM1V188ProvisionalTable}
@@ -82,6 +84,14 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const saved=useMemo(()=>new Map(
     (journal?.entries??[]).map(entry=>[entry.fixtureId,entry])),
   [journal]);
+  // The loaded v188 journal is already source-validated by its store.
+  // Readiness is a fictional per-fixture workload estimate, not medical
+  // clearance and never a mutation of a persisted player attribute.
+  const readiness=useMemo(()=>journal?
+    inspectM1V188ClubCondition(career,journal.entries,
+      career.selectedClubId):null,[career,journal]);
+  const readinessById=new Map((readiness?.players??[]).map(
+    player=>[player.playerId,player.condition]));
   const navigation=useMemo(()=>journal?
     planM1V188NextOwnMatch(career,journal):null,[career,journal]);
   const ownReports=fixtures.filter(f=>
@@ -566,7 +576,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                   setManagerSetup(null);
                 }} />
               <span>{playerNames.get(id)??id} ·
-                {' '}{playersById.get(id)?.primaryPosition}</span>
+                {' '}{playersById.get(id)?.primaryPosition}
+                {readinessById.has(id)?' · готовность '+
+                  readinessById.get(id)+'%':''}</span>
             </label>)}
             </div>
           <figure className="season-formation-board"
@@ -633,6 +645,11 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             </label>
           </div>
 
+          <p className="subtle">Готовность рассчитана по реальным игровым
+            минутам предыдущих матчей, с условным восстановлением перед
+            следующим туром. Усталость влияет на автоматическую ротацию
+            соперников и вашего состава при автоматическом выборе.
+            Это не медицинское заключение.</p>
           {!xiLegal&&<p role="alert" className="subtle">
             Проверьте 11 игроков, вратаря и лимит легионеров.
           </p>}

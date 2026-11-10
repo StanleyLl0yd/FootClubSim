@@ -634,10 +634,13 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               name={clubs.get(next.awayClubId)??next.awayClubId}/>
           </strong>
           <div className="button-stack">
-            <button type="button" disabled={busy||disabled||!!preview||!xiLegal}
+            <button type="button" disabled={busy||disabled||!!preview||!!halfTime||!xiLegal}
               onClick={()=>calculate()}>Рассчитать матч</button>
+            <button type="button" className="secondary-button"
+              disabled={busy||disabled||!!preview||!!halfTime||!xiLegal}
+              onClick={startHalfTime}>Играть с паузой в перерыве</button>
             {ownNextNow&&<button type="button" className="secondary-button"
-              disabled={busy||disabled||!!preview}
+              disabled={busy||disabled||!!preview||!!halfTime}
               onClick={xiSetup?clearXI:configureXI}>
               {xiSetup?'Вернуть автосостав':'Настроить стартовый состав'}
             </button>}
@@ -652,7 +655,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               onClick={()=>void connect()}>Обновить сохранение</button>
           </div>
         </div>}
-        {xiSetup&&ownNextNow&&!preview&&<fieldset
+        {xiSetup&&ownNextNow&&!preview&&!halfTime&&<fieldset
           className="season-substitution" disabled={busy||disabled}>
           <legend>Стартовый состав · {starterIds.length} из 11</legend>
           <p className="subtle">Выберите 11 игроков, включая ровно
@@ -828,7 +831,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             Проверьте 11 игроков, вратаря и лимит легионеров.
           </p>}
         </fieldset>}
-        {managerSetup&&ownNextNow&&!preview&&<fieldset
+        {managerSetup&&ownNextNow&&!preview&&!halfTime&&<fieldset
           className="season-substitution" disabled={busy||disabled}>
           <legend>Замена в перерыве вашего матча</legend>
           <div className="season-sub-fields">
@@ -857,6 +860,86 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               onClick={()=>setManagerSetup(null)}>Отмена настройки</button>
           </div>
         </fieldset>}
+        {halfTime&&halfTimeScore&&<section className="season-preview"
+          aria-label="Перерыв матча">
+          <h3>Перерыв · 45′</h3>
+          <p className="season-preview-score season-report-score">
+            <LigaClubLabel clubId={halfTime.fixture.homeClubId}
+              name={clubs.get(halfTime.fixture.homeClubId)??halfTime.fixture.homeClubId}/>
+            {' '}<strong>{halfTimeScore.homeGoals} : {halfTimeScore.awayGoals}</strong>{' '}
+            <LigaClubLabel clubId={halfTime.fixture.awayClubId}
+              name={clubs.get(halfTime.fixture.awayClubId)??halfTime.fixture.awayClubId}/>
+          </p>
+          <p className="subtle">Удары до перерыва:
+            {' '}{halfTimeScore.homeShots} : {halfTimeScore.awayShots}.
+            События после перерыва пока не раскрываются.</p>
+          <fieldset disabled={busy||disabled}>
+            <legend>Указания тренера на второй тайм</legend>
+            <label><input type="checkbox" checked={coachEnabled}
+              onChange={e=>setCoachEnabled(e.target.checked)}/>
+              {' '}Изменить тактику</label>
+            {coachEnabled&&<div className="season-tactics-grid">
+              <label>Схема
+                <select value={coachFormation}
+                  onChange={e=>setCoachFormation(e.target.value)}>
+                  {FORMATIONS.map(v=><option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+              <label>Настрой
+                <select value={coachMentality}
+                  onChange={e=>setCoachMentality(Number(e.target.value))}>
+                  <option value={-2}>Осторожный</option>
+                  <option value={-1}>Сдержанный</option>
+                  <option value={0}>Сбалансированный</option>
+                  <option value={1}>Атакующий</option>
+                  <option value={2}>Всё вперёд</option>
+                </select>
+              </label>
+              <label>Прессинг · {coachPressing}
+                <input type="range" min="0" max="100" step="10"
+                  value={coachPressing}
+                  onChange={e=>setCoachPressing(Number(e.target.value))}/>
+              </label>
+              <label>Темп · {coachTempo}
+                <input type="range" min="0" max="100" step="10"
+                  value={coachTempo}
+                  onChange={e=>setCoachTempo(Number(e.target.value))}/>
+              </label>
+              <label><input type="checkbox" checked={focusEnabled}
+                onChange={e=>setFocusEnabled(e.target.checked)}/>
+                {' '}Индивидуальное указание</label>
+              {focusEnabled&&<>
+                <label>Игрок
+                  <select value={actualFocusId}
+                    onChange={e=>setFocusId(e.target.value)}>
+                    {focusCandidates.map(id=><option key={id} value={id}>
+                      {playerNames.get(id)??id}</option>)}
+                  </select>
+                </label>
+                <label>Приоритет
+                  <select value={focusMode}
+                    onChange={e=>setFocusMode(e.target.value)}>
+                    <option value="attack">Атака</option>
+                    <option value="balanced">Баланс</option>
+                    <option value="defend">Защита</option>
+                  </select>
+                </label>
+              </>}
+            </div>}
+            <p className="subtle">Изменения вступают в силу на 45-й
+              минуте. Уже сыгранные эпизоды остаются неизменными.</p>
+            <div className="button-stack">
+              <button type="button" disabled={busy||disabled}
+                onClick={finishHalfTime}>Продолжить второй тайм</button>
+              <button type="button" className="secondary-button"
+                onClick={()=>{setHalfTime(null);
+                  setCoachEnabled(false);setFocusEnabled(false);
+                  setStatus('Перерыв отменён. Сохранение не изменено.');}}>
+                Отменить просмотр
+              </button>
+            </div>
+          </fieldset>
+        </section>}
         {preview&&previewResult&&<div className="season-preview"
           aria-label="Предварительный результат">
           <span className="subtle">Результат · тур {preview.fixture.round}</span>

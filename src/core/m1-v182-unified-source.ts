@@ -129,7 +129,7 @@ function regenerateUnifiedSource(
   // Physical substitutions still generate referee/medical source first.
   // Tactical orders alter only future v8 phase state, not past incidents.
   const plannedCommands=orderM1V166CombinedCommands(referee,
-    [...changes,...coachingOrders as Command[]]);
+    [...changes,...(coachingOrders as Command[])]);
   if(plannedCommands.length>275)
     return {ok:false as const,error:'SOURCE_EVENT_BUDGET' as const};
   const checkpointMedical=[...generated.syntheticTreatmentActions];

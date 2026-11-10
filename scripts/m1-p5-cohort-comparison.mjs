@@ -6,6 +6,15 @@ const METRICS=['goals','shots','penaltiesTaken','penaltyGoals',
 const integer=n=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;
 const invalid=message=>{throw new TypeError('INVALID_CALIBRATION_EVIDENCE: '+message);};
 const mean=values=>values.reduce((sum,n)=>sum+n,0)/values.length;
+// Two-sided 95% Student-t critical values, df=3..31 (4..32 seeds).
+const t95=[3.182446,2.776445,2.570582,2.446912,2.364624,2.306004,2.262157,2.228139,2.200985,2.178813,2.160369,2.144787,2.13145,2.119905,2.109816,2.100922,2.093024,2.085963,2.079614,2.073873,2.068658,2.063899,2.059539,2.055529,2.051831,2.048407,2.04523,2.042272,2.039513];
+const seededMean95Interval=values=>{
+  const n=values.length,average=mean(values);
+  const squared=values.reduce((sum,v)=>sum+(v-average)**2,0);
+  const margin=t95[n-4]*Math.sqrt(squared/(n*(n-1)));
+  return [Number(Math.max(0,average-margin).toFixed(2)),
+    Number((average+margin).toFixed(2))];
+};
 
 export function describeM1P5CohortVersusReference(cohort,reference){
   if(!cohort||typeof cohort!=='object'||!Array.isArray(cohort.results)||
@@ -53,6 +62,7 @@ export function describeM1P5CohortVersusReference(cohort,reference){
     return [k,{referenceTotal,
       observedTotals:observed,
       observedMean:Number(average.toFixed(4)),
+      observedSeedMean95Interval:seededMean95Interval(observed),
       observedRange:[Math.min(...observed),Math.max(...observed)],
       relativeDeltaPct:Number((100*(average/referenceTotal-1)).toFixed(2)),
       sourceUrl:reference.sourceByMetric[k]}];
@@ -62,6 +72,8 @@ export function describeM1P5CohortVersusReference(cohort,reference){
     engineSource:cohort.provenance,
     seasonCount:results.length,fixturesPerSeason:240,
     referenceSeason:reference.season,metrics,
+    seedMean95Method:'Two-sided Student t interval across complete seeded seasons; '+
+      'assumes independent pseudo-random seeds; does not quantify reference uncertainty',
     sourceRightsReviewed:false,
     semanticsHarmonized:false,calibrationToleranceApproved:false,
     heldOut2024_25Used:false,releaseAccepted:false,

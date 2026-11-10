@@ -16,3 +16,15 @@ The definition of FBref shots **may differ** from the game's source-generated sh
 `scripts/m1-p5-cohort-comparison.mjs` consumes the already source-replayed **four independent complete v188 seasons** output by `scripts/m1-v188-season-diversity.mjs`. It checks seed uniqueness, 240-match scope, internal goal conservation and proper fictional provenance, and reports per-metric mean, min/max and relative difference with source URL. It explicitly returns **`DESCRIPTIVE_2025_26_COMPARISON_NOT_M1_P5_ACCEPTED`** and `releaseAccepted:false` even when results happen to resemble real aggregates. This should be used to determine priorities and whether shot frequency vs conversion is the dominant mismatch, not to auto-pass M1.
 
 Before calibration acceptance: independently prove event-definition harmonization, rights to reuse any provider records, official source editions and time cutoffs, predeclare appropriate tolerances and cross-seed coverage, implement a new source-versioned calibrated playable model, and evaluate against a genuinely independent **unopened 2024/25 holdout** exactly once under a controlled protocol. The existing diagnostic does not access that holdout and does not decide or certify M1 or M2 readiness. #155 remains a final storage-release gate, not a current blocker on experimental saves.
+
+## Between-seed uncertainty (descriptive only)
+
+The comparator now reports `observedSeedMean95Interval` for every metric, a
+95% two-sided Student-t interval over **complete, independently seeded
+240-fixture fictional seasons** (4..32 seeds, sample standard error).
+This estimates variability of the *synthetic seed sample* only. It does not
+correct incompatible shot/card definitions, quantify uncertainty in the one
+2025/26 reference season, establish realistic game-to-game distributions or
+approve calibration thresholds. Four seeds have only three degrees of freedom;
+report and compare the full range and mean as well. No holdout observations are
+opened by the calculation.

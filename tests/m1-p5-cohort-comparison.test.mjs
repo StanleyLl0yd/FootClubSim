@@ -30,6 +30,8 @@ test('four independently seeded complete seasons generate descriptive only',()=>
   assert.equal(result.semanticsHarmonized,false);
   assert.equal(result.metrics.goals.relativeDeltaPct,-50);
   assert.equal(result.metrics.shots.observedMean,500);
+  assert.deepEqual(result.metrics.goals.observedSeedMean95Interval,[100,100]);
+  assert.match(result.seedMean95Method,/Student t/);
   assert.deepEqual(result.metrics.dismissals.observedTotals,[8,8,8,8]);
   assert.equal(JSON.stringify(src),before,'comparison must be read-only');
 });
@@ -47,4 +49,19 @@ test('forged/missing source arithmetic, seed/revision, or ref fails closed',()=>
   assert.throws(()=>compare(input(),e),/INVALID_CALIBRATION_EVIDENCE/);
   const f=input();f.refereeEventAuthorityAuthenticated=true;
   assert.throws(()=>compare(f,ref()),/INVALID_CALIBRATION_EVIDENCE/);
+});
+
+test('95% seeded-season interval reflects between-seed variability',()=>{
+  const src=input();
+  src.results[0].totalGoals=110;
+  src.results[0].eventTotals.goals=110;
+  src.results[0].eventTotals.openPlayGoals=110;
+  src.results[1].totalGoals=90;
+  src.results[1].eventTotals.goals=90;
+  src.results[1].eventTotals.openPlayGoals=90;
+  const result=compare(src,ref());
+  assert.equal(result.metrics.goals.observedMean,100);
+  assert.deepEqual(result.metrics.goals.observedSeedMean95Interval,
+    [87.01,112.99]);
+  assert.deepEqual(result.metrics.shots.observedSeedMean95Interval,[500,500]);
 });

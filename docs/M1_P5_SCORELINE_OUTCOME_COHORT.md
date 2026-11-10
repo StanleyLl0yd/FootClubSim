@@ -19,6 +19,6 @@ shot-on-target, injury or referee data, but four seeds cannot establish
 a release confidence interval or a final RPL performance target.
 
 See [P5 issue #31](https://github.com/StanleyLl0yd/FootClubSim/issues/31)
-and the [paired v191 census](M1_P5_V191_OBSERVED_COHORT.md).
+and the [paired v191 census in pending PR #518](https://github.com/StanleyLl0yd/FootClubSim/pull/518).
 The 2024/25 holdout is untouched, no provider match-level data is copied,
 and M1 P5-1/P5-2 and exit #3 remain OPEN.

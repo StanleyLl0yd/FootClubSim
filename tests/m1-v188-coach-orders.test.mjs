@@ -93,6 +93,37 @@ test('coach may order player focus only for an eligible active own outfielder',(
   }]),null);
 });
 
+test('individual focus order is admitted into physical source and CAS',()=>{
+  const {career,journal}=setup(818);
+  const baseline=prepareM1V188LeagueMatch(career,journal);
+  assert.ok(baseline?.ok);
+  const input=baseline.request.prematch;
+  const lineup=input.fixture.homeClubId===selected?
+    input.homeLineup:input.awayLineup;
+  const positions=new Map(catalog.players.map(p=>[p.id,p.primaryPosition]));
+  let accepted=null;
+  for(const playerId of lineup.starters.filter(id=>
+    positions.get(id)!=='GK')){
+    const prepared=prepareM1V188LeagueMatch(career,journal,[],
+      undefined,undefined,undefined,undefined,[{
+        kind:'player-focus',elapsedSeconds:300,
+        playerId,focus:'attack',
+      }]);
+    if(prepared?.ok){
+      accepted=prepared;
+      break;
+    }
+  }
+  assert.ok(accepted,'at least one active own outfielder must accept focus');
+  const orders=readOrders(accepted);
+  assert.equal(orders.length,1);
+  assert.equal(orders[0].kind,'set-player-focus');
+  assert.equal(orders[0].elapsedSeconds,300);
+  const applied=applyM1V188LeagueMatch(career,journal,accepted.request);
+  assert.ok(applied.ok);
+  assert.equal(validateM1V188LeagueJournal(career,applied.journal).ok,true);
+});
+
 test('orders fail closed on foreign team, duplicate, malformed or forged data',()=>{
   const {career,journal}=setup(717);
   const baseline=prepareM1V188LeagueMatch(career,journal);

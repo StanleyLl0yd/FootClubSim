@@ -25,3 +25,7 @@ M1's simulation detail grew much faster than its player-facing application. The 
 - Measured, real-browser validation before promising a playable release.
 
 Tracked in [#478](https://github.com/StanleyLl0yd/FootClubSim/issues/478). Deferred [#477](https://github.com/StanleyLl0yd/FootClubSim/pull/477) was closed without merge after an exact-head Core failure, and remains available as future backlog.
+
+## Owner authorization update · 2026-11-10
+
+The owner subsequently approved changing algorithms, engine structure, data parameters and persistence schemas even when incompatible with the v188 preview, and explicitly allowed **loss of prototype saves until the final ROADMAP stages**. [ADR-0012](0012-owner-approved-architecture-evolution.md) governs this preview-stage freedom. Legacy save migration is optional for development builds; #155 remains a mandatory final-release gate, and this approval does not accept M1 or M2.

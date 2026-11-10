@@ -14,6 +14,11 @@ import {deriveM1V188ProvisionalTable}
 const argument=(prefix)=>process.argv.find(s=>s.startsWith(prefix))
   ?.slice(prefix.length);
 const seedArg=argument('--seeds=')??'11,41,71,101';
+const specialArg=argument('--special-goal-source=');
+if(specialArg!==undefined&&specialArg!=='1'&&specialArg!=='2')
+  throw Error('Only source versions 1 (v190) or 2 (v191) are supported');
+const specialGoalSourceVersion=specialArg===undefined?undefined:
+  Number(specialArg);
 const seeds=seedArg.split(',').map(s=>{
   if(!/^[1-9]\d*$/.test(s))throw Error('Bad seed: '+s);
   const n=Number(s);
@@ -41,7 +46,8 @@ for(const seed of seeds){
   assert.equal(opened.ok,true,'Could not start seeded career '+seed);
   let journal=opened.journal;
   for(let played=0;played<240;played++){
-    const next=prepareM1V188LeagueMatch(career,journal);
+    const next=prepareM1V188LeagueMatch(career,journal,[],
+      undefined,undefined,undefined,specialGoalSourceVersion);
     assert.ok(next?.ok,
       'Could not prepare fixture '+(played+1)+' for '+seed+': '+
       JSON.stringify(next));
@@ -57,6 +63,9 @@ for(const seed of seeds){
   }
   assert.equal(journal.revision,240);
   assert.equal(validateM1V188LeagueJournal(career,journal).ok,true);
+  assert.ok(journal.entries.every(entry=>
+    entry.source.specialGoalSourceVersion===specialGoalSourceVersion),
+  'Season silently changed its versioned special-goal source');
   const table=deriveM1V188ProvisionalTable(career,journal);
   assert.ok(table&&table.length===16,'Missing final table');
   assert.ok(table.every(t=>t.played===30&&
@@ -159,7 +168,11 @@ const rankSpans=catalog.clubs.map(club=>{
     maxRank:Math.max(...positions)};
 });
 const report={
-  provenance:'FootClubSim v188 preview, local source-replayed deterministic cohort',
+  provenance:specialGoalSourceVersion===2?
+    'FootClubSim v188 journal with versioned v191 shot and v190 internal special-goal hypotheses':
+    specialGoalSourceVersion===1?
+      'FootClubSim v188 journal with versioned v190 experimental internal special-goal source':
+      'FootClubSim v188 preview, local source-replayed deterministic cohort',
   catalogId:catalog.packId,catalogVersion:catalog.packVersion,
   sampleSize:results.length,seeds,uniqueOrderings,uniqueResultDigests,
   champions:[...new Set(results.map(r=>r.champion))],
@@ -167,7 +180,13 @@ const report={
   rankSpans,results,
   caveat:'Reproducible prototype smoke, NOT competition realism calibration, '+
     'source rights clearance or owner acceptance.',
-  specialGoalDecisionSource:'UNCONNECTED_IN_CURRENT_V188_GENERATOR',
+  specialGoalDecisionSource:specialGoalSourceVersion===2?
+    'V191_TUNED_SHOTS_AND_V190_SPECIAL_GOALS_NOT_CALIBRATED':
+    specialGoalSourceVersion===1?
+      'V190_INTERNAL_NEW_CAREER_PROVISIONAL_NOT_CALIBRATED':
+      'UNCONNECTED_IN_CURRENT_V188_GENERATOR',
+  ...(specialGoalSourceVersion!==undefined?
+    {specialGoalSourceVersion}:{}),
   refereeEventAuthorityAuthenticated:false,
   independentExternalRateComparison:false,
 };
@@ -177,6 +196,12 @@ assert.ok(uniqueOrderings>1,
   'All sampled complete seasons had the same final club ordering');
 assert.ok(report.movedClubs>0,
   'No sampled club changed its finishing rank');
+if(specialGoalSourceVersion!==undefined){
+  assert.ok(results.reduce((sum,r)=>sum+r.eventTotals.penaltiesTaken,0)>0,
+    'New-career multi-seed cohort contained no verified penalties');
+  assert.ok(results.reduce((sum,r)=>sum+r.eventTotals.ownGoalsFor,0)>0,
+    'New-career multi-seed cohort contained no verified own goals');
+}
 const output=argument('--output=');
 if(output)writeFileSync(output,JSON.stringify(report,null,2)+'\n');
 console.log('SEASON DIVERSITY PASS: '+JSON.stringify({

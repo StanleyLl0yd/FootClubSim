@@ -112,7 +112,7 @@ function verifyArchive(json, careerId, snapshot) {
   // every fixture. The accepted speculative decisions are validated inside
   // both the source result and the full downloaded career archive.
   assert.ok(journal.entries.every(entry=>
-    entry.source.specialGoalSourceVersion===1),
+    entry.source.specialGoalSourceVersion===2),
   'New career silently fell back to pre-special-goal source');
   let penalties=0,ownGoals=0,scoredPenalties=0;
   for(const entry of journal.entries){
@@ -138,7 +138,7 @@ function verifyArchive(json, careerId, snapshot) {
     '240-match experimental source never produced a valid own goal');
   console.log('NEW_CAREER_SPECIAL_GOALS_CENSUS '+JSON.stringify({
     matches:TOTAL,penalties,scoredPenalties,ownGoals,
-    rules:'experimental and not externally calibrated',
+    rules:'v191 shot hypothesis and synthetic special goals, not calibrated',
   }));
 
   const clubs = new Map(initial.catalog.clubs.map(club => [club.id, {

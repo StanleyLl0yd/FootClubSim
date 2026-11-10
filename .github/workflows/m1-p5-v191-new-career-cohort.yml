@@ -1,0 +1,71 @@
+name: Four v191 shot-hypothesis new-career seasons
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/m1-v188-season-diversity.mjs'
+      - 'src/core/m1-v188-league-source-journal.ts'
+      - 'src/core/m1-v190-experimental-special-goals.ts'
+      - 'src/core/m1-v103-intraphase-medical.ts'
+      - 'src/core/m1-v105-special-goal-chronology.ts'
+      - '.github/workflows/m1-p5-v191-new-career-cohort.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  four-special-goal-seasons:
+    name: Four source-replayed v191 candidate seasons
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build domain modules
+        run: npm run build:core
+      - name: Replay four complete new careers with source-2 shot hypothesis
+        run: |
+          node scripts/m1-v188-season-diversity.mjs \
+            --special-goal-source=2 \
+            --seeds=11,41,71,101 \
+            --output=new-career-v191-hypothesis.json
+      - name: Summarize provisional evidence (not a calibration gate)
+        shell: bash
+        run: |
+          node --input-type=module -e '
+            import {readFileSync,appendFileSync} from "node:fs";
+            import assert from "node:assert/strict";
+            const j=JSON.parse(readFileSync("new-career-v191-hypothesis.json","utf8"));
+            assert.equal(j.specialGoalSourceVersion,2);
+            assert.equal(j.sampleSize,4);
+            assert.ok(j.results.every(r=>r.fixtureCount===240));
+            assert.equal(j.refereeEventAuthorityAuthenticated,false);
+            assert.equal(j.independentExternalRateComparison,false);
+            const metrics=["goals","openPlayGoals","penaltiesTaken","penaltyGoals",
+              "ownGoalsFor","shots","cautions","straightReds",
+              "secondYellowDismissals","fictionalInjuryWithdrawals"];
+            const lines=["## 4 × 240 matches with v191 provisional shot hypothesis",
+              "Deterministic internal events and v104-B shot hypothesis, **NOT** calibrated RPL rates.",
+              ...metrics.map(k=>k+": "+j.results.map(r=>r.eventTotals[k]).join(", ")),
+              "Seeds: "+j.seeds.join(", "),
+              "Different result hashes: "+j.uniqueResultDigests,
+              "**M1/P3/P5 not accepted.**"];
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join("\n")+"\n");
+          '
+      - name: Upload deterministic provisional cohort
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: new-career-v191-hypothesis-cohort
+          path: new-career-v191-hypothesis.json
+          retention-days: 14

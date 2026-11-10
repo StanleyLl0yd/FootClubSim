@@ -64,7 +64,7 @@ type Source={managedXI?:M1V188ManagedXI;
   plannedCommands:unknown[];checkpointMedical:unknown[];
   disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
-  specialGoalSourceVersion?:1};
+  specialGoalSourceVersion?:1|2};
 export type M1V188Entry={fixtureId:string;round:number;
   commandId:string;source:Source;result:Good};
 export type M1V188Journal={schemaVersion:188;careerId:string;
@@ -77,7 +77,7 @@ export type M1V188Request={schemaVersion:188;careerId:string;
   checkpointMedical:unknown[];result:unknown;
   medicalPolicyVersion?:2|3|4|5;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
-  specialGoalSourceVersion?:1};
+  specialGoalSourceVersion?:1|2};
 export type M1V188Error='INVALID_INITIAL'|'INVALID_JOURNAL'|
   'INVALID_REQUEST'|'WRONG_CAREER'|'STALE_REVISION'|
   'WRONG_FIXTURE'|'UNTRUSTED_CATALOG'|'SOURCE_MISMATCH'|
@@ -114,8 +114,9 @@ const sourceKeysV2=[...sourceKeys,'disciplinePolicyVersion'];
 const sourceKeysMedical=[...sourceKeysV2,'medicalPolicyVersion'];
 const sourceKeysMedicalV5=[...sourceKeysMedical,'autonomousMedicalOrigin'];
 const goalShape=(value:Record<string,unknown>,keys:readonly string[])=>
-  hasManagedShape(value,value.specialGoalSourceVersion===1?
-    [...keys,'specialGoalSourceVersion']:keys);
+  hasManagedShape(value,
+    value.specialGoalSourceVersion===1||value.specialGoalSourceVersion===2?
+      [...keys,'specialGoalSourceVersion']:keys);
 const requestKeys=['schemaVersion','careerId','expectedRevision',
   'commandId','prematch','policy','plannedCommands',
   'checkpointMedical','result'];
@@ -413,12 +414,13 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       e.source.medicalPolicyVersion===4||
         e.source.medicalPolicyVersion===5,
       e.source.medicalPolicyVersion===5);
-    const special=e.source.specialGoalSourceVersion===1&&replay.ok?
+    const version=e.source.specialGoalSourceVersion;
+    const special=(version===1||version===2)&&replay.ok?
       simulateM1V190ExperimentalSpecialGoals(input,POLICY,
-        replay.plannedCommands,replay.checkpointMedical):null;
+        replay.plannedCommands,replay.checkpointMedical,version):null;
     const result=special?.ok?special.result:replay.ok?replay.result:null;
     return replay.ok&&
-      (e.source.specialGoalSourceVersion!==1||special?.ok===true)&&
+      (version===undefined||special?.ok===true)&&
       result!==null&&
       sameCanonicalValue(replay.plannedCommands,
         e.source.plannedCommands)&&
@@ -486,12 +488,12 @@ function read(i:InitialCareerSave,value:unknown){
   const schedule=calendar(i),holds:Hold[]=[];
   if(schedule.length!==LIMIT)return null;
   let versionedSeen=false,medicalVersionSeen:0|2|3|4|5=0;
-  let specialGoalVersion:0|1|null=null;
+  let specialGoalVersion:0|1|2|null=null;
   for(let n=0;n<journal.entries.length;n++){
     const entry=journal.entries[n]!;
     const versioned=entry.source?.disciplinePolicyVersion===2;
     const medical=entry.source?.medicalPolicyVersion??0;
-    const special=entry.source?.specialGoalSourceVersion===1?1:0;
+    const special=entry.source?.specialGoalSourceVersion??0;
     if(specialGoalVersion!==null&&special!==specialGoalVersion||
        versionedSeen&&!versioned||medical<medicalVersionSeen)
       return null;
@@ -541,7 +543,8 @@ export function prepareM1V188LeagueMatch(
   // Even an empty caller-supplied list is not proof of official clearance.
   if(externalDiscipline!==undefined)
     return {ok:false,error:'UNVERIFIED_EXTERNAL_DISCIPLINE'};
-  if(specialGoalSourceVersion!==undefined&&specialGoalSourceVersion!==1)
+  if(specialGoalSourceVersion!==undefined&&
+      specialGoalSourceVersion!==1&&specialGoalSourceVersion!==2)
     return {ok:false,error:'INVALID_REQUEST'};
   if(medicalPolicyVersion!==undefined&&medicalPolicyVersion!==2&&
       medicalPolicyVersion!==3&&medicalPolicyVersion!==4&&
@@ -552,7 +555,7 @@ export function prepareM1V188LeagueMatch(
   const previous=accepted.journal.entries.at(-1)?.source.medicalPolicyVersion;
   const firstGoal=accepted.journal.entries[0]?.source.specialGoalSourceVersion;
   if(accepted.journal.revision>0&&
-     (firstGoal===1)!==(specialGoalSourceVersion===1))
+     firstGoal!==specialGoalSourceVersion)
     return {ok:false,error:'INVALID_REQUEST'};
   if(previous===5&&(medicalPolicyVersion===2||
       medicalPolicyVersion===3||medicalPolicyVersion===4)||
@@ -587,10 +590,12 @@ export function prepareM1V188LeagueMatch(
     effective===3||effective===4||effective===5,
     effective===4||effective===5,effective===5);
   if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED'};
-  const special=specialGoalSourceVersion===1?
+  const special=(specialGoalSourceVersion===1||
+      specialGoalSourceVersion===2)?
     simulateM1V190ExperimentalSpecialGoals(prematch,POLICY,
-      generated.plannedCommands,generated.checkpointMedical):null;
-  if(specialGoalSourceVersion===1&&!special?.ok)
+      generated.plannedCommands,generated.checkpointMedical,
+      specialGoalSourceVersion):null;
+  if(specialGoalSourceVersion!==undefined&&!special?.ok)
     return {ok:false,error:'GENERATOR_REJECTED'};
   const result=special?.ok?special.result:generated.result;
   const clock=replayedPhysicalClock(
@@ -603,7 +608,8 @@ export function prepareM1V188LeagueMatch(
     plannedCommands:generated.plannedCommands,
     checkpointMedical:generated.checkpointMedical,
     result,
-    ...(specialGoalSourceVersion===1?{specialGoalSourceVersion:1 as const}:{}),
+    ...(specialGoalSourceVersion===1||specialGoalSourceVersion===2?
+      {specialGoalSourceVersion}:{}),
     ...(effective?{medicalPolicyVersion:effective}:{}),
     ...(effective===5?{
       autonomousMedicalOrigin:generated.autonomousCollisions??[]}: {})},
@@ -640,7 +646,7 @@ export function applyM1V188LeagueMatch(
   if(raw.careerId!==initial.careerId)return fail('WRONG_CAREER');
   const firstGoal=accepted.journal.entries[0]?.source.specialGoalSourceVersion;
   if(accepted.journal.revision>0&&
-     (firstGoal===1)!==(raw.specialGoalSourceVersion===1))
+     firstGoal!==raw.specialGoalSourceVersion)
     return fail('SOURCE_MISMATCH');
   const priorMedical=accepted.journal.entries.at(-1)?.
     source.medicalPolicyVersion;
@@ -672,8 +678,10 @@ export function applyM1V188LeagueMatch(
       plannedCommands:raw.plannedCommands,
       checkpointMedical:raw.checkpointMedical,
       disciplinePolicyVersion:2,
-      ...(raw.specialGoalSourceVersion===1?{
-        specialGoalSourceVersion:1 as const}:{}),
+      ...(raw.specialGoalSourceVersion===1?
+        {specialGoalSourceVersion:1 as const}:
+        raw.specialGoalSourceVersion===2?
+          {specialGoalSourceVersion:2 as const}:{}),
       ...(raw.medicalPolicyVersion===2?{medicalPolicyVersion:2 as const}:
         raw.medicalPolicyVersion===3?{medicalPolicyVersion:3 as const}:
         raw.medicalPolicyVersion===4?{medicalPolicyVersion:4 as const}:

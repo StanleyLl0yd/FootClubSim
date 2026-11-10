@@ -121,3 +121,39 @@ test('new v191 source option is deterministic and version-gated independently',(
   assert.deepEqual(applyM1V188LeagueMatch(initial,journal,forgedGoal),
     {ok:false,error:'SOURCE_MISMATCH'});
 });
+
+test('v191 keeps v190 baseline shot identities and only reduces their xG',()=>{
+  let shared=0,strict=0,newExtras=0;
+  for(const seed of [11,41,71,101]){
+    const {initial,journal}=start(seed,'m1-v191-paired-'+seed);
+    const baseline=prepare(initial,journal,1);
+    const tuned=prepare(initial,journal,2);
+    assert.equal(baseline?.ok,true,'v190 seed '+seed);
+    assert.equal(tuned?.ok,true,'v191 seed '+seed);
+    if(!baseline?.ok||!tuned?.ok)continue;
+    const shots=result=>result.request.result.events
+      .filter(event=>event.type==='source'&&event.source.type==='shot')
+      .map(event=>event.source);
+    const bShots=shots(baseline),tShots=shots(tuned);
+    const revised=new Map(tShots.map(event=>[event.id,event]));
+    assert.ok(tShots.length>=bShots.length,
+      'higher opportunity multiplier cannot remove existing baseline shots');
+    newExtras+=tShots.length-bShots.length;
+    for(const shot of bShots){
+      const now=revised.get(shot.id);
+      assert.ok(now,'pre-existing source shot must remain '+shot.id);
+      assert.equal(now.teamId,shot.teamId);
+      assert.equal(now.playerId,shot.playerId);
+      assert.ok(now.xgMilli<=shot.xgMilli,
+        'v191 xG reduction never increases existing shot quality');
+      if(now.xgMilli<shot.xgMilli)strict++;
+      shared++;
+    }
+    assert.equal(tuned.request.result.rngState,
+      baseline.request.result.rngState);
+    assert.equal(tuned.request.result.rngDraws,270);
+  }
+  assert.ok(shared>0,'no shared source shots');
+  assert.ok(strict>0,'shot hypothesis never changed source quality');
+  assert.ok(newExtras>=0);
+});

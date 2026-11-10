@@ -108,6 +108,39 @@ function verifyArchive(json, careerId, snapshot) {
   assert.equal(journal.entries.length, TOTAL);
   assert.equal(new Set(journal.entries.map(entry => entry.fixtureId)).size, TOTAL);
 
+  // New single-user preview careers must truly use the new source across
+  // every fixture. The accepted speculative decisions are validated inside
+  // both the source result and the full downloaded career archive.
+  assert.ok(journal.entries.every(entry=>
+    entry.source.specialGoalSourceVersion===1),
+  'New career silently fell back to pre-special-goal source');
+  let penalties=0,ownGoals=0,scoredPenalties=0;
+  for(const entry of journal.entries){
+    const accepted=entry.result.events.filter(event=>
+      event.type==='adjudication');
+    assert.equal(entry.result.specialDecisionCount,accepted.length,
+      'Recorded special events must reconcile with replay report');
+    for(const side of ['home','away']){
+      const report=entry.result.report[side];
+      assert.equal(report.goals,
+        report.openPlayGoals+report.penaltyGoals+report.ownGoalsFor,
+        'No unaccounted goals in a versioned source match');
+      assert.ok(report.penaltyGoals<=report.penaltiesTaken,
+        'Scored penalties cannot exceed penalty attempts');
+      penalties+=report.penaltiesTaken;
+      ownGoals+=report.ownGoalsFor;
+      scoredPenalties+=report.penaltyGoals;
+    }
+  }
+  assert.ok(penalties>0,
+    '240-match experimental source never produced a valid penalty');
+  assert.ok(ownGoals>0,
+    '240-match experimental source never produced a valid own goal');
+  console.log('NEW_CAREER_SPECIAL_GOALS_CENSUS '+JSON.stringify({
+    matches:TOTAL,penalties,scoredPenalties,ownGoals,
+    rules:'experimental and not externally calibrated',
+  }));
+
   const clubs = new Map(initial.catalog.clubs.map(club => [club.id, {
     id: club.id, name: club.displayName, played: 0,won: 0,drawn: 0,lost: 0,
     goals: 0, difference: 0, points: 0,

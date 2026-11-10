@@ -119,7 +119,7 @@ test('versioned condition cannot be downgraded after a committed fixture',()=>{
   assert.equal(rejected.ok,false);
   assert.equal(rejected.error,'SOURCE_MISMATCH');
   const malformed=structuredClone(next.request);
-  malformed.conditionPolicyVersion=2;
+  malformed.conditionPolicyVersion=3;
   assert.equal(applyM1V188LeagueMatch(initial,first.journal,malformed).ok,
     false);
 });

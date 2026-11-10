@@ -2,6 +2,8 @@ import {sameCanonicalValue} from './canonical-value.js';
 import {advanceM1V188Condition,startM1V188Condition,
   selectM1V188ConditionLineup}
   from './m1-v188-condition.js';
+import {deriveM1V188ConditionedMatchInput}
+  from './m1-v188-conditioned-source.js';
 import {generateDoubleRoundRobin,type Fixture} from './fixtures.js';
 import {deriveM1FixtureSeed} from './m1-fixture-seed.js';
 import {MATCH_LEDGER_VERSION,M0_RULES_PACK_ID,M0_RULES_PACK_VERSION}
@@ -67,7 +69,7 @@ type Source={managedXI?:M1V188ManagedXI;
   plannedCommands:unknown[];checkpointMedical:unknown[];
   disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
-  specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1};
+  specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1|2};
 export type M1V188Entry={fixtureId:string;round:number;
   commandId:string;source:Source;result:Good};
 export type M1V188Journal={schemaVersion:188;careerId:string;
@@ -80,7 +82,7 @@ export type M1V188Request={schemaVersion:188;careerId:string;
   checkpointMedical:unknown[];result:unknown;
   medicalPolicyVersion?:2|3|4|5;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
-  specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1};
+  specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1|2};
 export type M1V188Error='INVALID_INITIAL'|'INVALID_JOURNAL'|
   'INVALID_REQUEST'|'WRONG_CAREER'|'STALE_REVISION'|
   'WRONG_FIXTURE'|'UNTRUSTED_CATALOG'|'SOURCE_MISMATCH'|
@@ -121,7 +123,8 @@ const goalShape=(value:Record<string,unknown>,keys:readonly string[])=>
     ...keys,
     ...(value.specialGoalSourceVersion===1||
         value.specialGoalSourceVersion===2?['specialGoalSourceVersion']:[]),
-    ...(value.conditionPolicyVersion===1?['conditionPolicyVersion']:[]),
+    ...(value.conditionPolicyVersion===1||
+        value.conditionPolicyVersion===2?['conditionPolicyVersion']:[]),
   ]);
 const requestKeys=['schemaVersion','careerId','expectedRevision',
   'commandId','prematch','policy','plannedCommands',
@@ -398,7 +401,7 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       !Array.isArray(e.source.checkpointMedical)||
       !rec(e.result))return false;
   const baseline=canonicalPrematch(i,f,index,holds,schedule,
-    condition,e.source.conditionPolicyVersion===1);
+    condition,e.source.conditionPolicyVersion!==undefined);
   const input=baseline?managedPrematch(
     baseline,i.selectedClubId,e.source.managedXI):null;
   if(!input)return false;
@@ -406,6 +409,9 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
   void _catalog;
   if(!sameCanonicalValue(e.source.prematch,canonical)||
       !sameCanonicalValue(e.source.policy,POLICY))return false;
+  const simulationInput=e.source.conditionPolicyVersion===2?
+    deriveM1V188ConditionedMatchInput(input,condition):input;
+  if(!simulationInput)return false;
   const manager=e.source.plannedCommands.filter(c=>
     rec(c)&&c.kind==='substitute-normal');
   if(manager.length&&!belongs(f,i.selectedClubId))return false;
@@ -415,7 +421,7 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
   // Prefer the final dense model, then prove exact legacy source replay.
   const sourceAttempt=(dense:boolean)=>{
     const replay=regenerateM1V184CausalSource(
-      input,POLICY,manager,dense,
+      simulationInput,POLICY,manager,dense,
       e.source.medicalPolicyVersion===2||
         e.source.medicalPolicyVersion===3||
         e.source.medicalPolicyVersion===4||
@@ -428,7 +434,7 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       e.source.medicalPolicyVersion===5);
     const version=e.source.specialGoalSourceVersion;
     const special=(version===1||version===2)&&replay.ok?
-      simulateM1V190ExperimentalSpecialGoals(input,POLICY,
+      simulateM1V190ExperimentalSpecialGoals(simulationInput,POLICY,
         replay.plannedCommands,replay.checkpointMedical,version):null;
     const result=special?.ok?special.result:replay.ok?replay.result:null;
     return replay.ok&&
@@ -501,7 +507,7 @@ function read(i:InitialCareerSave,value:unknown){
   const schedule=calendar(i),holds:Hold[]=[];
   let condition=startM1V188Condition(i);
   if(schedule.length!==LIMIT)return null;
-  let versionedSeen=false,conditionSeen=false,
+  let versionedSeen=false,conditionVersion:0|1|2=0,
     medicalVersionSeen:0|2|3|4|5=0;
   let specialGoalVersion:0|1|2|null=null;
   for(let n=0;n<journal.entries.length;n++){
@@ -509,10 +515,10 @@ function read(i:InitialCareerSave,value:unknown){
     const versioned=entry.source?.disciplinePolicyVersion===2;
     const medical=entry.source?.medicalPolicyVersion??0;
     const special=entry.source?.specialGoalSourceVersion??0;
-    const conditioned=entry.source?.conditionPolicyVersion===1;
+    const conditioned=entry.source?.conditionPolicyVersion??0;
     if(specialGoalVersion!==null&&special!==specialGoalVersion||
        versionedSeen&&!versioned||medical<medicalVersionSeen||
-       conditionSeen&&!conditioned)return null;
+       conditioned<conditionVersion)return null;
     if(copy(entry,MAX_REQUEST)===null||
         !verifyEntry(i,entry,schedule[n]!,n,holds,schedule,condition))
       return null;
@@ -520,7 +526,7 @@ function read(i:InitialCareerSave,value:unknown){
     if(!updated)return null;
     condition=updated;
     if(versioned)versionedSeen=true;
-    if(conditioned)conditionSeen=true;
+    conditionVersion=conditioned;
     specialGoalVersion=special;
     medicalVersionSeen=medical;
   }
@@ -605,14 +611,18 @@ export function prepareM1V188LeagueMatch(
       managerCommandsForFixture,initial.selectedClubId,
       initial.rngState))
     return {ok:false,error:'UNAUTHORIZED_MANAGER'};
+  const simulationInput=deriveM1V188ConditionedMatchInput(
+    prematch,accepted.condition);
+  if(!simulationInput)
+    return {ok:false,error:'GENERATOR_REJECTED'};
   const generated=regenerateM1V184CausalSource(
-    prematch,POLICY,managerCommandsForFixture,true,medicalSource,
+    simulationInput,POLICY,managerCommandsForFixture,true,medicalSource,
     effective===3||effective===4||effective===5,
     effective===4||effective===5,effective===5);
   if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED'};
   const special=(specialGoalSourceVersion===1||
       specialGoalSourceVersion===2)?
-    simulateM1V190ExperimentalSpecialGoals(prematch,POLICY,
+    simulateM1V190ExperimentalSpecialGoals(simulationInput,POLICY,
       generated.plannedCommands,generated.checkpointMedical,
       specialGoalSourceVersion):null;
   if(specialGoalSourceVersion!==undefined&&!special?.ok)
@@ -627,7 +637,7 @@ export function prepareM1V188LeagueMatch(
     ...(managedXI!==undefined?{managedXI:managedXI as M1V188ManagedXI}:{}),
     plannedCommands:generated.plannedCommands,
     checkpointMedical:generated.checkpointMedical,
-    result,conditionPolicyVersion:1,
+    result,conditionPolicyVersion:2,
     ...(specialGoalSourceVersion===1||specialGoalSourceVersion===2?
       {specialGoalSourceVersion}:{}),
     ...(effective?{medicalPolicyVersion:effective}:{}),
@@ -670,8 +680,10 @@ export function applyM1V188LeagueMatch(
     return fail('SOURCE_MISMATCH');
   const priorMedical=accepted.journal.entries.at(-1)?.
     source.medicalPolicyVersion;
-  if(accepted.journal.entries.at(-1)?.source.conditionPolicyVersion===1&&
-      raw.conditionPolicyVersion!==1)return fail('SOURCE_MISMATCH');
+  const priorCondition=accepted.journal.entries.at(-1)?.
+    source.conditionPolicyVersion??0;
+  if((raw.conditionPolicyVersion??0)<priorCondition)
+    return fail('SOURCE_MISMATCH');
   if(priorMedical===5&&raw.medicalPolicyVersion!==5||
       priorMedical===4&&raw.medicalPolicyVersion!==4&&
         raw.medicalPolicyVersion!==5||
@@ -700,8 +712,10 @@ export function applyM1V188LeagueMatch(
       plannedCommands:raw.plannedCommands,
       checkpointMedical:raw.checkpointMedical,
       disciplinePolicyVersion:2,
-      ...(raw.conditionPolicyVersion===1?
-        {conditionPolicyVersion:1 as const}:{}),
+      ...(raw.conditionPolicyVersion===2?
+        {conditionPolicyVersion:2 as const}:
+        raw.conditionPolicyVersion===1?
+          {conditionPolicyVersion:1 as const}:{}),
       ...(raw.specialGoalSourceVersion===1?
         {specialGoalSourceVersion:1 as const}:
         raw.specialGoalSourceVersion===2?

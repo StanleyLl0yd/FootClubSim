@@ -1,0 +1,11 @@
+# M1 P5-5: bounded reuse of locally prepared, source-verified v188 match
+
+**Experimental until exact-head and exact-main browser CI pass; P3-1 and P5-5 remain separate.**
+
+Measured baseline from the real native Linux Chromium [240-fixture observation](https://github.com/StanleyLl0yd/FootClubSim/actions/runs/42697557433): 323,993.6 ms to generate/commit 240 matches, p50/p95 per preparation 638.4/728.3 ms, p50/p95 per commit 707.9/796.9 ms; **cold 240-match replay still 143,626.8 ms**, 3,627,289 journal bytes. These are specific GitHub runner measurements, not target player SLAs.
+
+The playable engine ordinarily regenerates a full deterministic match during `prepareM1V188LeagueMatch`, then regenerates that same match in `applyM1V188LeagueMatch` before persisting. This patch keeps a **maximum two-entry in-process** memo of the generator-created request and its derived fictional availability holds. It is eligible for the append fast path **only when all three exact JSON byte representations match**: validated initial career, validated source journal prefix and generated request. Any change, mismatch, unknown memory entry, cross-tab write, replayed historical event or full browser restart still executes the original strict dense generator and source verification.
+
+This is neither a persistent MAC nor a new signature/authority. No caller may provide a memo, toggle its use or use it to authenticate external KDK/clinical evidence. The memo is never written to disk. Input aliases/prototypes, versioned source and official authority checks remain unchanged. The just-created entry still contains precisely the same original version 188 command source/result and save data. The in-memory same-request optimization must be validated against a separately loaded module instance with no memo, forged-score/event/policy/seed revisions, different career IDs, and medical v5 source evidence.
+
+**Performance contract:** calculate improvement against the same 240-fixture native benchmark on the exact PR head; preserve the original output tree, source event IDs and replay validation. This optimization addresses ordinary *prepare + commit*, **not** the full cold replay after page reload. Cold replay remains a separate high-priority P5-5 bottleneck; no performance acceptance or M1 exit is asserted.

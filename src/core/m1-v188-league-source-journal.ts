@@ -437,6 +437,30 @@ type VerifiedPrefix=Readonly<{initialBytes:string;journalBytes:string;
   holds:readonly Hold[]}>;
 const VERIFIED_PREFIX_CACHE_LIMIT=2;
 const verifiedPrefixes=new Map<string,VerifiedPrefix>();
+/** One-process optimization for a request produced by the local generator.
+ * This is not a signature, external authority or persisted attestation.
+ * Any differing byte, revision, catalog, career or fresh page takes the
+ * original full replay path. The bound is intentionally tiny.
+ */
+type PreparedSource=Readonly<{initialBytes:string;journalBytes:string;
+  requestBytes:string;holds:readonly Hold[]}>;
+const PREPARED_SOURCE_CACHE_LIMIT=2;
+const preparedSources=new Map<string,PreparedSource>();
+function rememberPrepared(i:InitialCareerSave,j:M1V188Journal,
+  request:M1V188Request,holds:readonly Hold[]):void{
+  const initialBytes=JSON.stringify(i);
+  const journalBytes=JSON.stringify(j);
+  const requestBytes=JSON.stringify(request);
+  if(initialBytes.length>10_000_000||
+      journalBytes.length>MAX_BYTES||requestBytes.length>MAX_REQUEST)return;
+  preparedSources.delete(i.careerId);
+  preparedSources.set(i.careerId,{initialBytes,journalBytes,
+    requestBytes,holds:holds.map(h=>({...h}))});
+  if(preparedSources.size>PREPARED_SOURCE_CACHE_LIMIT){
+    const oldest=preparedSources.keys().next().value;
+    if(oldest!==undefined)preparedSources.delete(oldest);
+  }
+}
 function rememberVerified(i:InitialCareerSave,j:M1V188Journal,
   holds:readonly Hold[]):void{
   const initialBytes=JSON.stringify(i);
@@ -566,7 +590,7 @@ export function prepareM1V188LeagueMatch(
   const clock=replayedPhysicalClock(
     prematch,generated.result,managerCommandsForFixture);
   if(!clock)return {ok:false,error:'GENERATOR_REJECTED'};
-  return{ok:true,fixture:f,clock,request:{schemaVersion:188,
+  const request:M1V188Request={schemaVersion:188,
     careerId:initial.careerId,expectedRevision:index,
     commandId:'v188-league-'+f.id,prematch,policy:POLICY,
     ...(managedXI!==undefined?{managedXI:managedXI as M1V188ManagedXI}:{}),
@@ -575,7 +599,13 @@ export function prepareM1V188LeagueMatch(
     result:generated.result,
     ...(effective?{medicalPolicyVersion:effective}:{}),
     ...(effective===5?{
-      autonomousMedicalOrigin:generated.autonomousCollisions??[]}: {})},
+      autonomousMedicalOrigin:generated.autonomousCollisions??[]}: {})};
+  // Both outcomes and incidents came from the trusted, physically replayed
+  // preparation. Preserve only an exact request/prefix-bound derived hold state.
+  const nextHolds=accepted.holds.map(h=>({...h}));
+  addHolds(nextHolds,generated.generatedIncidents,f,index,true);
+  rememberPrepared(initial,accepted.journal,request,nextHolds);
+  return{ok:true,fixture:f,clock,request,
     ...(medicalSource?{sourceLaw5Evidence:generated.law5Evidence}:{}),
     externalMedicalAuthorityAuthenticated:false,
     remainingFixtures:LIMIT-index-1,
@@ -645,9 +675,20 @@ export function applyM1V188LeagueMatch(
         autonomousMedicalOrigin:raw.autonomousMedicalOrigin as
           M1V35IndependentCollisionWitness[]}: {})},
     result:raw.result as Good};
-  const holds=[...accepted.holds];
-  // New commits cannot claim the legacy shot/referee authority.
-  if(!verifyEntry(initial,entry,f,n,holds,
+  const prepared=preparedSources.get(initial.careerId);
+  preparedSources.delete(initial.careerId);
+  // The cached branch cannot admit any untrusted new command, old revision,
+  // modified result, altered catalog, or another tab's journal. A mismatch
+  // always executes the unchanged strict source regeneration and replay.
+  const exactPreparation=prepared!==undefined&&
+    prepared.initialBytes===JSON.stringify(initial)&&
+    prepared.journalBytes===JSON.stringify(accepted.journal)&&
+    prepared.requestBytes===JSON.stringify(raw);
+  const holds=exactPreparation?
+    prepared.holds.map(h=>({...h})):[...accepted.holds];
+  // Only the exact generator-produced request can reuse source incidents;
+  // every other new commit still proves the dense physical source afresh.
+  if(!exactPreparation&&!verifyEntry(initial,entry,f,n,holds,
       accepted.schedule,false))return fail('SOURCE_MISMATCH');
   const next:M1V188Journal={...accepted.journal,revision:n+1,
     entries:[...accepted.journal.entries,entry]};

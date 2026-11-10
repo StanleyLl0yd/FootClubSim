@@ -117,6 +117,24 @@ export function simulateM1V190ExperimentalSpecialGoals(
     if(!proposed.ok||proposed.specialDecisionCount!==admitted.length+1||
        proposed.rngState!==source.rngState||
        proposed.rngDraws!==source.rngDraws)continue;
+    // The playable source also requires exactly one defending goalkeeper
+    // whenever the current physical event creates a shot or awarded goal.
+    // A legal referee decision alone is not enough to prove the complete
+    // match ledger, so filter the speculative ruling before admission.
+    const projected=projectM1V179MatchClock(input,proposed);
+    if(!projected.ok)continue;
+    const keeperValid=proposed.events.every((event,index)=>{
+      const attacker=event.type==='adjudication'?event.decision.teamId:
+        event.source.type==='shot'?event.source.teamId:null;
+      if(attacker===null)return true;
+      const defenders=attacker===input.fixture.homeClubId?
+        projected.snapshots[index]?.awayPresent:
+        attacker===input.fixture.awayClubId?
+          projected.snapshots[index]?.homePresent:null;
+      return !!defenders&&
+        defenders.filter(id=>positions.get(id)==='GK').length===1;
+    });
+    if(!keeperValid)continue;
     admitted.push(candidate);
     finished=proposed;
   }

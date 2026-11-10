@@ -77,4 +77,11 @@ jobs:
           fi
           node scripts/m1-v7-cdp-smoke.mjs "$browser" \
             http://127.0.0.1:5173/examples/m1-v188-full-season-profile.html \
-            M1_V188_BROWSER_SEASON
+            M1_V188_BROWSER_SEASON | tee /tmp/footclubsim-v188-observed.log
+          {
+            echo '## M1-P5 observed v188 240-fixture timing (not release SLA)'
+            echo
+            echo '~~~text'
+            tail -n 30 /tmp/footclubsim-v188-observed.log
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"

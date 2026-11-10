@@ -8,6 +8,8 @@ import {regenerateM1V184CausalSource}
   from './m1-v182-unified-source.js';
 import {projectM1V179MatchClock,type M1V179ClockResult}
   from './m1-v179-source-clock.js';
+import {simulateM1V190ExperimentalSpecialGoals}
+  from './m1-v190-experimental-special-goals.js';
 import {verifyM1V158CommandShape}
   from './m1-v158-generated-goal-stops.js';
 import {startM1V120Journal} from './m1-v120-playable-journal.js';
@@ -61,7 +63,8 @@ type Source={managedXI?:M1V188ManagedXI;
   prematch:Record<string,unknown>;policy:unknown;
   plannedCommands:unknown[];checkpointMedical:unknown[];
   disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5;
-  autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[]};
+  autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
+  specialGoalSourceVersion?:1};
 export type M1V188Entry={fixtureId:string;round:number;
   commandId:string;source:Source;result:Good};
 export type M1V188Journal={schemaVersion:188;careerId:string;
@@ -73,7 +76,8 @@ export type M1V188Request={schemaVersion:188;careerId:string;
   policy:unknown;plannedCommands:unknown[];
   checkpointMedical:unknown[];result:unknown;
   medicalPolicyVersion?:2|3|4|5;
-  autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[]};
+  autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
+  specialGoalSourceVersion?:1};
 export type M1V188Error='INVALID_INITIAL'|'INVALID_JOURNAL'|
   'INVALID_REQUEST'|'WRONG_CAREER'|'STALE_REVISION'|
   'WRONG_FIXTURE'|'UNTRUSTED_CATALOG'|'SOURCE_MISMATCH'|
@@ -109,6 +113,9 @@ const sourceKeys=['prematch','policy','plannedCommands','checkpointMedical'];
 const sourceKeysV2=[...sourceKeys,'disciplinePolicyVersion'];
 const sourceKeysMedical=[...sourceKeysV2,'medicalPolicyVersion'];
 const sourceKeysMedicalV5=[...sourceKeysMedical,'autonomousMedicalOrigin'];
+const goalShape=(value:Record<string,unknown>,keys:readonly string[])=>
+  hasManagedShape(value,value.specialGoalSourceVersion===1?
+    [...keys,'specialGoalSourceVersion']:keys);
 const requestKeys=['schemaVersion','careerId','expectedRevision',
   'commandId','prematch','policy','plannedCommands',
   'checkpointMedical','result'];
@@ -360,15 +367,15 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       e.fixtureId!==f.id||e.round!==f.round||
       e.commandId!=='v188-league-'+f.id||
       !rec(e.source)||
-      !(hasManagedShape(e.source,sourceKeys)||
-        (hasManagedShape(e.source,sourceKeysV2)&&
+      !(goalShape(e.source,sourceKeys)||
+        (goalShape(e.source,sourceKeysV2)&&
           e.source.disciplinePolicyVersion===2)||
-        (hasManagedShape(e.source,sourceKeysMedical)&&
+        (goalShape(e.source,sourceKeysMedical)&&
           e.source.disciplinePolicyVersion===2&&
           (e.source.medicalPolicyVersion===2||
             e.source.medicalPolicyVersion===3||
             e.source.medicalPolicyVersion===4))||
-        (hasManagedShape(e.source,sourceKeysMedicalV5)&&
+        (goalShape(e.source,sourceKeysMedicalV5)&&
           e.source.disciplinePolicyVersion===2&&
           e.source.medicalPolicyVersion===5&&
           Array.isArray(e.source.autonomousMedicalOrigin)&&
@@ -406,7 +413,13 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       e.source.medicalPolicyVersion===4||
         e.source.medicalPolicyVersion===5,
       e.source.medicalPolicyVersion===5);
+    const special=e.source.specialGoalSourceVersion===1&&replay.ok?
+      simulateM1V190ExperimentalSpecialGoals(input,POLICY,
+        replay.plannedCommands,replay.checkpointMedical):null;
+    const result=special?.ok?special.result:replay.ok?replay.result:null;
     return replay.ok&&
+      (e.source.specialGoalSourceVersion!==1||special?.ok===true)&&
+      result!==null&&
       sameCanonicalValue(replay.plannedCommands,
         e.source.plannedCommands)&&
       sameCanonicalValue(replay.checkpointMedical,
@@ -414,8 +427,8 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       (e.source.medicalPolicyVersion!==5||
         sameCanonicalValue(replay.autonomousCollisions??[],
           e.source.autonomousMedicalOrigin))&&
-      sameCanonicalValue(replay.result,e.result)&&
-      replayedPhysicalClock(input,replay.result,manager)?replay:null;
+      sameCanonicalValue(result,e.result)&&
+      replayedPhysicalClock(input,result,manager)?replay:null;
   };
   // Version 2 is minted only from the dense physical source. Never
   // validate a v2 entry by laundering an older v8 chronology through
@@ -437,30 +450,6 @@ type VerifiedPrefix=Readonly<{initialBytes:string;journalBytes:string;
   holds:readonly Hold[]}>;
 const VERIFIED_PREFIX_CACHE_LIMIT=2;
 const verifiedPrefixes=new Map<string,VerifiedPrefix>();
-/** One-process optimization for a request produced by the local generator.
- * This is not a signature, external authority or persisted attestation.
- * Any differing byte, revision, catalog, career or fresh page takes the
- * original full replay path. The bound is intentionally tiny.
- */
-type PreparedSource=Readonly<{initialBytes:string;journalBytes:string;
-  requestBytes:string;holds:readonly Hold[]}>;
-const PREPARED_SOURCE_CACHE_LIMIT=2;
-const preparedSources=new Map<string,PreparedSource>();
-function rememberPrepared(i:InitialCareerSave,j:M1V188Journal,
-  request:M1V188Request,holds:readonly Hold[]):void{
-  const initialBytes=JSON.stringify(i);
-  const journalBytes=JSON.stringify(j);
-  const requestBytes=JSON.stringify(request);
-  if(initialBytes.length>10_000_000||
-      journalBytes.length>MAX_BYTES||requestBytes.length>MAX_REQUEST)return;
-  preparedSources.delete(i.careerId);
-  preparedSources.set(i.careerId,{initialBytes,journalBytes,
-    requestBytes,holds:holds.map(h=>({...h}))});
-  if(preparedSources.size>PREPARED_SOURCE_CACHE_LIMIT){
-    const oldest=preparedSources.keys().next().value;
-    if(oldest!==undefined)preparedSources.delete(oldest);
-  }
-}
 function rememberVerified(i:InitialCareerSave,j:M1V188Journal,
   holds:readonly Hold[]):void{
   const initialBytes=JSON.stringify(i);
@@ -497,16 +486,20 @@ function read(i:InitialCareerSave,value:unknown){
   const schedule=calendar(i),holds:Hold[]=[];
   if(schedule.length!==LIMIT)return null;
   let versionedSeen=false,medicalVersionSeen:0|2|3|4|5=0;
+  let specialGoalVersion:0|1|null=null;
   for(let n=0;n<journal.entries.length;n++){
     const entry=journal.entries[n]!;
     const versioned=entry.source?.disciplinePolicyVersion===2;
     const medical=entry.source?.medicalPolicyVersion??0;
-    if(versionedSeen&&!versioned||medical<medicalVersionSeen)
+    const special=entry.source?.specialGoalSourceVersion===1?1:0;
+    if(specialGoalVersion!==null&&special!==specialGoalVersion||
+       versionedSeen&&!versioned||medical<medicalVersionSeen)
       return null;
     if(copy(entry,MAX_REQUEST)===null||
         !verifyEntry(i,entry,schedule[n]!,n,holds,schedule))
       return null;
     if(versioned)versionedSeen=true;
+    specialGoalVersion=special;
     medicalVersionSeen=medical;
   }
   rememberVerified(i,journal,holds);
@@ -541,12 +534,15 @@ export function prepareM1V188LeagueMatch(
   externalDiscipline:unknown=undefined,
   medicalPolicyVersion:unknown=undefined,
   managedXI:unknown=undefined,
+  specialGoalSourceVersion:unknown=undefined,
 ):M1V188Proposal|null{
   if(!validInitial(initial))return {ok:false,error:'INVALID_INITIAL'};
   // No complete authenticated external KDK feed exists in this game.
   // Even an empty caller-supplied list is not proof of official clearance.
   if(externalDiscipline!==undefined)
     return {ok:false,error:'UNVERIFIED_EXTERNAL_DISCIPLINE'};
+  if(specialGoalSourceVersion!==undefined&&specialGoalSourceVersion!==1)
+    return {ok:false,error:'INVALID_REQUEST'};
   if(medicalPolicyVersion!==undefined&&medicalPolicyVersion!==2&&
       medicalPolicyVersion!==3&&medicalPolicyVersion!==4&&
       medicalPolicyVersion!==5)
@@ -554,6 +550,10 @@ export function prepareM1V188LeagueMatch(
   const accepted=read(initial,value);
   if(!accepted)return {ok:false,error:'INVALID_JOURNAL'};
   const previous=accepted.journal.entries.at(-1)?.source.medicalPolicyVersion;
+  const firstGoal=accepted.journal.entries[0]?.source.specialGoalSourceVersion;
+  if(accepted.journal.revision>0&&
+     (firstGoal===1)!==(specialGoalSourceVersion===1))
+    return {ok:false,error:'INVALID_REQUEST'};
   if(previous===5&&(medicalPolicyVersion===2||
       medicalPolicyVersion===3||medicalPolicyVersion===4)||
       previous===4&&(medicalPolicyVersion===2||
@@ -587,25 +587,26 @@ export function prepareM1V188LeagueMatch(
     effective===3||effective===4||effective===5,
     effective===4||effective===5,effective===5);
   if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED'};
+  const special=specialGoalSourceVersion===1?
+    simulateM1V190ExperimentalSpecialGoals(prematch,POLICY,
+      generated.plannedCommands,generated.checkpointMedical):null;
+  if(specialGoalSourceVersion===1&&!special?.ok)
+    return {ok:false,error:'GENERATOR_REJECTED'};
+  const result=special?.ok?special.result:generated.result;
   const clock=replayedPhysicalClock(
-    prematch,generated.result,managerCommandsForFixture);
+    prematch,result,managerCommandsForFixture);
   if(!clock)return {ok:false,error:'GENERATOR_REJECTED'};
-  const request:M1V188Request={schemaVersion:188,
+  return{ok:true,fixture:f,clock,request:{schemaVersion:188,
     careerId:initial.careerId,expectedRevision:index,
     commandId:'v188-league-'+f.id,prematch,policy:POLICY,
     ...(managedXI!==undefined?{managedXI:managedXI as M1V188ManagedXI}:{}),
     plannedCommands:generated.plannedCommands,
     checkpointMedical:generated.checkpointMedical,
-    result:generated.result,
+    result,
+    ...(specialGoalSourceVersion===1?{specialGoalSourceVersion:1 as const}:{}),
     ...(effective?{medicalPolicyVersion:effective}:{}),
     ...(effective===5?{
-      autonomousMedicalOrigin:generated.autonomousCollisions??[]}: {})};
-  // Both outcomes and incidents came from the trusted, physically replayed
-  // preparation. Preserve only an exact request/prefix-bound derived hold state.
-  const nextHolds=accepted.holds.map(h=>({...h}));
-  addHolds(nextHolds,generated.generatedIncidents,f,index,true);
-  rememberPrepared(initial,accepted.journal,request,nextHolds);
-  return{ok:true,fixture:f,clock,request,
+      autonomousMedicalOrigin:generated.autonomousCollisions??[]}: {})},
     ...(medicalSource?{sourceLaw5Evidence:generated.law5Evidence}:{}),
     externalMedicalAuthorityAuthenticated:false,
     remainingFixtures:LIMIT-index-1,
@@ -621,11 +622,11 @@ export function applyM1V188LeagueMatch(
   const accepted=read(initial,value);
   if(!accepted)return fail('INVALID_JOURNAL');
   const raw=copy(request,MAX_REQUEST);
-  if(!rec(raw)||!(hasManagedShape(raw,requestKeys)||
-      hasManagedShape(raw,requestKeysMedical)&&
+  if(!rec(raw)||!(goalShape(raw,requestKeys)||
+      goalShape(raw,requestKeysMedical)&&
         (raw.medicalPolicyVersion===2||raw.medicalPolicyVersion===3||
           raw.medicalPolicyVersion===4)||
-      hasManagedShape(raw,requestKeysMedicalV5)&&
+      goalShape(raw,requestKeysMedicalV5)&&
         raw.medicalPolicyVersion===5&&
         Array.isArray(raw.autonomousMedicalOrigin)&&
         raw.autonomousMedicalOrigin.length<=1)||
@@ -637,6 +638,10 @@ export function applyM1V188LeagueMatch(
       !Array.isArray(raw.checkpointMedical))
     return fail('INVALID_REQUEST');
   if(raw.careerId!==initial.careerId)return fail('WRONG_CAREER');
+  const firstGoal=accepted.journal.entries[0]?.source.specialGoalSourceVersion;
+  if(accepted.journal.revision>0&&
+     (firstGoal===1)!==(raw.specialGoalSourceVersion===1))
+    return fail('SOURCE_MISMATCH');
   const priorMedical=accepted.journal.entries.at(-1)?.
     source.medicalPolicyVersion;
   if(priorMedical===5&&raw.medicalPolicyVersion!==5||
@@ -667,6 +672,8 @@ export function applyM1V188LeagueMatch(
       plannedCommands:raw.plannedCommands,
       checkpointMedical:raw.checkpointMedical,
       disciplinePolicyVersion:2,
+      ...(raw.specialGoalSourceVersion===1?{
+        specialGoalSourceVersion:1 as const}:{}),
       ...(raw.medicalPolicyVersion===2?{medicalPolicyVersion:2 as const}:
         raw.medicalPolicyVersion===3?{medicalPolicyVersion:3 as const}:
         raw.medicalPolicyVersion===4?{medicalPolicyVersion:4 as const}:
@@ -675,20 +682,9 @@ export function applyM1V188LeagueMatch(
         autonomousMedicalOrigin:raw.autonomousMedicalOrigin as
           M1V35IndependentCollisionWitness[]}: {})},
     result:raw.result as Good};
-  const prepared=preparedSources.get(initial.careerId);
-  preparedSources.delete(initial.careerId);
-  // The cached branch cannot admit any untrusted new command, old revision,
-  // modified result, altered catalog, or another tab's journal. A mismatch
-  // always executes the unchanged strict source regeneration and replay.
-  const exactPreparation=prepared!==undefined&&
-    prepared.initialBytes===JSON.stringify(initial)&&
-    prepared.journalBytes===JSON.stringify(accepted.journal)&&
-    prepared.requestBytes===JSON.stringify(raw);
-  const holds=exactPreparation?
-    prepared.holds.map(h=>({...h})):[...accepted.holds];
-  // Only the exact generator-produced request can reuse source incidents;
-  // every other new commit still proves the dense physical source afresh.
-  if(!exactPreparation&&!verifyEntry(initial,entry,f,n,holds,
+  const holds=[...accepted.holds];
+  // New commits cannot claim the legacy shot/referee authority.
+  if(!verifyEntry(initial,entry,f,n,holds,
       accepted.schedule,false))return fail('SOURCE_MISMATCH');
   const next:M1V188Journal={...accepted.journal,revision:n+1,
     entries:[...accepted.journal.entries,entry]};

@@ -34,22 +34,21 @@ journal admission and the browser manager controls.
 
 ## Interactive half-time continuation
 
-The manager can also choose **«Играть с паузой в перерыве»**. The
-same canonical engine calculates a proposed first-half history, but the
-browser displays only source-derived events, score and shots **before**
-2700 running seconds. The player can change the tactics and one player
-instruction at the interval, then resume; the full v188 match is recomputed
-with that authenticated order and **must** preserve the exact first-half
-source-event array and prematch identity before final preview or CAS save.
-No first-half or future result is stored ahead of final confirmation.
-Reload and cancel leave the prior durable journal untouched. This is a
-deterministic half-time interruption, not a wall-clock live match, and
-cannot yet pause at every arbitrary second.
+The manager can choose **«Играть до паузы»** at a 15, 30, 45,
+60, 75 or 85-minute deterministic checkpoint. The same canonical engine
+calculates a proposed match source, but the browser displays only
+source-derived score and shots **before** the chosen time. The player can
+change tactics and nominate one outfielder at that checkpoint, then resume.
+Full v188 source replay **must** preserve the exact already-played event
+prefix and prematch identity before final preview or CAS commit.
+No partial result is written to the journal; cancel/reload retain the prior
+durable match history. This is a source-frozen virtual-time pause, not a
+wall-clock live match. Multi-stop interactive play is still outstanding.
 
-`src/core/m1-v188-half-time.ts` provides the read-only half-time
-score and no-retroactive-change witness; tests cover five independent seeds,
-influence on future episodes, score consistency, immutable originals and
-altered-history rejection.
+`src/core/m1-v188-half-time.ts` provides the read-only selected-checkpoint
+score and no-retroactive-change witness. Tests cover 15/30/45/60/75-minute
+choices across independently seeded fixtures, future-event influence,
+source-score consistency, immutable originals and forged-prefix rejection.
 
 ## Scope and evidence
 
@@ -58,7 +57,6 @@ authority, missing/forged flags, non-retroactivity of events before an order,
 deterministic change in future chance source, and full v188 apply/replay.
 A manager can edit team tactics and give a player instruction at a source
 checkpoint while keeping the historical prematch/tactical commands intact.
-This is **P1 functional progress**, not a full P1 acceptance claim: arbitrary
-real-time pauses beyond the half-time checkpoint, final tactics
+This is **P1 functional progress**, not a full P1 acceptance claim: multi-stop pause/continue and fast-forward controls, final tactics
 calibration and official referee timing remain open. The 2024/25 holdout
 stays sealed, and P3/P5 gates and two M1 exit audits remain open.

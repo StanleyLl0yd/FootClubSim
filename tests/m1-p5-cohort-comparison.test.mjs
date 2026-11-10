@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {describeM1P5CohortVersusReference as compare}
+import {readFileSync} from 'node:fs';
+import {describeM1P5CohortVersusReference as compare,
+  describeM1P5PairedSourceVariants as paired}
   from '../scripts/m1-p5-cohort-comparison.mjs';
 const totals={goals:100,shots:500,penaltiesTaken:0,penaltyGoals:0,
   cautions:70,straightReds:3,secondYellowDismissals:5,
@@ -64,4 +66,40 @@ test('95% seeded-season interval reflects between-seed variability',()=>{
   assert.deepEqual(result.metrics.goals.observedSeedMean95Interval,
     [87.01,112.99]);
   assert.deepEqual(result.metrics.shots.observedSeedMean95Interval,[500,500]);
+});
+
+const observed=JSON.parse(readFileSync(
+  new URL('../data/research/m1-p5-v190-v191-paired-cohorts.json',
+    import.meta.url),'utf8'));
+test('source-1/source-2 archived observation is paired and conservation-safe',()=>{
+  const prior=JSON.stringify(observed);
+  const result=paired(observed);
+  assert.equal(result.sampleSize,4);
+  assert.equal(result.releaseAccepted,false);
+  assert.equal(result.heldOut2024_25Used,false);
+  assert.equal(result.metrics.goals.source1Mean,958.25);
+  assert.equal(result.metrics.goals.source2Mean,635);
+  assert.deepEqual(result.metrics.goals.pairedDifferences,
+    [-328,-308,-336,-321]);
+  assert.equal(result.metrics.goals.pairedMeanDifference,-323.25);
+  assert.deepEqual(result.metrics.goals.pairedMean95Interval,
+    [-342.14,-304.36]);
+  assert.equal(result.metrics.shots.pairedMeanDifference,408.25);
+  assert.deepEqual(result.metrics.shots.pairedMean95Interval,
+    [372.52,443.98]);
+  assert.deepEqual(result.metrics.penaltiesTaken.pairedMean95Interval,[0,0]);
+  assert.equal(JSON.stringify(observed),prior,'comparison must be read only');
+});
+test('paired census refuses forged goal, source version or seed metadata',()=>{
+  for(const attack of [
+    x=>{x.source2.results[0].eventTotals.goals++;},
+    x=>{x.source2.specialGoalSourceVersion=1;},
+    x=>{x.source2.seeds[0]=x.source2.seeds[1];},
+    x=>{x.source1.results[1].fixtureCount=239;},
+    x=>{x.source1.results[2].finalTableHash='a'.repeat(63);},
+    x=>{x.source2.results[0].eventTotals.penaltyGoals=999;},
+  ]){
+    const candidate=structuredClone(observed);attack(candidate);
+    assert.throws(()=>paired(candidate),/INVALID_CALIBRATION_EVIDENCE/);
+  }
 });

@@ -8,11 +8,11 @@ const invalid=message=>{throw new TypeError('INVALID_CALIBRATION_EVIDENCE: '+mes
 const mean=values=>values.reduce((sum,n)=>sum+n,0)/values.length;
 // Two-sided 95% Student-t critical values, df=3..31 (4..32 seeds).
 const t95=[3.182446,2.776445,2.570582,2.446912,2.364624,2.306004,2.262157,2.228139,2.200985,2.178813,2.160369,2.144787,2.13145,2.119905,2.109816,2.100922,2.093024,2.085963,2.079614,2.073873,2.068658,2.063899,2.059539,2.055529,2.051831,2.048407,2.04523,2.042272,2.039513];
-const seededMean95Interval=values=>{
+const seededMean95Interval=(values,floorAtZero=true)=>{
   const n=values.length,average=mean(values);
   const squared=values.reduce((sum,v)=>sum+(v-average)**2,0);
   const margin=t95[n-4]*Math.sqrt(squared/(n*(n-1)));
-  return [Number(Math.max(0,average-margin).toFixed(2)),
+  return [Number((floorAtZero?Math.max(0,average-margin):average-margin).toFixed(2)),
     Number((average+margin).toFixed(2))];
 };
 
@@ -80,6 +80,72 @@ export function describeM1P5CohortVersusReference(cohort,reference){
     warning:'Descriptive mean of reproducible fictional seeds. '+
       'Not equivalent event taxonomies, not official 2026/27 data and '+
       'not proof of model fitness or permission to reuse provider databases.'};
+}
+
+
+/** Paired v190/v191 observational cohorts, not an acceptance gate. */
+export function describeM1P5PairedSourceVariants(evidence){
+  const base=evidence?.source1,changed=evidence?.source2;
+  if(evidence?.schemaVersion!==1||!base||!changed||
+      base.specialGoalSourceVersion!==1||
+      changed.specialGoalSourceVersion!==2||
+      base.catalogId!=='liga-prikolov-preview'||
+      changed.catalogId!==base.catalogId||
+      base.refereeEventAuthorityAuthenticated!==false||
+      changed.refereeEventAuthorityAuthenticated!==false||
+      base.independentExternalRateComparison!==false||
+      changed.independentExternalRateComparison!==false||
+      !Array.isArray(base.seeds)||base.seeds.length<4||
+      base.seeds.length>32||
+      !Array.isArray(base.results)||!Array.isArray(changed.results)||
+      !Array.isArray(changed.seeds)||
+      base.seeds.length!==base.results.length||
+      base.seeds.length!==changed.results.length||
+      base.seeds.length!==changed.seeds.length||
+      base.sampleSize!==base.seeds.length||
+      changed.sampleSize!==base.seeds.length||
+      new Set(base.seeds).size!==base.seeds.length||
+      base.seeds.some((s,i)=>!Number.isSafeInteger(s)||s<1||
+        s>0xffffffff||s!==changed.seeds[i]))
+    invalid('paired cohorts require matching 4..32 independent seeds and source versions');
+  const fields=['goals','openPlayGoals','shots','penaltiesTaken',
+    'penaltyGoals','ownGoalsFor','cautions','straightReds',
+    'secondYellowDismissals','fictionalInjuryWithdrawals'];
+  const validate=(r,seed)=>{
+    const t=r?.eventTotals;
+    if(r?.seed!==seed||r.fixtureCount!==240||
+        !t||!integer(r.totalGoals)||
+        fields.some(k=>!integer(t[k]))||
+        t.goals!==r.totalGoals||
+        t.goals!==t.openPlayGoals+t.penaltyGoals+t.ownGoalsFor||
+        t.penaltyGoals>t.penaltiesTaken||
+        t.shots<t.openPlayGoals||
+        typeof r.finalTableHash!=='string'||
+        !/^[0-9a-f]{64}$/.test(r.finalTableHash))
+      invalid('paired source fixture, replay or event conservation failed');
+    return t;
+  };
+  const paired=base.seeds.map((seed,i)=>({
+    seed,old:validate(base.results[i],seed),
+    next:validate(changed.results[i],seed)}));
+  const metrics=Object.fromEntries(fields.map(k=>{
+    const observedOld=paired.map(p=>p.old[k]);
+    const observedNew=paired.map(p=>p.next[k]);
+    const differences=paired.map(p=>p.next[k]-p.old[k]);
+    return[k,{source1Mean:Number(mean(observedOld).toFixed(2)),
+      source2Mean:Number(mean(observedNew).toFixed(2)),
+      pairedDifferences:differences,
+      pairedMeanDifference:Number(mean(differences).toFixed(2)),
+      pairedMean95Interval:seededMean95Interval(differences,false)}];
+  }));
+  return{schemaVersion:1,
+    status:'PAIRED_INTERNAL_SOURCE_VARIANTS_NOT_CALIBRATED',
+    sampleSize:paired.length,fixturesPerSeason:240,
+    seeds:[...base.seeds],metrics,
+    method:'Two-sided 95% Student-t interval on paired whole-season seed differences',
+    releaseAccepted:false,heldOut2024_25Used:false,
+    sourceRightsReviewed:false,semanticsHarmonized:false,
+    warning:'Paired synthetic outcomes only. Not a real RPL calibration pass.'};
 }
 
 const current=process.argv[1];

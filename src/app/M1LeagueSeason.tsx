@@ -51,8 +51,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     selection:unknown=undefined)=>
     prepareM1V188LeagueMatch(career,saved,manager,
       undefined,undefined,selection,
-      saved.revision===0||saved.entries[0]?.source.specialGoalSourceVersion===1?
-        1:undefined);
+      saved.revision===0?
+        2:saved.entries[0]?.source.specialGoalSourceVersion);
   const [preview,setPreview]=useState<Ready|null>(null);
   const [busy,setBusy]=useState(false);
   const [advancing,setAdvancing]=useState(false);

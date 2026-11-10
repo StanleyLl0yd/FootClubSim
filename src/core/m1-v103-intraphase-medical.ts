@@ -3,7 +3,8 @@ import {isStableId} from './identifiers.js';
 import {isPlainJsonTree} from './plain-json-tree.js';
 import {startM1PlayerControl,advanceM1PlayerControl}
   from './m1-player-control.js';
-import {computeM1V5PhaseShot,M1_V5_DRAWS_PER_PHASE,
+import {computeM1V5PhaseShot,computeM1V104ResearchPhaseShot,
+  validM1V104ResearchParameters,M1_V5_DRAWS_PER_PHASE,
   type M1V5Shot} from './m1-phases-v5.js';
 import {M1_CLOCK_MAX_EVENTS,M1_CLOCK_STEP_SECONDS,
   type M1PrematchInput} from './m1-clock.js';
@@ -94,10 +95,13 @@ function readIntraphaseMedical(raw:unknown):M1V7TemporaryMedicalAction|null{
 export function simulateM1V103IntraphaseMedical(
   prematch:unknown,policy:unknown,plannedCommands:unknown=[],
   checkpointMedical:unknown=[],intraphaseMedical:unknown=[],
+  shotParameters:unknown=undefined,
 ):M1V103Run{
   if(![prematch,policy,plannedCommands,checkpointMedical,
       intraphaseMedical].every(isPlainJsonTree)||
-      !Array.isArray(intraphaseMedical)||intraphaseMedical.length>36)
+      !Array.isArray(intraphaseMedical)||intraphaseMedical.length>36||
+      shotParameters!==undefined&&
+        !validM1V104ResearchParameters(shotParameters))
     return {ok:false,error:'INVALID_INPUT'};
   const source=simulateM1V101PhysicalIntraphase(
     prematch,policy,plannedCommands,checkpointMedical);
@@ -240,8 +244,12 @@ export function simulateM1V103IntraphaseMedical(
         return {ok:false,error:'PHYSICAL_SOURCE_CONFLICT'};
       const present={home:teams.home.filter(id=>!absent.has(id)),
         away:teams.away.filter(id=>!absent.has(id))};
-      const raw=computeM1V5PhaseShot(
-        input,controlled,players,present,phase,rng,events.length+1);
+      // A versioned caller may opt into the predeclared v104 research
+      // shot kernel. Historical v103 callers still use original arithmetic.
+      const raw=shotParameters===undefined?computeM1V5PhaseShot(
+        input,controlled,players,present,phase,rng,events.length+1):
+        computeM1V104ResearchPhaseShot(input,controlled,players,present,
+          phase,rng,events.length+1,shotParameters);
       if(!raw)continue;
       const side=sideFor(raw.teamId);
       if(!side||!present[side].includes(raw.playerId)||
@@ -285,9 +293,11 @@ export function simulateM1V103IntraphaseMedical(
 export function verifyM1V103IntraphaseMedical(
   prematch:unknown,policy:unknown,plannedCommands:unknown,
   checkpointMedical:unknown,intraphaseMedical:unknown,candidate:unknown,
+  shotParameters:unknown=undefined,
 ):boolean{
   if(!isPlainJsonTree(candidate))return false;
   const replay=simulateM1V103IntraphaseMedical(
-    prematch,policy,plannedCommands,checkpointMedical,intraphaseMedical);
+    prematch,policy,plannedCommands,checkpointMedical,intraphaseMedical,
+    shotParameters);
   return replay.ok&&sameCanonicalValue(replay,candidate);
 }

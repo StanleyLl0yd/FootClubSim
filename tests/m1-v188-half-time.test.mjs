@@ -6,7 +6,8 @@ import {createInitialCareer} from '../dist/core/save.js';
 import {startM1V188LeagueJournal,prepareM1V188LeagueMatch,
   applyM1V188LeagueMatch}
   from '../dist/core/m1-v188-league-source-journal.js';
-import {deriveM1V188HalfTimeScore,sameM1V188FirstHalfSource}
+import {deriveM1V188HalfTimeScore,sameM1V188FirstHalfSource,
+  deriveM1V188CheckpointScore,sameM1V188CheckpointPrefix}
   from '../dist/core/m1-v188-half-time.js';
 
 const catalog=createSyntheticRplScaleCatalog(2026);
@@ -92,4 +93,40 @@ test('prefix witness detects rewritten past or changed fixture',()=>{
   assert.equal(JSON.stringify(first.request.result),
     JSON.stringify(prepareM1V188LeagueMatch(career,zero.journal)
       .request.result));
+});
+
+test('15/30/60/75-minute interactive pauses preserve prior source',()=>{
+  for(const minute of [15,30,60,75]){
+    const career=createInitialCareer(catalog,chosen,minute+4096,
+      'checkpoint-'+minute);
+    const begin=startM1V188LeagueJournal(career);
+    assert.ok(begin.ok);
+    const previous=prepareM1V188LeagueMatch(career,begin.journal);
+    assert.ok(previous?.ok);
+    const updated=prepareM1V188LeagueMatch(career,begin.journal,
+      [],undefined,undefined,undefined,undefined,[{
+        kind:'team-tactics',elapsedSeconds:minute*60,
+        plan:plan(previous.request.prematch),
+      }]);
+    assert.ok(updated?.ok);
+    assert.equal(sameM1V188CheckpointPrefix(
+      previous.request.result,updated.request.result,minute*60),true);
+    const at=deriveM1V188CheckpointScore(previous.request.prematch,
+      previous.request.result,minute*60);
+    assert.ok(at);
+    assert.equal(at.elapsedSeconds,minute*60);
+    assert.deepEqual(at,deriveM1V188CheckpointScore(
+      updated.request.prematch,updated.request.result,minute*60));
+    assert.ok(applyM1V188LeagueMatch(career,begin.journal,
+      updated.request).ok);
+  }
+  const career=createInitialCareer(catalog,chosen,9876,'invalid-checkpoint');
+  const begin=startM1V188LeagueJournal(career);
+  assert.ok(begin.ok);
+  const previous=prepareM1V188LeagueMatch(career,begin.journal);
+  assert.ok(previous?.ok);
+  assert.equal(deriveM1V188CheckpointScore(
+    previous.request.prematch,previous.request.result,123),null);
+  assert.equal(sameM1V188CheckpointPrefix(
+    previous.request.result,previous.request.result,123),false);
 });

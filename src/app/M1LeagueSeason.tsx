@@ -3,7 +3,7 @@ import {M1ClubOverview} from './M1ClubOverview.js';
 import {M1MatchReport} from './M1MatchReport.js';
 import {LigaClubLabel} from './LigaClubLabel.js';
 import {deriveM1V188Champion} from '../core/m1-v188-championship.js';
-import {deriveM1V188HalfTimeScore,sameM1V188FirstHalfSource}
+import {deriveM1V188CheckpointScore,sameM1V188CheckpointPrefix}
   from '../core/m1-v188-half-time.js';
 import {inspectM1V188ClubCondition}
   from '../core/m1-v188-condition.js';
@@ -59,6 +59,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         2:saved.entries[0]?.source.specialGoalSourceVersion,coaching);
   const [preview,setPreview]=useState<Ready|null>(null);
   const [halfTime,setHalfTime]=useState<Ready|null>(null);
+  const [pauseMinute,setPauseMinute]=useState(45);
   const [busy,setBusy]=useState(false);
   const [advancing,setAdvancing]=useState(false);
   const [managerSetup,setManagerSetup]=useState<Ready|null>(null);
@@ -169,17 +170,17 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     focusId:focusCandidates[0]??'';
   const coachedPlan=xiChoice?.tactics??halfTimeTactics;
   const coachingChoices=coachEnabled&&coachedPlan?[{
-    kind:'team-tactics',elapsedSeconds:(halfTime?45:coachMinute)*60,
+    kind:'team-tactics',elapsedSeconds:(halfTime?pauseMinute:coachMinute)*60,
     plan:{...coachedPlan,schemaVersion:2 as const,
       formation:coachFormation,mentality:coachMentality,
       pressing:coachPressing,tempo:coachTempo},
   },...(focusEnabled&&actualFocusId?[{
-    kind:'player-focus',elapsedSeconds:(halfTime?45:coachMinute)*60,
+    kind:'player-focus',elapsedSeconds:(halfTime?pauseMinute:coachMinute)*60,
     playerId:actualFocusId,focus:focusMode,
   }]:[])]:[];
   const halfTimeScore=halfTime&&halfTimeInput?
-    deriveM1V188HalfTimeScore(halfTimeInput,
-      halfTime.request.result as Good):null;
+    deriveM1V188CheckpointScore(halfTimeInput,
+      halfTime.request.result as Good,pauseMinute*60):null;
   // A read-only pitch preview. The tactical formation is persisted in v188,
   // while individual player-to-slot assignments are not yet modelled.
   const boardGoalkeeper=starterIds.find(id=>
@@ -305,13 +306,13 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       const input=prepared.request.prematch as M1PrematchInput;
       const tactics=input.fixture.homeClubId===career.selectedClubId?
         input.homeTactics:input.awayTactics;
-      setCoachMinute(45);setCoachEnabled(true);setFocusEnabled(false);
+      setCoachMinute(pauseMinute);setCoachEnabled(false);setFocusEnabled(false);
       setCoachFormation(tactics.formation);
       setCoachMentality(tactics.mentality);
       setCoachPressing(tactics.pressing);setCoachTempo(tactics.tempo);
       setHalfTime(prepared);setManagerSetup(null);
-      setStatus('Первый тайм рассчитан. Выберите изменения в перерыве. '+
-        'Результат второго тайма ещё не показан.');
+      setStatus('Матч рассчитан до выбранной паузы. '+
+        'Выберите указания на оставшуюся часть игры.');
     }catch(error){
       setStatus('Первый тайм не рассчитан: '+errorText(error));
     }
@@ -330,15 +331,15 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           halfTime.request.expectedRevision||
           !sameCanonicalValue(prepared.request.prematch,
             halfTime.request.prematch)||
-          !sameM1V188FirstHalfSource(
+          !sameM1V188CheckpointPrefix(
             halfTime.request.result as Good,
-            prepared.request.result as Good)){
-        setStatus('Продолжение запрещено: уже сыгранный первый тайм '+
-          'отличается от проверенного источника.');
+            prepared.request.result as Good,pauseMinute*60)){
+        setStatus('Продолжение запрещено: уже сыгранные события '+
+          'отличаются от проверенного источника.');
         return;
       }
       setHalfTime(null);setPreview(prepared);
-      setStatus('Второй тайм рассчитан без изменения первого. '+
+      setStatus('Матч продолжен без изменения сыгранного отрезка. '+
         'Проверьте итоговый результат перед сохранением.');
     }catch(error){
       setStatus('Не удалось продолжить матч: '+errorText(error));
@@ -636,9 +637,17 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           <div className="button-stack">
             <button type="button" disabled={busy||disabled||!!preview||!!halfTime||!xiLegal}
               onClick={()=>calculate()}>Рассчитать матч</button>
+            <label>Остановить матч на минуте
+              <select value={pauseMinute} disabled={busy||disabled||
+                !!preview||!!halfTime}
+                onChange={e=>setPauseMinute(Number(e.target.value))}>
+                {[15,30,45,60,75,85].map(minute=>
+                  <option value={minute} key={minute}>{minute}-я</option>)}
+              </select>
+            </label>
             <button type="button" className="secondary-button"
               disabled={busy||disabled||!!preview||!!halfTime||!xiLegal}
-              onClick={startHalfTime}>Играть с паузой в перерыве</button>
+              onClick={startHalfTime}>Играть до паузы</button>
             {ownNextNow&&<button type="button" className="secondary-button"
               disabled={busy||disabled||!!preview||!!halfTime}
               onClick={xiSetup?clearXI:configureXI}>
@@ -861,8 +870,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           </div>
         </fieldset>}
         {halfTime&&halfTimeScore&&<section className="season-preview"
-          aria-label="Перерыв матча">
-          <h3>Перерыв · 45′</h3>
+          aria-label="Пауза матча">
+          <h3>Пауза · {pauseMinute}′</h3>
           <p className="season-preview-score season-report-score">
             <LigaClubLabel clubId={halfTime.fixture.homeClubId}
               name={clubs.get(halfTime.fixture.homeClubId)??halfTime.fixture.homeClubId}/>
@@ -870,11 +879,11 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             <LigaClubLabel clubId={halfTime.fixture.awayClubId}
               name={clubs.get(halfTime.fixture.awayClubId)??halfTime.fixture.awayClubId}/>
           </p>
-          <p className="subtle">Удары до перерыва:
+          <p className="subtle">Удары до паузы:
             {' '}{halfTimeScore.homeShots} : {halfTimeScore.awayShots}.
-            События после перерыва пока не раскрываются.</p>
+            События после паузы пока не раскрываются.</p>
           <fieldset disabled={busy||disabled}>
-            <legend>Указания тренера на второй тайм</legend>
+            <legend>Указания тренера на оставшуюся часть матча</legend>
             <label><input type="checkbox" checked={coachEnabled}
               onChange={e=>setCoachEnabled(e.target.checked)}/>
               {' '}Изменить тактику</label>
@@ -926,11 +935,12 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 </label>
               </>}
             </div>}
-            <p className="subtle">Изменения вступают в силу на 45-й
-              минуте. Уже сыгранные эпизоды остаются неизменными.</p>
+            <p className="subtle">Изменения вступают в силу на
+              {' '}{pauseMinute}-й минуте. Уже сыгранные эпизоды
+              остаются неизменными.</p>
             <div className="button-stack">
               <button type="button" disabled={busy||disabled}
-                onClick={finishHalfTime}>Продолжить второй тайм</button>
+                onClick={finishHalfTime}>Продолжить матч</button>
               <button type="button" className="secondary-button"
                 onClick={()=>{setHalfTime(null);
                   setCoachEnabled(false);setFocusEnabled(false);

@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'scripts/m1-v188-season-diversity.mjs'
+      - 'scripts/m1-p5-cohort-comparison.mjs'
+      - 'data/research/rpl-2025-26-aggregate-reference.json'
       - '.github/workflows/season-diversity.yml'
   workflow_dispatch:
 
@@ -35,6 +37,12 @@ jobs:
           node scripts/m1-v188-season-diversity.mjs \
             --seeds=11,41,71,101 \
             --output=season-diversity-report.json
+      - name: Describe source-comparable aggregates, not release acceptance
+        run: |
+          node scripts/m1-p5-cohort-comparison.mjs \
+            season-diversity-report.json \
+            data/research/rpl-2025-26-aggregate-reference.json \
+            season-diversity-compare.json
       - name: Summarize evidence
         shell: bash
         run: |
@@ -66,5 +74,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: season-diversity-cohort
-          path: season-diversity-report.json
+          path: |
+            season-diversity-report.json
+            season-diversity-compare.json
           retention-days: 14

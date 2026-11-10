@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "competition": "Russian Premier League",
+  "season": "2025/26",
+  "scope": "completed 240-match season",
+  "status": "EXTERNAL_AGGREGATE_OBSERVATIONS_NOT_RELEASE_TARGETS",
+  "asOf": "2026-11-10",
+  "matches": 240,
+  "totals": {
+    "goals": 609,
+    "shots": 5781,
+    "penaltiesTaken": 101,
+    "penaltyGoals": 77,
+    "cautions": 1024,
+    "dismissals": 59
+  },
+  "sourceByMetric": {
+    "goals": "https://news.sportbox.ru/Vidy_sporta/Futbol/Russia/premier_league/stats/turnir_23003",
+    "shots": "https://fbref.com/en/comps/30/2025-2026/shooting/2025-2026-Russian-Premier-League-Stats",
+    "penaltiesTaken": "https://news.sportbox.ru/Vidy_sporta/Futbol/Russia/premier_league/stats/turnir_23003",
+    "penaltyGoals": "https://news.sportbox.ru/Vidy_sporta/Futbol/Russia/premier_league/stats/turnir_23003",
+    "cautions": "https://news.sportbox.ru/Vidy_sporta/Futbol/Russia/premier_league/stats/turnir_23003",
+    "dismissals": "https://news.sportbox.ru/Vidy_sporta/Futbol/Russia/premier_league/stats/turnir_23003"
+  },
+  "warnings": [
+    "FBref and Sportbox use different definitions and coverage; shot counts are not proven directly comparable to synthetic open-play events.",
+    "Sportbox season goals include goal types absent from historical v188; penalties and own-goal classifications must be normalized.",
+    "Season 2025/26 is development reference evidence, not a claim about the later 2026/27 season.",
+    "No rights to redistribute underlying match-by-match, player or club-provider databases are established.",
+    "Source-year 2024/25 independent holdout must remain unopened for fitting.",
+    "This observation does not establish statistical acceptance limits or M1-P5 signoff."
+  ]
+}

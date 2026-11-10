@@ -32,6 +32,25 @@ journal admission and the browser manager controls.
 - Source replay and referee-generated physical availability remain
   authoritative; this does not invent referee permission to substitute.
 
+## Interactive half-time continuation
+
+The manager can also choose **«Играть с паузой в перерыве»**. The
+same canonical engine calculates a proposed first-half history, but the
+browser displays only source-derived events, score and shots **before**
+2700 running seconds. The player can change the tactics and one player
+instruction at the interval, then resume; the full v188 match is recomputed
+with that authenticated order and **must** preserve the exact first-half
+source-event array and prematch identity before final preview or CAS save.
+No first-half or future result is stored ahead of final confirmation.
+Reload and cancel leave the prior durable journal untouched. This is a
+deterministic half-time interruption, not a wall-clock live match, and
+cannot yet pause at every arbitrary second.
+
+`src/core/m1-v188-half-time.ts` provides the read-only half-time
+score and no-retroactive-change witness; tests cover five independent seeds,
+influence on future episodes, score consistency, immutable originals and
+altered-history rejection.
+
 ## Scope and evidence
 
 Unit tests cover command identity, monotonic virtual time, selected-team
@@ -40,6 +59,6 @@ deterministic change in future chance source, and full v188 apply/replay.
 A manager can edit team tactics and give a player instruction at a source
 checkpoint while keeping the historical prematch/tactical commands intact.
 This is **P1 functional progress**, not a full P1 acceptance claim: arbitrary
-real-time pauses, true user-controllable live match interrupts, final tactics
+real-time pauses beyond the half-time checkpoint, final tactics
 calibration and official referee timing remain open. The 2024/25 holdout
 stays sealed, and P3/P5 gates and two M1 exit audits remain open.

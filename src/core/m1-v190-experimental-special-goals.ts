@@ -2,15 +2,22 @@ import {sameCanonicalValue} from './canonical-value.js';
 import {isPlainJsonTree} from './plain-json-tree.js';
 import {SeededRng} from './rng.js';
 import type {M1PrematchInput} from './m1-clock.js';
+import type {M1V104ResearchParameters} from './m1-phases-v5.js';
 import type {M1V7Decision} from './m1-v7-adjudications.js';
 import {simulateM1V105SpecialGoalChronology,
   type M1V105Run} from './m1-v105-special-goal-chronology.js';
 import {projectM1V179MatchClock} from './m1-v179-source-clock.js';
 
-/** Research-only virtual referee special-goal decisions, NEVER admitted
- * to v188 career journals. Frequencies are exploratory, not calibrated.
+/** Versioned internal virtual referee, not external rule authority.
+ * Experimental trigger probabilities are NOT calibrated RPL rates.
  */
 export const M1_V190_EXPERIMENTAL_SOURCE_VERSION=190 as const;
+/** Previously measured v104-B hypothesis, NOT a calibrated release target.
+ * Source version 2 opts into this model for future new careers only.
+ */
+export const M1_V191_SHOT_HYPOTHESIS:Readonly<M1V104ResearchParameters>=
+  Object.freeze({shotOpportunityMultiplier:1.08,xgMultiplier:0.60,
+    saveMultiplier:0.68});
 type Good=Extract<M1V105Run,{ok:true}>;
 type ErrorKind='INVALID_SOURCE'|'INVALID_CLOCK'|'NO_LEGAL_ACTOR'|
   'SPECIAL_GOAL_SOURCE_REJECTED';
@@ -39,12 +46,17 @@ function validRngSeed(v:unknown):v is number{
 export function simulateM1V190ExperimentalSpecialGoals(
   prematch:unknown,policy:unknown,
   plannedCommands:unknown=[],checkpointMedical:unknown=[],
+  shotSourceVersion:1|2=1,
 ):M1V190ExperimentalResult{
-  if(![prematch,policy,plannedCommands,checkpointMedical]
-    .every(isPlainJsonTree))
+  if((shotSourceVersion!==1&&shotSourceVersion!==2)||
+      ![prematch,policy,plannedCommands,checkpointMedical]
+        .every(isPlainJsonTree))
     return{ok:false,error:'INVALID_SOURCE'};
+  const shotParameters=shotSourceVersion===2?
+    M1_V191_SHOT_HYPOTHESIS:undefined;
   const source=simulateM1V105SpecialGoalChronology(
-    prematch,policy,plannedCommands,checkpointMedical,[],[]);
+    prematch,policy,plannedCommands,checkpointMedical,[],[],
+    shotParameters);
   if(!source.ok)return{ok:false,error:'INVALID_SOURCE'};
   const input=prematch as M1PrematchInput;
   if(!validRngSeed(input.rngSeed)||
@@ -113,7 +125,8 @@ export function simulateM1V190ExperimentalSpecialGoals(
   let finished:Good=source;
   for(const candidate of decisions){
     const proposed=simulateM1V105SpecialGoalChronology(input,policy,
-      plannedCommands,checkpointMedical,[],[...admitted,candidate]);
+      plannedCommands,checkpointMedical,[],[...admitted,candidate],
+      shotParameters);
     if(!proposed.ok||proposed.specialDecisionCount!==admitted.length+1||
        proposed.rngState!==source.rngState||
        proposed.rngDraws!==source.rngDraws)continue;
@@ -149,10 +162,10 @@ export function simulateM1V190ExperimentalSpecialGoals(
 export function verifyM1V190ExperimentalSpecialGoals(
   prematch:unknown,policy:unknown,
   plannedCommands:unknown,checkpointMedical:unknown,
-  claimed:unknown,
+  claimed:unknown,shotSourceVersion:1|2=1,
 ):boolean{
   if(!isPlainJsonTree(claimed))return false;
   const replay=simulateM1V190ExperimentalSpecialGoals(
-    prematch,policy,plannedCommands,checkpointMedical);
+    prematch,policy,plannedCommands,checkpointMedical,shotSourceVersion);
   return replay.ok&&sameCanonicalValue(replay,claimed);
 }

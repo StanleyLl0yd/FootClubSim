@@ -682,7 +682,9 @@ export function applyM1V188LeagueMatch(
     source.medicalPolicyVersion;
   const priorCondition=accepted.journal.entries.at(-1)?.
     source.conditionPolicyVersion??0;
-  if((raw.conditionPolicyVersion??0)<priorCondition)
+  const incomingCondition=raw.conditionPolicyVersion===2?2:
+    raw.conditionPolicyVersion===1?1:0;
+  if(incomingCondition<priorCondition)
     return fail('SOURCE_MISMATCH');
   if(priorMedical===5&&raw.medicalPolicyVersion!==5||
       priorMedical===4&&raw.medicalPolicyVersion!==4&&

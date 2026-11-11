@@ -499,6 +499,24 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
           assert.equal(await run(()=>document.querySelector(
             'section[aria-label="Пауза матча"] h3')?.textContent.trim()),
           'Пауза · 45′');
+          // Crash/reload during an uncommitted match must restore its
+          // exact verified past, with no duplicate fixture CAS.
+          await reload();
+          await waitPage('Создайте тренера, выберите клуб');
+          await waitFor(()=>run(id=>[...document.querySelector(
+            '#career-saved-select').options].some(opt=>opt.value===id),
+          careerId),'selected career after mid-match reload');
+          await setValue('#career-saved-select',careerId);
+          await click('Восстановить из браузера');
+          await waitPage('Стартовая карьера восстановлена');
+          await seasonClick('Начать или продолжить сезон');
+          await waitSeason(value=>value.revision===before.revision&&
+            value.status.startsWith('Восстановлена пауза матча'),
+          'same source-verified in-match checkpoint restored',
+          COLD_REPLAY_TIMEOUT);
+          assert.equal(await run(()=>document.querySelector(
+            'section[aria-label="Пауза матча"] h3')?.textContent.trim()),
+          'Пауза · 45′');
           const enableCoach=async()=>{
             const enabled=await run(()=>{
               const input=document.querySelector(

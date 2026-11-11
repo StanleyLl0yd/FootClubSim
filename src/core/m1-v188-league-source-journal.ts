@@ -103,7 +103,8 @@ export type M1V188Gate=
     externalKdkAuthenticated:false;clinicalAuthorityAuthenticated:false;
     rescheduledFixturesSupported:false}>;
 export type M1V188Proposal=
-  | Readonly<{ok:false;error:M1V188Error}>
+  | Readonly<{ok:false;error:M1V188Error;
+    stage?:'CONDITION'|'CAUSAL'|'SPECIAL'|'CLOCK';cause?:string}>
   | Readonly<{ok:true;fixture:Fixture;request:M1V188Request;
     clock:PhysicalClock;remainingFixtures:number;
     selectedClubFixture:boolean;
@@ -630,23 +631,25 @@ export function prepareM1V188LeagueMatch(
   const simulationInput=deriveM1V188ConditionedMatchInput(
     prematch,accepted.condition);
   if(!simulationInput)
-    return {ok:false,error:'GENERATOR_REJECTED'};
+    return {ok:false,error:'GENERATOR_REJECTED',stage:'CONDITION'};
   const generated=regenerateM1V184CausalSource(
     simulationInput,POLICY,managerCommandsForFixture,true,medicalSource,
     effective===3||effective===4||effective===5,
     effective===4||effective===5,effective===5,coachOrders);
-  if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED'};
+  if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED',
+    stage:'CAUSAL',cause:generated.error};
   const special=(specialGoalSourceVersion===1||
       specialGoalSourceVersion===2)?
     simulateM1V190ExperimentalSpecialGoals(simulationInput,POLICY,
       generated.plannedCommands,generated.checkpointMedical,
       specialGoalSourceVersion):null;
   if(specialGoalSourceVersion!==undefined&&!special?.ok)
-    return {ok:false,error:'GENERATOR_REJECTED'};
+    return {ok:false,error:'GENERATOR_REJECTED',
+      stage:'SPECIAL',cause:special?.error??'NO_RESULT'};
   const result=special?.ok?special.result:generated.result;
   const clock=replayedPhysicalClock(
     prematch,result,managerCommandsForFixture);
-  if(!clock)return {ok:false,error:'GENERATOR_REJECTED'};
+  if(!clock)return {ok:false,error:'GENERATOR_REJECTED',stage:'CLOCK'};
   return{ok:true,fixture:f,clock,request:{schemaVersion:188,
     careerId:initial.careerId,expectedRevision:index,
     commandId:'v188-league-'+f.id,prematch,policy:POLICY,

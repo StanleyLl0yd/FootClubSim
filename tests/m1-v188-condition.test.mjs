@@ -159,7 +159,8 @@ test('conditioned source lowers effective ability without mutating catalog',()=>
     original.attributes.naturalFitness);
   assert.equal(adjusted.catalog.packId,prematch.catalog.packId);
   assert.equal(JSON.stringify(prematch),before);
-  assert.equal(JSON.stringify(initial.catalog),JSON.stringify(catalog));
+  assert.deepEqual(initial.catalog,catalog,
+    'career import may reorder object keys but must preserve catalog values');
   assert.deepEqual(deriveM1V188ConditionedMatchInput(prematch,state),
     adjusted);
   const illegal=new Map(state);

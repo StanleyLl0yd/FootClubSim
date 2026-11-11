@@ -1,7 +1,8 @@
 import {sameCanonicalValue} from './canonical-value.js';
 import {isStableId} from './identifiers.js';
 import {isPlainJsonTree} from './plain-json-tree.js';
-import {startM1PlayerControl,advanceM1PlayerControl}
+import {startM1PlayerControl,advanceM1PlayerControl,
+  submitM1PlayerInstruction,submitM1TeamTacticsWithPlayerControl}
   from './m1-player-control.js';
 import {computeM1V5PhaseShot,computeM1V104ResearchPhaseShot,
   validM1V104ResearchParameters,M1_V5_DRAWS_PER_PHASE,
@@ -144,11 +145,14 @@ export function simulateM1V103IntraphaseMedical(
   const absent=new Map<string,Absence>();
   const transitions=source.events.filter(
     (e):e is SourceTransition=>e.type==='physical-transition');
+  const coachOrders=(plannedCommands as Record<string,unknown>[])
+    .filter(c=>c.kind==='set-tactics'||c.kind==='set-player-focus');
   const rng=new SeededRng(input.rngSeed);
   const totals={home:{goals:0,shots:0,shotsOnTarget:0,xgMilli:0},
     away:{goals:0,shots:0,shotsOnTarget:0,xgMilli:0}};
   const events:M1V103Event[]=[];
-  let controlled=started.state,sourceIndex=0,medicalIndex=0;
+  let controlled=started.state,sourceIndex=0,medicalIndex=0,
+    coachIndex=0;
   const sideFor=(teamId:string):'home'|'away'|null=>
     teamId===input.fixture.homeClubId?'home':
       teamId===input.fixture.awayClubId?'away':null;
@@ -232,6 +236,16 @@ export function simulateM1V103IntraphaseMedical(
         return {ok:false,error:'PHYSICAL_SOURCE_CONFLICT'};
       sourceIndex++;
     }
+    while(coachIndex<coachOrders.length&&
+        coachOrders[coachIndex]?.elapsedSeconds===second){
+      const order=coachOrders[coachIndex]!;
+      const next=order.kind==='set-tactics'?
+        submitM1TeamTacticsWithPlayerControl(input,policy,controlled,order):
+        submitM1PlayerInstruction(input,policy,controlled,order);
+      if(!next.ok)return {ok:false,error:'PHYSICAL_SOURCE_CONFLICT'};
+      controlled=next.state;
+      coachIndex++;
+    }
     for(let slot=0;slot<M1_V99_SLOTS_PER_CHECKPOINT;slot++){
       const shotSecond=second+(slot+1)*M1_V99_SECONDS_PER_SLOT-1;
       while(medicalIndex<actions.length&&
@@ -269,7 +283,8 @@ export function simulateM1V103IntraphaseMedical(
     if(!next.ok)return {ok:false,error:'INVALID_CLOCK_TRANSITION'};
     controlled=next.state;
   }
-  if(sourceIndex!==transitions.length||medicalIndex!==actions.length)
+  if(sourceIndex!==transitions.length||medicalIndex!==actions.length||
+      coachIndex!==coachOrders.length)
     return {ok:false,error:'PHYSICAL_SOURCE_CONFLICT'};
   events.push({schemaVersion:103,type:'full-time',
     id:'m1-v103-full-time',sequence:events.length+1,

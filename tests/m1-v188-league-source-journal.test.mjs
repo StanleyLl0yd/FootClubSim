@@ -1282,3 +1282,75 @@ test('P3-3: four distinct seeded cautions exclude the next own-team match',()=>{
   assert.deepEqual(inspectM1V188FictionalHolds(career,forged),
     {ok:false,error:'INVALID_JOURNAL'});
 });
+
+test('P3-3/P3-4: both clubs honor unexpired holds over real source fixtures',()=>{
+  const career=createInitialCareer(catalog,catalog.clubs[0].id,
+    77,'p3-two-team-holds-source2');
+  const opened=startM1V188LeagueJournal(career);
+  assert.ok(opened.ok);
+  let journal=opened.journal;
+  let blockedOwnFixtures=0,observedBans=0;
+  let medicalSourceFixtures=0,independentCollisions=0;
+  const unique=new Set();
+  for(let index=0;index<64;index++){
+    const inspected=inspectM1V188FictionalHolds(career,journal);
+    assert.ok(inspected.ok,'source history '+index);
+    assert.equal(inspected.journalRevision,index);
+    assert.equal(inspected.externalKdkAuthenticated,false);
+    assert.equal(inspected.officialClearanceAuthenticated,false);
+    // Upgrade one existing career to the already-supported v5 medical
+    // source, then keep v5 for all later fixtures (no downgrade).
+    const medicalPolicyVersion=index<16?undefined:5;
+    const prepared=prepareM1V188LeagueMatch(career,journal,[],
+      undefined,medicalPolicyVersion,undefined,2);
+    assert.ok(prepared?.ok,'prepare both clubs '+index);
+    assert.equal(prepared.externalMedicalAuthorityAuthenticated,false);
+    assert.equal(prepared.request.medicalPolicyVersion,medicalPolicyVersion);
+    if(medicalPolicyVersion===5){
+      medicalSourceFixtures++;
+      independentCollisions+=
+        prepared.request.autonomousMedicalOrigin?.length??0;
+    }
+    assert.equal(prepared.request.expectedRevision,index);
+    assert.equal(unique.has(prepared.fixture.id),false);
+    unique.add(prepared.fixture.id);
+    const pm=prepared.request.prematch;
+    for(const [teamId,lineup] of [
+      [prepared.fixture.homeClubId,pm.homeLineup],
+      [prepared.fixture.awayClubId,pm.awayLineup],
+    ]){
+      const barred=inspected.holds.filter(h=>h.clubId===teamId&&
+        (h.remainingOwnFixtures===null||h.remainingOwnFixtures>0));
+      const selected=new Set([...lineup.starters,...lineup.bench]);
+      assert.equal(selected.size,
+        lineup.starters.length+lineup.bench.length,
+        'No player may appear both in the XI and on the bench');
+      for(const hold of barred){
+        observedBans++;
+        assert.equal(selected.has(hold.playerId),false,
+          'Unexpired '+hold.reason+' cannot enter XI or bench for '+
+          teamId+' at fixture '+prepared.fixture.id);
+      }
+      if(barred.length)blockedOwnFixtures++;
+    }
+    const next=applyM1V188LeagueMatch(career,journal,prepared.request);
+    assert.ok(next.ok,'commit both-team fixture '+index);
+    assert.equal(next.journal.revision,index+1);
+    journal=next.journal;
+    if((index+1)%16===0)
+      assert.equal(validateM1V188LeagueJournal(career,
+        structuredClone(journal)).ok,true,
+      'Original source must replay at each 16-fixture boundary');
+  }
+  assert.ok(observedBans>0&&blockedOwnFixtures>0,
+    'A real positive cross-fixture suspension witness is mandatory');
+  assert.equal(medicalSourceFixtures,48);
+  assert.ok(independentCollisions>0,
+    'Integrated medical v5 must produce a real seeded collision');
+  assert.equal(unique.size,64);
+  assert.equal(validateM1V188LeagueJournal(career,
+    structuredClone(journal)).ok,true);
+  assert.equal(prepareM1V188LeagueMatch(career,journal,[],
+    [],undefined,undefined,2).error,'UNVERIFIED_EXTERNAL_DISCIPLINE',
+  'An empty unauthenticated official order feed cannot clear a hold');
+});

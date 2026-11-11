@@ -4,6 +4,16 @@ on:
   pull_request:
     paths:
       - 'scripts/m1-v188-season-diversity.mjs'
+      - 'src/app/M1LeagueSeason.tsx'
+      - 'src/app/ligaPrikolovPreviewCatalog.ts'
+      - 'src/core/m1-v188-league-source-journal.ts'
+      - 'src/core/m1-v188-condition.ts'
+      - 'src/core/m1-v188-conditioned-source.ts'
+      - 'src/core/m1-v190-experimental-special-goals.ts'
+      - 'src/core/m1-v103-intraphase-medical.ts'
+      - 'src/core/m1-v105-special-goal-chronology.ts'
+      - 'src/core/m1-v182-unified-source.ts'
+      - 'src/core/m1-v23-temporary-treatment.ts'
       - 'scripts/m1-p5-cohort-comparison.mjs'
       - 'data/research/rpl-2025-26-aggregate-reference.json'
       - 'tests/m1-p5-cohort-comparison.test.mjs'
@@ -43,6 +53,7 @@ jobs:
         run: |
           SEEDS=$(node -e 'const s=Number(process.argv[1]); process.stdout.write([0,1,2,3].map(i=>11+120*s+30*i).join(","))' "$SHARD")
           node scripts/m1-v188-season-diversity.mjs \
+            --medical-source=5 \
             --special-goal-source=2 \
             --seeds="$SEEDS" \
             --output=new-career-v191-hypothesis.json
@@ -58,6 +69,7 @@ jobs:
             const shard=Number(process.env.SHARD);
             assert.deepEqual(j.seeds,[0,1,2,3].map(i=>11+120*shard+30*i));
             assert.equal(j.specialGoalSourceVersion,2);
+            assert.equal(j.medicalPolicyVersion,5);
             assert.equal(j.sampleSize,4);
             assert.equal(j.catalogId,"liga-prikolov-preview");
             assert.ok(j.results.every(r=>r.fixtureCount===240));
@@ -65,7 +77,8 @@ jobs:
             assert.equal(j.independentExternalRateComparison,false);
             assert.equal(j.uniqueResultDigests,4);
             const metrics=["goals","openPlayGoals","penaltiesTaken","penaltyGoals",
-              "ownGoalsFor","shots","cautions","straightReds",
+              "ownGoalsFor","shots","shotsOnTarget","openPlayXgMilli",
+              "cautions","straightReds",
               "secondYellowDismissals","fictionalInjuryWithdrawals"];
             const lines=["## Current playable-source shard "+shard+" (4 × 240)",
               "Source-2 original game engine; no separate research model.",
@@ -111,6 +124,7 @@ jobs:
           from pathlib import Path
 
           results = []
+          outcomes = []
           seen = set()
           hashes = set()
           for shard in range(12):
@@ -120,6 +134,7 @@ jobs:
               assert data["sampleSize"] == 4
               assert data["seeds"] == expected
               assert data["specialGoalSourceVersion"] == 2
+              assert data["medicalPolicyVersion"] == 5
               assert data["catalogId"] == "liga-prikolov-preview"
               assert data["refereeEventAuthorityAuthenticated"] is False
               assert data["independentExternalRateComparison"] is False
@@ -134,8 +149,14 @@ jobs:
                   assert totals["goals"] == result["totalGoals"]
                   assert totals["goals"] == totals["openPlayGoals"] + totals["penaltyGoals"] + totals["ownGoalsFor"]
                   assert totals["penaltyGoals"] <= totals["penaltiesTaken"]
-                  assert result["outcomeTotals"]["matches"] == 240
+                  outcome = result["outcomeTotals"]
+                  assert outcome["matches"] == 240
+                  assert outcome["homeWins"] + outcome["draws"] + outcome["awayWins"] == 240
+                  assert outcome["homeGoals"] + outcome["awayGoals"] == totals["goals"]
+                  assert totals["shotsOnTarget"] <= totals["shots"]
+                  assert isinstance(totals["openPlayXgMilli"], int) and totals["openPlayXgMilli"] >= 0
                   results.append(totals)
+                  outcomes.append(outcome)
           assert len(results) == len(seen) == len(hashes) == 48
           assert len(results) * 240 == 11520
           reference = json.loads(Path("data/research/rpl-2025-26-aggregate-reference.json").read_text())
@@ -146,9 +167,10 @@ jobs:
           assert taxonomy["metrics"]["goals"]["maxRelativeDeviation"] == 0.20
           assert all(definition["status"] == "EXCLUDED"
                      for metric, definition in taxonomy["metrics"].items() if metric != "goals")
-          metrics = ("goals", "openPlayGoals", "shots", "penaltiesTaken",
-                     "penaltyGoals", "ownGoalsFor", "cautions",
-                     "straightReds", "secondYellowDismissals", "fictionalInjuryWithdrawals")
+          metrics = ("goals", "openPlayGoals", "shots", "shotsOnTarget",
+                     "openPlayXgMilli", "penaltiesTaken", "penaltyGoals",
+                     "ownGoalsFor", "cautions", "straightReds",
+                     "secondYellowDismissals", "fictionalInjuryWithdrawals")
           summary = {}
           for metric in metrics:
               values = [row[metric] for row in results]
@@ -160,11 +182,23 @@ jobs:
                   "min": min(values), "max": max(values),
                   "comparableToExternalReference": metric == "goals",
               }
+          outcome_summary = {}
+          for metric in ("homeWins", "draws", "awayWins", "scorelessDraws",
+                         "homeGoals", "awayGoals"):
+              values = [row[metric] for row in outcomes]
+              mean = statistics.mean(values)
+              margin = 2.012 * statistics.stdev(values) / math.sqrt(len(values))
+              outcome_summary[metric] = {
+                  "per240MatchSeasonMean": round(mean, 3),
+                  "wholeCareerCluster95Interval": [round(max(0, mean-margin), 3), round(mean+margin, 3)],
+                  "min": min(values), "max": max(values),
+                  "comparableToExternalReference": False,
+              }
           goal_reference = reference["totals"]["goals"]
           goal_delta = summary["goals"]["per240MatchSeasonMean"] / goal_reference - 1
           report = {
               "status": "P5_CANDIDATE_REPRODUCIBLE_NOT_ACCEPTED",
-              "existingEngine": "v188 journal + v191 source2",
+              "existingEngine": "v188 journal + v191 source2 + medical v5",
               "careerSeeds": sorted(seen),
               "careerClusters": 48,
               "independentFixtureOutputs": 11520,
@@ -173,6 +207,7 @@ jobs:
               "goalsRelativeDifference": round(goal_delta, 4),
               "withinFrozenGoalsDevelopmentTolerance": abs(goal_delta) <= 0.20,
               "metrics": summary,
+              "outcomes": outcome_summary,
               "limit": "Only all-type goals are definition-comparable; remaining categories require independent alignment.",
           }
           Path("current-playable-source-11520.json").write_text(json.dumps(report, indent=2) + "\n")
@@ -181,7 +216,8 @@ jobs:
                   f"All-type goals mean per season: {summary['goals']['per240MatchSeasonMean']}",
                   f"Whole-career 95% interval: {summary['goals']['wholeCareerCluster95Interval']}",
                   f"2025/26 goal-only development tolerance: {report['withinFrozenGoalsDevelopmentTolerance']}",
-                  "Shots, cards, injuries and penalties recorded but NOT definition-harmonized.",
+                  "H/D/A, 0-0 and home/away goals: " + str({k:v["per240MatchSeasonMean"] for k,v in outcome_summary.items()}),
+                  "Open-play xG, shots/target, cards, injuries and penalties recorded separately but NOT category-harmonized.",
                   "No 2024/25 holdout; no P5-2 or release acceptance implied."]
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as output:
               output.write("\n".join(text) + "\n")

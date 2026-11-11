@@ -114,6 +114,18 @@ function verifyArchive(json, careerId, snapshot) {
   assert.ok(journal.entries.every(entry=>
     entry.source.specialGoalSourceVersion===2),
   'New career silently fell back to pre-special-goal source');
+  assert.ok(journal.entries.every(entry=>
+    entry.source.medicalPolicyVersion===5 &&
+    Array.isArray(entry.source.autonomousMedicalOrigin)),
+  'New career silently fell back from the existing medical v5 source');
+  const medicalCollisions=journal.entries.reduce((n,entry)=>
+    n+entry.source.autonomousMedicalOrigin.length,0);
+  assert.ok(medicalCollisions>0,
+    'Full playable career contains no verified v5 medical collision');
+  console.log('PLAYABLE_MEDICAL_V5_CENSUS '+JSON.stringify({
+    matches:TOTAL,modelledIndependentCollisions:medicalCollisions,
+    externalClinicalAuthorityAuthenticated:false,
+  }));
   let penalties=0,ownGoals=0,scoredPenalties=0;
   for(const entry of journal.entries){
     const accepted=entry.result.events.filter(event=>

@@ -88,3 +88,27 @@ stoppage and numerical-strength cases.
 Therefore P3-2 **OPEN** and M1 **OPEN**, even after exact-head CI.
 P3-3/P3-4/P5 remain independent acceptance blocks; M2 prohibited,
 2024/25 holdout SEALED, repository-wide exit audits still 0/2.
+
+## New-career playable integration (source v5; existing model)
+
+New playable browser careers now opt into the **already implemented** v188
+`medicalPolicyVersion:5` at their first fixture, alongside the existing
+source-2 goal generator. After the first commit, the UI uses that **stored
+first-entry source version** for the remaining fixtures, while older careers
+retain their original unversioned/v2/v3/v4 medical replay and saved bytes.
+A career that has already explicitly upgraded to v5 remains monotonic by
+the canonical journal source reader. There is no schema migration, new
+medical clock/engine, custom client claim, random override or external
+diagnosis.
+
+The existing **full 240-fixture real browser season** acceptance harness
+verifies that *every* saved new-career fixture has version 5 and a
+replay-authenticated origin array, and requires at least one actual
+autonomous collision. The same archive already must fully restore after
+deletion in native Chrome, Edge and Safari. It does not mislabel a
+fictional source witness as independent clinical/referee authority.
+
+**P3-2 remains OPEN:** serious injury/concussion/penalty-taker exceptions,
+authentic clinical discharge, and direct integration of independent v5
+whistle into the persisted physical event stream still require evidence.
+P3-3/P3-4 and P5 final-source validation remain separate obligations.

@@ -57,13 +57,15 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   readonly onCareerStored:()=>void;
 }){
   const [journal,setJournal]=useState<M1V188Journal|null>(null);
-  // New careers use the experimental sourced-penalty model. An already
-  // started career keeps the first entry's source model for all 240 fixtures.
+  // Only brand-new careers opt into the existing internally generated
+  // medical v5 and source-2 goal model. Preserve both source versions
+  // from the first played fixture when reopening historical careers.
   const prepareSource=(saved:M1V188Journal,manager:unknown=[],
-    selection:unknown=undefined,coaching:unknown=[])=>
+    selection:unknown=undefined,coaching:unknown[])=>
     prepareM1V188LeagueMatch(career,saved,manager,
-      undefined,undefined,selection,
-      saved.revision===0?
+      undefined,saved.revision===0?
+        5:saved.entries[0]?.source.medicalPolicyVersion,
+      selection,saved.revision===0?
         2:saved.entries[0]?.source.specialGoalSourceVersion,coaching);
   const [preview,setPreview]=useState<Ready|null>(null);
   const [halfTime,setHalfTime]=useState<Ready|null>(null);

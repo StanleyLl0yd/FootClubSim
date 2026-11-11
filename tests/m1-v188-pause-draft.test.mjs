@@ -39,6 +39,8 @@ test('forged, malformed, cross-career, stale and backdated drafts fail closed',(
   tamper(x=>{x.fixtureId='fake';});
   tamper(x=>{x.careerId='fake';});
   tamper(x=>{x.playedPrefix[0].sequence=999;});
+  tamper(x=>{x.prematchWitness.rngSeed=999;});
+  tamper(x=>{x.commandPrefix=[{kind:'forged',elapsedSeconds:300}];});
   tamper(x=>{x.pauseMinute=50;});
   tamper(x=>{x.expectedRevision=1;});
   tamper(x=>{x.coachingChoices=[{
@@ -73,5 +75,13 @@ test('previous coaching changes are preserved but cannot be retroedited',()=>{
     initial,journal,draft)?.proposal.request.inMatchOrdersVersion,1);
   const forged=structuredClone(draft);
   forged.coachingChoices[0].plan.mentality=-2;
-  assert.equal(recoverM1V188PauseDraft(initial,journal,forged),null);
+  assert.equal(recoverM1V188PauseDraft(initial,journal,forged),null,
+    'historical coaching commands must match the witnessed source '+
+    'even if past event outcomes happen to be numerically identical');
+  const forgedCommand=structuredClone(draft);
+  assert.ok(forgedCommand.commandPrefix.some(c=>c.kind==='set-tactics'));
+  forgedCommand.commandPrefix.find(c=>c.kind==='set-tactics')
+    .plan.mentality=-2;
+  assert.equal(recoverM1V188PauseDraft(
+    initial,journal,forgedCommand),null);
 });

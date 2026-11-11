@@ -4,6 +4,7 @@ import {prepareM1V188LeagueMatch,
   type M1V188Journal,type M1V188ManagedXI,
   type M1V188Proposal} from './m1-v188-league-source-journal.js';
 import type {M1V105Run} from './m1-v105-special-goal-chronology.js';
+import type {M1PrematchInput} from './m1-clock.js';
 import type {InitialCareerSave} from './save.js';
 
 type Ready=Extract<M1V188Proposal,{ok:true}>;
@@ -15,7 +16,8 @@ export type M1V188PauseDraft=Readonly<{
   expectedRevision:number;pauseMinute:number;
   managedXI?:M1V188ManagedXI;
   substitutions:readonly unknown[];coachingChoices:readonly unknown[];
-  playedPrefix:readonly unknown[];
+  prematchWitness:Readonly<Record<string,unknown>>;
+  commandPrefix:readonly unknown[];playedPrefix:readonly unknown[];
 }>;
 export type M1V188RecoveredPause=Readonly<{
   draft:M1V188PauseDraft;proposal:Ready;
@@ -23,13 +25,31 @@ export type M1V188RecoveredPause=Readonly<{
 const record=(x:unknown):x is Record<string,unknown>=>
   x!==null&&typeof x==='object'&&!Array.isArray(x);
 const keys=['schemaVersion','careerId','fixtureId','expectedRevision',
-  'pauseMinute','substitutions','coachingChoices','playedPrefix'];
+  'pauseMinute','substitutions','coachingChoices',
+  'prematchWitness','commandPrefix','playedPrefix'];
 const validMinute=(m:unknown):m is number=>
   Number.isSafeInteger(m)&&(m as number)>=5&&(m as number)<=85&&
   (m as number)%5===0;
 const played=(proposal:Ready,second:number)=>
   (proposal.request.result as Good).events.filter(e=>
     e.elapsedSeconds<second);
+const sourcePrematch=(proposal:Ready)=>{
+  const input=proposal.request.prematch as M1PrematchInput;
+  return {
+    fixture:input.fixture,
+    homeLineup:input.homeLineup,awayLineup:input.awayLineup,
+    homeTactics:input.homeTactics,awayTactics:input.awayTactics,
+    rngSeed:input.rngSeed,rngAlgorithmVersion:input.rngAlgorithmVersion,
+    engineVersion:input.engineVersion,
+    rulesPackId:input.rulesPackId,rulesPackVersion:input.rulesPackVersion,
+    rosterRules:input.rosterRules,
+  };
+};
+const beforeCommands=(proposal:Ready,second:number)=>
+  proposal.request.plannedCommands.filter(c=>record(c)&&
+    Number.isSafeInteger(c.elapsedSeconds)&&
+    (c.elapsedSeconds as number)<second);
+
 const validEnvelope=(raw:unknown):raw is M1V188PauseDraft=>{
   if(!isPlainJsonTree(raw)||!record(raw))return false;
   const expected=Object.hasOwn(raw,'managedXI')?
@@ -46,6 +66,9 @@ const validEnvelope=(raw:unknown):raw is M1V188PauseDraft=>{
       !Array.isArray(raw.substitutions)||raw.substitutions.length>5||
       !Array.isArray(raw.coachingChoices)||
       raw.coachingChoices.length>10||
+      !record(raw.prematchWitness)||
+      !Array.isArray(raw.commandPrefix)||
+      raw.commandPrefix.length>1500||
       !Array.isArray(raw.playedPrefix)||
       raw.playedPrefix.length>1500)return false;
   const stop=(raw.pauseMinute as number)*60;
@@ -82,6 +105,8 @@ export function createM1V188PauseDraft(
     ...(proposal.request.managedXI?
       {managedXI:proposal.request.managedXI}:{}),
     substitutions:[...substitutions],coachingChoices:[...coachingChoices],
+    prematchWitness:sourcePrematch(proposal),
+    commandPrefix:beforeCommands(proposal,pauseMinute*60),
     playedPrefix:played(proposal,pauseMinute*60),
   });
 }
@@ -103,6 +128,9 @@ export function recoverM1V188PauseDraft(
   if(!restored?.ok||!restored.selectedClubFixture||
       restored.fixture.id!==draft.fixtureId||
       restored.request.expectedRevision!==draft.expectedRevision||
+      !sameCanonicalValue(sourcePrematch(restored),draft.prematchWitness)||
+      !sameCanonicalValue(beforeCommands(restored,draft.pauseMinute*60),
+        draft.commandPrefix)||
       !sameCanonicalValue(
         played(restored,draft.pauseMinute*60),draft.playedPrefix))
     return null;

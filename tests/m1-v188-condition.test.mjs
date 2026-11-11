@@ -12,6 +12,8 @@ import {advanceM1V188Condition,deriveM1V188Condition,
   from '../dist/core/m1-v188-condition.js';
 import {selectM1V96EligibleRegisteredLineup}
   from '../dist/core/m1-v96-cap-safe-lineup.js';
+import {deriveM1V188ConditionedMatchInput}
+  from '../dist/core/m1-v188-conditioned-source.js';
 
 const catalog=createSyntheticRplScaleCatalog(2026);
 const initial=createInitialCareer(catalog,catalog.clubs[0].id,
@@ -24,12 +26,12 @@ const players=new Map(catalog.players.map(p=>[p.id,p]));
 test('fixture recovery, exact minutes workload, and bounded condition',()=>{
   const proposal=prepareM1V188LeagueMatch(initial,empty.journal);
   assert.ok(proposal?.ok);
-  assert.equal(proposal.request.conditionPolicyVersion,1);
+  assert.equal(proposal.request.conditionPolicyVersion,2);
   const stored=applyM1V188LeagueMatch(initial,empty.journal,proposal.request);
   assert.equal(stored.ok,true);
   if(!stored.ok)return;
   const entry=stored.journal.entries[0];
-  assert.equal(entry.source.conditionPolicyVersion,1);
+  assert.equal(entry.source.conditionPolicyVersion,2);
   const start=startM1V188Condition(initial);
   const after=advanceM1V188Condition(initial,start,entry);
   assert.ok(after);
@@ -64,7 +66,7 @@ test('cross-round automatic XI rotates by source minutes; full replay holds',()=
   for(let index=0;index<10;index++){
     const proposal=prepareM1V188LeagueMatch(initial,journal);
     assert.ok(proposal?.ok,'fixture '+index);
-    assert.equal(proposal.request.conditionPolicyVersion,1);
+    assert.equal(proposal.request.conditionPolicyVersion,2);
     assert.equal(proposal.request.expectedRevision,index);
     const verified=applyM1V188LeagueMatch(initial,journal,proposal.request);
     assert.equal(verified.ok,true,'fixture '+index);
@@ -117,7 +119,7 @@ test('versioned condition cannot be downgraded after a committed fixture',()=>{
   assert.equal(rejected.ok,false);
   assert.equal(rejected.error,'SOURCE_MISMATCH');
   const malformed=structuredClone(next.request);
-  malformed.conditionPolicyVersion=2;
+  malformed.conditionPolicyVersion=3;
   assert.equal(applyM1V188LeagueMatch(initial,first.journal,malformed).ok,
     false);
 });
@@ -132,5 +134,36 @@ test('historical prefix without a condition flag still replays as legacy',()=>{
   assert.equal(validateM1V188LeagueJournal(initial,legacy).ok,true);
   const continued=prepareM1V188LeagueMatch(initial,legacy);
   assert.ok(continued?.ok);
-  assert.equal(continued.request.conditionPolicyVersion,1);
+  assert.equal(continued.request.conditionPolicyVersion,2);
+});
+
+test('conditioned source lowers effective ability without mutating catalog',()=>{
+  const proposal=prepareM1V188LeagueMatch(initial,empty.journal);
+  assert.ok(proposal?.ok);
+  const prematch=proposal.request.prematch;
+  const before=JSON.stringify(prematch);
+  const state=startM1V188Condition(initial);
+  const first=prematch.homeLineup.starters[1];
+  state.set(first,35);
+  const adjusted=deriveM1V188ConditionedMatchInput(prematch,state);
+  assert.ok(adjusted);
+  const original=players.get(first);
+  const effective=adjusted.catalog.players.find(p=>p.id===first);
+  assert.ok(original&&effective);
+  assert.ok(effective.attributes.finishing<=original.attributes.finishing);
+  assert.ok(Object.keys(original.attributes).some(key=>
+    !['naturalFitness','leadership','teamwork','aggression'].includes(key)&&
+    effective.attributes[key]<original.attributes[key]),
+  'lower condition must reduce at least one effective skill');
+  assert.equal(effective.attributes.naturalFitness,
+    original.attributes.naturalFitness);
+  assert.equal(adjusted.catalog.packId,prematch.catalog.packId);
+  assert.equal(JSON.stringify(prematch),before);
+  assert.deepEqual(initial.catalog,catalog,
+    'career import may reorder object keys but must preserve catalog values');
+  assert.deepEqual(deriveM1V188ConditionedMatchInput(prematch,state),
+    adjusted);
+  const illegal=new Map(state);
+  illegal.set(first,-1);
+  assert.equal(deriveM1V188ConditionedMatchInput(prematch,illegal),null);
 });

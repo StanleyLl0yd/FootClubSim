@@ -28,12 +28,29 @@ Implementation: `src/core/m1-v188-condition.ts`, `src/core/m1-v188-league-source
   verified journal history. The original M0 catalog, career seed, journal
   schema 188, source engine, match commands and storage CAS are unchanged.
 
+## Version 2: source-verified effective match performance
+
+Future prepared matches now use `conditionPolicyVersion: 2`. The source
+generator, special-goal engine and their independent source replay receive a
+**transient** effective-ability projection for both sides: lower readiness
+reduces relevant football attributes by at most 19.5% before rounding.
+Natural fitness, leadership, teamwork and aggression retain their original
+catalog values; player identity, contract, roster and recovery do not mutate.
+The original, unadjusted M0 catalog is still the only catalog accepted in
+the authenticated v188 request and stored source prematch. The generator's
+projection is computed again, rather than read from an untrusted saved field.
+
+The original PR #521 introduced condition source v1 (automatic rotation).
+This follow-up permits monotonic 1 → 2 upgrades, never 2 → 1, and
+replays both versions exactly. A saved v1 fixture does not acquire v2
+match penalties retroactively. No stochastic draws are added.
+
 ## Replay and compatibility
 
 The condition flag is optional on **legacy** v188 entries, so earlier
 careers replay under their exact source model. A newly prepared match opts
-into v1 condition; after the first v1 entry, subsequent entries may not
-downgrade to legacy. Full replay of every entry verifies the lineup used
+into v2 condition; after the first v1 or v2 entry, subsequent entries
+may not downgrade. Earlier v1 entries still replay by v1 rules. Full replay of every entry verifies the lineup used
 against the condition state from **its preceding verified fixtures**.
 Commit verification recomputes both the result and the condition transition;
 it never trusts a posted condition score. Cached verified prefixes bind the
@@ -44,9 +61,9 @@ state. Any broken physical chronology fails closed.
 
 This is a provisional **fixture-step** model. It is not measured calendar
 days, travel/training stress, diagnosis, official injury clearance, a
-clinical suspension or licensed real-world match calibration. It does not
-model full in-match physical performance degradation, morale or official
-post-match injury recovery. It is not M1-P4 acceptance in isolation.
+clinical suspension or licensed real-world match calibration. It does not model minute-by-minute
+performance deterioration within a match, morale or official post-match
+injury recovery. It is not M1-P4 acceptance in isolation.
 
 Verification gates include unit tests for minutes-driven condition,
 recovery, roster rotation, replay, immutable legacy prefixes, downgrade and

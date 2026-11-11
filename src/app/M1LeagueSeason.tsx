@@ -5,6 +5,9 @@ import {LigaClubLabel} from './LigaClubLabel.js';
 import {deriveM1V188Champion} from '../core/m1-v188-championship.js';
 import {deriveM1V188CheckpointScore,sameM1V188CheckpointPrefix}
   from '../core/m1-v188-half-time.js';
+import {inspectM1V188PauseSubstitutions,
+  type M1V188PauseSubstitutionChoice}
+  from '../core/m1-v188-pause-substitutions.js';
 import {inspectM1V188ClubCondition}
   from '../core/m1-v188-condition.js';
 import {deriveM1V188RememberedXI} from '../core/m1-v188-manager-defaults.js';
@@ -62,6 +65,11 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const [pauseMinute,setPauseMinute]=useState(45);
   const [nextPauseMinute,setNextPauseMinute]=useState(60);
   const [inGameChoices,setInGameChoices]=useState<unknown[]>([]);
+  const [inGameSubstitutions,setInGameSubstitutions]=
+    useState<M1V188PauseSubstitutionChoice[]>([]);
+  const [pauseSubEnabled,setPauseSubEnabled]=useState(false);
+  const [pauseOutId,setPauseOutId]=useState('');
+  const [pauseInId,setPauseInId]=useState('');
   const [busy,setBusy]=useState(false);
   const [advancing,setAdvancing]=useState(false);
   const [managerSetup,setManagerSetup]=useState<Ready|null>(null);
@@ -183,6 +191,17 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const halfTimeScore=halfTime&&halfTimeInput?
     deriveM1V188CheckpointScore(halfTimeInput,
       halfTime.request.result as Good,pauseMinute*60):null;
+  const pauseSubOptions=halfTime?inspectM1V188PauseSubstitutions(
+    halfTime,career.selectedClubId,pauseMinute*60):null;
+  const pauseOutOptions=[...new Set((pauseSubOptions?.pairs??[])
+    .map(pair=>pair.outPlayerId))];
+  const actualPauseOut=pauseOutOptions.includes(pauseOutId)?
+    pauseOutId:pauseOutOptions[0]??'';
+  const pauseInOptions=(pauseSubOptions?.pairs??[])
+    .filter(pair=>pair.outPlayerId===actualPauseOut)
+    .map(pair=>pair.inPlayerId);
+  const actualPauseIn=pauseInOptions.includes(pauseInId)?
+    pauseInId:pauseInOptions[0]??'';
   // A read-only pitch preview. The tactical formation is persisted in v188,
   // while individual player-to-slot assignments are not yet modelled.
   const boardGoalkeeper=starterIds.find(id=>
@@ -219,7 +238,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   async function connect():Promise<void>{
     if(busy||disabled)return;
     setBusy(true);setPreview(null);setHalfTime(null);
-    setInGameChoices([]);setManagerSetup(null);
+    setInGameChoices([]);setInGameSubstitutions([]);
+    setPauseSubEnabled(false);setManagerSetup(null);
     setXiSetup(null);setStarterIds([]);
     setCoachEnabled(false);setFocusEnabled(false);
     setForceAutoXI(false);setMatchInspectId('');
@@ -316,6 +336,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       setCoachMentality(tactics.mentality);
       setCoachPressing(tactics.pressing);setCoachTempo(tactics.tempo);
       setHalfTime(prepared);setInGameChoices([]);
+      setInGameSubstitutions([]);setPauseSubEnabled(false);
+      setPauseOutId('');setPauseInId('');
       setNextPauseMinute(Math.min(85,pauseMinute+15));
       setManagerSetup(null);
       setStatus('Матч рассчитан до выбранной паузы. '+
@@ -333,7 +355,21 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     }
     try{
       const choices=[...inGameChoices,...coachingChoices];
-      const prepared=prepareSource(journal,[],
+      if(pauseSubEnabled&&(!pauseSubOptions?.canSubstitute||
+          !actualPauseOut||!actualPauseIn||
+          !pauseSubOptions.pairs.some(p=>
+            p.outPlayerId===actualPauseOut&&
+            p.inPlayerId===actualPauseIn))){
+        setStatus('Замена не разрешена на этой остановке. '+
+          'Сохранение не изменено.');
+        return;
+      }
+      const changes:M1V188PauseSubstitutionChoice[]=[
+        ...inGameSubstitutions,
+        ...(pauseSubEnabled?[{outPlayerId:actualPauseOut,
+          inPlayerId:actualPauseIn,elapsedSeconds:pauseMinute*60}]:[]),
+      ];
+      const prepared=prepareSource(journal,changes,
         halfTime.request.managedXI,choices);
       if(!prepared?.ok){
         setStatus('Продолжение матча отклонено: '+
@@ -352,14 +388,17 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         return;
       }
       if(nextMinute!==null){
-        setInGameChoices(choices);setHalfTime(prepared);
+        setInGameChoices(choices);setInGameSubstitutions(changes);
+        setPauseSubEnabled(false);setPauseOutId('');setPauseInId('');
+        setHalfTime(prepared);
         setPauseMinute(nextMinute);
         setNextPauseMinute(Math.min(85,nextMinute+15));
         setCoachEnabled(false);setFocusEnabled(false);
         setStatus('Игра продолжена до '+nextMinute+'-й минуты. '+
           'Предыдущие события не изменены. Можно дать новый приказ.');
       }else{
-        setInGameChoices([]);setHalfTime(null);setPreview(prepared);
+        setInGameChoices([]);setInGameSubstitutions([]);
+        setPauseSubEnabled(false);setHalfTime(null);setPreview(prepared);
         setStatus('Матч завершён без изменения сыгранного отрезка. '+
           'Проверьте результат перед сохранением.');
       }
@@ -372,6 +411,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     const expected=journal.revision;
     const request=preview.request;
     setBusy(true);setPreview(null);setInGameChoices([]);
+    setInGameSubstitutions([]);setPauseSubEnabled(false);
     try{
       const updated=await commitM1V188PersistedLeagueMatch(
         career.careerId,expected,request);
@@ -482,7 +522,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     const plan=planM1V188NextOwnMatch(career,start);
     if(!plan||plan.automaticMatches===0)return;
     setAdvancing(true);setPreview(null);setHalfTime(null);
-    setInGameChoices([]);setManagerSetup(null);setXiSetup(null);
+    setInGameChoices([]);setInGameSubstitutions([]);
+    setPauseSubEnabled(false);setManagerSetup(null);setXiSetup(null);
     setStatus('Автоматически рассчитываются матчи остальных клубов.');
     stopRequested.current=false;
     try{
@@ -957,6 +998,42 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 </label>
               </>}
             </div>}
+            <div className="season-substitution">
+              <label><input id="season-pause-replace" type="checkbox"
+                checked={pauseSubEnabled}
+                disabled={!pauseSubOptions?.canSubstitute}
+                onChange={e=>setPauseSubEnabled(e.target.checked)}/>
+                {' '}Заменить игрока на этой остановке</label>
+              {pauseSubOptions?.canSubstitute&&pauseSubEnabled&&
+                <div className="season-sub-fields">
+                  <label htmlFor="season-pause-out">Уходит с поля
+                    <select id="season-pause-out" value={actualPauseOut}
+                      onChange={e=>{setPauseOutId(e.target.value);
+                        setPauseInId('');}}>
+                      {pauseOutOptions.map(id=><option key={id} value={id}>
+                        {playerNames.get(id)??id}</option>)}
+                    </select>
+                  </label>
+                  <label htmlFor="season-pause-in">Выходит на поле
+                    <select id="season-pause-in" value={actualPauseIn}
+                      onChange={e=>setPauseInId(e.target.value)}>
+                      {pauseInOptions.map(id=><option key={id} value={id}>
+                        {playerNames.get(id)??id}</option>)}
+                    </select>
+                  </label>
+                </div>}
+              {!pauseSubOptions?.canSubstitute&&
+                <p className="subtle" role="status">
+                  {pauseSubOptions?.reason==='NO_REFEREE_STOP'?
+                    'На этой минуте нет подтверждённой остановки судьи. '+
+                    'Тактические указания доступны без замены.':
+                    'На этой остановке больше нет допустимых замен.'}
+                </p>}
+              {pauseSubOptions?.canSubstitute&&<p className="subtle">
+                Использовано замен: {pauseSubOptions.usedSubstitutions} из 5.
+                Замена допускается только после проверки игрового протокола.
+              </p>}
+            </div>
             <p className="subtle">Изменения вступают в силу на
               {' '}{pauseMinute}-й минуте. Уже сыгранные эпизоды
               остаются неизменными.</p>
@@ -980,6 +1057,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 onClick={()=>finishHalfTime(null)}>До финального свистка</button>
               <button type="button" className="secondary-button"
                 onClick={()=>{setHalfTime(null);setInGameChoices([]);
+                  setInGameSubstitutions([]);setPauseSubEnabled(false);
                   setCoachEnabled(false);setFocusEnabled(false);
                   setStatus('Перерыв отменён. Сохранение не изменено.');}}>
                 Отменить просмотр
@@ -1015,7 +1093,12 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           {preview.request.plannedCommands.some(command=>
             command!==null&&typeof command==='object'&&
             'kind' in command&&command.kind==='substitute-normal')&&
-            <p className="subtle">Замена в перерыве включена в расчёт матча.</p>}
+            <p className="subtle">{preview.request.plannedCommands.some(
+              command=>command!==null&&typeof command==='object'&&
+                'kind' in command&&command.kind==='substitute-normal'&&
+                'elapsedSeconds' in command&&command.elapsedSeconds!==2700)?
+                'Замена по ходу матча включена в проверяемый протокол.':
+                'Замена в перерыве включена в расчёт матча.'}</p>}
           <div className="button-stack">
             <button type="button" disabled={busy||disabled}
               onClick={()=>void commit()}>Подтвердить и сохранить</button>

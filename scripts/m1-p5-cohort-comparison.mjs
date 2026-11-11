@@ -36,6 +36,22 @@ export function describeM1P5CohortVersusReference(cohort,reference){
      cohort.refereeEventAuthorityAuthenticated!==false||
      cohort.independentExternalRateComparison!==false)
     invalid('source provenance and limitations must remain explicit');
+  const metricContract=reference.taxonomy;
+  if(metricContract?.status!==
+       'FROZEN_DEVELOPMENT_COMPARISON_BEFORE_NEXT_FINAL_ENGINE_FIT'||
+      metricContract.engineSpecialGoalSourceVersion!==2||
+      metricContract.holdout2024_25Used!==false||
+      !metricContract.referenceRights?.includes('aggregate facts')||
+      METRICS.some(k=>!metricContract.metrics?.[k]||
+        !['COMPARABLE','EXCLUDED'].includes(
+          metricContract.metrics[k].status))||
+      metricContract.metrics.goals.status!=='COMPARABLE'||
+      metricContract.metrics.goals.maxRelativeDeviation!==0.20||
+      METRICS.filter(k=>k!=='goals').some(k=>
+        metricContract.metrics[k].status!=='EXCLUDED')||
+      ['shotsOnTarget','xg','injuries','homeDrawAway'].some(k=>
+        metricContract.metrics[k]?.status!=='EXCLUDED'))
+    invalid('missing or unsupported frozen source taxonomy');
   const results=cohort.results.map((r,index)=>{
     if(!r||r.seed!==cohort.seeds[index]||r.fixtureCount!==240||
        !r.eventTotals||!integer(r.totalGoals))
@@ -59,7 +75,16 @@ export function describeM1P5CohortVersusReference(cohort,reference){
   const metrics=Object.fromEntries(METRICS.map(k=>{
     const observed=results.map(r=>r.metrics[k]);
     const average=mean(observed),referenceTotal=reference.totals[k];
-    return [k,{referenceTotal,
+    // Only v191+ all-type goals are definition-aligned; numerical proximity
+    // cannot turn excluded event categories into acceptance evidence.
+    const contract=metricContract.metrics[k];
+    const comparable=contract.status==='COMPARABLE'&&
+      cohort.specialGoalSourceVersion===2;
+    return [k,{referenceTotal,comparable,
+      comparisonReason:comparable?null:
+        (contract.reason??'Model source is not the frozen all-type source'),
+      withinPredeclaredTolerance:comparable?
+        Math.abs(average/referenceTotal-1)<=contract.maxRelativeDeviation:null,
       observedTotals:observed,
       observedMean:Number(average.toFixed(4)),
       observedSeedMean95Interval:seededMean95Interval(observed),

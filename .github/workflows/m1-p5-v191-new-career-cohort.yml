@@ -1,23 +1,26 @@
-name: Four v191 shot-hypothesis new-career seasons
+name: M1 P5 playable source 11,520-match cohort
 
 on:
   pull_request:
     paths:
       - 'scripts/m1-v188-season-diversity.mjs'
-      - 'src/core/m1-v188-league-source-journal.ts'
-      - 'src/core/m1-v190-experimental-special-goals.ts'
-      - 'src/core/m1-v103-intraphase-medical.ts'
-      - 'src/core/m1-v105-special-goal-chronology.ts'
+      - 'scripts/m1-p5-cohort-comparison.mjs'
+      - 'data/research/rpl-2025-26-aggregate-reference.json'
+      - 'tests/m1-p5-cohort-comparison.test.mjs'
       - '.github/workflows/m1-p5-v191-new-career-cohort.yml'
   workflow_dispatch:
 
 permissions: {}
 
 jobs:
-  four-special-goal-seasons:
-    name: Four source-replayed v191 candidate seasons
+  source2-seasons:
+    name: Source-2 full seasons (shard ${{ matrix.shard }})
     runs-on: ubuntu-24.04
     timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     permissions:
       contents: read
     steps:
@@ -32,40 +35,162 @@ jobs:
           package-manager-cache: false
       - name: Install locked dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Build domain modules
+      - name: Build existing game engine
         run: npm run build:core
-      - name: Replay four complete new careers with source-2 shot hypothesis
+      - name: Four independent complete careers from unchanged v191 source
+        env:
+          SHARD: ${{ matrix.shard }}
         run: |
+          SEEDS=$(node -e 'const s=Number(process.argv[1]); process.stdout.write([0,1,2,3].map(i=>11+120*s+30*i).join(","))' "$SHARD")
           node scripts/m1-v188-season-diversity.mjs \
             --special-goal-source=2 \
-            --seeds=11,41,71,101 \
+            --seeds="$SEEDS" \
             --output=new-career-v191-hypothesis.json
-      - name: Summarize provisional evidence (not a calibration gate)
+      - name: Verify the shard's full-season source and report
         shell: bash
+        env:
+          SHARD: ${{ matrix.shard }}
         run: |
           node --input-type=module -e '
             import {readFileSync,appendFileSync} from "node:fs";
             import assert from "node:assert/strict";
             const j=JSON.parse(readFileSync("new-career-v191-hypothesis.json","utf8"));
+            const shard=Number(process.env.SHARD);
+            assert.deepEqual(j.seeds,[0,1,2,3].map(i=>11+120*shard+30*i));
             assert.equal(j.specialGoalSourceVersion,2);
             assert.equal(j.sampleSize,4);
+            assert.equal(j.catalogId,"liga-prikolov-preview");
             assert.ok(j.results.every(r=>r.fixtureCount===240));
             assert.equal(j.refereeEventAuthorityAuthenticated,false);
             assert.equal(j.independentExternalRateComparison,false);
+            assert.equal(j.uniqueResultDigests,4);
             const metrics=["goals","openPlayGoals","penaltiesTaken","penaltyGoals",
               "ownGoalsFor","shots","cautions","straightReds",
               "secondYellowDismissals","fictionalInjuryWithdrawals"];
-            const lines=["## 4 × 240 matches with v191 provisional shot hypothesis",
-              "Deterministic internal events and v104-B shot hypothesis, **NOT** calibrated RPL rates.",
+            const lines=["## Current playable-source shard "+shard+" (4 × 240)",
+              "Source-2 original game engine; no separate research model.",
               ...metrics.map(k=>k+": "+j.results.map(r=>r.eventTotals[k]).join(", ")),
               "Seeds: "+j.seeds.join(", "),
-              "Different result hashes: "+j.uniqueResultDigests,
-              "**M1/P3/P5 not accepted.**"];
+              "2024/25 holdout NOT accessed; no P5 acceptance inferred."];
             appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join("\n")+"\n");
           '
-      - name: Upload deterministic provisional cohort
+      - name: Upload verified cohort shard
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: new-career-v191-hypothesis-cohort
+          name: new-career-v191-shard-${{ matrix.shard }}
           path: new-career-v191-hypothesis.json
-          retention-days: 14
+          if-no-files-found: error
+          retention-days: 30
+
+  full-cohort:
+    name: Cross-shard 48-career source and uncertainty verification
+    needs: source2-seasons
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the 12 independently verified shards
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: new-career-v191-shard-*
+          path: cohort-shards
+          merge-multiple: false
+      - name: Verify all 11,520 fixtures and whole-season uncertainty
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import math
+          import os
+          import statistics
+          from pathlib import Path
+
+          results = []
+          seen = set()
+          hashes = set()
+          for shard in range(12):
+              path = Path(f"cohort-shards/new-career-v191-shard-{shard}/new-career-v191-hypothesis.json")
+              data = json.loads(path.read_text())
+              expected = [11 + 120 * shard + 30 * i for i in range(4)]
+              assert data["sampleSize"] == 4
+              assert data["seeds"] == expected
+              assert data["specialGoalSourceVersion"] == 2
+              assert data["catalogId"] == "liga-prikolov-preview"
+              assert data["refereeEventAuthorityAuthenticated"] is False
+              assert data["independentExternalRateComparison"] is False
+              assert data["uniqueResultDigests"] == 4
+              for seed, result in zip(expected, data["results"], strict=True):
+                  assert seed not in seen and result["seed"] == seed
+                  seen.add(seed)
+                  assert result["fixtureCount"] == 240
+                  assert len(result["finalTableHash"]) == 64
+                  hashes.add(result["finalTableHash"])
+                  totals = result["eventTotals"]
+                  assert totals["goals"] == result["totalGoals"]
+                  assert totals["goals"] == totals["openPlayGoals"] + totals["penaltyGoals"] + totals["ownGoalsFor"]
+                  assert totals["penaltyGoals"] <= totals["penaltiesTaken"]
+                  assert result["outcomeTotals"]["matches"] == 240
+                  results.append(totals)
+          assert len(results) == len(seen) == len(hashes) == 48
+          assert len(results) * 240 == 11520
+          reference = json.loads(Path("data/research/rpl-2025-26-aggregate-reference.json").read_text())
+          taxonomy = reference["taxonomy"]
+          assert taxonomy["engineSpecialGoalSourceVersion"] == 2
+          assert taxonomy["holdout2024_25Used"] is False
+          assert taxonomy["metrics"]["goals"]["status"] == "COMPARABLE"
+          assert taxonomy["metrics"]["goals"]["maxRelativeDeviation"] == 0.20
+          assert all(definition["status"] == "EXCLUDED"
+                     for metric, definition in taxonomy["metrics"].items() if metric != "goals")
+          metrics = ("goals", "openPlayGoals", "shots", "penaltiesTaken",
+                     "penaltyGoals", "ownGoalsFor", "cautions",
+                     "straightReds", "secondYellowDismissals", "fictionalInjuryWithdrawals")
+          summary = {}
+          for metric in metrics:
+              values = [row[metric] for row in results]
+              mean = statistics.mean(values)
+              margin = 2.012 * statistics.stdev(values) / math.sqrt(len(values))
+              summary[metric] = {
+                  "per240MatchSeasonMean": round(mean, 3),
+                  "wholeCareerCluster95Interval": [round(max(0, mean-margin), 3), round(mean+margin, 3)],
+                  "min": min(values), "max": max(values),
+                  "comparableToExternalReference": metric == "goals",
+              }
+          goal_reference = reference["totals"]["goals"]
+          goal_delta = summary["goals"]["per240MatchSeasonMean"] / goal_reference - 1
+          report = {
+              "status": "P5_CANDIDATE_REPRODUCIBLE_NOT_ACCEPTED",
+              "existingEngine": "v188 journal + v191 source2",
+              "careerSeeds": sorted(seen),
+              "careerClusters": 48,
+              "independentFixtureOutputs": 11520,
+              "sourceReplayRequired": True,
+              "holdout2024_25Used": False,
+              "goalsRelativeDifference": round(goal_delta, 4),
+              "withinFrozenGoalsDevelopmentTolerance": abs(goal_delta) <= 0.20,
+              "metrics": summary,
+              "limit": "Only all-type goals are definition-comparable; remaining categories require independent alignment.",
+          }
+          Path("current-playable-source-11520.json").write_text(json.dumps(report, indent=2) + "\n")
+          text = ["## 48 independently seeded playable careers / 11,520 canonical fixtures",
+                  "All 12 matrix shards completed; source v188/v191, unchanged production probabilities.",
+                  f"All-type goals mean per season: {summary['goals']['per240MatchSeasonMean']}",
+                  f"Whole-career 95% interval: {summary['goals']['wholeCareerCluster95Interval']}",
+                  f"2025/26 goal-only development tolerance: {report['withinFrozenGoalsDevelopmentTolerance']}",
+                  "Shots, cards, injuries and penalties recorded but NOT definition-harmonized.",
+                  "No 2024/25 holdout; no P5-2 or release acceptance implied."]
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as output:
+              output.write("\n".join(text) + "\n")
+          print("M1_P5_PLAYABLE_FULL_COHORT", json.dumps(report))
+          PY
+      - name: Upload source-replayed 48-career statistics
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: current-playable-source-11520-summary
+          path: current-playable-source-11520.json
+          if-no-files-found: error
+          retention-days: 30

@@ -29,5 +29,55 @@
     "No rights to redistribute underlying match-by-match, player or club-provider databases are established.",
     "Source-year 2024/25 independent holdout must remain unopened for fitting.",
     "This observation does not establish statistical acceptance limits or M1-P5 signoff."
-  ]
+  ],
+  "taxonomy": {
+    "status": "FROZEN_DEVELOPMENT_COMPARISON_BEFORE_NEXT_FINAL_ENGINE_FIT",
+    "engineSpecialGoalSourceVersion": 2,
+    "holdout2024_25Used": false,
+    "referenceRights": "Publicly attributed aggregate facts only; no underlying provider database, player records or assets redistributed",
+    "metrics": {
+      "goals": {
+        "status": "COMPARABLE",
+        "model": "All credited goals: open-play + scored penalties + own goals for both clubs",
+        "reference": "All official credited league goals across 240 completed matches",
+        "maxRelativeDeviation": 0.2
+      },
+      "shots": {
+        "status": "EXCLUDED",
+        "reason": "Publisher attempt and blocked/last-line/penalty-shot definitions not harmonized"
+      },
+      "penaltiesTaken": {
+        "status": "EXCLUDED",
+        "reason": "Source/award decision and provider attempt taxonomy not harmonized"
+      },
+      "penaltyGoals": {
+        "status": "EXCLUDED",
+        "reason": "Official converted-attempt and synthetic decision taxonomy not yet harmonized"
+      },
+      "cautions": {
+        "status": "EXCLUDED",
+        "reason": "Source-generated fictional cautions versus official published card taxonomy not validated"
+      },
+      "dismissals": {
+        "status": "EXCLUDED",
+        "reason": "Straight red and second-yellow official classifications do not match a proved common taxonomy"
+      },
+      "shotsOnTarget": {
+        "status": "EXCLUDED",
+        "reason": "No verified same-provider last-line block and goalkeeper-save definition"
+      },
+      "xg": {
+        "status": "EXCLUDED",
+        "reason": "No matching independent Russian Premier League xG population and definition"
+      },
+      "injuries": {
+        "status": "EXCLUDED",
+        "reason": "Fictional withdrawals are not verified clinical injury observations"
+      },
+      "homeDrawAway": {
+        "status": "EXCLUDED",
+        "reason": "Published single-season reference here has no frozen match-outcome counts"
+      }
+    }
+  }
 }

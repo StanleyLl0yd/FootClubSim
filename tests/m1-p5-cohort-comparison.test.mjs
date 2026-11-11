@@ -7,6 +7,9 @@ import {describeM1P5CohortVersusReference as compare,
 const totals={goals:100,shots:500,penaltiesTaken:0,penaltyGoals:0,
   cautions:70,straightReds:3,secondYellowDismissals:5,
   openPlayGoals:100,ownGoalsFor:0};
+const frozen=JSON.parse(readFileSync(new URL(
+  '../data/research/rpl-2025-26-aggregate-reference.json',
+  import.meta.url),'utf8'));
 const seeds=[11,41,71,101];
 const input=()=>({
   catalogId:'liga-prikolov-preview',
@@ -22,6 +25,7 @@ const ref=()=>({schemaVersion:1,season:'2025/26',matches:240,
     cautions:600,dismissals:60},
   sourceByMetric:Object.fromEntries(['goals','shots','penaltiesTaken',
     'penaltyGoals','cautions','dismissals'].map(k=>[k,'https://example.org/'+k])),
+  taxonomy:structuredClone(frozen.taxonomy),
 });
 test('four independently seeded complete seasons generate descriptive only',()=>{
   const src=input(),reference=ref();
@@ -32,6 +36,9 @@ test('four independently seeded complete seasons generate descriptive only',()=>
   assert.equal(result.semanticsHarmonized,false);
   assert.equal(result.metrics.goals.relativeDeltaPct,-50);
   assert.equal(result.metrics.shots.observedMean,500);
+  assert.equal(result.metrics.goals.comparable,false);
+  assert.equal(result.metrics.goals.withinPredeclaredTolerance,null);
+  assert.equal(result.metrics.shots.comparable,false);
   assert.deepEqual(result.metrics.goals.observedSeedMean95Interval,[100,100]);
   assert.match(result.seedMean95Method,/Student t/);
   assert.deepEqual(result.metrics.dismissals.observedTotals,[8,8,8,8]);
@@ -51,6 +58,29 @@ test('forged/missing source arithmetic, seed/revision, or ref fails closed',()=>
   assert.throws(()=>compare(input(),e),/INVALID_CALIBRATION_EVIDENCE/);
   const f=input();f.refereeEventAuthorityAuthenticated=true;
   assert.throws(()=>compare(f,ref()),/INVALID_CALIBRATION_EVIDENCE/);
+});
+
+test('frozen v191 all-type goals compare; excluded categories cannot pass',()=>{
+  const source={...input(),specialGoalSourceVersion:2};
+  const reference=ref();
+  const out=compare(source,reference);
+  assert.equal(out.metrics.goals.comparable,true);
+  assert.equal(out.metrics.goals.withinPredeclaredTolerance,false);
+  assert.equal(out.metrics.shots.comparable,false);
+  assert.equal(out.metrics.shots.withinPredeclaredTolerance,null);
+  assert.equal(out.metrics.cautions.comparable,false);
+  assert.equal(out.releaseAccepted,false);
+  const fabricated=ref();
+  fabricated.taxonomy.metrics.shots.status='COMPARABLE';
+  assert.throws(()=>compare(source,fabricated),
+    /INVALID_CALIBRATION_EVIDENCE/);
+  const unbounded=ref();
+  unbounded.taxonomy.metrics.goals.maxRelativeDeviation=1;
+  assert.throws(()=>compare(source,unbounded),
+    /INVALID_CALIBRATION_EVIDENCE/);
+  const opened=ref();opened.taxonomy.holdout2024_25Used=true;
+  assert.throws(()=>compare(source,opened),
+    /INVALID_CALIBRATION_EVIDENCE/);
 });
 
 test('95% seeded-season interval reflects between-seed variability',()=>{

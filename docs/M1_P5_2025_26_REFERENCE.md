@@ -1,4 +1,23 @@
 # M1-P5: non-acceptance reference for 2025/26 Russian Premier League
+## Frozen P5-1 category boundary for the next final-engine evaluation
+
+The existing attributed aggregate reference now records its metric categories
+and a **broad 20% relative development tolerance for all-type goals only**.
+This tolerance is frozen **before the next 10,000+ match final-source evaluation**;
+it was **not** predeclared before the older four-seed v191 experiment and does
+not retroactively validate that experiment. All other provider comparisons
+(shots/on-target, xG, penalty awards/conversions, cautions, dismissals,
+injury withdrawals and home/draw/away) explicitly remain **excluded**, not
+assumed equivalent by matching column names or close numerical totals.
+
+The existing cohort comparator now fails closed if this freeze is modified
+without a corresponding explicit review. It reports goal comparability only
+for `specialGoalSourceVersion:2`; it never treats excluded metric totals as
+calibrated or accepted. The existing 2024/25 holdout remains unopened.
+Limited public aggregate observations are attributed; underlying provider
+records are not republished. **P5-1/P5-2 remain open pending the complete
+metric-review, real cohort result and separate formal acceptance.**
+
 
 **Development diagnostic only.** The sole purpose of `data/research/rpl-2025-26-aggregate-reference.json` is to freeze six explicitly sourced public aggregate observations before the next generation of FootClubSim match-engine tuning. No provider data tables, player records, photos, API credentials or database rights are bundled.
 

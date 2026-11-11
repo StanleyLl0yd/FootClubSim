@@ -61,7 +61,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   // medical v5 and source-2 goal model. Preserve both source versions
   // from the first played fixture when reopening historical careers.
   const prepareSource=(saved:M1V188Journal,manager:unknown=[],
-    selection:unknown=undefined,coaching:unknown[])=>
+    selection:unknown=undefined,coaching:unknown[]=[])=>
     prepareM1V188LeagueMatch(career,saved,manager,
       undefined,saved.revision===0?
         5:saved.entries[0]?.source.medicalPolicyVersion,

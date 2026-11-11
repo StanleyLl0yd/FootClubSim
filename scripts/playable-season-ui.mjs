@@ -151,6 +151,7 @@ function verifyArchive(json, careerId, snapshot) {
   let ownWithFormation = 0;
   let ownWithHalfTime = 0;
   let ownWithCoachOrders = 0;
+  let ownWithPauseSubstitution = 0;
   let ownWithRememberedPlan = 0;
   let lastOwn=null;
   for (const entry of journal.entries) {
@@ -185,6 +186,13 @@ function verifyArchive(json, careerId, snapshot) {
         command.actor?.kind === 'player' && command.teamId === clubId &&
         command.elapsedSeconds === 2700)) ownWithHalfTime++;
       if (entry.source.inMatchOrdersVersion === 1) {
+        const replacements=entry.source.plannedCommands.filter(c=>
+          c.kind==='substitute-normal'&&c.teamId===clubId);
+        assert.equal(replacements.length,1,
+          'The interactive match must save its one actual replacement');
+        assert.equal(replacements[0].elapsedSeconds,2700,
+          'The interactive replacement must happen at the verified pause');
+        ownWithPauseSubstitution++;
         const actual = entry.source.plannedCommands.filter(c=>c.kind==='set-tactics');
         assert.deepEqual(actual.map(c=>c.elapsedSeconds),[2700,3600],
           'Paused match must retain both verified in-play tactical changes');
@@ -198,7 +206,10 @@ function verifyArchive(json, careerId, snapshot) {
   assert.equal(ownWithFormation,OWN,'Formation not retained for every own match');
   assert.equal(ownWithRememberedPlan,OWN,
     'Pressing and tempo were reset between managed fixtures');
-  assert.equal(ownWithHalfTime, 1, 'Halftime manager substitution missing from canonical journal');
+  assert.equal(ownWithHalfTime,2,
+    'Both standalone and interactive half-time replacements must persist');
+  assert.equal(ownWithPauseSubstitution,1,
+    'Live pause replacement must share the two-order canonical match');
   assert.equal(ownWithCoachOrders,1,
     'Two-pause coach commands not saved in the canonical career');
   assert.equal(finalRound.length, 8);

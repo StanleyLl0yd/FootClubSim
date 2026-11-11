@@ -685,9 +685,21 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   assert.equal(await evaluate('document.querySelector("#workspace-season").hidden'),false);
   await openSeason(TOTAL);
   assert.deepEqual(await run(finalSnapshot), before, 'Restored profile, standings or results differ from the finished season');
+  const archiveBytes=Buffer.byteLength(archive.json);
+  const elapsedSeconds=Math.round((Date.now() - started) / 1000);
+  const heapBytes=await evaluate('Number.isFinite(performance.memory?.usedJSHeapSize) ? performance.memory.usedJSHeapSize : null');
+  // Predeclared, CI-hosted 240-fixture smoke limits, not a player-device SLA.
+  assert.ok(archiveBytes<=8*1024*1024,
+    'Full 240-fixture career archive exceeded the 8 MiB budget');
+  assert.ok(elapsedSeconds<=30*60,
+    'Native browser season exceeded the 30-minute CI acceptance budget');
+  if(typeof heapBytes==='number')assert.ok(heapBytes<=512*1024*1024,
+    'Observed post-restore JS heap exceeded the 512 MiB budget');
   console.log('PASS: ' + JSON.stringify({
     browser, fixtures: TOTAL, own: OWN, opponents: TOTAL - OWN, pausedAt,
-    restoredRevision: TOTAL, tableRows: before.table.length, archiveBytes: Buffer.byteLength(archive.json),
-    elapsedSeconds: Math.round((Date.now() - started) / 1000),
+    restoredRevision: TOTAL, tableRows: before.table.length,
+    archiveBytes,elapsedSeconds,postRestoreHeapBytes:heapBytes,
+    budget:{maxArchiveBytes:8*1024*1024,maxElapsedSeconds:1800,
+      maxObservedHeapBytes:512*1024*1024},
   }));
 }

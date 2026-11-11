@@ -8,6 +8,11 @@ import {deriveM1V188CheckpointScore,sameM1V188CheckpointPrefix}
 import {inspectM1V188PauseSubstitutions,
   type M1V188PauseSubstitutionChoice}
   from '../core/m1-v188-pause-substitutions.js';
+import {createM1V188PauseDraft,recoverM1V188PauseDraft}
+  from '../core/m1-v188-pause-draft.js';
+import {saveM1V188PauseDraft,loadM1V188PauseDraft,
+  clearM1V188PauseDraft}
+  from '../browser/m1-v188-pause-draft-store.js';
 import {inspectM1V188ClubCondition}
   from '../core/m1-v188-condition.js';
 import {deriveM1V188RememberedXI} from '../core/m1-v188-manager-defaults.js';
@@ -278,6 +283,40 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         }
       }
       setJournal(loaded);
+      // An untrusted pause is NOT a journal entry. It can only restore
+      // an exact replayed event prefix at the current journal revision.
+      let savedDraft:unknown=null;
+      try{savedDraft=await loadM1V188PauseDraft(career.careerId);}
+      catch(error){
+        setStatus('Сезон проверен; черновик паузы недоступен: '+
+          errorText(error));
+      }
+      const resumed=savedDraft===null?null:
+        recoverM1V188PauseDraft(career,loaded,savedDraft);
+      if(resumed){
+        const {draft,proposal}=resumed;
+        const input=proposal.request.prematch as M1PrematchInput;
+        const tactics=input.fixture.homeClubId===career.selectedClubId?
+          input.homeTactics:input.awayTactics;
+        setHalfTime(proposal);setPauseMinute(draft.pauseMinute);
+        setNextPauseMinute(Math.min(85,draft.pauseMinute+15));
+        setInGameChoices([...draft.coachingChoices]);
+        setInGameSubstitutions(
+          [...draft.substitutions] as M1V188PauseSubstitutionChoice[]);
+        setCoachMinute(draft.pauseMinute);
+        setCoachFormation(tactics.formation);
+        setCoachMentality(tactics.mentality);
+        setCoachPressing(tactics.pressing);setCoachTempo(tactics.tempo);
+        setStatus('Восстановлена пауза матча · '+draft.pauseMinute+
+          '-я минута. Уже сыгранные события проверены и неизменны.');
+        return;
+      }
+      if(savedDraft!==null){
+        // A stale, invalid or previously committed draft is nonauthoritative.
+        // Cleanup failure must not interfere with a verified league journal.
+        try{await clearM1V188PauseDraft(career.careerId,loaded.revision);}
+        catch{/* Source journal remains authoritative. */}
+      }
       setStatus('Сезон проверен и загружен. Сыграно матчей: '+
         loaded.revision+' из 240.');
       await advanceOpponents(loaded);
@@ -313,9 +352,10 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     }
   }
 
-  function startHalfTime():void{
+  async function startHalfTime():Promise<void>{
     if(busy||disabled||!journal||preview||halfTime||
         !ownNextNow||!xiLegal)return;
+    setBusy(true);
     try{
       const base=prepareSource(journal);
       const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
@@ -328,6 +368,13 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           (prepared?.error??'SEASON_COMPLETE'));
         return;
       }
+      const draft=createM1V188PauseDraft(prepared,pauseMinute);
+      if(!draft){
+        setStatus('Первый тайм не рассчитан: неверная игровая пауза.');
+        return;
+      }
+      // Do not reveal a pause as resumable until its source prefix is durable.
+      await saveM1V188PauseDraft(draft);
       const input=prepared.request.prematch as M1PrematchInput;
       const tactics=input.fixture.homeClubId===career.selectedClubId?
         input.homeTactics:input.awayTactics;
@@ -344,15 +391,16 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         'Выберите указания на оставшуюся часть игры.');
     }catch(error){
       setStatus('Первый тайм не рассчитан: '+errorText(error));
-    }
+    }finally{setBusy(false);}
   }
-  function finishHalfTime(nextMinute:number|null):void{
+  async function finishHalfTime(nextMinute:number|null):Promise<void>{
     if(busy||disabled||!journal||!halfTime||!halfTimeInput)return;
     if(nextMinute!==null&&(nextMinute<=pauseMinute||nextMinute>85||
         nextMinute%5!==0)){
       setStatus('Следующая пауза должна быть позже текущей и кратна 5 минутам.');
       return;
     }
+    setBusy(true);
     try{
       const choices=[...inGameChoices,...coachingChoices];
       if(pauseSubEnabled&&(!pauseSubOptions?.canSubstitute||
@@ -388,6 +436,13 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         return;
       }
       if(nextMinute!==null){
+        const draft=createM1V188PauseDraft(
+          prepared,nextMinute,changes,choices);
+        if(!draft){
+          setStatus('Не удалось подготовить проверяемую игровую паузу.');
+          return;
+        }
+        await saveM1V188PauseDraft(draft);
         setInGameChoices(choices);setInGameSubstitutions(changes);
         setPauseSubEnabled(false);setPauseOutId('');setPauseInId('');
         setHalfTime(prepared);
@@ -404,7 +459,22 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       }
     }catch(error){
       setStatus('Не удалось продолжить матч: '+errorText(error));
-    }
+    }finally{setBusy(false);}
+  }
+  async function cancelPausedMatch():Promise<void>{
+    if(busy||disabled||!journal||!halfTime)return;
+    setBusy(true);
+    try{
+      await clearM1V188PauseDraft(career.careerId,
+        journal.revision,pauseMinute);
+      setHalfTime(null);setInGameChoices([]);
+      setInGameSubstitutions([]);setPauseSubEnabled(false);
+      setCoachEnabled(false);setFocusEnabled(false);
+      setStatus('Перерыв отменён. Сохранение не изменено.');
+    }catch(error){
+      setStatus('Не удалось удалить черновик паузы: '+
+        errorText(error)+'. Текущий матч не изменён.');
+    }finally{setBusy(false);}
   }
   async function commit():Promise<void>{
     if(busy||disabled||!journal||!preview)return;
@@ -421,6 +491,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       setForceAutoXI(false);
       setStatus('Матч №'+updated.revision+
         ' записан в браузер. Результат и таблица обновлены.');
+      try{await clearM1V188PauseDraft(career.careerId,expected);}
+      catch{/* A stale pause cannot survive revision-bound replay. */}
       await advanceOpponents(updated);
     }catch(error){
       try{
@@ -710,7 +782,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             </label>
             <button type="button" className="secondary-button"
               disabled={busy||disabled||!!preview||!!halfTime||!xiLegal}
-              onClick={startHalfTime}>Играть до паузы</button>
+              onClick={()=>void startHalfTime()}>Играть до паузы</button>
             {ownNextNow&&<button type="button" className="secondary-button"
               disabled={busy||disabled||!!preview||!!halfTime}
               onClick={xiSetup?clearXI:configureXI}>
@@ -1049,17 +1121,14 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                   </select>
                 </label>
                 <button type="button" disabled={busy||disabled}
-                  onClick={()=>finishHalfTime(nextPauseMinute)}>
+                  onClick={()=>void finishHalfTime(nextPauseMinute)}>
                   Продолжить до следующей паузы
                 </button>
               </>}
               <button type="button" disabled={busy||disabled}
-                onClick={()=>finishHalfTime(null)}>До финального свистка</button>
+                onClick={()=>void finishHalfTime(null)}>До финального свистка</button>
               <button type="button" className="secondary-button"
-                onClick={()=>{setHalfTime(null);setInGameChoices([]);
-                  setInGameSubstitutions([]);setPauseSubEnabled(false);
-                  setCoachEnabled(false);setFocusEnabled(false);
-                  setStatus('Перерыв отменён. Сохранение не изменено.');}}>
+                onClick={()=>void cancelPausedMatch()}>
                 Отменить просмотр
               </button>
             </div>

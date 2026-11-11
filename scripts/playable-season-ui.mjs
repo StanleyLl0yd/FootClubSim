@@ -505,6 +505,17 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
           await setValue(
             'section[aria-label="Пауза матча"] .season-tactics-grid label:nth-child(2) select',
             '2');
+          const allowedSub=await run(()=>{
+            const toggle=document.querySelector('#season-pause-replace');
+            if(!toggle||toggle.disabled)return false;
+            toggle.click();return true;
+          });
+          assert.equal(allowedSub,true,'Missing referee-authorized pause substitution');
+          await waitFor(()=>run(()=>{
+            const out=document.querySelector('#season-pause-out');
+            const incoming=document.querySelector('#season-pause-in');
+            return Boolean(out?.value&&incoming?.value&&out.value!==incoming.value);
+          }), 'valid live substitution pair');
           await seasonClick('Продолжить до следующей паузы');
           await waitSeason(value=>value.status.startsWith(
             'Игра продолжена до 60-й минуты'),'second live pause');

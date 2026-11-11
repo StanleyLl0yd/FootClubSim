@@ -1,6 +1,7 @@
 import {sameCanonicalValue} from './canonical-value.js';
 import {isPlainJsonTree} from './plain-json-tree.js';
-import {startM1PlayerControl,advanceM1PlayerControl}
+import {startM1PlayerControl,advanceM1PlayerControl,
+  submitM1PlayerInstruction,submitM1TeamTacticsWithPlayerControl}
   from './m1-player-control.js';
 import {computeM1V5PhaseShot,M1_V5_DRAWS_PER_PHASE,
   type M1V5Shot} from './m1-phases-v5.js';
@@ -53,11 +54,11 @@ export function simulateM1V101PhysicalIntraphase(
   if(![prematch,policy,plannedCommands,medicalActions].every(isPlainJsonTree)||
       !Array.isArray(plannedCommands)||!Array.isArray(medicalActions)||
       plannedCommands.some(x=>!x||typeof x!=='object'||
-        !['substitute-normal','caution','direct-red','injury-withdrawal']
-          .includes(x.kind)))
+        !['substitute-normal','caution','direct-red','injury-withdrawal',
+          'set-tactics','set-player-focus'].includes(x.kind)))
     return {ok:false,error:'INVALID_INPUT'};
-  // v8 fully replays the original v7 legal command source; no special-goal
-  // decisions or tactical commands may silently bypass this bridge.
+  // v8 verifies physical and coaching commands first; the intraphase
+  // bridge applies approved coach orders at the same clock boundaries.
   const source=simulateM1V8MedicalPhases(
     prematch,policy,plannedCommands,[],medicalActions);
   if(!source.ok)return {ok:false,error:'SOURCE_REJECTED'};
@@ -73,13 +74,15 @@ export function simulateM1V101PhysicalIntraphase(
   const transitions:PhysicalTransition[]=source.events.filter(
     (e):e is PhysicalTransition=>
       e.type==='availability'||e.type==='medical');
+  const coachOrders=(plannedCommands as Record<string,unknown>[])
+    .filter(c=>c.kind==='set-tactics'||c.kind==='set-player-focus');
   const rng=new SeededRng(input.rngSeed);
   const totals={
     home:{goals:0,shots:0,shotsOnTarget:0,xgMilli:0},
     away:{goals:0,shots:0,shotsOnTarget:0,xgMilli:0},
   };
   const events:M1V101Event[]=[];
-  let controlled=start.state,cursor=0;
+  let controlled=start.state,cursor=0,orderIndex=0;
   for(let phase=0;phase<M1_CLOCK_MAX_EVENTS;phase++){
     const second=phase*M1_CLOCK_STEP_SECONDS;
     const upcoming=transitions[cursor];
@@ -124,6 +127,16 @@ export function simulateM1V101PhysicalIntraphase(
       });
       cursor++;
     }
+    while(orderIndex<coachOrders.length&&
+        coachOrders[orderIndex]?.elapsedSeconds===second){
+      const order=coachOrders[orderIndex]!;
+      const next=order.kind==='set-tactics'?
+        submitM1TeamTacticsWithPlayerControl(input,policy,controlled,order):
+        submitM1PlayerInstruction(input,policy,controlled,order);
+      if(!next.ok)return {ok:false,error:'INVALID_PHYSICAL_TRANSITION'};
+      controlled=next.state;
+      orderIndex++;
+    }
     const present={
       home:teams.home.filter(id=>!absent.has(id)),
       away:teams.away.filter(id=>!absent.has(id)),
@@ -161,7 +174,7 @@ export function simulateM1V101PhysicalIntraphase(
     if(!next.ok)return {ok:false,error:'INVALID_CLOCK_TRANSITION'};
     controlled=next.state;
   }
-  if(cursor!==transitions.length)
+  if(cursor!==transitions.length||orderIndex!==coachOrders.length)
     return {ok:false,error:'INVALID_PHYSICAL_TRANSITION'};
   events.push({schemaVersion:101,type:'full-time',
     id:'m1-v101-full-time',sequence:events.length+1,elapsedSeconds:5400});

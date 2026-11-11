@@ -97,10 +97,14 @@ function regenerateUnifiedSource(
   prematch:unknown,policy:unknown,manager:unknown,causal:boolean,
   denseShotSource=false,goalkeeperOnFieldSource=false,
   multiPatientSource=false,collisionSource=false,
-  autonomousCollisionSource=false,
+  autonomousCollisionSource=false,coachingOrders:unknown=[],
 ){
   if(!isPlainJsonTree(prematch)||!isPlainJsonTree(policy)||
       !isPlainJsonTree(manager)||!Array.isArray(manager)||
+      !isPlainJsonTree(coachingOrders)||!Array.isArray(coachingOrders)||
+      coachingOrders.length>8||coachingOrders.some(command=>
+        !valid(command)||command.kind!=='set-tactics'&&
+        command.kind!=='set-player-focus')||
       manager.length>5||manager.some(command=>
         !valid(command)||command.kind!=='substitute-normal'))
     return {ok:false as const,error:'INVALID_MANAGER_SOURCE' as const};
@@ -122,7 +126,10 @@ function regenerateUnifiedSource(
     return {ok:false as const,error:'UNIFIED_GENERATION_REJECTED' as const};
   const referee=buildM1V124GeneratedCommands(
     generated.generatedIncidents,generated.fixtureId);
-  const plannedCommands=orderM1V166CombinedCommands(referee,changes);
+  // Physical substitutions still generate referee/medical source first.
+  // Tactical orders alter only future v8 phase state, not past incidents.
+  const plannedCommands=orderM1V166CombinedCommands(referee,
+    [...changes,...(coachingOrders as Command[])]);
   if(plannedCommands.length>275)
     return {ok:false as const,error:'SOURCE_EVENT_BUDGET' as const};
   const checkpointMedical=[...generated.syntheticTreatmentActions];
@@ -164,12 +171,12 @@ export function regenerateM1V184CausalSource(
   prematch:unknown,policy:unknown,manager:unknown,
   denseShotSource=false,goalkeeperOnFieldSource=false,
   multiPatientSource=false,collisionSource=false,
-  autonomousCollisionSource=false,
+  autonomousCollisionSource=false,coachingOrders:unknown=[],
 ){
   return regenerateUnifiedSource(
     prematch,policy,manager,true,denseShotSource,
     goalkeeperOnFieldSource,multiPatientSource,collisionSource,
-    autonomousCollisionSource);
+    autonomousCollisionSource,coachingOrders);
 }
 
 /** Canonical v182 claim is independently replayed before v120 CAS.

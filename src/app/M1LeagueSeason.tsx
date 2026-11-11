@@ -3,6 +3,8 @@ import {M1ClubOverview} from './M1ClubOverview.js';
 import {M1MatchReport} from './M1MatchReport.js';
 import {LigaClubLabel} from './LigaClubLabel.js';
 import {deriveM1V188Champion} from '../core/m1-v188-championship.js';
+import {deriveM1V188CheckpointScore,sameM1V188CheckpointPrefix}
+  from '../core/m1-v188-half-time.js';
 import {inspectM1V188ClubCondition}
   from '../core/m1-v188-condition.js';
 import {deriveM1V188RememberedXI} from '../core/m1-v188-manager-defaults.js';
@@ -50,12 +52,16 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   // New careers use the experimental sourced-penalty model. An already
   // started career keeps the first entry's source model for all 240 fixtures.
   const prepareSource=(saved:M1V188Journal,manager:unknown=[],
-    selection:unknown=undefined)=>
+    selection:unknown=undefined,coaching:unknown=[])=>
     prepareM1V188LeagueMatch(career,saved,manager,
       undefined,undefined,selection,
       saved.revision===0?
-        2:saved.entries[0]?.source.specialGoalSourceVersion);
+        2:saved.entries[0]?.source.specialGoalSourceVersion,coaching);
   const [preview,setPreview]=useState<Ready|null>(null);
+  const [halfTime,setHalfTime]=useState<Ready|null>(null);
+  const [pauseMinute,setPauseMinute]=useState(45);
+  const [nextPauseMinute,setNextPauseMinute]=useState(60);
+  const [inGameChoices,setInGameChoices]=useState<unknown[]>([]);
   const [busy,setBusy]=useState(false);
   const [advancing,setAdvancing]=useState(false);
   const [managerSetup,setManagerSetup]=useState<Ready|null>(null);
@@ -67,6 +73,15 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const [xiMentality,setXiMentality]=useState(0);
   const [xiPressing,setXiPressing]=useState(50);
   const [xiTempo,setXiTempo]=useState(50);
+  const [coachEnabled,setCoachEnabled]=useState(false);
+  const [coachMinute,setCoachMinute]=useState(45);
+  const [coachFormation,setCoachFormation]=useState('4-2-3-1');
+  const [coachMentality,setCoachMentality]=useState(0);
+  const [coachPressing,setCoachPressing]=useState(50);
+  const [coachTempo,setCoachTempo]=useState(50);
+  const [focusEnabled,setFocusEnabled]=useState(false);
+  const [focusId,setFocusId]=useState('');
+  const [focusMode,setFocusMode]=useState('attack');
   const [outId,setOutId]=useState('');
   const [inId,setInId]=useState('');
   const stopRequested=useRef(false);
@@ -143,6 +158,31 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       mentality:xiMentality,pressing:xiPressing,tempo:xiTempo},
   }:undefined;
   const xiPlayers=new Set(starterIds);
+  const halfTimeInput=halfTime?.request.prematch as
+    M1PrematchInput|undefined;
+  const halfTimeOwn=halfTimeInput?(
+    halfTimeInput.fixture.homeClubId===career.selectedClubId?
+      halfTimeInput.homeLineup:halfTimeInput.awayLineup):null;
+  const halfTimeTactics=halfTimeInput?(
+    halfTimeInput.fixture.homeClubId===career.selectedClubId?
+      halfTimeInput.homeTactics:halfTimeInput.awayTactics):null;
+  const focusCandidates=(halfTimeOwn?.starters??starterIds).filter(id=>
+    playersById.get(id)?.primaryPosition!=='GK');
+  const actualFocusId=focusCandidates.includes(focusId)?
+    focusId:focusCandidates[0]??'';
+  const coachedPlan=xiChoice?.tactics??halfTimeTactics;
+  const coachingChoices=coachEnabled&&coachedPlan?[{
+    kind:'team-tactics',elapsedSeconds:(halfTime?pauseMinute:coachMinute)*60,
+    plan:{...coachedPlan,schemaVersion:2 as const,
+      formation:coachFormation,mentality:coachMentality,
+      pressing:coachPressing,tempo:coachTempo},
+  },...(focusEnabled&&actualFocusId?[{
+    kind:'player-focus',elapsedSeconds:(halfTime?pauseMinute:coachMinute)*60,
+    playerId:actualFocusId,focus:focusMode,
+  }]:[])]:[];
+  const halfTimeScore=halfTime&&halfTimeInput?
+    deriveM1V188CheckpointScore(halfTimeInput,
+      halfTime.request.result as Good,pauseMinute*60):null;
   // A read-only pitch preview. The tactical formation is persisted in v188,
   // while individual player-to-slot assignments are not yet modelled.
   const boardGoalkeeper=starterIds.find(id=>
@@ -178,8 +218,10 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
 
   async function connect():Promise<void>{
     if(busy||disabled)return;
-    setBusy(true);setPreview(null);setManagerSetup(null);
+    setBusy(true);setPreview(null);setHalfTime(null);
+    setInGameChoices([]);setManagerSetup(null);
     setXiSetup(null);setStarterIds([]);
+    setCoachEnabled(false);setFocusEnabled(false);
     setForceAutoXI(false);setMatchInspectId('');
     try{
       let stored:InitialCareerSave;
@@ -227,14 +269,15 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   }
 
   function calculate(changes:readonly HalfTimeChange[]=[]):void{
-    if(busy||disabled||!journal||preview||!xiLegal)return;
+    if(busy||disabled||!journal||preview||halfTime||!xiLegal)return;
     try{
-      const base=prepareSource(journal,changes);
+      const base=prepareSource(journal,changes,undefined,coachingChoices);
       const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
         deriveM1V188RememberedXI(
           career,journal,base.request.prematch as M1PrematchInput):null;
       const prepared=xiChoice||remembered?
-        prepareSource(journal,changes,xiChoice??remembered):base;
+        prepareSource(journal,changes,xiChoice??remembered,
+          coachingChoices):base;
       if(prepared===null){
         setStatus('Сезон завершён. Все 240 матчей уже сохранены.');
       }else if(!prepared.ok){
@@ -250,16 +293,91 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     }
   }
 
+  function startHalfTime():void{
+    if(busy||disabled||!journal||preview||halfTime||
+        !ownNextNow||!xiLegal)return;
+    try{
+      const base=prepareSource(journal);
+      const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
+        deriveM1V188RememberedXI(career,journal,
+          base.request.prematch as M1PrematchInput):null;
+      const prepared=xiChoice||remembered?
+        prepareSource(journal,[],xiChoice??remembered):base;
+      if(!prepared?.ok){
+        setStatus('Первый тайм не рассчитан: '+
+          (prepared?.error??'SEASON_COMPLETE'));
+        return;
+      }
+      const input=prepared.request.prematch as M1PrematchInput;
+      const tactics=input.fixture.homeClubId===career.selectedClubId?
+        input.homeTactics:input.awayTactics;
+      setCoachMinute(pauseMinute);setCoachEnabled(false);setFocusEnabled(false);
+      setCoachFormation(tactics.formation);
+      setCoachMentality(tactics.mentality);
+      setCoachPressing(tactics.pressing);setCoachTempo(tactics.tempo);
+      setHalfTime(prepared);setInGameChoices([]);
+      setNextPauseMinute(Math.min(85,pauseMinute+15));
+      setManagerSetup(null);
+      setStatus('Матч рассчитан до выбранной паузы. '+
+        'Выберите указания на оставшуюся часть игры.');
+    }catch(error){
+      setStatus('Первый тайм не рассчитан: '+errorText(error));
+    }
+  }
+  function finishHalfTime(nextMinute:number|null):void{
+    if(busy||disabled||!journal||!halfTime||!halfTimeInput)return;
+    if(nextMinute!==null&&(nextMinute<=pauseMinute||nextMinute>85||
+        nextMinute%5!==0)){
+      setStatus('Следующая пауза должна быть позже текущей и кратна 5 минутам.');
+      return;
+    }
+    try{
+      const choices=[...inGameChoices,...coachingChoices];
+      const prepared=prepareSource(journal,[],
+        halfTime.request.managedXI,choices);
+      if(!prepared?.ok){
+        setStatus('Продолжение матча отклонено: '+
+          (prepared?.error??'SEASON_COMPLETE'));
+        return;
+      }
+      if(prepared.request.expectedRevision!==
+          halfTime.request.expectedRevision||
+          !sameCanonicalValue(prepared.request.prematch,
+            halfTime.request.prematch)||
+          !sameM1V188CheckpointPrefix(
+            halfTime.request.result as Good,
+            prepared.request.result as Good,pauseMinute*60)){
+        setStatus('Продолжение запрещено: уже сыгранные события '+
+          'отличаются от проверенного источника.');
+        return;
+      }
+      if(nextMinute!==null){
+        setInGameChoices(choices);setHalfTime(prepared);
+        setPauseMinute(nextMinute);
+        setNextPauseMinute(Math.min(85,nextMinute+15));
+        setCoachEnabled(false);setFocusEnabled(false);
+        setStatus('Игра продолжена до '+nextMinute+'-й минуты. '+
+          'Предыдущие события не изменены. Можно дать новый приказ.');
+      }else{
+        setInGameChoices([]);setHalfTime(null);setPreview(prepared);
+        setStatus('Матч завершён без изменения сыгранного отрезка. '+
+          'Проверьте результат перед сохранением.');
+      }
+    }catch(error){
+      setStatus('Не удалось продолжить матч: '+errorText(error));
+    }
+  }
   async function commit():Promise<void>{
     if(busy||disabled||!journal||!preview)return;
     const expected=journal.revision;
     const request=preview.request;
-    setBusy(true);setPreview(null);
+    setBusy(true);setPreview(null);setInGameChoices([]);
     try{
       const updated=await commitM1V188PersistedLeagueMatch(
         career.careerId,expected,request);
       setJournal(updated);
       setManagerSetup(null);setXiSetup(null);setStarterIds([]);
+      setCoachEnabled(false);setFocusEnabled(false);
       setForceAutoXI(false);
       setStatus('Матч №'+updated.revision+
         ' записан в браузер. Результат и таблица обновлены.');
@@ -279,7 +397,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   }
 
   function configureXI():void{
-    if(busy||disabled||!journal||!ownNextNow||preview)return;
+    if(busy||disabled||!journal||!ownNextNow||preview||halfTime)return;
     const prepared=prepareSource(journal);
     if(!prepared?.ok){
       setStatus('Не удалось открыть состав: '+
@@ -300,6 +418,11 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     setXiMentality(tactics.mentality);
     setXiPressing(tactics.pressing);
     setXiTempo(tactics.tempo);setForceAutoXI(false);
+    setCoachEnabled(false);setFocusEnabled(false);
+    setCoachFormation(tactics.formation);
+    setCoachMentality(tactics.mentality);
+    setCoachPressing(tactics.pressing);
+    setCoachTempo(tactics.tempo);
     setManagerSetup(null);
     setStatus(remembered?
       'Восстановлены состав и тактика прошлого матча. Проверьте доступность игроков.':
@@ -322,20 +445,22 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   }
   function clearXI():void{
     setXiSetup(null);setStarterIds([]);setManagerSetup(null);
+    setCoachEnabled(false);setFocusEnabled(false);
     setForceAutoXI(true);
     setStatus('Для этого матча выбран автоматический стартовый состав.');
   }
 
   function configureHalfTime():void{
-    if(busy||disabled||!journal||!ownNextNow||preview)return;
+    if(busy||disabled||!journal||!ownNextNow||preview||halfTime)return;
     try{
       if(!xiLegal)return;
-      const base=prepareSource(journal);
+      const base=prepareSource(journal,[],undefined,coachingChoices);
       const remembered=!xiChoice&&!forceAutoXI&&base?.ok?
         deriveM1V188RememberedXI(
           career,journal,base.request.prematch as M1PrematchInput):null;
       const prepared=xiChoice||remembered?
-        prepareSource(journal,[],xiChoice??remembered):base;
+        prepareSource(journal,[],xiChoice??remembered,
+          coachingChoices):base;
       if(!prepared?.ok){
         setStatus('Подготовка состава отклонена: '+
           (prepared?.error??'SEASON_COMPLETE'));
@@ -356,8 +481,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   async function advanceOpponents(start:M1V188Journal):Promise<void>{
     const plan=planM1V188NextOwnMatch(career,start);
     if(!plan||plan.automaticMatches===0)return;
-    setAdvancing(true);setPreview(null);
-    setManagerSetup(null);setXiSetup(null);
+    setAdvancing(true);setPreview(null);setHalfTime(null);
+    setInGameChoices([]);setManagerSetup(null);setXiSetup(null);
     setStatus('Автоматически рассчитываются матчи остальных клубов.');
     stopRequested.current=false;
     try{
@@ -532,13 +657,27 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               name={clubs.get(next.awayClubId)??next.awayClubId}/>
           </strong>
           <div className="button-stack">
-            <button type="button" disabled={busy||disabled||!!preview||!xiLegal}
+            <button type="button" disabled={busy||disabled||!!preview||!!halfTime||!xiLegal}
               onClick={()=>calculate()}>Рассчитать матч</button>
+            <label>Остановить матч на минуте
+              <select value={pauseMinute} disabled={busy||disabled||
+                !!preview||!!halfTime}
+                onChange={e=>setPauseMinute(Number(e.target.value))}>
+                {Array.from({length:17},(_,i)=>(i+1)*5).map(minute=>
+                  <option value={minute} key={minute}>{minute}-я</option>)}
+              </select>
+            </label>
+            <button type="button" className="secondary-button"
+              disabled={busy||disabled||!!preview||!!halfTime||!xiLegal}
+              onClick={startHalfTime}>Играть до паузы</button>
             {ownNextNow&&<button type="button" className="secondary-button"
-              disabled={busy||disabled||!!preview}
+              disabled={busy||disabled||!!preview||!!halfTime}
               onClick={xiSetup?clearXI:configureXI}>
               {xiSetup?'Вернуть автосостав':'Настроить стартовый состав'}
             </button>}
+            {ownNextNow&&<button type="button" className="secondary-button"
+              disabled={busy||disabled||!!preview}
+              onClick={configureXI}>Настроить тактику по ходу матча</button>}
             {ownNextNow&&<button type="button" className="secondary-button"
               disabled={busy||disabled||!!preview||!xiLegal}
               onClick={configureHalfTime}>Настроить замену</button>}
@@ -547,7 +686,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               onClick={()=>void connect()}>Обновить сохранение</button>
           </div>
         </div>}
-        {xiSetup&&ownNextNow&&!preview&&<fieldset
+        {xiSetup&&ownNextNow&&!preview&&!halfTime&&<fieldset
           className="season-substitution" disabled={busy||disabled}>
           <legend>Стартовый состав · {starterIds.length} из 11</legend>
           <p className="subtle">Выберите 11 игроков, включая ровно
@@ -647,6 +786,73 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             </label>
           </div>
 
+          <h4 className="season-editor-title">Изменение тактики в игре</h4>
+          <label>
+            <input type="checkbox" checked={coachEnabled}
+              onChange={e=>setCoachEnabled(e.target.checked)}/>
+            {' '}Запланировать тактический приказ на пятиминутной границе
+          </label>
+          {coachEnabled&&<div className="season-tactics-grid">
+            <label>Минута изменения
+              <select value={coachMinute}
+                onChange={e=>setCoachMinute(Number(e.target.value))}>
+                {[15,30,45,60,75,85].map(minute=>
+                  <option key={minute} value={minute}>{minute}-я</option>)}
+              </select>
+            </label>
+            <label>Новая схема
+              <select value={coachFormation}
+                onChange={e=>setCoachFormation(e.target.value)}>
+                {FORMATIONS.map(v=><option key={v} value={v}>{v}</option>)}
+              </select>
+            </label>
+            <label>Новый настрой
+              <select value={coachMentality}
+                onChange={e=>setCoachMentality(Number(e.target.value))}>
+                <option value={-2}>Осторожный</option>
+                <option value={-1}>Сдержанный</option>
+                <option value={0}>Сбалансированный</option>
+                <option value={1}>Атакующий</option>
+                <option value={2}>Всё вперёд</option>
+              </select>
+            </label>
+            <label>Новый прессинг · {coachPressing}
+              <input type="range" min="0" max="100" step="10"
+                value={coachPressing}
+                onChange={e=>setCoachPressing(Number(e.target.value))}/>
+            </label>
+            <label>Новый темп · {coachTempo}
+              <input type="range" min="0" max="100" step="10"
+                value={coachTempo}
+                onChange={e=>setCoachTempo(Number(e.target.value))}/>
+            </label>
+            <label>
+              <input type="checkbox" checked={focusEnabled}
+                onChange={e=>setFocusEnabled(e.target.checked)}/>
+              {' '}Индивидуальное указание
+            </label>
+            {focusEnabled&&<>
+              <label>Игрок
+                <select value={actualFocusId}
+                  onChange={e=>setFocusId(e.target.value)}>
+                  {focusCandidates.map(id=><option key={id} value={id}>
+                    {playerNames.get(id)??id}</option>)}
+                </select>
+              </label>
+              <label>Приоритет
+                <select value={focusMode}
+                  onChange={e=>setFocusMode(e.target.value)}>
+                  <option value="attack">Атака</option>
+                  <option value="balanced">Баланс</option>
+                  <option value="defend">Защита</option>
+                </select>
+              </label>
+            </>}
+          </div>}
+          {coachEnabled&&<p className="subtle">Приказ вступает в силу
+            только с выбранной минуты и влияет на последующие эпизоды.
+            Если футболист к этому моменту удалён или недоступен,
+            индивидуальный приказ будет отклонён.</p>}
           <p className="subtle">Готовность рассчитана по реальным игровым
             минутам предыдущих матчей, с условным восстановлением перед
             следующим туром. Усталость влияет на автоматическую ротацию
@@ -656,7 +862,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             Проверьте 11 игроков, вратаря и лимит легионеров.
           </p>}
         </fieldset>}
-        {managerSetup&&ownNextNow&&!preview&&<fieldset
+        {managerSetup&&ownNextNow&&!preview&&!halfTime&&<fieldset
           className="season-substitution" disabled={busy||disabled}>
           <legend>Замена в перерыве вашего матча</legend>
           <div className="season-sub-fields">
@@ -685,6 +891,102 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               onClick={()=>setManagerSetup(null)}>Отмена настройки</button>
           </div>
         </fieldset>}
+        {halfTime&&halfTimeScore&&<section className="season-preview"
+          aria-label="Пауза матча">
+          <h3>Пауза · {pauseMinute}′</h3>
+          <p className="season-preview-score season-report-score">
+            <LigaClubLabel clubId={halfTime.fixture.homeClubId}
+              name={clubs.get(halfTime.fixture.homeClubId)??halfTime.fixture.homeClubId}/>
+            {' '}<strong>{halfTimeScore.homeGoals} : {halfTimeScore.awayGoals}</strong>{' '}
+            <LigaClubLabel clubId={halfTime.fixture.awayClubId}
+              name={clubs.get(halfTime.fixture.awayClubId)??halfTime.fixture.awayClubId}/>
+          </p>
+          <p className="subtle">Удары до паузы:
+            {' '}{halfTimeScore.homeShots} : {halfTimeScore.awayShots}.
+            События после паузы пока не раскрываются.</p>
+          <fieldset disabled={busy||disabled}>
+            <legend>Указания тренера на оставшуюся часть матча</legend>
+            <label><input type="checkbox" checked={coachEnabled}
+              onChange={e=>setCoachEnabled(e.target.checked)}/>
+              {' '}Изменить тактику</label>
+            {coachEnabled&&<div className="season-tactics-grid">
+              <label>Схема
+                <select value={coachFormation}
+                  onChange={e=>setCoachFormation(e.target.value)}>
+                  {FORMATIONS.map(v=><option key={v} value={v}>{v}</option>)}
+                </select>
+              </label>
+              <label>Настрой
+                <select value={coachMentality}
+                  onChange={e=>setCoachMentality(Number(e.target.value))}>
+                  <option value={-2}>Осторожный</option>
+                  <option value={-1}>Сдержанный</option>
+                  <option value={0}>Сбалансированный</option>
+                  <option value={1}>Атакующий</option>
+                  <option value={2}>Всё вперёд</option>
+                </select>
+              </label>
+              <label>Прессинг · {coachPressing}
+                <input type="range" min="0" max="100" step="10"
+                  value={coachPressing}
+                  onChange={e=>setCoachPressing(Number(e.target.value))}/>
+              </label>
+              <label>Темп · {coachTempo}
+                <input type="range" min="0" max="100" step="10"
+                  value={coachTempo}
+                  onChange={e=>setCoachTempo(Number(e.target.value))}/>
+              </label>
+              <label><input type="checkbox" checked={focusEnabled}
+                onChange={e=>setFocusEnabled(e.target.checked)}/>
+                {' '}Индивидуальное указание</label>
+              {focusEnabled&&<>
+                <label>Игрок
+                  <select value={actualFocusId}
+                    onChange={e=>setFocusId(e.target.value)}>
+                    {focusCandidates.map(id=><option key={id} value={id}>
+                      {playerNames.get(id)??id}</option>)}
+                  </select>
+                </label>
+                <label>Приоритет
+                  <select value={focusMode}
+                    onChange={e=>setFocusMode(e.target.value)}>
+                    <option value="attack">Атака</option>
+                    <option value="balanced">Баланс</option>
+                    <option value="defend">Защита</option>
+                  </select>
+                </label>
+              </>}
+            </div>}
+            <p className="subtle">Изменения вступают в силу на
+              {' '}{pauseMinute}-й минуте. Уже сыгранные эпизоды
+              остаются неизменными.</p>
+            <div className="button-stack">
+              {pauseMinute<85&&<>
+                <label>Следующая пауза
+                  <select value={nextPauseMinute}
+                    onChange={e=>setNextPauseMinute(Number(e.target.value))}>
+                    {Array.from({length:17},(_,i)=>(i+1)*5)
+                      .filter(minute=>minute>pauseMinute)
+                      .map(minute=><option key={minute} value={minute}>
+                        {minute}-я минута</option>)}
+                  </select>
+                </label>
+                <button type="button" disabled={busy||disabled}
+                  onClick={()=>finishHalfTime(nextPauseMinute)}>
+                  Продолжить до следующей паузы
+                </button>
+              </>}
+              <button type="button" disabled={busy||disabled}
+                onClick={()=>finishHalfTime(null)}>До финального свистка</button>
+              <button type="button" className="secondary-button"
+                onClick={()=>{setHalfTime(null);setInGameChoices([]);
+                  setCoachEnabled(false);setFocusEnabled(false);
+                  setStatus('Перерыв отменён. Сохранение не изменено.');}}>
+                Отменить просмотр
+              </button>
+            </div>
+          </fieldset>
+        </section>}
         {preview&&previewResult&&<div className="season-preview"
           aria-label="Предварительный результат">
           <span className="subtle">Результат · тур {preview.fixture.round}</span>
@@ -707,6 +1009,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           {preview.request.managedXI&&
             <p className="subtle">Стартовый состав и тактика выбраны тренером
               и включены в проверяемый расчёт.</p>}
+          {preview.request.inMatchOrdersVersion===1&&
+            <p className="subtle">Изменение тактики и индивидуальное указание
+              включены в проверяемый протокол по ходу матча.</p>}
           {preview.request.plannedCommands.some(command=>
             command!==null&&typeof command==='object'&&
             'kind' in command&&command.kind==='substitute-normal')&&

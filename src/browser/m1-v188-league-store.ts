@@ -20,13 +20,15 @@ export class M1V188StorageError extends Error{
 }
 const fail=(code:M1V188StorageCode,domain?:M1V188Error)=>
   new M1V188StorageError(code,domain);
-const quota=(e:DOMException|null)=>e?.name==='QuotaExceededError';
+const quota=(e:unknown):boolean=>
+  typeof e==='object'&&e!==null&&'name' in e&&
+  e.name==='QuotaExceededError';
 async function open():Promise<IDBDatabase>{
   if(typeof indexedDB==='undefined')throw fail('UNAVAILABLE');
   return new Promise((resolve,reject)=>{
     let req:IDBOpenDBRequest;
     try{req=indexedDB.open(DATABASE,1);}
-    catch{reject(fail('UNAVAILABLE'));return;}
+    catch(error){reject(fail(quota(error)?'QUOTA_EXCEEDED':'UNAVAILABLE'));return;}
     let settled=false;
     const rejectOnce=(code:M1V188StorageCode)=>{
       if(settled)return;
@@ -54,7 +56,8 @@ async function transact<T>(mode:IDBTransactionMode,
     return await new Promise<T>((resolve,reject)=>{
       let tx:IDBTransaction;
       try{tx=db.transaction(STORE,mode);}
-      catch{reject(fail('STORAGE_FAILED'));return;}
+      catch(error){reject(fail(quota(error)?'QUOTA_EXCEEDED':
+        'STORAGE_FAILED'));return;}
       let result:T|undefined,err:M1V188StorageError|null=null;
       const abort=(e:M1V188StorageError)=>{
         err=e;try{tx.abort();}catch{reject(e);}
@@ -67,7 +70,8 @@ async function transact<T>(mode:IDBTransactionMode,
       try{
         fn(tx.objectStore(STORE),abort,v=>{result=v;},
           e=>{err=e;});
-      }catch{abort(fail('STORAGE_FAILED'));}
+      }catch(error){abort(fail(quota(error)?'QUOTA_EXCEEDED':
+        'STORAGE_FAILED'));}
     });
   }finally{db.close();}
 }
@@ -125,7 +129,14 @@ export async function commitM1V188PersistedLeagueMatch(
       if(!next.ok){
         abort(fail('DOMAIN_REJECTED',next.error));return;
       }
-      const put=store.put(next.journal,careerId);
+      // An IDBObjectStore.put() can throw synchronously (including quota
+      // enforcement) from this asynchronous get-success callback. It is
+      // outside the transaction-constructor try/catch above: always abort
+      // instead of leaving the commit Promise unsettled.
+      let put:IDBRequest<IDBValidKey>;
+      try{put=store.put(next.journal,careerId);}
+      catch(reason){abort(fail(quota(reason)?'QUOTA_EXCEEDED':
+        'STORAGE_FAILED'));return;}
       put.onerror=()=>error(fail(quota(put.error)?
         'QUOTA_EXCEEDED':'STORAGE_FAILED'));
       success(next.journal);

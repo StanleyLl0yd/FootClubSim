@@ -92,9 +92,19 @@
         "Real all-type goals, open-play goals, saved/blocked/last-line attempts, xG, cards and injuries have compatible categories or explicit not-comparable exclusions.",
         "Reference metrics and numerical tolerances are frozen before final model fitting; sealed 2024/25 holdout stays unopened."
       ],
-      "next": "Reconcile provider-specific field definitions and unlicensed gaps; freeze development-only baselines.",
-      "state": "open",
-      "verification": null
+      "next": "ACCEPTED on protected exact main 80171eb8: source-attributed 2025/26 factual aggregates, narrow goal comparability, explicit excluded categories, preregistered goal-only development tolerance, sealed 2024/25 holdout. Do not infer P5-2 acceptance.",
+      "state": "accepted",
+      "verification": {
+        "exactMainSha": "80171eb86b5caeebf320a3a50e83c05ffbd0245c",
+        "evidenceUrls": [
+          "https://github.com/StanleyLl0yd/FootClubSim/issues/31#issuecomment-6799941107",
+          "https://github.com/StanleyLl0yd/FootClubSim/pull/528",
+          "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/43028823369",
+          "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/43043920452",
+          "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/43043920489"
+        ],
+        "acceptedBy": "https://github.com/StanleyLl0yd/FootClubSim/issues/31#issuecomment-6799941107"
+      }
     },
     {
       "id": "P5-2",

@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { createSyntheticRplScaleCatalog } from '../dist/core/synthetic.js';
 import { createInitialCareer } from '../dist/core/save.js';
 import { saveNewInitialCareer, loadInitialCareer } from '../dist/browser/initial-career-store.js';
+import { createM1V188PersistedLeague, loadM1V188PersistedLeague,
+  commitM1V188PersistedLeagueMatch } from '../dist/browser/m1-v188-league-store.js';
+import { prepareM1V188LeagueMatch } from '../dist/core/m1-v188-league-source-journal.js';
 
 const catalog = createSyntheticRplScaleCatalog(33);
 const career = createInitialCareer(catalog, catalog.clubs[0].id, 12, 'test-career');
@@ -12,14 +15,22 @@ function makeDatabaseStub() {
   let closeCount = 0;
   let quotaOnAdd = false;
   let quotaOnOpen = false;
+  let quotaThrowOnAdd = false;
+  let quotaThrowOnPut = false;
+  let quotaThrowOnTransaction = false;
   const db = {
     objectStoreNames: { contains: () => true },
     close() { closeCount++; },
     transaction(_store, mode) {
-      const tx = { error: null, oncomplete: null, onabort: null, onerror: null, objectStore() {
+      if (quotaThrowOnTransaction)
+        throw new DOMException('storage quota', 'QuotaExceededError');
+      const tx = { error: null, oncomplete: null, onabort: null, onerror: null,
+        abort() { queueMicrotask(() => tx.onabort?.()); }, objectStore() {
         return {
           add(value, key) {
             assert.equal(mode, 'readwrite');
+            if (quotaThrowOnAdd)
+              throw new DOMException('storage quota', 'QuotaExceededError');
             const request = { error: null, onerror: null };
             queueMicrotask(() => {
               if (quotaOnAdd) {
@@ -39,11 +50,22 @@ function makeDatabaseStub() {
             return request;
           },
           get(key) {
-            assert.equal(mode, 'readonly');
+            assert.ok(mode === 'readonly' || mode === 'readwrite');
             const request = { result: undefined, onsuccess: null };
             queueMicrotask(() => {
               request.result = entries.get(key);
               request.onsuccess?.();
+              if (mode === 'readonly') tx.oncomplete?.();
+            });
+            return request;
+          },
+          put(value, key) {
+            assert.equal(mode, 'readwrite');
+            if (quotaThrowOnPut)
+              throw new DOMException('storage quota', 'QuotaExceededError');
+            const request = { error: null, onerror: null };
+            queueMicrotask(() => {
+              entries.set(key, value);
               tx.oncomplete?.();
             });
             return request;
@@ -58,6 +80,9 @@ function makeDatabaseStub() {
     get closeCount() { return closeCount; },
     setQuotaOnAdd(value) { quotaOnAdd = value; },
     setQuotaOnOpen(value) { quotaOnOpen = value; },
+    setQuotaThrowOnAdd(value) { quotaThrowOnAdd = value; },
+    setQuotaThrowOnPut(value) { quotaThrowOnPut = value; },
+    setQuotaThrowOnTransaction(value) { quotaThrowOnTransaction = value; },
     indexedDB: { open() {
       const request = { result: db, error: null, onupgradeneeded: null, onerror: null, onblocked: null, onsuccess: null };
       queueMicrotask(() => {
@@ -221,6 +246,103 @@ test('an asynchronous save keeps the storage key tied to its validated payload',
     await saving;
     assert.deepEqual(await loadInitialCareer(career.careerId), career);
     assert.equal(stub.entries.has(mutable.careerId), false);
+  } finally {
+    if (original === undefined) delete globalThis.indexedDB;
+    else globalThis.indexedDB = original;
+  }
+});
+
+test('P5-4/P5-5: v188 league source commit is atomic on synchronous quota failures', async () => {
+  const original = globalThis.indexedDB;
+  const initial = makeDatabaseStub();
+  const league = makeDatabaseStub();
+  const database = { open(name) {
+    if (name === 'footclubsim-m0') return initial.indexedDB.open();
+    if (name === 'footclubsim-m1-v188') return league.indexedDB.open();
+    throw new Error('Unknown test database: ' + name);
+  } };
+  globalThis.indexedDB = database;
+  try {
+    await saveNewInitialCareer(career);
+    const savedCareer = initial.entries.get(career.careerId);
+    league.setQuotaThrowOnAdd(true);
+    await assert.rejects(createM1V188PersistedLeague(career.careerId),
+      { code: 'QUOTA_EXCEEDED' });
+    assert.equal(league.entries.size, 0,
+      'Failed league creation must not create an incomplete journal');
+    assert.equal(initial.entries.get(career.careerId), savedCareer);
+
+    league.setQuotaThrowOnAdd(false);
+    const zero = await createM1V188PersistedLeague(career.careerId);
+    assert.equal(zero.revision, 0);
+    const prepared = prepareM1V188LeagueMatch(career, zero);
+    assert.ok(prepared.ok);
+
+    league.setQuotaThrowOnPut(true);
+    await assert.rejects(commitM1V188PersistedLeagueMatch(
+      career.careerId, 0, prepared.request), { code: 'QUOTA_EXCEEDED' });
+    assert.equal((await loadM1V188PersistedLeague(career.careerId)).revision, 0,
+      'Synchronous put quota failure must preserve prior revision');
+    assert.equal(initial.entries.get(career.careerId), savedCareer);
+
+    league.setQuotaThrowOnPut(false);
+    league.setQuotaThrowOnTransaction(true);
+    await assert.rejects(loadM1V188PersistedLeague(career.careerId),
+      { code: 'QUOTA_EXCEEDED' });
+    league.setQuotaThrowOnTransaction(false);
+
+    globalThis.indexedDB = { open(name) {
+      if (name === 'footclubsim-m1-v188')
+        throw new DOMException('quota on opening', 'QuotaExceededError');
+      return database.open(name);
+    } };
+    await assert.rejects(loadM1V188PersistedLeague(career.careerId),
+      { code: 'QUOTA_EXCEEDED' });
+    globalThis.indexedDB = database;
+
+    const committed = await commitM1V188PersistedLeagueMatch(
+      career.careerId, 0, prepared.request);
+    assert.equal(committed.revision, 1);
+    assert.equal((await loadM1V188PersistedLeague(career.careerId)).revision, 1);
+    await assert.rejects(commitM1V188PersistedLeagueMatch(
+      career.careerId, 0, prepared.request), { code: 'STALE_REVISION' });
+    assert.equal((await loadM1V188PersistedLeague(career.careerId)).revision, 1);
+  } finally {
+    if (original === undefined) delete globalThis.indexedDB;
+    else globalThis.indexedDB = original;
+  }
+});
+test('P5-5: M0 synchronous quota faults are typed and never erase an existing career', async () => {
+  const original = globalThis.indexedDB;
+  const stub = makeDatabaseStub();
+  globalThis.indexedDB = stub.indexedDB;
+  try {
+    await saveNewInitialCareer(career);
+    const saved = stub.entries.get(career.careerId);
+    const second = createInitialCareer(
+      catalog, catalog.clubs[1].id, 32, 'quota-throw-second');
+    stub.setQuotaThrowOnAdd(true);
+    await assert.rejects(saveNewInitialCareer(second),
+      { code: 'QUOTA_EXCEEDED' });
+    assert.equal(stub.entries.size, 1);
+    assert.equal(stub.entries.get(career.careerId), saved);
+    stub.setQuotaThrowOnAdd(false);
+
+    stub.setQuotaThrowOnTransaction(true);
+    await assert.rejects(loadInitialCareer(career.careerId),
+      { code: 'QUOTA_EXCEEDED' });
+    await assert.rejects(saveNewInitialCareer(second),
+      { code: 'QUOTA_EXCEEDED' });
+    stub.setQuotaThrowOnTransaction(false);
+    assert.deepEqual(await loadInitialCareer(career.careerId), career);
+
+    globalThis.indexedDB = {open() {
+      throw new DOMException('quota on open', 'QuotaExceededError');
+    }};
+    await assert.rejects(loadInitialCareer(career.careerId),
+      { code: 'QUOTA_EXCEEDED' });
+    globalThis.indexedDB = stub.indexedDB;
+    assert.deepEqual(await loadInitialCareer(career.careerId), career);
   } finally {
     if (original === undefined) delete globalThis.indexedDB;
     else globalThis.indexedDB = original;

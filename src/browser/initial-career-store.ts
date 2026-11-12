@@ -16,6 +16,11 @@ export class CareerStorageError extends Error {
 
 const DATABASE = 'footclubsim-m0';
 const STORE = 'initial-careers';
+const quota = (e:unknown):boolean =>
+  typeof e==='object'&&e!==null&&'name' in e&&
+  e.name==='QuotaExceededError';
+const storageFailure = (e:unknown):CareerStorageError =>
+  new CareerStorageError(quota(e)?'QUOTA_EXCEEDED':'STORAGE_FAILED');
 
 /** Opens only an M0 prototype store; never upgrades or modifies future career formats. */
 function openDatabase(): Promise<IDBDatabase> {
@@ -25,7 +30,8 @@ function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     let request: IDBOpenDBRequest;
     try { request = indexedDB.open(DATABASE, 1); }
-    catch { reject(new CareerStorageError('UNAVAILABLE')); return; }
+    catch (error) { reject(new CareerStorageError(quota(error)?
+      'QUOTA_EXCEEDED':'UNAVAILABLE')); return; }
     let settled = false;
     function failure(code: CareerStorageErrorCode): void {
       if (settled) return;
@@ -62,11 +68,11 @@ export async function saveNewInitialCareer(snapshot: InitialCareerSave): Promise
     await new Promise<void>((resolve, reject) => {
       let transaction: IDBTransaction;
       try { transaction = db.transaction(STORE, 'readwrite'); }
-      catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
+      catch (error) { reject(storageFailure(error)); return; }
       let requestError: CareerStorageErrorCode = 'STORAGE_FAILED';
       let request: IDBRequest<IDBValidKey>;
       try { request = transaction.objectStore(STORE).add(encoded, careerId); }
-      catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
+      catch (error) { reject(storageFailure(error)); return; }
       request.onerror = () => {
         if (request.error?.name === 'ConstraintError') requestError = 'DUPLICATE';
         else if (request.error?.name === 'QuotaExceededError') requestError = 'QUOTA_EXCEEDED';
@@ -92,14 +98,14 @@ export async function loadInitialCareer(careerId: string): Promise<InitialCareer
     encoded = await new Promise<unknown>((resolve, reject) => {
       let transaction: IDBTransaction;
       try { transaction = db.transaction(STORE, 'readonly'); }
-      catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
+      catch (error) { reject(storageFailure(error)); return; }
       let request: IDBRequest<unknown>;
       try { request = transaction.objectStore(STORE).get(careerId); }
-      catch { reject(new CareerStorageError('STORAGE_FAILED')); return; }
+      catch (error) { reject(storageFailure(error)); return; }
       let value: unknown;
       request.onsuccess = () => { value = request.result as unknown; };
       transaction.oncomplete = () => resolve(value);
-      transaction.onabort = () => reject(new CareerStorageError('STORAGE_FAILED'));
+      transaction.onabort = () => reject(storageFailure(transaction.error));
       transaction.onerror = () => { /* Abort determines final transaction outcome. */ };
     });
   } finally {
@@ -122,11 +128,15 @@ export async function listStoredInitialCareerIds():Promise<readonly string[]>{
     return await new Promise<readonly string[]>((resolve,reject)=>{
       let transaction:IDBTransaction;
       try{transaction=db.transaction(STORE,'readonly');}
-      catch{reject(new CareerStorageError('STORAGE_FAILED'));return;}
-      const store=transaction.objectStore(STORE);
+      catch(error){reject(storageFailure(error));return;}
+      let keyRequest:IDBRequest<IDBValidKey[]>;
+      let countRequest:IDBRequest<number>;
+      try{
+        const store=transaction.objectStore(STORE);
+        keyRequest=store.getAllKeys(undefined,65);
+        countRequest=store.count();
+      }catch(error){reject(storageFailure(error));return;}
       let keys:IDBValidKey[]|null=null,count=0;
-      const keyRequest=store.getAllKeys(undefined,65);
-      const countRequest=store.count();
       keyRequest.onsuccess=()=>{keys=keyRequest.result;};
       countRequest.onsuccess=()=>{count=countRequest.result;};
       transaction.oncomplete=()=>{
@@ -138,7 +148,7 @@ export async function listStoredInitialCareerIds():Promise<readonly string[]>{
         }
         resolve(keys as string[]);
       };
-      transaction.onabort=()=>reject(new CareerStorageError('STORAGE_FAILED'));
+      transaction.onabort=()=>reject(storageFailure(transaction.error));
       transaction.onerror=()=>{};
     });
   }finally{db.close();}

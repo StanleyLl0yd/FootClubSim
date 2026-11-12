@@ -312,3 +312,39 @@ test('P5-4/P5-5: v188 league source commit is atomic on synchronous quota failur
     else globalThis.indexedDB = original;
   }
 });
+test('P5-5: M0 synchronous quota faults are typed and never erase an existing career', async () => {
+  const original = globalThis.indexedDB;
+  const stub = makeDatabaseStub();
+  globalThis.indexedDB = stub.indexedDB;
+  try {
+    await saveNewInitialCareer(career);
+    const saved = stub.entries.get(career.careerId);
+    const second = createInitialCareer(
+      catalog, catalog.clubs[1].id, 32, 'quota-throw-second');
+    stub.setQuotaThrowOnAdd(true);
+    await assert.rejects(saveNewInitialCareer(second),
+      { code: 'QUOTA_EXCEEDED' });
+    assert.equal(stub.entries.size, 1);
+    assert.equal(stub.entries.get(career.careerId), saved);
+    stub.setQuotaThrowOnAdd(false);
+
+    stub.setQuotaThrowOnTransaction(true);
+    await assert.rejects(loadInitialCareer(career.careerId),
+      { code: 'QUOTA_EXCEEDED' });
+    await assert.rejects(saveNewInitialCareer(second),
+      { code: 'QUOTA_EXCEEDED' });
+    stub.setQuotaThrowOnTransaction(false);
+    assert.deepEqual(await loadInitialCareer(career.careerId), career);
+
+    globalThis.indexedDB = {open() {
+      throw new DOMException('quota on open', 'QuotaExceededError');
+    }};
+    await assert.rejects(loadInitialCareer(career.careerId),
+      { code: 'QUOTA_EXCEEDED' });
+    globalThis.indexedDB = stub.indexedDB;
+    assert.deepEqual(await loadInitialCareer(career.careerId), career);
+  } finally {
+    if (original === undefined) delete globalThis.indexedDB;
+    else globalThis.indexedDB = original;
+  }
+});

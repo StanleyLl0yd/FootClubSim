@@ -17,6 +17,10 @@ const argument=(prefix)=>process.argv.find(s=>s.startsWith(prefix))
   ?.slice(prefix.length);
 const seedArg=argument('--seeds=')??'11,41,71,101';
 const specialArg=argument('--special-goal-source=');
+const medicalArg=argument('--medical-source=');
+if(medicalArg!==undefined&&medicalArg!=='5')
+  throw Error('Only existing medical source 5 is supported');
+const medicalPolicyVersion=medicalArg==='5'?5:undefined;
 if(specialArg!==undefined&&specialArg!=='1'&&specialArg!=='2')
   throw Error('Only source versions 1 (v190) or 2 (v191) are supported');
 const specialGoalSourceVersion=specialArg===undefined?undefined:
@@ -49,7 +53,7 @@ for(const seed of seeds){
   let journal=opened.journal;
   for(let played=0;played<240;played++){
     const next=prepareM1V188LeagueMatch(career,journal,[],
-      undefined,undefined,undefined,specialGoalSourceVersion);
+      undefined,medicalPolicyVersion,undefined,specialGoalSourceVersion);
     assert.ok(next?.ok,
       'Could not prepare fixture '+(played+1)+' for '+seed+': '+
       JSON.stringify(next));
@@ -68,6 +72,13 @@ for(const seed of seeds){
   assert.ok(journal.entries.every(entry=>
     entry.source.specialGoalSourceVersion===specialGoalSourceVersion),
   'Season silently changed its versioned special-goal source');
+  assert.ok(journal.entries.every(entry=>
+    entry.source.medicalPolicyVersion===medicalPolicyVersion),
+  'Season silently changed its versioned medical source');
+  if(medicalPolicyVersion===5)assert.ok(journal.entries.some(entry=>
+    Array.isArray(entry.source.autonomousMedicalOrigin)&&
+    entry.source.autonomousMedicalOrigin.length>0),
+  'A full v5 season must have a real source-generated medical collision');
   const table=deriveM1V188ProvisionalTable(career,journal);
   assert.ok(table&&table.length===16,'Missing final table');
   assert.ok(table.every(t=>t.played===30&&
@@ -90,7 +101,8 @@ for(const seed of seeds){
   // This is an observational census of the already replay-verified v188
   // journal, not an external referee, provider or clinical benchmark.
   const eventTotals={goals:0,openPlayGoals:0,penaltiesTaken:0,
-    penaltyGoals:0,ownGoalsFor:0,shots:0,cautions:0,
+    penaltyGoals:0,ownGoalsFor:0,shots:0,shotsOnTarget:0,
+    openPlayXgMilli:0,cautions:0,
     straightReds:0,secondYellowDismissals:0,
     fictionalInjuryWithdrawals:0,matchesWithSpecialDecisions:0};
   for(const entry of journal.entries){
@@ -108,6 +120,8 @@ for(const seed of seeds){
       eventTotals.penaltyGoals+=team.penaltyGoals;
       eventTotals.ownGoalsFor+=team.ownGoalsFor;
       eventTotals.shots+=team.shots;
+      eventTotals.shotsOnTarget+=team.shotsOnTarget;
+      eventTotals.openPlayXgMilli+=team.xgMilli;
     }
     const fromEvents=entry.result.events.filter(event=>
       event.type==='adjudication');
@@ -138,6 +152,10 @@ for(const seed of seeds){
   assert.equal(eventTotals.goals,
     eventTotals.openPlayGoals+eventTotals.penaltyGoals+
       eventTotals.ownGoalsFor,'League goal type totals must reconcile');
+  assert.ok(eventTotals.shotsOnTarget<=eventTotals.shots,
+    'Source shots on target cannot exceed open-play shots');
+  assert.ok(Number.isSafeInteger(eventTotals.openPlayXgMilli)&&
+    eventTotals.openPlayXgMilli>=0,'Source xG must be bounded');
   assert.equal(eventTotals.goals,
     table.reduce((sum,t)=>sum+t.goalsFor,0),
     'League event goals must reconcile with the final standings');
@@ -160,6 +178,8 @@ for(const seed of seeds){
       draws:outcomeTotals.draws/240,
       awayWins:outcomeTotals.awayWins/240,
       shots:eventTotals.shots/240,
+      shotsOnTarget:eventTotals.shotsOnTarget/240,
+      openPlayXgMilli:eventTotals.openPlayXgMilli/240,
       cautions:eventTotals.cautions/240,
       dismissals:(eventTotals.straightReds+
         eventTotals.secondYellowDismissals)/240,
@@ -199,6 +219,7 @@ const report={
     {specialGoalSourceVersion}:{}),
   refereeEventAuthorityAuthenticated:false,
   independentExternalRateComparison:false,
+  ...(medicalPolicyVersion===5?{medicalPolicyVersion:5}:{}),
 };
 assert.ok(uniqueResultDigests>1,
   'Different career seeds must not produce identical entire match journals');

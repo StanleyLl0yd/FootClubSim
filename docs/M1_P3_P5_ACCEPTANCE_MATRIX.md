@@ -1,6 +1,6 @@
 # M1 P3/P5 — nine-block functional closure matrix
 
-**Status: 1/9 ACCEPTED; P3 1/4, P5 0/5. M1 and exit #3 OPEN, M2 prohibited.**
+**Status: 2/9 ACCEPTED; P3 1/4, P5 1/5. M1 and exit #3 OPEN, M2 prohibited.**
 This is a *tracking subdivision* of existing [P3 #29](https://github.com/StanleyLl0yd/FootClubSim/issues/29) and [P5 #31](https://github.com/StanleyLl0yd/FootClubSim/issues/31), not a rewrite or relaxation of either issue's acceptance criteria. P1 #27, P2 #28, deferred P4 #30 and the two full repository-wide audits in exit #3 are **additional independent M1 obligations**, not silently included in the nine.
 
 The executable source of the nine records is `data/m1-p3-p5-closure-gates.json`. Every record begins **open**, despite extensive partial implementations and previously successful CI. Only move a gate to `accepted` after its entire `criteria` list is demonstrated on the integrated playable engine, with exact-main SHA, evidence URLs and written acceptance; no increment of the counter from a research-only or regression-only PR.
@@ -11,7 +11,7 @@ The executable source of the nine records is `data/m1-p3-p5-closure-gates.json`.
 | P3-2 | Medical events and exceptions | P3-1 | OPEN |
 | P3-3 | Discipline and match-specific suspensions | P3-1 | OPEN |
 | P3-4 | Complete two-team career chronology | P3-1, P3-2, P3-3 | OPEN |
-| P5-1 | Lawful comparable metric taxonomy | Independent | OPEN |
+| P5-1 | Lawful comparable metric taxonomy | Independent | ACCEPTED — [exact-main review](https://github.com/StanleyLl0yd/FootClubSim/issues/31#issuecomment-6799941107) |
 | P5-2 | Final playable-engine statistical calibration | P3-1, P3-2, P3-3, P3-4, P5-1 | OPEN |
 | P5-3 | Independent held-out validation | P5-2 | OPEN |
 | P5-4 | Integrated property, fuzz and recovery gates | P3-4 | OPEN |
@@ -22,7 +22,7 @@ The executable source of the nine records is `data/m1-p3-p5-closure-gates.json`.
 1. **Completed:** earlier gated #430/#431 work and P3-1 source integration #468 are on protected main. Do not reopen closed integration work without a demonstrated regression.
 2. **P3-1 ACCEPTED.** Finish P3-2 and P3-3 on the same v188 source, then close the remaining P3-4 recovery/rescheduling cases. Preserve M0/v8 and persisted schema compatibility.
 3. Do not mark P3-4 accepted merely because 240-fixture Chromium replay passed: rescheduling and clinical/KDK-dependent restrictions still need positive and negative evidence.
-4. In parallel, complete **P5-1**, establish P5-4 final-engine adversarial harness and predeclare P5-5 budgets. These tasks do not require opening the sealed 2024/25 holdout.
+4. **P5-1 ACCEPTED** with only all-type goals comparable. In parallel, establish P5-4 final-engine adversarial harness and verify the predeclared P5-5 budgets. These tasks do not require opening the sealed 2024/25 holdout.
 5. After final P3 engine is frozen, carry out **P5-2** full-engine calibrated aggregate/cohort work. Only then, with frozen thresholds and rights, perform **P5-3** once. Finish P5-4/5 on the identical final engine and browser targets.
 6. Even after all nine gates are accepted, keep M1 exit #3 open until P1/P2/P4 acceptance and **two genuinely complete repository-wide audit passes**, review, security, source/rights check and exact-main CI are recorded.
 
@@ -40,7 +40,7 @@ The executable source of the nine records is `data/m1-p3-p5-closure-gates.json`.
 - **P3-2:** Complete source-driven medical/return transitions and executable exception coverage.
 - **P3-3:** Integrate card carryover and authority-bound disciplinary ledger into playable career.
 - **P3-4:** Replace selected-club-only unknown opponent history with replay-verified two-team coverage and season gates.
-- **P5-1:** Reconcile provider-specific field definitions and unlicensed gaps; freeze development-only baselines.
+- **P5-1 ACCEPTED:** [exact-main all-three-criteria review](https://github.com/StanleyLl0yd/FootClubSim/issues/31#issuecomment-6799941107) on `80171eb86b5caeebf320a3a50e83c05ffbd0245c`, 9/9 PASS. The comparison covers 2025/26 published *all-type goals only*; every incompatible shot/xG/card/penalty/medical/outcome metric is explicitly excluded without claiming external license. Preserve this exact category freeze through later P5-2, not a blanket statistical calibration approval.
 - **P5-2:** Freeze integrated engine, measure its actual output and tune only legitimate development references.
 - **P5-3:** Execute one-time holdout protocol only after all prerequisites are evidence-verified.
 - **P5-4:** Consolidate existing campaigns around the selected playable path; add missing cross-module and fault-injection cases.

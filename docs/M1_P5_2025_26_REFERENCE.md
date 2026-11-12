@@ -47,3 +47,44 @@ correct incompatible shot/card definitions, quantify uncertainty in the one
 approve calibration thresholds. Four seeds have only three degrees of freedom;
 report and compare the full range and mean as well. No holdout observations are
 opened by the calculation.
+
+## P5-1 acceptance evidence: selected published references and category boundary
+
+This section freezes the **2025/26 development population of 240 played RPL
+fixtures**, observed no later than `2026-11-10` in
+`data/research/rpl-2025-26-aggregate-reference.json`. The current game
+population is a different, fictional 2026/27 16-club league. Aggregates are
+historical observations, **not** permission to redistribute underlying
+provider match/player tables or a claim that the competitions have equal clubs.
+
+| Frozen real metric | Named source / attributed event meaning | Comparison to current playable source |
+| --- | --- | --- |
+| 609 credited goals | Sportbox final 2025/26 competition aggregate; independently cross-checked against [Championnat's 240-match 609-goal table](https://www.championat.com/football/_russiapl/tournament/6594/) | **COMPARABLE** to source-2 all-type goals = open-play + scored penalties + own goals credited to the beneficiary; not equivalent to open-play-only goals |
+| 5,781 shots | FBref 2025/26 16-club squad shooting aggregate: publisher-defined attempts, not proven equivalent to source-generated open-play attempt | **EXCLUDED** |
+| 101 penalty attempts / 77 conversions | Sportbox same frozen season, official decision/attempt categories not proven identical to synthetic v190 decision rule | **EXCLUDED** |
+| 1,024 cautions / 59 dismissals | Sportbox same frozen season; card, direct-red and second-yellow partitions and reporting differences not fully reconciled | **EXCLUDED** |
+| Shots on target, saves, last-line blocks | No frozen matched provider event taxonomy or confirmed denominator | **EXCLUDED** |
+| Full xG and medical injury events | No corresponding validated same-population xG/clinical incidence comparison | **EXCLUDED** |
+| Home/draw/away | [Championnat's 109/67/64 reference was recorded on 2026-11-10](https://github.com/StanleyLl0yd/FootClubSim/issues/31#issuecomment-6770210903), before the 48-season run, but was not included in this comparator's original machine-readable reference or given predeclared numerical tolerances | **EXCLUDED** from formal numerical acceptance for this existing cohort; historical reference values remain descriptive |
+
+**Provenance/rights boundary:** each selected metric's direct source URL is
+recorded under `sourceByMetric` in the existing JSON; the reference file
+records competition, edition, season, population, observation date and
+known limitations. Only short attributed factual *aggregates* are stored.
+No provider raw event database, fixture-by-fixture licensed table, player
+records, images or source credentials are copied or redistributed. No
+external data license or official medical/KDK authority is asserted.
+Some linked provider pages may deny automated current retrieval; their
+existing frozen observations are therefore not promoted into newly
+authenticated raw evidence. The 609-goal total has the independent
+attributed cross-check above.
+
+**Frozen pre-fit limit:** only the all-type goal mean has an allowed broad
+**±20% relative development envelope**, fixed by [#528](https://github.com/StanleyLl0yd/FootClubSim/pull/528)
+*before* the new 48-career/11,520-match CI run. Every other unaligned
+metric has an explicit `EXCLUDED` category and **no numerical pass**.
+The result comparator rejects forged all-comparable claims, changed limit,
+changed source version, and 2024/25 holdout access. These are sufficient
+for the category/provenance freeze **P5-1 only**; P5-2 statistical
+acceptance and the separate 2024/25 held-out protocol require the final
+post-P3 engine and their own proof.

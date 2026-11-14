@@ -41,7 +41,7 @@ peak memory cases. No claim that M2 #155 or P5-5 is already complete.
 The existing full-season Chrome/Edge/Safari harness now **prospectively**
 includes a transient, isolated `indexedDB.open` throwing
 `QuotaExceededError` **after** the verified 240-fixture archive/recovery
-flow. It requires the UI to return the typed refusal, proves the active
+flow. It requires the UI to display the normal localized **insufficient storage / download full backup** guidance from its typed quota error, proves the active
 table/fixtures did not change, restores the original browser API, and reads
 the **actual native v188 IndexedDB record** to verify its revision remains
 240. This reuses the same application, fixture journal and native browsers

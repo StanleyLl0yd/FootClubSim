@@ -35,3 +35,21 @@ must fail, not be relabelled as progress.
 P5-5 formal acceptance still requires post-change exact-main runs and
 an explicit decision on the unmeasured real quota/eviction, crash and
 peak memory cases. No claim that M2 #155 or P5-5 is already complete.
+
+## Real-browser quota-fault recovery (incremental P5-4/P5-5 test)
+
+The existing full-season Chrome/Edge/Safari harness now **prospectively**
+includes a transient, isolated `indexedDB.open` throwing
+`QuotaExceededError` **after** the verified 240-fixture archive/recovery
+flow. It requires the UI to return the typed refusal, proves the active
+table/fixtures did not change, restores the original browser API, and reads
+the **actual native v188 IndexedDB record** to verify its revision remains
+240. This reuses the same application, fixture journal and native browsers
+with no new test runner or alternate persistence layer.
+
+The injection is **not** a disk-fill experiment, an OS quota enforcement
+measurement, peak browser memory measurement or proof of arbitrary organic
+eviction. The already existing `deleteDatabase` and real file-backed
+archive restore cover explicit storage loss and recovery separately.
+**P5-4 and P5-5 remain OPEN** until all other required source/real-platform
+gates are independently accepted and verified on final `main`.

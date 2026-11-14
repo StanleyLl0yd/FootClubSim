@@ -683,6 +683,57 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   assert.deepEqual(await run(finalSnapshot), before,
     'Tampered archive damaged a healthy persisted career');
 
+  // Native browser fault injection on the real 240-fixture career. This
+  // tests UI refusal and journal preservation, NOT organic disk exhaustion.
+  assert.equal(await run(()=>{
+    const previous=Object.getOwnPropertyDescriptor(window,'indexedDB');
+    if(previous&&!previous.configurable)return false;
+    Object.defineProperty(window,'indexedDB',{configurable:true,
+      value:{open(){throw new DOMException(
+        'Simulated full browser storage','QuotaExceededError');}}});
+    window.__p5QuotaOriginalIndexedDB=previous??null;
+    return true;
+  }),true,'Cannot isolate native browser IndexedDB quota fault');
+  try{
+    await click('Восстановить из браузера');
+    await waitFor(async()=>{
+      const text=await pageStatus();
+      return text.startsWith(
+        'Восстановление отклонено: Недостаточно места в браузере.')&&
+        text.includes('скачайте полный архив');
+    },'native-browser quota refusal with actionable backup guidance',
+    60_000);
+    assert.deepEqual(await run(finalSnapshot),before,
+      'Rejected quota restore changed the loaded full season');
+  }finally{
+    assert.equal(await run(()=>{
+      const previous=window.__p5QuotaOriginalIndexedDB;
+      if(previous)Object.defineProperty(window,'indexedDB',previous);
+      else delete window.indexedDB;
+      delete window.__p5QuotaOriginalIndexedDB;
+      return typeof indexedDB?.open==='function';
+    }),true,'Browser IndexedDB API not restored after fault');
+  }
+  // Verify the durable v188 journal remains present without forcing a
+  // redundant 240-fixture cold replay just to inspect its revision.
+  const durableRevision=await run(async id=>new Promise((resolve,reject)=>{
+    const opened=indexedDB.open('footclubsim-m1-v188',1);
+    opened.onerror=()=>reject(opened.error);
+    opened.onsuccess=()=>{
+      const db=opened.result;
+      const tx=db.transaction('full-league-source-journals','readonly');
+      const request=tx.objectStore('full-league-source-journals').get(id);
+      let revision=null;
+      request.onsuccess=()=>{revision=request.result?.revision??null;};
+      tx.oncomplete=()=>{db.close();resolve(revision);};
+      tx.onabort=()=>{db.close();reject(tx.error);};
+    };
+  }),careerId);
+  assert.equal(durableRevision,TOTAL,
+    'Actual native browser quota failure destroyed the 240-fixture journal');
+  console.log('PASS: '+browser+
+    ' refused injected IDB quota and preserved the final native journal');
+
   // Remove only the two databases created by this test on its isolated origin.
   assert.equal(await evaluate('Promise.all(["footclubsim-m0","footclubsim-m1-v188"].map(name => new Promise(resolve => {' +
     'const request = indexedDB.deleteDatabase(name); request.onsuccess = () => resolve(true); ' +

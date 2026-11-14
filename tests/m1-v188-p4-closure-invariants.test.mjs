@@ -171,7 +171,7 @@ test('P5-4: seeded two-club source streams reject tamper, duplicate, stale and o
         r=>{r.prematch.fixture.id='forged-fixture';},
         r=>{r.prematch.catalog.clubs[0].displayName='untrusted-club';},
         r=>{r.result.report.home.goals+=1;},
-        r=>{r.medicalPolicyVersion=4;},
+        r=>{r.autonomousMedicalOrigin=[{id:'forged-medical-witness'}];},
       ];
       for(const mutate of failures){
         const bad=structuredClone(p.request);

@@ -696,9 +696,13 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
   }),true,'Cannot isolate native browser IndexedDB quota fault');
   try{
     await click('Восстановить из браузера');
-    await waitFor(async()=>await pageStatus()===
-      'Восстановление отклонено: QUOTA_EXCEEDED',
-    'typed native-browser quota refusal',60_000);
+    await waitFor(async()=>{
+      const text=await pageStatus();
+      return text.startsWith(
+        'Восстановление отклонено: Недостаточно места в браузере.')&&
+        text.includes('скачайте полный архив');
+    },'native-browser quota refusal with actionable backup guidance',
+    60_000);
     assert.deepEqual(await run(finalSnapshot),before,
       'Rejected quota restore changed the loaded full season');
   }finally{

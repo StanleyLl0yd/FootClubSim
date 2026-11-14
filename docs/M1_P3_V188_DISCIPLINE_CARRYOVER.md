@@ -54,7 +54,7 @@ empty list is not an authenticated complete official snapshot. Without
 that argument, the previous internally fictional gameplay remains
 unchanged. External KDK orders, authenticated appeals, cancellations,
 reinstatement and retroactive conflicts remain outside this feature.
-This is partial P3-3 progress, not ACCEPTED.
+This is the intentionally fictional sanction-policy implementation. Its complete P3-3 acceptance, including mandatory refusal of unauthenticated real KDK/appeal claims, was subsequently recorded on exact main (see final section below).
 
 ## Explicit limitations
 
@@ -65,7 +65,16 @@ treated as cleared by modelled ban expiry. The existing second-yellow,
 straight-red and temporary-treatment models remain synthetic. Rescheduled
 fixture and medical-exception admission are not solved here.
 
-P3-3 remains OPEN until its complete verified in-match, cross-match,
-authority/appeal/expiry and typed-refusal criteria are accepted on the final
-playable source. P3-2/P3-4 and P5 remain OPEN; M1 and exit audit #3 remain
-OPEN, M2 forbidden, holdout 2024/25 sealed.
+## P3-3 formal acceptance boundary (2026-11-12)
+
+The [all-three-criteria review](https://github.com/StanleyLl0yd/FootClubSim/issues/29#issuecomment-6826198408) accepted the existing
+fictional, source-replayed discipline lifecycle on protected exact
+`main=21bfe37906a905f94900c9475e1694fc6a7fc767`, **9/9 required
+CI PASS**. The later medical-v5 full playable season also passed exact-head
+Core and native browser checks (PR #530). The approval explicitly treats
+an **unauthenticated external appeal/order/clearance as refused input**, not
+as a working RFU/KDK integration. Both-team verified eligibility, positive
+bans and actual own-fixture expiry are within the fictional game model;
+external approvals remain unsupported. **P3-3 ACCEPTED**; P3-2/P3-4 and
+P5-2/3/4/5 stay OPEN, M1 and the two full audits OPEN, M2 prohibited and
+2024/25 holdout SEALED.

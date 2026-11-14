@@ -60,9 +60,20 @@
         "Fictional game sanction policy and external KDK orders are separate; unresolved official rulings fail closed rather than silently assume an empty ban.",
         "Cross-match, appeal/expiry and two-team cases have deterministic replay and typed refusals."
       ],
-      "next": "Integrate card carryover and authority-bound disciplinary ledger into playable career.",
-      "state": "open",
-      "verification": null
+      "next": "ACCEPTED on protected exact main 21bfe379: fictional all-card suspension lifecycle, both-club XI/bench exclusions and expiry replay. External KDK orders/appeals are strictly rejected with UNVERIFIED_EXTERNAL_DISCIPLINE, not authenticated or applied; P3-4 rescheduling remains open.",
+      "state": "accepted",
+      "verification": {
+        "exactMainSha": "21bfe37906a905f94900c9475e1694fc6a7fc767",
+        "evidenceUrls": [
+          "https://github.com/StanleyLl0yd/FootClubSim/issues/29#issuecomment-6826198408",
+          "https://github.com/StanleyLl0yd/FootClubSim/pull/529",
+          "https://github.com/StanleyLl0yd/FootClubSim/pull/530",
+          "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/43048429251",
+          "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/43048776871",
+          "https://github.com/StanleyLl0yd/FootClubSim/actions/runs/43048777629"
+        ],
+        "acceptedBy": "https://github.com/StanleyLl0yd/FootClubSim/issues/29#issuecomment-6826198408"
+      }
     },
     {
       "id": "P3-4",

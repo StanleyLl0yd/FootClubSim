@@ -146,3 +146,77 @@ test('P4 interrupted match is an uncommitted pause, not a second CAS',()=>{
   assert.deepEqual(stale,{ok:false,error:'STALE_REVISION'});
   assert.equal(JSON.stringify(started.journal),before);
 });
+
+test('P5-4: seeded two-club source streams reject tamper, duplicate, stale and out-of-order commits',()=>{
+  const seeds=[11,37,71,127];
+  let verified=0,refused=0,medical=0;
+  for(const seed of seeds){
+    const career=initial(seed,'p5-property');
+    const started=startM1V188LeagueJournal(career);
+    assert.ok(started.ok);
+    let journal=started.journal;
+    const committed=new Set();
+    for(let step=0;step<12;step++){
+      const before=JSON.stringify(journal);
+      const p=prepareM1V188LeagueMatch(career,journal,
+        [],undefined,5,undefined,2);
+      assert.ok(p?.ok,'valid real source '+seed+'/'+step);
+      assert.equal(p.request.expectedRevision,step);
+      assert.ok(!committed.has(p.fixture.id));
+      // Each mutation is independent. No failed operation may change
+      // even one byte of the authoritative previous journal.
+      const failures=[
+        r=>{r.expectedRevision=step+1;},
+        r=>{r.commandId='v188-league-forged';},
+        r=>{r.prematch.fixture.id='forged-fixture';},
+        r=>{r.prematch.catalog.clubs[0].displayName='untrusted-club';},
+        r=>{r.result.report.home.goals+=1;},
+        r=>{r.autonomousMedicalOrigin=[{id:'forged-medical-witness'}];},
+      ];
+      for(const mutate of failures){
+        const bad=structuredClone(p.request);
+        mutate(bad);
+        const result=applyM1V188LeagueMatch(career,journal,bad);
+        assert.equal(result.ok,false,
+          'forged input wrongly accepted for seed '+seed+' step '+step);
+        assert.equal(JSON.stringify(journal),before);
+        refused++;
+      }
+      const applied=applyM1V188LeagueMatch(career,journal,p.request);
+      assert.ok(applied.ok,'source commit '+seed+'/'+step);
+      assert.equal(applied.journal.revision,step+1);
+      assert.equal(JSON.stringify(journal),before);
+      committed.add(p.fixture.id);
+      const entry=applied.journal.entries[step];
+      assert.equal(entry.source.medicalPolicyVersion,5);
+      assert.ok(Array.isArray(entry.source.autonomousMedicalOrigin));
+      medical+=entry.source.autonomousMedicalOrigin.length;
+      const detail=deriveM1V188MatchDetails(entry);
+      assert.ok(detail);
+      assert.equal(detail.home.goals+detail.away.goals,
+        entry.result.report.home.goals+entry.result.report.away.goals);
+      const cold=structuredClone(applied.journal);
+      assert.equal(validateM1V188LeagueJournal(career,cold).ok,true,
+        'cold source verification step '+step);
+      const table=deriveM1V188ProvisionalTable(career,cold);
+      assert.ok(table&&table.length===16);
+      assert.equal(table.reduce((sum,row)=>sum+row.played,0),
+        (step+1)*2);
+      assert.equal(table.reduce((sum,row)=>sum+row.goalsFor,0),
+        table.reduce((sum,row)=>sum+row.goalsAgainst,0));
+      const stale=applyM1V188LeagueMatch(career,
+        applied.journal,p.request);
+      assert.deepEqual(stale,{ok:false,error:'STALE_REVISION'});
+      assert.equal(applied.journal.revision,step+1);
+      journal=applied.journal;
+      verified++;
+    }
+    assert.equal(committed.size,12);
+    assert.equal(validateM1V188LeagueJournal(career,
+      structuredClone(journal)).ok,true);
+  }
+  assert.equal(verified,seeds.length*12);
+  assert.equal(refused,verified*6);
+  assert.ok(medical>0,
+    'The invalid-stream campaign must cover real medical v5 witnesses');
+});

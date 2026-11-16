@@ -1,3 +1,4 @@
+import {sameCanonicalValue} from './canonical-value.js';
 import {isPlainJsonTree} from './plain-json-tree.js';
 import {startM1Clock,type M1PrematchInput} from './m1-clock.js';
 import type {M1V29CausalSourceRun}
@@ -105,7 +106,8 @@ export function deriveM1V186Law5FromCausalSource(
       e.source.source.action.teamId===action.teamId&&
       e.source.source.action.playerId===action.playerId&&
       e.source.source.action.kind===action.kind&&
-      e.elapsedSeconds===action.elapsedSeconds);
+      e.elapsedSeconds===action.elapsedSeconds&&
+      sameCanonicalValue(e.source.source.action,action));
   for(const assessment of source.causalAssessments){
     const incident=source.generatedIncidents.find(i=>
       i.id===assessment.incidentId);
@@ -113,6 +115,9 @@ export function deriveM1V186Law5FromCausalSource(
       inspectedPatients.get(incident.id)??[]:[];
     const second=assessment.sameWhistleSecondPatient===true;
     if(!incident||
+        assessment.simulatedMedicalNeed!==true||
+        assessment.decisionSource!=='seeded-internal-medical-referee'||
+        assessment.externalMedicalAuthorityAuthenticated!==false||
         (second?prior.length!==1:prior.length!==0)||
         prior.includes(assessment.patientPlayerId)||
         incident.teamId===assessment.patientTeamId||
@@ -131,6 +136,8 @@ export function deriveM1V186Law5FromCausalSource(
       e.id===assessment.foulRestartEventId&&
       e.kind==='synthetic-foul-restart');
     if(!decision||!whistle||!restart||
+        whistle.teamId!==assessment.patientTeamId||
+        restart.teamId!==assessment.patientTeamId||
         decision.id!==assessment.offenderSourceEventId||
         decision.teamId!==incident.teamId||
         decision.playerId!==incident.playerId||
@@ -224,7 +231,9 @@ export function deriveM1V186Law5FromCausalSource(
           assessment.transition!=='on-field-quick'))
       return fail('UNSUPPORTED_LAW5_ORIGIN');
     if(assessment.transition==='on-field-quick'){
-      if(leave.length!==0||back.length!==0||
+      if(assessment.medicalExitEventId!==null||
+          assessment.medicalReturnEventId!==null||
+          leave.length!==0||back.length!==0||
           !restart.onField[patientSide].includes(
             assessment.patientPlayerId))
         return fail('INVALID_MEDICAL_CHRONOLOGY');
@@ -249,15 +258,31 @@ export function deriveM1V186Law5FromCausalSource(
         leave.length!==1||back.length!==1)
       return fail('INVALID_MEDICAL_CHRONOLOGY');
     const exit=leave[0]!,entry=back[0]!;
+    const exitRef=source.match.events.find(e=>
+      e.id===assessment.medicalExitEventId);
+    const returnRef=source.match.events.find(e=>
+      e.id===assessment.medicalReturnEventId);
     const exitEvent=physicalEvent(exit),returnEvent=physicalEvent(entry);
-    if(!exitEvent||!returnEvent||
+    if(!exitRef||!returnRef||
+        exitRef.kind!=='treatment-exit'||
+        returnRef.kind!=='treatment-return'||
+        exitRef.teamId!==assessment.patientTeamId||
+        returnRef.teamId!==assessment.patientTeamId||
+        exitRef.playerId!==assessment.patientPlayerId||
+        returnRef.playerId!==assessment.patientPlayerId||
+        exitRef.runningSeconds!==exit.elapsedSeconds||
+        returnRef.runningSeconds!==entry.elapsedSeconds||
+        !(decision.sequence<exitRef.sequence&&
+          exitRef.sequence<restart.sequence&&
+          restart.sequence<returnRef.sequence)||
+        !exitEvent||!returnEvent||
         savedDecision.sequence>=exitEvent.sequence||
         exitEvent.sequence>=returnEvent.sequence||
         entry.elapsedSeconds-restart.runningSeconds<60||
         entry.returnContext!=='running-clock'||
         entry.ballInPlay!==true||entry.entryBoundary!=='touchline'||
-        typeof entry.refereeSignalId!=='string'||
-        !entry.refereeSignalId.startsWith('m1-v23-unverified-')||
+        entry.refereeSignalId!==
+          'm1-v23-unverified-synthetic-signal'||
         restart.onField[patientSide].includes(
           assessment.patientPlayerId)||
         absentEvents(assessment.patientPlayerId,exit.elapsedSeconds,

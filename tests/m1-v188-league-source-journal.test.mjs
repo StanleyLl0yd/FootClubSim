@@ -1482,3 +1482,57 @@ test('P3-4: deferred schedule opens with the managed club for all 16 choices',()
       f.homeClubId===club.id||f.awayClubId===club.id).length,30);
   }
 });
+
+test('P3-2: generated fictional injuries physically withdraw and block later own fixtures',()=>{
+  const career=createInitialCareer(
+    catalog,catalog.clubs[0].id,131,'v188-medical-injury-carry');
+  let journal=startM1V188LeagueJournal(career).journal;
+  let withdrawals=0,injuryBanWitnesses=0;
+  for(let index=0;index<64;index++){
+    const holds=inspectM1V188FictionalHolds(career,journal);
+    assert.ok(holds.ok);
+    const prepared=prepareM1V188LeagueMatch(
+      career,journal,[],undefined,5,undefined,2,[],2);
+    assert.ok(prepared?.ok,'valid medical-v5 fixture '+index);
+    for(const side of ['home','away']){
+      const teamId=prepared.fixture[side==='home'?'homeClubId':'awayClubId'];
+      const lineup=prepared.request.prematch[side+'Lineup'];
+      const selected=new Set([...lineup.starters,...lineup.bench]);
+      for(const hold of holds.holds.filter(h=>
+        h.clubId===teamId&&h.reason==='fictional-injury'&&
+        h.remainingOwnFixtures>0)){
+        injuryBanWitnesses++;
+        assert.equal(selected.has(hold.playerId),false,
+          'Modelled injured player cannot reenter XI/bench without serving');
+      }
+    }
+    const events=prepared.request.result.events;
+    for(const action of prepared.request.plannedCommands.filter(c=>
+      c.kind==='injury-withdrawal')){
+      withdrawals++;
+      assert.equal(events.some(e=>
+        e.elapsedSeconds>=action.elapsedSeconds&&(
+          e.type==='source'&&e.source.type==='shot'&&
+            e.source.playerId===action.playerId||
+          e.type==='adjudication'&&
+            e.decision.playerId===action.playerId
+        )),false,
+      'A withdrawn player cannot take later source shots or penalties');
+    }
+    const applied=applyM1V188LeagueMatch(
+      career,journal,prepared.request);
+    assert.ok(applied.ok,'atomic medical-v5 commit '+index);
+    journal=applied.journal;
+  }
+  assert.ok(withdrawals>0,
+    'Require genuine generated injured-player withdrawal evidence');
+  assert.ok(injuryBanWitnesses>0,
+    'Require real next-own-fixture exclusion for fictional injury');
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(journal)).ok,true);
+  const tampered=structuredClone(journal);
+  tampered.entries[0].source.autonomousMedicalOrigin=[
+    {id:'forged-medical-origin'}];
+  assert.equal(validateM1V188LeagueJournal(career,tampered).ok,false,
+    'Forged medical-model downgrade cannot rewrite the actual source');
+});

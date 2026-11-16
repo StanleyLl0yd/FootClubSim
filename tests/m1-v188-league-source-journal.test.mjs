@@ -1463,3 +1463,22 @@ test('P3-4: source-seeded fictional postponements replay without rewriting past 
     {ok:false,error:'INVALID_REQUEST'},
     'Old played careers cannot retroactively opt into new fixture order');
 });
+
+test('P3-4: deferred schedule opens with the managed club for all 16 choices',()=>{
+  for(const club of catalog.clubs){
+    const career=createInitialCareer(catalog,club.id,11,
+      'v188-p3-4-opening-'+club.id);
+    const started=startM1V188LeagueJournal(career);
+    assert.ok(started.ok,club.id+' career must be valid');
+    const inspected=inspectM1V188LeagueCalendar(
+      career,started.journal,2);
+    assert.ok(inspected.ok,club.id+' deferred calendar');
+    assert.equal(inspected.fixtures.length,240);
+    assert.equal(new Set(inspected.fixtures.map(f=>f.id)).size,240);
+    const first=inspected.fixtures[0];
+    assert.ok([first.homeClubId,first.awayClubId].includes(club.id),
+      club.id+' must have the first playable match');
+    assert.equal(inspected.fixtures.filter(f=>
+      f.homeClubId===club.id||f.awayClubId===club.id).length,30);
+  }
+});

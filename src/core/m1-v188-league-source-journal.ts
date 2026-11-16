@@ -214,10 +214,12 @@ function calendar(i:InitialCareerSave,version:2|undefined=undefined):Fixture[]{
       fixtures.splice(to+deriveM1FixtureSeed(i.rngState,delayed.id)%8,
         0,delayed);
     }
-    // Keep the first fixture playable by the default manager's club
-    // while preserving the opening match's genuinely later source slot.
-    // This is an explicitly fictional advance of the next-round game.
-    const [advanced]=fixtures.splice(7,1);
+    // Keep the first fixture playable for whichever club the player chose.
+    // Move its earliest remaining match into the opening slot, not a
+    // hard-coded first-club match. This is a fictional calendar advance.
+    const firstOwn=fixtures.findIndex(f=>belongs(f,i.selectedClubId));
+    if(firstOwn<0)throw Error('Missing selected club fixture');
+    const [advanced]=fixtures.splice(firstOwn,1);
     if(!advanced)throw Error('Missing replacement opening fixture');
     fixtures.unshift(advanced);
   }

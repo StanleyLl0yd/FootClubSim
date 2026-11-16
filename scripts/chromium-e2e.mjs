@@ -633,20 +633,19 @@ async function run() {
     await waitText('Стартовая карьера восстановлена и проверена по SHA-256');
     await assertNondefaultCareer('normal profile restore');
 
-    // Player-facing career: automatic opponent game, owned-team
-    // halftime coaching decision, verified two-team table and durable reload.
+    // New-career calendar v2 starts with the actual managed club.
+    // Automatic opponent fixtures are verified AFTER that first own match.
     await clickSeason('Начать или продолжить сезон');
-    await waitText('Теперь очередь вашего клуба. Остальные матчи сохранены.');
-    if(await evaluate("Boolean(document.querySelector('.season-advance'))"))
-      throw new Error('Opponent fixture not automatically finished on season open');
-    const tablePlayed = await evaluate(`(() => {
-      return Array.from(document.querySelectorAll('.season-table tbody tr'))
-        .filter(row => Number(row.querySelectorAll('td')[1]?.textContent) === 1)
-        .length;
-    })()`);
-    if (tablePlayed !== 2) {
-      throw new Error('Automatic opponent fixture did not update both table rows');
-    }
+    await waitText('Сезон проверен и загружен. Сыграно матчей: 0 из 240.');
+    const opening=await evaluate(`(() => ({
+      revision:Number(document.querySelector('.season-progress')?.value),
+      played:[...document.querySelectorAll('.season-table tbody tr')]
+        .reduce((n,row)=>n+Number(row.querySelectorAll('td')[1]?.textContent??0),0),
+      own:document.querySelectorAll('.season-own-calendar .season-played').length,
+    }))()`);
+    if(opening.revision!==0||opening.played!==0||opening.own!==0)
+      throw new Error('New managed opening fixture was unexpectedly auto-committed: '+
+        JSON.stringify(opening));
     await clickSeason('Настроить замену');
     await waitText('Замена в перерыве вашего матча');
     const seasonChoice = await evaluate(`(() => ({
@@ -675,10 +674,10 @@ async function run() {
       }))()`);
       if(result.status.startsWith('Автоматический расчёт не завершён'))
         throw new Error(result.status);
-      return result.own===1&&result.revision>2&&
+      return result.own===1&&result.revision>1&&
         result.status.startsWith('Теперь очередь вашего клуба.')?
           result.revision:null;
-    },'owned halftime result and automatic opponents complete');
+    },'owned halftime result and automatic opponents complete',120_000);
     const storedChange = await evaluate(`new Promise((resolve, reject) => {
       const opening = indexedDB.open('footclubsim-m1-v188', 1);
       opening.onerror = () => reject(opening.error);
@@ -692,7 +691,9 @@ async function run() {
           const journal = request.result;
           result = {
             revision: journal?.revision,
-            change: journal?.entries?.[1]?.source?.plannedCommands
+            calendarVersion: journal?.entries?.[0]?.source?.fixtureCalendarPolicyVersion,
+            firstFixture: journal?.entries?.[0]?.fixtureId,
+            change: journal?.entries?.[0]?.source?.plannedCommands
               ?.find(cmd => cmd.kind === 'substitute-normal') ?? null,
           };
         };
@@ -701,6 +702,8 @@ async function run() {
       };
     })`);
     if (storedChange?.revision !== secondSeasonRevision ||
+        storedChange.calendarVersion !== 2 ||
+        !storedChange.firstFixture ||
         storedChange.change?.outPlayerId !== seasonChoice.outgoing ||
         storedChange.change?.inPlayerId !== seasonChoice.incoming ||
         storedChange.change?.elapsedSeconds !== 2700) {

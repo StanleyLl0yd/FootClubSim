@@ -208,7 +208,7 @@ function calendar(i:InitialCareerSave,version:2|undefined=undefined):Fixture[]{
   const fixtures=[...generateDoubleRoundRobin(
     i.catalog.clubs.map(c=>c.id)).flatMap(round=>round.fixtures)];
   if(version===2){
-    for(const [from,to] of [[0,16],[120,136]]){
+    for(const [from,to] of [[0,16],[120,136]] as const){
       const [delayed]=fixtures.splice(from,1);
       if(!delayed)throw Error('Missing original fixture');
       fixtures.splice(to+deriveM1FixtureSeed(i.rngState,delayed.id)%8,

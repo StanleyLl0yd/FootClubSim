@@ -19,7 +19,12 @@ export function deriveM1V188ProvisionalTable(
   if(journal.careerId!==initial.careerId||
       journal.revision!==journal.entries.length||
       journal.revision<0||journal.revision>240)return null;
-  const inspected=inspectM1V188LeagueCalendar(initial,journal);
+  // Storage verifies the journal; this display-only reduction needs only
+  // its immutable first-match calendar marker, not another full replay.
+  const calendarVersion=journal.entries[0]?.source?.
+    fixtureCalendarPolicyVersion===2?2:undefined;
+  const inspected=inspectM1V188LeagueCalendar(initial,undefined,
+    calendarVersion);
   if(!inspected.ok)return null;
   const schedule=inspected.fixtures;
   const rows=initial.catalog.clubs.map(club=>({

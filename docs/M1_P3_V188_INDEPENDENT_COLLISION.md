@@ -112,3 +112,20 @@ fictional source witness as independent clinical/referee authority.
 authentic clinical discharge, and direct integration of independent v5
 whistle into the persisted physical event stream still require evidence.
 P3-3/P3-4 and P5 final-source validation remain separate obligations.
+
+## Additional P3-2 physical injury/eligibility regression
+
+The existing real-source medical-v5/calendar-v2 64-fixture test exercises **both
+clubs**, not only the managed team. It observes genuine internally
+generated `injury-withdrawal` events, proves the injured player no
+longer performs any later source shot or speculative penalty kick,
+requires positive replay-derived **next-own-fixture** ban witnesses in
+both starting XI and bench, and validates the whole cold journal.
+A forged `autonomousMedicalOrigin` witness must fail replay.
+
+All outcomes remain **fictional game rules**: an in-match withdrawal
+is not an independent clinical diagnosis, confirmed concussion,
+bleeding clearance or external referee permission. The scope of this
+test is exact source/physical-player consistency and cross-fixture
+eligibility. It does **not** close P3-2, P3-4 or redefine unsupported
+2026/27 Law 5 exceptions.

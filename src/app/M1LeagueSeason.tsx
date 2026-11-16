@@ -105,8 +105,12 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   useEffect(()=>()=>{stopRequested.current=true;},[]);
   const [status,setStatus]=useState(
     'Нажмите «Начать или продолжить сезон». Начальная карьера сохранится автоматически.');
+  // Journals loaded from IndexedDB have already passed source replay.
+  // Recomputing that full replay on each UI commit would be quadratic.
+  const calendarVersion=journal?.revision?
+    journal.entries[0]?.source.fixtureCalendarPolicyVersion:2;
   const calendar=useMemo(()=>inspectM1V188LeagueCalendar(
-    career,journal??undefined,2),[career,journal]);
+    career,undefined,calendarVersion),[career,calendarVersion]);
   const fixtures=calendar.ok?calendar.fixtures:[];
   const postponed=new Set(calendar.ok?
     calendar.internalFictionalPostponements:[]);

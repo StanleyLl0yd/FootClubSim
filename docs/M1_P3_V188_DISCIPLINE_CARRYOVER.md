@@ -88,7 +88,10 @@ club per home/away pair, original round labels, physical referee source,
 player condition and both-team eligibility. It deterministically moves
 the first opening-round fixture into the third matchday sequence and
 the first second-leg fixture into the eighteenth matchday sequence,
-with a small seeded within-week destination offset.
+with a small seeded within-week destination offset. The
+first game of the next source round is advanced into the opening
+slot, so the default managed club can still play immediately,
+while the original opening fixture is genuinely postponed.
 
 The schedule is internal **fictional game chronology only**. The
 original match ID/round remains intact, so the UI can label a delayed

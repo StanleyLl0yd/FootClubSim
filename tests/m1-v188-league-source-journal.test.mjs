@@ -1380,6 +1380,10 @@ test('P3-4: source-seeded fictional postponements replay without rewriting past 
   assert.deepEqual(rescheduled.internalFictionalPostponements,
     [delayedOpening,delayedReturn]);
   assert.notEqual(ids[0],original.fixtures[0].id);
+  assert.equal(ids[0],original.fixtures[8].id,
+    'The opening slot stays a genuine first-team playable fixture');
+  assert.ok([rescheduled.fixtures[0].homeClubId,
+    rescheduled.fixtures[0].awayClubId].includes(career.selectedClubId));
   assert.deepEqual(prepareM1V188LeagueMatch(career,zero.journal,
     [],undefined,5,undefined,2,[],3),
   {ok:false,error:'INVALID_REQUEST'},

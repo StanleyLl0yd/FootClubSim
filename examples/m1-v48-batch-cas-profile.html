@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>M1 v48 paired native schema-6 batch CAS</title></head>
+<body>
+  <h1>Disposable Chromium paired sequential versus batched CAS profile</h1>
+  <pre id="status">M1_V48_BATCH_PROFILE_RUNNING</pre>
+  <pre id="report"></pre>
+  <script type="module">
+    import { createSyntheticRplScaleCatalog,defaultSyntheticLineup }
+      from '../dist/core/synthetic.js';
+    import { createInitialCareer } from '../dist/core/save.js';
+    import { saveNewInitialCareer,loadInitialCareer }
+      from '../dist/browser/initial-career-store.js';
+    import { createM1V32PersistedJournal,loadM1V32PersistedJournal,
+      commitM1V32PersistedBatch } from '../dist/browser/m1-v32-journal-store.js';
+    import { deriveM1V31CausalPhysicalExposure }
+      from '../dist/core/m1-v24-physical-exposure.js';
+    import { generateDoubleRoundRobin } from '../dist/core/fixtures.js';
+    import { MATCH_LEDGER_VERSION,M0_RULES_PACK_ID,M0_RULES_PACK_VERSION }
+      from '../dist/core/match-contracts.js';
+    import { M1_ENGINE_VERSION } from '../dist/core/m1-clock.js';
+    import { RNG_VERSION } from '../dist/core/rng.js';
+    import { defaultTacticalPlan } from '../dist/core/tactics.js';
+
+    const count=12,batchSize=6;
+    const status=document.querySelector('#status');
+    const reportNode=document.querySelector('#report');
+    const check=(yes,why)=>{if(!yes)throw Error(why);};
+    const ms=v=>Math.round(v*1000)/1000;
+    const catalog=createSyntheticRplScaleCatalog(77);
+    const sequentialCareer=createInitialCareer(
+      catalog,catalog.clubs[0].id,42,'m1-v48-sequential');
+    const batchCareer=createInitialCareer(
+      catalog,catalog.clubs[0].id,42,'m1-v48-batched');
+    const fixtures=generateDoubleRoundRobin(catalog.clubs.map(c=>c.id))
+      .flatMap(round=>round.fixtures).slice(0,count);
+    const clubs=new Map(catalog.clubs.map(c=>[c.id,c]));
+    const policy={
+      home:{assignedActor:{kind:'player'},availableStaffIds:[]},
+      away:{assignedActor:{kind:'player'},availableStaffIds:[]},
+    };
+    function request(index,careerId){
+      const fixture=fixtures[index];
+      const prematch={
+        schemaVersion:MATCH_LEDGER_VERSION,engineVersion:M1_ENGINE_VERSION,
+        rulesPackId:M0_RULES_PACK_ID,rulesPackVersion:M0_RULES_PACK_VERSION,
+        fixture,catalog,
+        homeLineup:defaultSyntheticLineup(clubs.get(fixture.homeClubId)),
+        awayLineup:defaultSyntheticLineup(clubs.get(fixture.awayClubId)),
+        homeTactics:defaultTacticalPlan(fixture.homeClubId),
+        awayTactics:defaultTacticalPlan(fixture.awayClubId),
+        rosterRules:{starterCount:11,maxBench:12,maxForeignersOnField:7},
+        rngAlgorithmVersion:RNG_VERSION,rngSeed:1,
+      };
+      for(let seed=1;seed<=128;seed++){
+        prematch.rngSeed=seed;
+        const result=deriveM1V31CausalPhysicalExposure(
+          prematch,policy,[],[]);
+        if(!result.ok)continue;
+        return {schemaVersion:6,commandId:'v48-comparable-'+index,
+          careerId,expectedRevision:index,prematch:{...prematch},
+          policy,halfTimeCommands:[],inPlayCommands:[],result};
+      }
+      throw Error('NO_ADMISSIBLE_SOURCE:'+fixture.id);
+    }
+    async function run(){
+      check(fixtures.length===count,'insufficient synthetic fixtures');
+      const stage=new URL(location.href).searchParams.get('stage');
+      check(stage===null||stage==='verify','invalid stage');
+      if(stage===null){
+        await saveNewInitialCareer(sequentialCareer);
+        await saveNewInitialCareer(batchCareer);
+        await createM1V32PersistedJournal(sequentialCareer.careerId);
+        await createM1V32PersistedJournal(batchCareer.careerId);
+        const preparedStart=performance.now();
+        const requests=fixtures.map((_,i)=>request(i,sequentialCareer.careerId));
+        const sourcePreparationMs=ms(performance.now()-preparedStart);
+        const copyForBatch=requests.map(req=>({
+          ...req,careerId:batchCareer.careerId,
+        }));
+        // Native all-or-nothing check: the first command is valid but the
+        // second carries a stale revision. Neither test career may advance.
+        for(const [id,commands] of [
+          [sequentialCareer.careerId,requests],
+          [batchCareer.careerId,copyForBatch],
+        ]){
+          let rejected=false;
+          try{
+            await commitM1V32PersistedBatch(id,0,[
+              commands[0],{...commands[1],expectedRevision:0},
+            ]);
+          }catch(error){
+            rejected=error?.code==='DOMAIN_REJECTED' &&
+              error?.domainError==='STALE_REVISION';
+          }
+          check(rejected,'invalid second command was not rejected');
+          const unchanged=await loadM1V32PersistedJournal(id);
+          check(unchanged.revision===0&&unchanged.results.length===0,
+            'partial transaction survived an invalid second command');
+        }
+        const sequentialSamples=[];
+        const seqStart=performance.now();
+        for(let index=0;index<count;index++){
+          const start=performance.now();
+          const committed=await commitM1V32PersistedBatch(
+            sequentialCareer.careerId,index,[requests[index]]);
+          check(committed.revision===index+1,
+            'single-commit revision drift');
+          sequentialSamples.push(ms(performance.now()-start));
+        }
+        const sequentialCommitMs=ms(performance.now()-seqStart);
+        const seqReload=performance.now();
+        const savedSequential=await loadM1V32PersistedJournal(
+          sequentialCareer.careerId);
+        const sequentialReplayMs=ms(performance.now()-seqReload);
+        const batchSamples=[];
+        const batchStart=performance.now();
+        for(let start=0;start<count;start+=batchSize){
+          const requestSet=copyForBatch.slice(start,start+batchSize);
+          const started=performance.now();
+          const committed=await commitM1V32PersistedBatch(
+            batchCareer.careerId,start,requestSet);
+          check(committed.revision===start+batchSize,
+            'batched-commit revision drift');
+          batchSamples.push(ms(performance.now()-started));
+        }
+        const batchCommitMs=ms(performance.now()-batchStart);
+        const batchReload=performance.now();
+        const savedBatch=await loadM1V32PersistedJournal(batchCareer.careerId);
+        const batchReplayMs=ms(performance.now()-batchReload);
+        check(savedSequential.revision===count&&
+          savedBatch.revision===count&&
+          JSON.stringify(savedSequential.results)===
+            JSON.stringify(savedBatch.results),
+          'sequential and batched model histories differ');
+        sessionStorage.setItem('m1-v48-profile',
+          JSON.stringify({
+            sourcePreparationMs,sequentialSamples,batchSamples,
+            sequentialCommitMs,batchCommitMs,
+            sequentialReplayMs,batchReplayMs,
+          }));
+        const next=new URL(location.href);
+        next.searchParams.set('stage','verify');
+        location.replace(next.href);
+        return;
+      }
+      const saved=sessionStorage.getItem('m1-v48-profile');
+      check(typeof saved==='string','measurement lost on navigation');
+      const samples=JSON.parse(saved);
+      const reloadedSequential=await loadM1V32PersistedJournal(
+        sequentialCareer.careerId);
+      const reloadedBatch=await loadM1V32PersistedJournal(
+        batchCareer.careerId);
+      check(reloadedSequential.revision===count&&
+        reloadedBatch.revision===count&&
+        JSON.stringify(reloadedSequential.results)===
+          JSON.stringify(reloadedBatch.results),
+        'models diverged after navigation / replay');
+      check((await loadInitialCareer(sequentialCareer.careerId)).careerId===
+        sequentialCareer.careerId &&
+        (await loadInitialCareer(batchCareer.careerId)).careerId===
+          batchCareer.careerId,'immutable M0 career lost');
+      const report={
+        schemaVersion:1,
+        status:'NATIVE_PAIRED_BATCH_CAS_OBSERVATION_NOT_A_GATE',
+        browser:navigator.userAgent,fixtureCount:count,batchSize,
+        historyIdentical:true,fullSourceReplayVerified:true,
+        measurements:samples,
+        limitations:[
+          'same hosted browser but order is sequential then batched',
+          'synthetic uncalibrated fixtures; no accepted performance SLA',
+          'all source commands generated before commit timings',
+          'M0+schema-6 are isolated disposable test careers',
+          'no 240-fixture season, eviction, OS power loss or official authority',
+        ],
+      };
+      reportNode.textContent=JSON.stringify(report);
+      sessionStorage.removeItem('m1-v48-profile');
+      status.textContent='M1_V48_BATCH_PROFILE_PASS';
+    }
+    run().catch(error=>{
+      status.textContent='M1_V48_BATCH_PROFILE_FAIL: '+
+        String(error?.stack??error);
+    });
+  </script>
+</body>
+</html>

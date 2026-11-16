@@ -66,7 +66,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       undefined,saved.revision===0?
         5:saved.entries[0]?.source.medicalPolicyVersion,
       selection,saved.revision===0?
-        2:saved.entries[0]?.source.specialGoalSourceVersion,coaching);
+        2:saved.entries[0]?.source.specialGoalSourceVersion,coaching,
+      saved.revision===0?
+        2:saved.entries[0]?.source.fixtureCalendarPolicyVersion);
   const [preview,setPreview]=useState<Ready|null>(null);
   const [halfTime,setHalfTime]=useState<Ready|null>(null);
   const [pauseMinute,setPauseMinute]=useState(45);
@@ -103,8 +105,11 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   useEffect(()=>()=>{stopRequested.current=true;},[]);
   const [status,setStatus]=useState(
     'Нажмите «Начать или продолжить сезон». Начальная карьера сохранится автоматически.');
-  const calendar=useMemo(()=>inspectM1V188LeagueCalendar(career),[career]);
+  const calendar=useMemo(()=>inspectM1V188LeagueCalendar(
+    career,journal??undefined,2),[career,journal]);
   const fixtures=calendar.ok?calendar.fixtures:[];
+  const postponed=new Set(calendar.ok?
+    calendar.internalFictionalPostponements:[]);
   const clubs=useMemo(()=>new Map(
     career.catalog.clubs.map(club=>[club.id,club.displayName])),[career]);
   const table=useMemo(()=>journal?
@@ -123,7 +128,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const readinessById=new Map((readiness?.players??[]).map(
     player=>[player.playerId,player.condition]));
   const navigation=useMemo(()=>journal?
-    planM1V188NextOwnMatch(career,journal):null,[career,journal]);
+    planM1V188NextOwnMatch(career,journal,2):null,[career,journal]);
   const ownReports=fixtures.filter(f=>
     f.homeClubId===career.selectedClubId||
     f.awayClubId===career.selectedClubId).flatMap(f=>{
@@ -593,7 +598,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
    * Never rely on an effect to commit twice under React StrictMode.
    */
   async function advanceOpponents(start:M1V188Journal):Promise<void>{
-    const plan=planM1V188NextOwnMatch(career,start);
+    const plan=planM1V188NextOwnMatch(career,start,2);
     if(!plan||plan.automaticMatches===0)return;
     setAdvancing(true);setPreview(null);setHalfTime(null);
     setInGameChoices([]);setInGameSubstitutions([]);
@@ -763,7 +768,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             </div>
           </div>}
         {next&&ownNextNow&&<div className="season-next">
-          <span className="subtle">Следующая игра · тур {next.round}</span>
+          <span className="subtle">Следующая игра · тур {next.round}
+            {postponed.has(next.id)?' · перенесённый матч':''}
+          </span>
           <strong className="season-club-pair">
             <LigaClubLabel clubId={next.homeClubId}
               name={clubs.get(next.homeClubId)??next.homeClubId}/>
@@ -1217,6 +1224,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                       <LigaClubLabel clubId={f.awayClubId}
                         name={clubs.get(f.awayClubId)??f.awayClubId}/>
                     </span>
+                    {postponed.has(f.id)&&
+                      <span className="subtle"> · перенесённый</span>}
                   </span>
                   <strong>{entry?
                     entry.result.report.home.goals+' : '+

@@ -72,7 +72,7 @@ type Source={managedXI?:M1V188ManagedXI;
   disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
   specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1|2;
-  inMatchOrdersVersion?:1};
+  fixtureCalendarPolicyVersion?:2;inMatchOrdersVersion?:1};
 export type M1V188Entry={fixtureId:string;round:number;
   commandId:string;source:Source;result:Good};
 export type M1V188Journal={schemaVersion:188;careerId:string;
@@ -86,7 +86,7 @@ export type M1V188Request={schemaVersion:188;careerId:string;
   medicalPolicyVersion?:2|3|4|5;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
   specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1|2;
-  inMatchOrdersVersion?:1};
+  fixtureCalendarPolicyVersion?:2;inMatchOrdersVersion?:1};
 export type M1V188Error='INVALID_INITIAL'|'INVALID_JOURNAL'|
   'INVALID_REQUEST'|'WRONG_CAREER'|'STALE_REVISION'|
   'WRONG_FIXTURE'|'UNTRUSTED_CATALOG'|'SOURCE_MISMATCH'|
@@ -101,7 +101,7 @@ export type M1V188Gate=
     remainingFixtures:number;completeHistory:boolean;
     sourceReplayVerified:true;bothTeamsEligibilityApplied:true;
     externalKdkAuthenticated:false;clinicalAuthorityAuthenticated:false;
-    rescheduledFixturesSupported:false}>;
+    rescheduledFixturesSupported:boolean}>;
 export type M1V188Proposal=
   | Readonly<{ok:false;error:M1V188Error;
     stage?:'CONDITION'|'CAUSAL'|'SPECIAL'|'CLOCK';cause?:string}>
@@ -131,6 +131,8 @@ const goalShape=(value:Record<string,unknown>,keys:readonly string[])=>
     ...(value.conditionPolicyVersion===1||
         value.conditionPolicyVersion===2?['conditionPolicyVersion']:[]),
     ...(value.inMatchOrdersVersion===1?['inMatchOrdersVersion']:[]),
+    ...(value.fixtureCalendarPolicyVersion===2?
+      ['fixtureCalendarPolicyVersion']:[]),
   ]);
 const requestKeys=['schemaVersion','careerId','expectedRevision',
   'commandId','prematch','policy','plannedCommands',
@@ -197,9 +199,23 @@ function validInitial(value:unknown):value is InitialCareerSave{
   return startM1V120Journal(value).ok&&
     (value as InitialCareerSave).catalog.clubs.length===16;
 }
-function calendar(i:InitialCareerSave):Fixture[]{
-  return generateDoubleRoundRobin(i.catalog.clubs.map(c=>c.id))
-    .flatMap(round=>round.fixtures);
+/** Replayable in-game fixture delay, never an external league statement.
+ * The opening fixture is always moved: legacy source prefixes cannot be
+ * relabelled as deferred calendars after a game has already been played.
+ * IDs, original round numbers and all 240 match records stay unchanged.
+ */
+function calendar(i:InitialCareerSave,version:2|undefined=undefined):Fixture[]{
+  const fixtures=[...generateDoubleRoundRobin(
+    i.catalog.clubs.map(c=>c.id)).flatMap(round=>round.fixtures)];
+  if(version===2){
+    for(const [from,to] of [[0,16],[120,136]]){
+      const [delayed]=fixtures.splice(from,1);
+      if(!delayed)throw Error('Missing original fixture');
+      fixtures.splice(to+deriveM1FixtureSeed(i.rngState,delayed.id)%8,
+        0,delayed);
+    }
+  }
+  return fixtures;
 }
 function belongs(f:Fixture,team:string){
   return f.homeClubId===team||f.awayClubId===team;
@@ -511,12 +527,17 @@ function read(i:InitialCareerSave,value:unknown){
       !Array.isArray(raw.entries)||
       raw.entries.length!==raw.revision)return null;
   const journal=raw as unknown as M1V188Journal;
+  const fixtureCalendarVersion=
+    journal.entries[0]?.source?.fixtureCalendarPolicyVersion;
+  if(fixtureCalendarVersion!==undefined&&fixtureCalendarVersion!==2)
+    return null;
   const cached=verifiedPrefixes.get(i.careerId);
   if(cached&&cached.initialBytes===JSON.stringify(i)&&
       cached.journalBytes===JSON.stringify(journal))
     return{journal,holds:cached.holds.map(h=>({...h})),
-      condition:new Map(cached.condition),schedule:calendar(i)};
-  const schedule=calendar(i),holds:Hold[]=[];
+      condition:new Map(cached.condition),
+      schedule:calendar(i,fixtureCalendarVersion)};
+  const schedule=calendar(i,fixtureCalendarVersion),holds:Hold[]=[];
   let condition=startM1V188Condition(i);
   if(schedule.length!==LIMIT)return null;
   let versionedSeen=false,conditionVersion:0|1|2=0,
@@ -530,7 +551,9 @@ function read(i:InitialCareerSave,value:unknown){
     const conditioned=entry.source?.conditionPolicyVersion??0;
     if(specialGoalVersion!==null&&special!==specialGoalVersion||
        versionedSeen&&!versioned||medical<medicalVersionSeen||
-       conditioned<conditionVersion)return null;
+       conditioned<conditionVersion||
+       entry.source?.fixtureCalendarPolicyVersion!==fixtureCalendarVersion)
+      return null;
     if(copy(entry,MAX_REQUEST)===null||
         !verifyEntry(i,entry,schedule[n]!,n,holds,schedule,condition))
       return null;
@@ -554,7 +577,8 @@ function good(journal:M1V188Journal):M1V188Gate{
     sourceReplayVerified:true,bothTeamsEligibilityApplied:true,
     externalKdkAuthenticated:false,
     clinicalAuthorityAuthenticated:false,
-    rescheduledFixturesSupported:false};
+    rescheduledFixturesSupported:
+      journal.entries[0]?.source?.fixtureCalendarPolicyVersion===2};
 }
 export function startM1V188LeagueJournal(initial:unknown):M1V188Gate{
   if(!validInitial(initial))return fail('INVALID_INITIAL');
@@ -576,6 +600,7 @@ export function prepareM1V188LeagueMatch(
   managedXI:unknown=undefined,
   specialGoalSourceVersion:unknown=undefined,
   coachingChoices:unknown=[],
+  fixtureCalendarPolicyVersion:unknown=undefined,
 ):M1V188Proposal|null{
   if(!validInitial(initial))return {ok:false,error:'INVALID_INITIAL'};
   // No complete authenticated external KDK feed exists in this game.
@@ -589,9 +614,19 @@ export function prepareM1V188LeagueMatch(
       medicalPolicyVersion!==3&&medicalPolicyVersion!==4&&
       medicalPolicyVersion!==5)
     return {ok:false,error:'INVALID_REQUEST'};
+  if(fixtureCalendarPolicyVersion!==undefined&&
+      fixtureCalendarPolicyVersion!==2)
+    return {ok:false,error:'INVALID_REQUEST'};
   const accepted=read(initial,value);
   if(!accepted)return {ok:false,error:'INVALID_JOURNAL'};
   const previous=accepted.journal.entries.at(-1)?.source.medicalPolicyVersion;
+  const firstCalendar=accepted.journal.entries[0]?.
+    source.fixtureCalendarPolicyVersion;
+  const effectiveCalendar=fixtureCalendarPolicyVersion===2?2:firstCalendar;
+  if(accepted.journal.revision>0&&
+      fixtureCalendarPolicyVersion!==undefined&&
+      fixtureCalendarPolicyVersion!==firstCalendar)
+    return {ok:false,error:'INVALID_REQUEST'};
   const firstGoal=accepted.journal.entries[0]?.source.specialGoalSourceVersion;
   if(accepted.journal.revision>0&&
      firstGoal!==specialGoalSourceVersion)
@@ -608,14 +643,15 @@ export function prepareM1V188LeagueMatch(
     medicalPolicyVersion===3||previous===3?3:
     medicalPolicyVersion===2||previous===2?2:undefined;
   const medicalSource=effective!==undefined;
-  const index=accepted.journal.revision,f=accepted.schedule[index];
+  const schedule=calendar(initial,effectiveCalendar);
+  const index=accepted.journal.revision,f=schedule[index];
   if(!f)return null;
   const managerCommandsForFixture=managerCommands(manager,f,
     initial.selectedClubId);
   if(managerCommandsForFixture===null)
     return {ok:false,error:'UNAUTHORIZED_MANAGER'};
   const baseline=canonicalPrematch(initial,f,index,
-    accepted.holds,accepted.schedule,accepted.condition,true);
+    accepted.holds,schedule,accepted.condition,true);
   if(!baseline)return {ok:false,error:'NO_LEGAL_LINEUP'};
   const prematch=managedPrematch(baseline,
     initial.selectedClubId,managedXI);
@@ -658,6 +694,7 @@ export function prepareM1V188LeagueMatch(
     checkpointMedical:generated.checkpointMedical,
     result,conditionPolicyVersion:2,
     ...(coachOrders.length?{inMatchOrdersVersion:1 as const}:{}),
+    ...(effectiveCalendar===2?{fixtureCalendarPolicyVersion:2 as const}:{}),
     ...(specialGoalSourceVersion===1||specialGoalSourceVersion===2?
       {specialGoalSourceVersion}:{}),
     ...(effective?{medicalPolicyVersion:effective}:{}),
@@ -698,6 +735,13 @@ export function applyM1V188LeagueMatch(
   if(accepted.journal.revision>0&&
      firstGoal!==raw.specialGoalSourceVersion)
     return fail('SOURCE_MISMATCH');
+  const priorCalendar=accepted.journal.entries[0]?.
+    source.fixtureCalendarPolicyVersion;
+  if(accepted.journal.revision>0&&
+      raw.fixtureCalendarPolicyVersion!==priorCalendar)
+    return fail('SOURCE_MISMATCH');
+  const schedule=calendar(initial,
+    raw.fixtureCalendarPolicyVersion===2?2:undefined);
   const priorMedical=accepted.journal.entries.at(-1)?.
     source.medicalPolicyVersion;
   const priorCondition=accepted.journal.entries.at(-1)?.
@@ -718,7 +762,7 @@ export function applyM1V188LeagueMatch(
     return fail('SOURCE_MISMATCH');
   if(raw.expectedRevision!==accepted.journal.revision)
     return fail('STALE_REVISION');
-  const n=accepted.journal.revision,f=accepted.schedule[n];
+  const n=accepted.journal.revision,f=schedule[n];
   if(!f)return fail('SEASON_COMPLETE');
   if(raw.commandId!=='v188-league-'+f.id||
       !sameCanonicalValue(raw.prematch.fixture,f))
@@ -736,6 +780,8 @@ export function applyM1V188LeagueMatch(
       disciplinePolicyVersion:2,
       ...(raw.inMatchOrdersVersion===1?
         {inMatchOrdersVersion:1 as const}:{}),
+      ...(raw.fixtureCalendarPolicyVersion===2?
+        {fixtureCalendarPolicyVersion:2 as const}:{}),
       ...(raw.conditionPolicyVersion===2?
         {conditionPolicyVersion:2 as const}:
         raw.conditionPolicyVersion===1?
@@ -755,7 +801,7 @@ export function applyM1V188LeagueMatch(
   const holds=[...accepted.holds];
   // New commits cannot claim the legacy shot/referee authority.
   if(!verifyEntry(initial,entry,f,n,holds,
-      accepted.schedule,accepted.condition,false))return fail('SOURCE_MISMATCH');
+      schedule,accepted.condition,false))return fail('SOURCE_MISMATCH');
   const condition=advanceM1V188Condition(initial,accepted.condition,entry);
   if(!condition)return fail('SOURCE_MISMATCH');
   const next:M1V188Journal={...accepted.journal,revision:n+1,
@@ -796,11 +842,30 @@ export function inspectM1V188FictionalHolds(
     externalKdkAuthenticated:false,
     officialClearanceAuthenticated:false,holds};
 }
-export function inspectM1V188LeagueCalendar(initial:unknown):
-  {ok:false;error:'INVALID_INITIAL'}|
+export function inspectM1V188LeagueCalendar(
+  initial:unknown,journal:unknown=undefined,
+  newCareerCalendarPolicy:unknown=undefined,
+):{ok:false;error:'INVALID_INITIAL'|'INVALID_JOURNAL'|'INVALID_REQUEST'}|
   {ok:true;fixtures:readonly Fixture[];fixtureCount:240;
-    roundCount:30;selectedClubFixtures:30}{
+    roundCount:30;selectedClubFixtures:30;
+    internalFictionalPostponements:readonly string[];
+    externalLeagueReschedulingAuthenticated:false}{
   if(!validInitial(initial))return {ok:false,error:'INVALID_INITIAL'};
-  return{ok:true,fixtures:calendar(initial),fixtureCount:240,
-    roundCount:30,selectedClubFixtures:30};
+  if(newCareerCalendarPolicy!==undefined&&newCareerCalendarPolicy!==2)
+    return {ok:false,error:'INVALID_REQUEST'};
+  const accepted=journal===undefined?null:read(initial,journal);
+  if(journal!==undefined&&!accepted)
+    return {ok:false,error:'INVALID_JOURNAL'};
+  const source=accepted?.journal.entries[0]?.
+    source.fixtureCalendarPolicyVersion;
+  const version=source===2||accepted?.journal.revision===0&&
+    newCareerCalendarPolicy===2||journal===undefined&&
+    newCareerCalendarPolicy===2?2:undefined;
+  const fixtures=calendar(initial,version);
+  const original=version===2?calendar(initial):[];
+  return{ok:true,fixtures,fixtureCount:240,roundCount:30,
+    selectedClubFixtures:30,
+    internalFictionalPostponements:version===2?
+      [original[0]!.id,original[120]!.id]:[],
+    externalLeagueReschedulingAuthenticated:false};
 }

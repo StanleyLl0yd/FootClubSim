@@ -78,3 +78,39 @@ bans and actual own-fixture expiry are within the fictional game model;
 external approvals remain unsupported. **P3-3 ACCEPTED**; P3-2/P3-4 and
 P5-2/3/4/5 stay OPEN, M1 and the two full audits OPEN, M2 prohibited and
 2024/25 holdout SEALED.
+
+## P3-4 candidate: in-game source-seeded fixture postponements (not yet accepted)
+
+The existing 240-fixture v188 journal now has an **opt-in**
+`fixtureCalendarPolicyVersion: 2` on its **existing source entries**.
+The version-2 calendar preserves all 240 match IDs, two fixtures per
+club per home/away pair, original round labels, physical referee source,
+player condition and both-team eligibility. It deterministically moves
+the first opening-round fixture into the third matchday sequence and
+the first second-leg fixture into the eighteenth matchday sequence,
+with a small seeded within-week destination offset.
+
+The schedule is internal **fictional game chronology only**. The
+original match ID/round remains intact, so the UI can label a delayed
+fixture without impersonating a Russian Premier League calendar or
+claiming a weather bulletin, medical opinion or RFU/KDK approval.
+`externalLeagueReschedulingAuthenticated:false` stays explicit.
+The canonical schedule is regenerated from the fixed initial-career
+seed and source version, not from user-supplied rescheduling claims.
+
+Existing saves have **no** new calendar marker, preserve the old
+fixture ordering, validate with the original v188 source and are
+never retroactively rescheduled. The source marker is part of
+every new v2 replayed entry; a changed marker or swapped match
+breaks cold source verification. Holds are served by *actual
+own-team matches played in the replayed order*, so a postponed
+match cannot silently clear a sanction. The same actual journal
+supports both managed and automatic fixtures.
+
+This is directly tested against 24 genuine source fixtures
+(including the deferred opening match), with full 240-fixture
+real-browser native UI tests and a future prospective 48-career
+P5 calibration required before final acceptance.
+**P3-4 remains OPEN:** final source chronology,
+all-source rescheduling evidence and any genuinely missing
+externally authorized fixture changes still require evaluation.

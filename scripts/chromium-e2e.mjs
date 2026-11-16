@@ -639,7 +639,7 @@ async function run() {
     await waitText('Сезон проверен и загружен. Сыграно матчей: 0 из 240.');
     const opening=await evaluate(`(() => ({
       revision:Number(document.querySelector('.season-progress')?.value),
-      played:[...document.querySelectorAll('.season-table tbody tr')]
+      played:[...document.querySelectorAll('table.season-table:not(.season-squad) tbody tr')]
         .reduce((n,row)=>n+Number(row.querySelectorAll('td')[1]?.textContent??0),0),
       own:document.querySelectorAll('.season-own-calendar .season-played').length,
     }))()`);
@@ -679,7 +679,7 @@ async function run() {
           result.revision:null;
     },'owned halftime result and automatic opponents complete',120_000);
     const tableAfterAuto=await evaluate(`(() => {
-      const rows=[...document.querySelectorAll('.season-table tbody tr')];
+      const rows=[...document.querySelectorAll('table.season-table:not(.season-squad) tbody tr')];
       const played=rows.map(row=>Number(
         row.querySelectorAll('td')[1]?.textContent));
       return {teams:rows.length,totalPlayed:played.reduce(

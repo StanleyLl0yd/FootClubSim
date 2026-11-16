@@ -214,6 +214,12 @@ function calendar(i:InitialCareerSave,version:2|undefined=undefined):Fixture[]{
       fixtures.splice(to+deriveM1FixtureSeed(i.rngState,delayed.id)%8,
         0,delayed);
     }
+    // Keep the first fixture playable by the default manager's club
+    // while preserving the opening match's genuinely later source slot.
+    // This is an explicitly fictional advance of the next-round game.
+    const [advanced]=fixtures.splice(7,1);
+    if(!advanced)throw Error('Missing replacement opening fixture');
+    fixtures.unshift(advanced);
   }
   return fixtures;
 }

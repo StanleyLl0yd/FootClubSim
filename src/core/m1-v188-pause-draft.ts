@@ -33,7 +33,8 @@ const validMinute=(m:unknown):m is number=>
 const played=(proposal:Ready,second:number)=>
   (proposal.request.result as Good).events.filter(e=>
     e.elapsedSeconds<second);
-const sourcePrematch=(proposal:Ready)=>{
+const sourcePrematch=(proposal:Ready,
+  includeVersionWitness=true)=>{
   const input=proposal.request.prematch as M1PrematchInput;
   return {
     fixture:input.fixture,
@@ -43,6 +44,14 @@ const sourcePrematch=(proposal:Ready)=>{
     engineVersion:input.engineVersion,
     rulesPackId:input.rulesPackId,rulesPackVersion:input.rulesPackVersion,
     rosterRules:input.rosterRules,
+    // New pauses bind the precise existing engine-source combination.
+    // Older persisted pause drafts did not include this nested witness;
+    // absence is handled by strict historical played-prefix replay.
+    ...(includeVersionWitness?{sourceVersions:{
+      medical:proposal.request.medicalPolicyVersion??null,
+      specialGoal:proposal.request.specialGoalSourceVersion??null,
+      fixtureCalendar:proposal.request.fixtureCalendarPolicyVersion??null,
+    }}:{}),
   };
 };
 const beforeCommands=(proposal:Ready,second:number)=>
@@ -147,7 +156,9 @@ export function recoverM1V188PauseDraft(
     if(!restored?.ok||!restored.selectedClubFixture||
         restored.fixture.id!==draft.fixtureId||
         restored.request.expectedRevision!==draft.expectedRevision||
-        !sameCanonicalValue(sourcePrematch(restored),draft.prematchWitness)||
+        !sameCanonicalValue(sourcePrematch(restored,
+          Object.hasOwn(draft.prematchWitness,'sourceVersions')),
+          draft.prematchWitness)||
         !sameCanonicalValue(beforeCommands(restored,draft.pauseMinute*60),
           draft.commandPrefix)||
         !sameCanonicalValue(

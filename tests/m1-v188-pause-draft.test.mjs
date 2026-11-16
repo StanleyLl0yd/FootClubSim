@@ -96,11 +96,18 @@ test('P3-4: first-fixture paused medical-v5/calendar-v2 source survives exact re
   assert.equal(p.request.specialGoalSourceVersion,2);
   const original=createM1V188PauseDraft(p,45);
   assert.ok(original?.playedPrefix.length>0);
+  assert.deepEqual(original.prematchWitness.sourceVersions,{
+    medical:5,specialGoal:2,fixtureCalendar:2,
+  },'New draft must bind the exact medical, goal and calendar source');
   const draft=structuredClone(original);
   const recovered=recoverM1V188PauseDraft(initial,journal,draft);
   assert.ok(recovered,'new medical/calendar-v2 pause must be recoverable');
   assert.deepEqual(recovered.proposal.request,p.request);
   assert.deepEqual(recovered.draft,original);
+  const forgedVersion=structuredClone(draft);
+  forgedVersion.prematchWitness.sourceVersions.fixtureCalendar=null;
+  assert.equal(recoverM1V188PauseDraft(initial,journal,
+    forgedVersion),null,'Cannot forge the calendar provenance of a pause');
   const untrusted=structuredClone(draft);
   untrusted.playedPrefix[0].sequence=999;
   assert.equal(recoverM1V188PauseDraft(initial,journal,untrusted),null,
@@ -114,4 +121,9 @@ test('P3-4: first-fixture paused medical-v5/calendar-v2 source survives exact re
     initial,journal,structuredClone(oldDraft));
   assert.ok(oldRecovered,'existing medical-v5 flat-calendar pauses survive');
   assert.deepEqual(oldRecovered.proposal.request,older.request);
+  const legacyDraft=structuredClone(oldDraft);
+  delete legacyDraft.prematchWitness.sourceVersions;
+  const olderSource=recoverM1V188PauseDraft(initial,journal,legacyDraft);
+  assert.ok(olderSource,'Unversioned historical pause remains recoverable');
+  assert.deepEqual(olderSource.draft,legacyDraft);
 });

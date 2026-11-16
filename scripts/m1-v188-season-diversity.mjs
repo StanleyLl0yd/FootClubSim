@@ -18,6 +18,10 @@ const argument=(prefix)=>process.argv.find(s=>s.startsWith(prefix))
 const seedArg=argument('--seeds=')??'11,41,71,101';
 const specialArg=argument('--special-goal-source=');
 const medicalArg=argument('--medical-source=');
+const calendarArg=argument('--fictional-calendar-source=');
+if(calendarArg!==undefined&&calendarArg!=='2')
+  throw Error('Only explicit source-replayed fictional calendar v2 is supported');
+const fixtureCalendarPolicyVersion=calendarArg==='2'?2:undefined;
 if(medicalArg!==undefined&&medicalArg!=='5')
   throw Error('Only existing medical source 5 is supported');
 const medicalPolicyVersion=medicalArg==='5'?5:undefined;
@@ -53,7 +57,8 @@ for(const seed of seeds){
   let journal=opened.journal;
   for(let played=0;played<240;played++){
     const next=prepareM1V188LeagueMatch(career,journal,[],
-      undefined,medicalPolicyVersion,undefined,specialGoalSourceVersion);
+      undefined,medicalPolicyVersion,undefined,specialGoalSourceVersion,
+      [],fixtureCalendarPolicyVersion);
     assert.ok(next?.ok,
       'Could not prepare fixture '+(played+1)+' for '+seed+': '+
       JSON.stringify(next));
@@ -75,6 +80,9 @@ for(const seed of seeds){
   assert.ok(journal.entries.every(entry=>
     entry.source.medicalPolicyVersion===medicalPolicyVersion),
   'Season silently changed its versioned medical source');
+  assert.ok(journal.entries.every(entry=>
+    entry.source.fixtureCalendarPolicyVersion===fixtureCalendarPolicyVersion),
+  'Season silently changed its source-derived fixture chronology');
   if(medicalPolicyVersion===5)assert.ok(journal.entries.some(entry=>
     Array.isArray(entry.source.autonomousMedicalOrigin)&&
     entry.source.autonomousMedicalOrigin.length>0),
@@ -220,6 +228,7 @@ const report={
   refereeEventAuthorityAuthenticated:false,
   independentExternalRateComparison:false,
   ...(medicalPolicyVersion===5?{medicalPolicyVersion:5}:{}),
+  ...(fixtureCalendarPolicyVersion===2?{fixtureCalendarPolicyVersion:2}:{}),
 };
 assert.ok(uniqueResultDigests>1,
   'Different career seeds must not produce identical entire match journals');

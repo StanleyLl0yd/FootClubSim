@@ -85,3 +85,33 @@ test('previous coaching changes are preserved but cannot be retroedited',()=>{
   assert.equal(recoverM1V188PauseDraft(
     initial,journal,forgedCommand),null);
 });
+
+test('P3-4: first-fixture paused medical-v5/calendar-v2 source survives exact reload',()=>{
+  const p=prepareM1V188LeagueMatch(initial,journal,
+    [],undefined,5,undefined,2,[],2);
+  assert.ok(p?.ok,'new default source must be playable');
+  assert.equal(p.selectedClubFixture,true);
+  assert.equal(p.request.medicalPolicyVersion,5);
+  assert.equal(p.request.fixtureCalendarPolicyVersion,2);
+  assert.equal(p.request.specialGoalSourceVersion,2);
+  const original=createM1V188PauseDraft(p,45);
+  assert.ok(original?.playedPrefix.length>0);
+  const draft=structuredClone(original);
+  const recovered=recoverM1V188PauseDraft(initial,journal,draft);
+  assert.ok(recovered,'new medical/calendar-v2 pause must be recoverable');
+  assert.deepEqual(recovered.proposal.request,p.request);
+  assert.deepEqual(recovered.draft,original);
+  const untrusted=structuredClone(draft);
+  untrusted.playedPrefix[0].sequence=999;
+  assert.equal(recoverM1V188PauseDraft(initial,journal,untrusted),null,
+    'source calendar marker must not launder a forged played prefix');
+  const older=prepareM1V188LeagueMatch(initial,journal,
+    [],undefined,5,undefined,2);
+  assert.ok(older?.ok);
+  const oldDraft=createM1V188PauseDraft(older,45);
+  assert.ok(oldDraft);
+  const oldRecovered=recoverM1V188PauseDraft(
+    initial,journal,structuredClone(oldDraft));
+  assert.ok(oldRecovered,'existing medical-v5 flat-calendar pauses survive');
+  assert.deepEqual(oldRecovered.proposal.request,older.request);
+});

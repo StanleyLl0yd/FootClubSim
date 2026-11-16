@@ -120,19 +120,40 @@ export function recoverM1V188PauseDraft(
   if(!draft||draft.careerId!==initial.careerId||
       draft.expectedRevision!==journal.revision||
       journal.revision>=240)return null;
-  const firstGoal=journal.revision===0?2:
-    journal.entries[0]?.source.specialGoalSourceVersion;
-  const restored=prepareM1V188LeagueMatch(initial,journal,
-    draft.substitutions,undefined,undefined,draft.managedXI,
-    firstGoal,draft.coachingChoices);
-  if(!restored?.ok||!restored.selectedClubFixture||
-      restored.fixture.id!==draft.fixtureId||
-      restored.request.expectedRevision!==draft.expectedRevision||
-      !sameCanonicalValue(sourcePrematch(restored),draft.prematchWitness)||
-      !sameCanonicalValue(beforeCommands(restored,draft.pauseMinute*60),
-        draft.commandPrefix)||
-      !sameCanonicalValue(
-        played(restored,draft.pauseMinute*60),draft.playedPrefix))
-    return null;
-  return {draft,proposal:restored};
+  // A first-match draft has not committed its source-version markers yet.
+  // Try the current playable defaults first, then a fixed, small set of
+  // historical versions. NONE of these attempts trusts the draft's label:
+  // the whole original physical event and command prefix must replay.
+  // After any committed fixture, read versions from the verified journal.
+  type Model=readonly [
+    2|3|4|5|undefined,1|2|undefined,2|undefined];
+  const oldFirst:readonly (readonly [
+    Model[0],Model[1]])[]=[
+    [5,2],[undefined,2],[undefined,undefined],
+    [2,2],[3,2],[4,2],[5,undefined],
+    [2,undefined],[3,undefined],[4,undefined],
+    [undefined,1],[2,1],[3,1],[4,1],[5,1],
+  ];
+  const models:readonly Model[]=journal.revision===0?
+    [[5,2,2],...oldFirst.map(([medical,goal])=>
+      [medical,goal,undefined] as const)]:
+    [[journal.entries.at(-1)?.source.medicalPolicyVersion,
+      journal.entries[0]?.source.specialGoalSourceVersion,
+      journal.entries[0]?.source.fixtureCalendarPolicyVersion]];
+  for(const [medical,goal,calendar] of models){
+    const restored=prepareM1V188LeagueMatch(initial,journal,
+      draft.substitutions,undefined,medical,draft.managedXI,
+      goal,draft.coachingChoices,calendar);
+    if(!restored?.ok||!restored.selectedClubFixture||
+        restored.fixture.id!==draft.fixtureId||
+        restored.request.expectedRevision!==draft.expectedRevision||
+        !sameCanonicalValue(sourcePrematch(restored),draft.prematchWitness)||
+        !sameCanonicalValue(beforeCommands(restored,draft.pauseMinute*60),
+          draft.commandPrefix)||
+        !sameCanonicalValue(
+          played(restored,draft.pauseMinute*60),draft.playedPrefix))
+      continue;
+    return {draft,proposal:restored};
+  }
+  return null;
 }

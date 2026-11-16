@@ -18,7 +18,12 @@ export function deriveM1V188Champion(
       journal.revision!==journal.entries.length||
       journal.revision<0||journal.revision>240||
       initial.catalog.clubs.length!==16)return null;
-  const inspected=inspectM1V188LeagueCalendar(initial,journal);
+  // The persisted journal is replay-validated at the storage boundary.
+  // The read-only winner projection must not re-simulate every past match.
+  const calendarVersion=journal.entries[0]?.source?.
+    fixtureCalendarPolicyVersion===2?2:undefined;
+  const inspected=inspectM1V188LeagueCalendar(initial,undefined,
+    calendarVersion);
   if(!inspected.ok)return null;
   const fixtures=inspected.fixtures;
   if(fixtures.length!==240)return null;

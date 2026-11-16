@@ -678,6 +678,18 @@ async function run() {
         result.status.startsWith('Теперь очередь вашего клуба.')?
           result.revision:null;
     },'owned halftime result and automatic opponents complete',120_000);
+    const tableAfterAuto=await evaluate(`(() => {
+      const rows=[...document.querySelectorAll('.season-table tbody tr')];
+      const played=rows.map(row=>Number(
+        row.querySelectorAll('td')[1]?.textContent));
+      return {teams:rows.length,totalPlayed:played.reduce(
+        (sum,value)=>sum+value,0),valid:played.every(value=>
+        Number.isInteger(value)&&value>=0&&value<=30)};
+    })()`);
+    if(tableAfterAuto.teams!==16||!tableAfterAuto.valid||
+        tableAfterAuto.totalPlayed!==2*secondSeasonRevision)
+      throw new Error('Automatic fixtures broke two-team table conservation: '+
+        JSON.stringify(tableAfterAuto));
     const storedChange = await evaluate(`new Promise((resolve, reject) => {
       const opening = indexedDB.open('footclubsim-m1-v188', 1);
       opening.onerror = () => reject(opening.error);

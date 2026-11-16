@@ -111,6 +111,63 @@ test('Law5 source rejects forged victim, missing return and fake referee permiss
     causal,fourth).ok,false);
 });
 
+test('Law5 source binds every patient, signal and transition to its referee journal',()=>{
+  const {causal,source}=chosen.offField;
+  const original=causal.causalAssessments.find(a=>
+    a.transition==='off-field-return');
+  assert.ok(original);
+  const assertRefused=(candidate,report=source.request.result)=>{
+    assert.deepEqual(deriveM1V186Law5FromCausalSource(
+      candidate,report),{ok:false,error:'INVALID_MEDICAL_CHRONOLOGY'});
+  };
+  const badRef=structuredClone(causal);
+  badRef.causalAssessments.find(a=>
+    a.incidentId===original.incidentId&&
+    a.patientPlayerId===original.patientPlayerId)
+    .medicalReturnEventId=original.foulRestartEventId;
+  assertRefused(badRef);
+
+  const forgedSignal=structuredClone(causal);
+  const originalReturn=forgedSignal.syntheticTreatmentActions.find(a=>
+    a.kind==='treatment-return'&&
+    a.playerId===original.patientPlayerId);
+  assert.ok(originalReturn);
+  originalReturn.refereeSignalId='m1-v23-unverified-forged-permission';
+  assertRefused(forgedSignal);
+
+  const forgedBoth=structuredClone(source.request.result);
+  const sourceReturn=forgedBoth.events.find(e=>
+    e.type==='source'&&e.source.type==='physical-transition'&&
+    e.source.source.type==='medical'&&
+    e.source.source.action.id===originalReturn.id);
+  assert.ok(sourceReturn);
+  sourceReturn.source.source.action.refereeSignalId=
+    'm1-v23-unverified-forged-permission';
+  assertRefused(forgedSignal,forgedBoth);
+
+  const onField=structuredClone(chosen.onField.causal);
+  const staying=onField.causalAssessments.find(a=>
+    a.transition==='on-field-quick');
+  assert.ok(staying);
+  staying.medicalExitEventId='fabricated-exit';
+  assertRefused(onField,chosen.onField.source.request.result);
+
+  const foreign=structuredClone(chosen.onField.causal);
+  const wrongSide=foreign.causalAssessments.find(a=>
+    a.transition==='on-field-quick');
+  wrongSide.patientTeamId='fabricated-third-club';
+  assertRefused(foreign,chosen.onField.source.request.result);
+
+  const untrusted=structuredClone(causal);
+  untrusted.causalAssessments.find(a=>
+    a.incidentId===original.incidentId&&
+    a.patientPlayerId===original.patientPlayerId)
+    .externalMedicalAuthorityAuthenticated=true;
+  assert.deepEqual(deriveM1V186Law5FromCausalSource(
+    untrusted,source.request.result),
+    {ok:false,error:'UNSUPPORTED_LAW5_ORIGIN'});
+});
+
 test('Law5 source rejects externally claimed unsupported exceptions',()=>{
   const {causal,source}=chosen.onField;
   const forged=structuredClone(causal);

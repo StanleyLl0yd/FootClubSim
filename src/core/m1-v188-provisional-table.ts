@@ -1,4 +1,4 @@
-import {generateDoubleRoundRobin} from './fixtures.js';
+import {inspectM1V188LeagueCalendar} from './m1-v188-league-source-journal.js';
 import type {InitialCareerSave} from './save.js';
 import type {M1V188Journal} from './m1-v188-league-source-journal.js';
 
@@ -19,8 +19,14 @@ export function deriveM1V188ProvisionalTable(
   if(journal.careerId!==initial.careerId||
       journal.revision!==journal.entries.length||
       journal.revision<0||journal.revision>240)return null;
-  const schedule=generateDoubleRoundRobin(
-    initial.catalog.clubs.map(club=>club.id)).flatMap(round=>round.fixtures);
+  // Storage verifies the journal; this display-only reduction needs only
+  // its immutable first-match calendar marker, not another full replay.
+  const calendarVersion=journal.entries[0]?.source?.
+    fixtureCalendarPolicyVersion===2?2:undefined;
+  const inspected=inspectM1V188LeagueCalendar(initial,undefined,
+    calendarVersion);
+  if(!inspected.ok)return null;
+  const schedule=inspected.fixtures;
   const rows=initial.catalog.clubs.map(club=>({
     clubId:club.id,played:0,won:0,drawn:0,lost:0,
     goalsFor:0,goalsAgainst:0,goalDifference:0,points:0,

@@ -1354,3 +1354,131 @@ test('P3-3/P3-4: both clubs honor unexpired holds over real source fixtures',()=
     [],undefined,undefined,2).error,'UNVERIFIED_EXTERNAL_DISCIPLINE',
   'An empty unauthenticated official order feed cannot clear a hold');
 });
+
+test('P3-4: source-seeded fictional postponements replay without rewriting past careers',()=>{
+  const career=createInitialCareer(catalog,catalog.clubs[0].id,11,
+    'v188-p3-4-fictitious-schedule');
+  const zero=startM1V188LeagueJournal(career);
+  assert.ok(zero.ok);
+  const original=inspectM1V188LeagueCalendar(career);
+  const rescheduled=inspectM1V188LeagueCalendar(career,zero.journal,2);
+  assert.ok(original.ok&&rescheduled.ok);
+  assert.equal(rescheduled.externalLeagueReschedulingAuthenticated,false);
+  assert.equal(rescheduled.internalFictionalPostponements.length,2);
+  assert.equal(rescheduled.fixtureCount,240);
+  const ids=rescheduled.fixtures.map(f=>f.id);
+  assert.equal(new Set(ids).size,240);
+  assert.deepEqual([...ids].sort(),
+    original.fixtures.map(f=>f.id).sort(),
+    'The exact canonical set of 240 original match IDs is conserved');
+  const delayedOpening=original.fixtures[0].id;
+  const delayedReturn=original.fixtures[120].id;
+  assert.ok(ids.indexOf(delayedOpening)>=16&&
+    ids.indexOf(delayedOpening)<=23);
+  assert.ok(ids.indexOf(delayedReturn)>=136&&
+    ids.indexOf(delayedReturn)<=143);
+  assert.deepEqual(rescheduled.internalFictionalPostponements,
+    [delayedOpening,delayedReturn]);
+  assert.notEqual(ids[0],original.fixtures[0].id);
+  assert.equal(ids[0],original.fixtures[8].id,
+    'The opening slot stays a genuine first-team playable fixture');
+  assert.ok([rescheduled.fixtures[0].homeClubId,
+    rescheduled.fixtures[0].awayClubId].includes(career.selectedClubId));
+  assert.deepEqual(prepareM1V188LeagueMatch(career,zero.journal,
+    [],undefined,5,undefined,2,[],3),
+  {ok:false,error:'INVALID_REQUEST'},
+  'Unknown calendar-source versions must fail closed');
+
+  let journal=zero.journal,seen=0,blocked=0;
+  for(let index=0;index<24;index++){
+    const before=JSON.stringify(journal);
+    const holds=inspectM1V188FictionalHolds(career,journal);
+    assert.ok(holds.ok);
+    const proposed=prepareM1V188LeagueMatch(career,journal,
+      [],undefined,5,undefined,2,[],2);
+    assert.ok(proposed?.ok,'source-2 medical-v5 fixture '+index);
+    assert.equal(proposed.fixture.id,ids[index]);
+    assert.equal(proposed.request.fixtureCalendarPolicyVersion,2);
+    assert.equal(proposed.request.prematch.fixture.round,
+      original.fixtures.find(f=>f.id===ids[index]).round);
+    for(const side of ['home','away']){
+      const clubId=proposed.fixture[side==='home'?
+        'homeClubId':'awayClubId'];
+      const selected=new Set([
+        ...proposed.request.prematch[side+'Lineup'].starters,
+        ...proposed.request.prematch[side+'Lineup'].bench,
+      ]);
+      for(const hold of holds.holds.filter(h=>
+        h.clubId===clubId&&h.remainingOwnFixtures>0)){
+        blocked++;
+        assert.equal(selected.has(hold.playerId),false,
+          'Rescheduled fixture cannot bypass replayed eligibility');
+      }
+    }
+    const applied=applyM1V188LeagueMatch(career,journal,
+      proposed.request);
+    assert.ok(applied.ok,'canonical source commit '+index);
+    assert.equal(applied.journal.revision,index+1);
+    assert.equal(applied.rescheduledFixturesSupported,true);
+    assert.equal(JSON.stringify(journal),before,
+      'Journal immutable across a commit');
+    journal=applied.journal;
+    assert.equal(validateM1V188LeagueJournal(career,
+      structuredClone(journal)).ok,true);
+    seen++;
+  }
+  assert.equal(seen,24);
+  assert.ok(blocked>0,'Need positive rescheduled-player eligibility witness');
+  assert.equal(journal.entries[ids.indexOf(delayedOpening)].fixtureId,
+    delayedOpening);
+  assert.deepEqual(inspectM1V188LeagueCalendar(career,journal).fixtures,
+    rescheduled.fixtures);
+  const retroactive=structuredClone(journal);
+  delete retroactive.entries[0].source.fixtureCalendarPolicyVersion;
+  assert.deepEqual(validateM1V188LeagueJournal(career,retroactive),
+    {ok:false,error:'INVALID_JOURNAL'});
+  const changedOrder=structuredClone(journal);
+  [changedOrder.entries[0],changedOrder.entries[1]]=[
+    changedOrder.entries[1],changedOrder.entries[0]];
+  assert.equal(validateM1V188LeagueJournal(career,changedOrder).ok,false);
+  const untrusted=prepareM1V188LeagueMatch(career,journal,
+    [],undefined,5,undefined,2,[],2);
+  assert.ok(untrusted?.ok);
+  const forged=structuredClone(untrusted.request);
+  forged.externalLeagueDecision={reason:'appeal',approved:true};
+  assert.deepEqual(applyM1V188LeagueMatch(career,journal,forged),
+    {ok:false,error:'INVALID_REQUEST'},
+    'Untrusted external rescheduling must never be accepted');
+
+  const legacy=prepareM1V188LeagueMatch(career,zero.journal,
+    [],undefined,5,undefined,2);
+  assert.ok(legacy?.ok);
+  const oldCareer=applyM1V188LeagueMatch(career,zero.journal,legacy.request);
+  assert.ok(oldCareer.ok);
+  assert.equal(oldCareer.rescheduledFixturesSupported,false);
+  assert.equal(validateM1V188LeagueJournal(career,
+    structuredClone(oldCareer.journal)).ok,true);
+  assert.deepEqual(prepareM1V188LeagueMatch(career,oldCareer.journal,
+    [],undefined,5,undefined,2,[],2),
+    {ok:false,error:'INVALID_REQUEST'},
+    'Old played careers cannot retroactively opt into new fixture order');
+});
+
+test('P3-4: deferred schedule opens with the managed club for all 16 choices',()=>{
+  for(const club of catalog.clubs){
+    const career=createInitialCareer(catalog,club.id,11,
+      'v188-p3-4-opening-'+club.id);
+    const started=startM1V188LeagueJournal(career);
+    assert.ok(started.ok,club.id+' career must be valid');
+    const inspected=inspectM1V188LeagueCalendar(
+      career,started.journal,2);
+    assert.ok(inspected.ok,club.id+' deferred calendar');
+    assert.equal(inspected.fixtures.length,240);
+    assert.equal(new Set(inspected.fixtures.map(f=>f.id)).size,240);
+    const first=inspected.fixtures[0];
+    assert.ok([first.homeClubId,first.awayClubId].includes(club.id),
+      club.id+' must have the first playable match');
+    assert.equal(inspected.fixtures.filter(f=>
+      f.homeClubId===club.id||f.awayClubId===club.id).length,30);
+  }
+});

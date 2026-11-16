@@ -1,4 +1,4 @@
-import {generateDoubleRoundRobin} from './fixtures.js';
+import {inspectM1V188LeagueCalendar} from './m1-v188-league-source-journal.js';
 import type {InitialCareerSave} from './save.js';
 import type {M1V188Journal} from './m1-v188-league-source-journal.js';
 
@@ -18,8 +18,14 @@ export function deriveM1V188Champion(
       journal.revision!==journal.entries.length||
       journal.revision<0||journal.revision>240||
       initial.catalog.clubs.length!==16)return null;
-  const fixtures=generateDoubleRoundRobin(
-    initial.catalog.clubs.map(club=>club.id)).flatMap(round=>round.fixtures);
+  // The persisted journal is replay-validated at the storage boundary.
+  // The read-only winner projection must not re-simulate every past match.
+  const calendarVersion=journal.entries[0]?.source?.
+    fixtureCalendarPolicyVersion===2?2:undefined;
+  const inspected=inspectM1V188LeagueCalendar(initial,undefined,
+    calendarVersion);
+  if(!inspected.ok)return null;
+  const fixtures=inspected.fixtures;
   if(fixtures.length!==240)return null;
   const teams=new Map(initial.catalog.clubs.map(club=>[
     club.id,{played:0,points:0,goalsFor:0,goalsAgainst:0}]));
@@ -43,7 +49,7 @@ export function deriveM1V188Champion(
       for(const [id,leader] of teams){
         if([...teams].every(([otherId,other])=>otherId===id||
           leader.points>other.points+3*(30-other.played))){
-          clinched={id,round:fixture.round};
+          clinched={id,round:Math.ceil((index+1)/8)};
           break;
         }
       }

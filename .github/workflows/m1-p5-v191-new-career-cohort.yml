@@ -55,6 +55,7 @@ jobs:
           node scripts/m1-v188-season-diversity.mjs \
             --medical-source=5 \
             --special-goal-source=2 \
+            --fictional-calendar-source=2 \
             --seeds="$SEEDS" \
             --output=new-career-v191-hypothesis.json
       - name: Verify the shard's full-season source and report
@@ -70,6 +71,7 @@ jobs:
             assert.deepEqual(j.seeds,[0,1,2,3].map(i=>11+120*shard+30*i));
             assert.equal(j.specialGoalSourceVersion,2);
             assert.equal(j.medicalPolicyVersion,5);
+            assert.equal(j.fixtureCalendarPolicyVersion,2);
             assert.equal(j.sampleSize,4);
             assert.equal(j.catalogId,"liga-prikolov-preview");
             assert.ok(j.results.every(r=>r.fixtureCount===240));
@@ -135,6 +137,7 @@ jobs:
               assert data["seeds"] == expected
               assert data["specialGoalSourceVersion"] == 2
               assert data["medicalPolicyVersion"] == 5
+              assert data["fixtureCalendarPolicyVersion"] == 2
               assert data["catalogId"] == "liga-prikolov-preview"
               assert data["refereeEventAuthorityAuthenticated"] is False
               assert data["independentExternalRateComparison"] is False
@@ -198,7 +201,7 @@ jobs:
           goal_delta = summary["goals"]["per240MatchSeasonMean"] / goal_reference - 1
           report = {
               "status": "P5_CANDIDATE_REPRODUCIBLE_NOT_ACCEPTED",
-              "existingEngine": "v188 journal + v191 source2 + medical v5",
+              "existingEngine": "v188 journal + v191 source2 + medical v5 + fictional source calendar v2",
               "careerSeeds": sorted(seen),
               "careerClusters": 48,
               "independentFixtureOutputs": 11520,

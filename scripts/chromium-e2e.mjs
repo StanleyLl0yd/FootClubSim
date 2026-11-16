@@ -379,7 +379,7 @@ async function run() {
           "document.querySelectorAll('.season-own-calendar .season-played').length");
         return own===1&&value.includes('Теперь очередь вашего клуба')?
           value:null;
-      },'managed XI commit and automatic opponents');
+      },'managed XI commit and automatic opponents',120_000);
       if(!firstCommit.includes('Теперь очередь вашего клуба'))
         throw new Error('Automatic opponent calculation did not complete');
       const firstSeasonRevision=await evaluate(

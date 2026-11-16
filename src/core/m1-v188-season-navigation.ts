@@ -20,8 +20,13 @@ export function planM1V188NextOwnMatch(
       journal.revision!==journal.entries.length||
       !Number.isSafeInteger(journal.revision)||
       journal.revision<0||journal.revision>=240)return null;
+  // The store already verifies committed source history. Do not replay it
+  // inside the read-only navigation call on every automatic fixture.
+  const calendarVersion=journal.revision===0?newCareerCalendarPolicy:
+    journal.entries[0]?.source?.fixtureCalendarPolicyVersion===2?
+      2:undefined;
   const inspected=inspectM1V188LeagueCalendar(
-    initial,journal,newCareerCalendarPolicy);
+    initial,undefined,calendarVersion);
   if(!inspected.ok)return null;
   const schedule=inspected.fixtures;
   const target=schedule.findIndex((fixture,index)=>

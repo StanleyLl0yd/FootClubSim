@@ -203,7 +203,8 @@ function calculateMedicalPhases(
   }
   for (let phase = 0; phase < M1_CLOCK_MAX_EVENTS; phase++) {
     const second = phase * M1_CLOCK_STEP_SECONDS;
-    while(minuteReturns[minuteIndex]?.elapsedSeconds<second){
+    while(minuteIndex<minuteReturns.length&&
+        minuteReturns[minuteIndex]!.elapsedSeconds<second){
       const action=minuteReturns[minuteIndex]!;
       const departed=absent.get(action.playerId);
       if(!departed||departed.teamId!==action.teamId||

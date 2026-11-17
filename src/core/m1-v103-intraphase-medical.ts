@@ -107,7 +107,8 @@ export function simulateM1V103IntraphaseMedical(
       typeof allowCheckpointIntraphaseReturn!=='boolean')
     return {ok:false,error:'INVALID_INPUT'};
   const source=simulateM1V101PhysicalIntraphase(
-    prematch,policy,plannedCommands,checkpointMedical);
+    prematch,policy,plannedCommands,checkpointMedical,
+    allowCheckpointIntraphaseReturn?intraphaseMedical:[]);
   if(!source.ok)return {ok:false,error:'SOURCE_REJECTED'};
   const started=startM1PlayerControl(prematch,policy);
   if(!started.ok)return {ok:false,error:'SOURCE_REJECTED'};

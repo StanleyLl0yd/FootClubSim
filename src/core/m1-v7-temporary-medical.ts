@@ -70,7 +70,8 @@ const fail = (error: M1V7TemporaryMedicalError,
 const sortIds = (items: Iterable<string>): string[] => [...items].sort();
 
 /** Shared strict validator for versioned treatment actions; no source authentication. */
-export function readM1V7TemporaryMedicalAction(raw: unknown):
+export function readM1V7TemporaryMedicalAction(raw: unknown,
+  allowIntraphaseReturn=false):
   M1V7TemporaryMedicalAction | null {
   if (!record(raw) ||
       !exact(raw, raw.kind === 'treatment-exit' ? EXIT :
@@ -81,7 +82,11 @@ export function readM1V7TemporaryMedicalAction(raw: unknown):
       !Number.isSafeInteger(raw.elapsedSeconds) ||
       (raw.elapsedSeconds as number) < 0 ||
       (raw.elapsedSeconds as number) >= 5400 ||
-      (raw.elapsedSeconds as number) % M1_CLOCK_STEP_SECONDS !== 0) return null;
+      (allowIntraphaseReturn?
+        raw.kind!=='treatment-return'||
+        (raw.elapsedSeconds as number)%M1_CLOCK_STEP_SECONDS!==60:
+        (raw.elapsedSeconds as number)%M1_CLOCK_STEP_SECONDS!==0))
+    return null;
   if (raw.kind === 'treatment-exit') {
     if (!['injury-stopped-play', 'medical-staff-entered',
       'requested-on-field-attention'].includes(raw.reason as string) ||

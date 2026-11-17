@@ -135,16 +135,16 @@ export function recoverM1V188PauseDraft(
   // the whole original physical event and command prefix must replay.
   // After any committed fixture, read versions from the verified journal.
   type Model=readonly [
-    2|3|4|5|6|undefined,1|2|undefined,2|undefined];
+    2|3|4|5|6|7|undefined,1|2|undefined,2|undefined];
   const oldFirst:readonly (readonly [
     Model[0],Model[1]])[]=[
-    [6,2],[5,2],[undefined,2],[undefined,undefined],
-    [2,2],[3,2],[4,2],[5,undefined],[6,undefined],
+    [7,2],[6,2],[5,2],[undefined,2],[undefined,undefined],
+    [2,2],[3,2],[4,2],[5,undefined],[6,undefined],[7,undefined],
     [2,undefined],[3,undefined],[4,undefined],
-    [undefined,1],[2,1],[3,1],[4,1],[5,1],[6,1],
+    [undefined,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1],
   ];
   const models:readonly Model[]=journal.revision===0?
-    [[5,2,2],[6,2,2],...oldFirst.map(([medical,goal])=>
+    [[5,2,2],[6,2,2],[7,2,2],...oldFirst.map(([medical,goal])=>
       [medical,goal,undefined] as const)]:
     [[journal.entries.at(-1)?.source.medicalPolicyVersion,
       journal.entries[0]?.source.specialGoalSourceVersion,

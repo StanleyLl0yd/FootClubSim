@@ -485,7 +485,7 @@ export function simulateM1V23RefereeWithTreatment(
       if(!side||time<running||foulTimes.has(time)||
           !teams[side].has(keeper.playerId)||
           absent.has(keeper.playerId)||
-          !input.catalog.players.some(p=>
+          !(input as M1PrematchInput).catalog.players.some(p=>
             p.id===keeper.playerId&&p.primaryPosition==='GK')||
           source.events.some(e=>e.type==='availability'&&
             e.elapsedSeconds===time))return false;

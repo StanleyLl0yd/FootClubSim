@@ -69,9 +69,10 @@ export type M1V188ManagedXI=Readonly<{
 type Source={managedXI?:M1V188ManagedXI;
   prematch:Record<string,unknown>;policy:unknown;
   plannedCommands:unknown[];checkpointMedical:unknown[];
-  disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5|6;
+  disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5|6|7;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
   intraphaseMedical?:readonly unknown[];
+  autonomousKeeperInjuryOrigin?:readonly unknown[];
   specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1|2;
   fixtureCalendarPolicyVersion?:2;inMatchOrdersVersion?:1};
 export type M1V188Entry={fixtureId:string;round:number;
@@ -84,9 +85,10 @@ export type M1V188Request={schemaVersion:188;careerId:string;
   managedXI?:M1V188ManagedXI;
   policy:unknown;plannedCommands:unknown[];
   checkpointMedical:unknown[];result:unknown;
-  medicalPolicyVersion?:2|3|4|5|6;
+  medicalPolicyVersion?:2|3|4|5|6|7;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
   intraphaseMedical?:readonly unknown[];
+  autonomousKeeperInjuryOrigin?:readonly unknown[];
   specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1|2;
   fixtureCalendarPolicyVersion?:2;inMatchOrdersVersion?:1};
 export type M1V188Error='INVALID_INITIAL'|'INVALID_JOURNAL'|
@@ -126,6 +128,8 @@ const sourceKeysV2=[...sourceKeys,'disciplinePolicyVersion'];
 const sourceKeysMedical=[...sourceKeysV2,'medicalPolicyVersion'];
 const sourceKeysMedicalV5=[...sourceKeysMedical,'autonomousMedicalOrigin'];
 const sourceKeysMedicalV6=[...sourceKeysMedicalV5,'intraphaseMedical'];
+const sourceKeysMedicalV7=[...sourceKeysMedicalV6,
+  'autonomousKeeperInjuryOrigin'];
 const goalShape=(value:Record<string,unknown>,keys:readonly string[])=>
   hasManagedShape(value,[
     ...keys,
@@ -143,6 +147,8 @@ const requestKeys=['schemaVersion','careerId','expectedRevision',
 const requestKeysMedical=[...requestKeys,'medicalPolicyVersion'];
 const requestKeysMedicalV5=[...requestKeysMedical,'autonomousMedicalOrigin'];
 const requestKeysMedicalV6=[...requestKeysMedicalV5,'intraphaseMedical'];
+const requestKeysMedicalV7=[...requestKeysMedicalV6,
+  'autonomousKeeperInjuryOrigin'];
 const fail=(error:M1V188Error):Extract<M1V188Gate,{ok:false}>=>
   ({ok:false,error});
 /** The managed XI must use ONLY already eligible fixture players.
@@ -435,7 +441,16 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
           Array.isArray(e.source.autonomousMedicalOrigin)&&
           e.source.autonomousMedicalOrigin.length<=1&&
           Array.isArray(e.source.intraphaseMedical)&&
-          e.source.intraphaseMedical.length<=36))||
+          e.source.intraphaseMedical.length<=36)||
+        (goalShape(e.source,sourceKeysMedicalV7)&&
+          e.source.disciplinePolicyVersion===2&&
+          e.source.medicalPolicyVersion===7&&
+          Array.isArray(e.source.autonomousMedicalOrigin)&&
+          e.source.autonomousMedicalOrigin.length<=1&&
+          Array.isArray(e.source.intraphaseMedical)&&
+          e.source.intraphaseMedical.length<=36&&
+          Array.isArray(e.source.autonomousKeeperInjuryOrigin)&&
+          e.source.autonomousKeeperInjuryOrigin.length<=1))||
       !rec(e.source.prematch)||
       Object.hasOwn(e.source.prematch,'catalog')||
       !Array.isArray(e.source.plannedCommands)||
@@ -473,17 +488,23 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
         e.source.medicalPolicyVersion===3||
         e.source.medicalPolicyVersion===4||
         e.source.medicalPolicyVersion===5||
-        e.source.medicalPolicyVersion===6,
+        e.source.medicalPolicyVersion===6||
+        e.source.medicalPolicyVersion===7,
       e.source.medicalPolicyVersion===3||
         e.source.medicalPolicyVersion===4||
         e.source.medicalPolicyVersion===5||
-        e.source.medicalPolicyVersion===6,
+        e.source.medicalPolicyVersion===6||
+        e.source.medicalPolicyVersion===7,
       e.source.medicalPolicyVersion===4||
         e.source.medicalPolicyVersion===5||
-        e.source.medicalPolicyVersion===6,
+        e.source.medicalPolicyVersion===6||
+        e.source.medicalPolicyVersion===7,
       e.source.medicalPolicyVersion===5||
-        e.source.medicalPolicyVersion===6,coach,
-      e.source.medicalPolicyVersion===6);
+        e.source.medicalPolicyVersion===6||
+        e.source.medicalPolicyVersion===7,coach,
+      e.source.medicalPolicyVersion===6||
+        e.source.medicalPolicyVersion===7,
+      e.source.medicalPolicyVersion===7);
     const version=e.source.specialGoalSourceVersion;
     const special=(version===1||version===2)&&replay.ok?
       simulateM1V190ExperimentalSpecialGoals(simulationInput,POLICY,
@@ -498,12 +519,17 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       sameCanonicalValue(replay.checkpointMedical,
         e.source.checkpointMedical)&&
       ((e.source.medicalPolicyVersion!==5&&
-          e.source.medicalPolicyVersion!==6)||
+          e.source.medicalPolicyVersion!==6&&
+          e.source.medicalPolicyVersion!==7)||
         sameCanonicalValue(replay.autonomousCollisions??[],
           e.source.autonomousMedicalOrigin))&&
-      (e.source.medicalPolicyVersion!==6||
+      ((e.source.medicalPolicyVersion!==6&&
+          e.source.medicalPolicyVersion!==7)||
         sameCanonicalValue(replay.intraphaseMedical??[],
           e.source.intraphaseMedical))&&
+      (e.source.medicalPolicyVersion!==7||
+        sameCanonicalValue(replay.autonomousSingleKeeperInjuries??[],
+          e.source.autonomousKeeperInjuryOrigin))&&
       sameCanonicalValue(result,e.result)&&
       replayedPhysicalClock(input,result,manager)?replay:null;
   };
@@ -570,7 +596,7 @@ function read(i:InitialCareerSave,value:unknown){
   let condition=startM1V188Condition(i);
   if(schedule.length!==LIMIT)return null;
   let versionedSeen=false,conditionVersion:0|1|2=0,
-    medicalVersionSeen:0|2|3|4|5|6=0;
+    medicalVersionSeen:0|2|3|4|5|6|7=0;
   let specialGoalVersion:0|1|2|null=null;
   for(let n=0;n<journal.entries.length;n++){
     const entry=journal.entries[n]!;

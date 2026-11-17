@@ -1789,6 +1789,16 @@ test('P3-2: medical v7 keeper-only injury keeps goalkeeper on pitch with source-
     .sourceEventId='forged-referee-origin';
   assert.equal(deriveM1V186Law5FromCausalSource(
     forgedRef,request.result,request.prematch).ok,false);
+  const forgedWall=structuredClone(causal);
+  forgedWall.match.events.find(e=>e.id===origin.injuryEventId)
+    .wallSeconds++;
+  assert.equal(deriveM1V186Law5FromCausalSource(
+    forgedWall,request.result,request.prematch).ok,false);
+  const forgedOrdinal=structuredClone(causal);
+  forgedOrdinal.autonomousSingleKeeperInjuries[0].id=
+    'm1-v36-keeper-999';
+  assert.equal(deriveM1V186Law5FromCausalSource(
+    forgedOrdinal,request.result,request.prematch).ok,false);
   const accepted=applyM1V188LeagueMatch(
     career,zero.journal,request);
   assert.equal(accepted.ok,true,accepted.ok?'':accepted.error);

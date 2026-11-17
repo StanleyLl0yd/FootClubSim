@@ -142,7 +142,9 @@ export function simulateM1V103IntraphaseMedical(
     touchedAtSecond.add(a.playerId);
     prev=a.elapsedSeconds;
     ids.add(a.id);
-    actions.push(a);
+    // The saved request and the replayed event journal must be independent
+    // plain JSON trees: shared references are rejected at v188 CAS admission.
+    actions.push({...a});
   }
   const players=new Map<string,Player>(
     input.catalog.players.map(p=>[p.id,p]));

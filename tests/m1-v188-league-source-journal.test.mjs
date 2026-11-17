@@ -17,6 +17,7 @@ import {deriveM1V186Law5FromCausalSource}
   from '../dist/core/m1-v186-law5-causal.js';
 import {verifyM1V105SpecialGoalChronology}
   from '../dist/core/m1-v105-special-goal-chronology.js';
+import {isPlainJsonTree} from '../dist/core/plain-json-tree.js';
 import {M1_MODELLED_GOAL_STOP_SECONDS,
   M1_MODELLED_FOUL_STOP_SECONDS,
   M1_MODELLED_HALF_TIME_STOP_SECONDS}
@@ -1568,6 +1569,8 @@ test('P3-2: v6 actual 60-running-second off-field return shares saved v188 physi
     JSON.stringify(Object.fromEntries(rejected)));
   const {career,zero,proposal,medical}=witness;
   const original=proposal.request;
+  assert.equal(isPlainJsonTree(original),true,
+    'v6 request must not alias any nested physical source event');
   assert.equal(original.medicalPolicyVersion,6);
   assert.equal(proposal.externalMedicalAuthorityAuthenticated,false);
   assert.ok(original.intraphaseMedical.length>0);

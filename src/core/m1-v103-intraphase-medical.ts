@@ -97,12 +97,14 @@ export function simulateM1V103IntraphaseMedical(
   prematch:unknown,policy:unknown,plannedCommands:unknown=[],
   checkpointMedical:unknown=[],intraphaseMedical:unknown=[],
   shotParameters:unknown=undefined,
+  allowCheckpointIntraphaseReturn=false,
 ):M1V103Run{
   if(![prematch,policy,plannedCommands,checkpointMedical,
       intraphaseMedical].every(isPlainJsonTree)||
       !Array.isArray(intraphaseMedical)||intraphaseMedical.length>36||
       shotParameters!==undefined&&
-        !validM1V104ResearchParameters(shotParameters))
+        !validM1V104ResearchParameters(shotParameters)||
+      typeof allowCheckpointIntraphaseReturn!=='boolean')
     return {ok:false,error:'INVALID_INPUT'};
   const source=simulateM1V101PhysicalIntraphase(
     prematch,policy,plannedCommands,checkpointMedical);
@@ -125,13 +127,18 @@ export function simulateM1V103IntraphaseMedical(
   const actions:M1V7TemporaryMedicalAction[]=[];
   const ids=new Set<string>();
   let prev=-1;
+  const touchedAtSecond=new Set<string>();
   for(const raw of intraphaseMedical){
     const a=readIntraphaseMedical(raw);
     if(!a||a.fixtureId!==input.fixture.id||
         (a.teamId!==input.fixture.homeClubId&&
           a.teamId!==input.fixture.awayClubId)||
-        a.elapsedSeconds<=prev||ids.has(a.id)||sourceActionIds.has(a.id))
+        a.elapsedSeconds<prev||
+        (a.elapsedSeconds===prev&&touchedAtSecond.has(a.playerId))||
+        ids.has(a.id)||sourceActionIds.has(a.id))
       return {ok:false,error:'INVALID_INTRAPHASE_SCHEDULE'};
+    if(a.elapsedSeconds!==prev)touchedAtSecond.clear();
+    touchedAtSecond.add(a.playerId);
     prev=a.elapsedSeconds;
     ids.add(a.id);
     actions.push(a);
@@ -206,7 +213,9 @@ export function simulateM1V103IntraphaseMedical(
       absent.set(action.playerId,{origin:'v103',exit:action});
     }else{
       const old=absent.get(action.playerId);
-      if(!old||old.origin!=='v103')return false;
+      if(!old||old.origin!=='v103'&&
+          !(allowCheckpointIntraphaseReturn&&old.origin==='v8'))
+        return false;
       const decision=admitM1OffFieldMedicalReturn(input,{
         schemaVersion:1,fixtureId:action.fixtureId,
         teamId:action.teamId,playerId:action.playerId,

@@ -65,6 +65,10 @@ export function deriveM1V186Law5FromCausalSource(
       !Array.isArray(source.causalAssessments)||
       !Array.isArray(source.generatedIncidents)||
       !Array.isArray(source.syntheticTreatmentActions)||
+      (source.syntheticIntraphaseTreatmentActions!==undefined&&
+        (!Array.isArray(source.syntheticIntraphaseTreatmentActions)||
+          source.syntheticIntraphaseTreatmentActions.some(a=>
+            a.kind!=='treatment-return')))||
       !source.match?.ok||!Array.isArray(source.match.events)||
       !Array.isArray(result.events)||
       source.autonomousCollisions!==undefined&&
@@ -84,7 +88,9 @@ export function deriveM1V186Law5FromCausalSource(
     keepers=new Set(input.catalog.players.filter(p=>
       p.primaryPosition==='GK').map(p=>p.id));
   }
-  const medical=source.syntheticTreatmentActions;
+  const minuteReturn=source.syntheticIntraphaseTreatmentActions!==undefined;
+  const medical=[...source.syntheticTreatmentActions,
+    ...(source.syntheticIntraphaseTreatmentActions??[])];
   const evidence:M1V186Law5Evidence[]=[];
   const inspectedPatients=new Map<string,readonly string[]>();
   const inspectedCollisions=new Set<string>();
@@ -99,15 +105,13 @@ export function deriveM1V186Law5FromCausalSource(
         e.type==='source'&&e.source.type==='shot'&&
           e.source.playerId===patientId));
   const physicalEvent=(action:typeof medical[number])=>
-    result.events.find(e=>
-      e.type==='source'&&e.source.type==='physical-transition'&&
-      e.source.source.type==='medical'&&
-      e.source.source.action.id===action.id&&
-      e.source.source.action.teamId===action.teamId&&
-      e.source.source.action.playerId===action.playerId&&
-      e.source.source.action.kind===action.kind&&
-      e.elapsedSeconds===action.elapsedSeconds&&
-      sameCanonicalValue(e.source.source.action,action));
+    result.events.find(e=>e.type==='source'&&
+      e.elapsedSeconds===action.elapsedSeconds&&(
+        e.source.type==='physical-transition'&&
+          e.source.source.type==='medical'&&
+          sameCanonicalValue(e.source.source.action,action)||
+        e.source.type==='intraphase-medical'&&
+          sameCanonicalValue(e.source.action,action)));
   for(const assessment of source.causalAssessments){
     const incident=source.generatedIncidents.find(i=>
       i.id===assessment.incidentId);
@@ -225,7 +229,8 @@ export function deriveM1V186Law5FromCausalSource(
     const back=returns.filter(e=>
       e.teamId===assessment.patientTeamId&&
       e.playerId===assessment.patientPlayerId&&
-      e.elapsedSeconds===assessment.elapsedSeconds+300);
+      e.elapsedSeconds===assessment.elapsedSeconds+
+        (minuteReturn?60:300));
     if(assessment.goalkeeperExceptionSource===true&&
         (!keepers.has(assessment.patientPlayerId)||
           assessment.transition!=='on-field-quick'))
@@ -278,7 +283,9 @@ export function deriveM1V186Law5FromCausalSource(
         !exitEvent||!returnEvent||
         savedDecision.sequence>=exitEvent.sequence||
         exitEvent.sequence>=returnEvent.sequence||
-        entry.elapsedSeconds-restart.runningSeconds<60||
+        (minuteReturn?
+          entry.elapsedSeconds-restart.runningSeconds!==60:
+          entry.elapsedSeconds-restart.runningSeconds<60)||
         entry.returnContext!=='running-clock'||
         entry.ballInPlay!==true||entry.entryBoundary!=='touchline'||
         entry.refereeSignalId!==

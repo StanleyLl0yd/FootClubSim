@@ -117,11 +117,20 @@ export interface M1V35IndependentCollisionWitness {
   readonly modelledNeedsOnFieldAttention:true;
   readonly externalMedicalAuthorityAuthenticated:false;
 }
+export interface M1V36IndependentKeeperInjuryWitness {
+  readonly id:string;readonly teamId:string;readonly playerId:string;
+  readonly elapsedSeconds:number;readonly whistleEventId:string;
+  readonly injuryEventId:string;readonly restartEventId:string;
+  readonly modelledNeedsOnFieldAttention:true;
+  readonly externalMedicalAuthorityAuthenticated:false;
+}
 export type M1V29CausalSourceRun =
   | Extract<M1V23CoachRun, {ok:false}>
   | (Extract<M1V23CoachRun, {ok:true}> &
       Readonly<{causalAssessments: readonly M1V29CausalAssessment[];
-        autonomousCollisions?:readonly M1V35IndependentCollisionWitness[]}>);
+        autonomousCollisions?:readonly M1V35IndependentCollisionWitness[];
+        autonomousSingleKeeperInjuries?:
+          readonly M1V36IndependentKeeperInjuryWitness[]}>);
 type AssessmentDraft = Readonly<{
   incidentId: string; patientTeamId: string; patientPlayerId: string;
   elapsedSeconds: number;
@@ -154,12 +163,13 @@ export function simulateM1V29CausalMedicalSource(
   inPlayCommands: unknown = [], denseShotSource=false,
   goalkeeperOnFieldSource=false,multiPatientSource=false,
   collisionSource=false,autonomousCollisionSource=false,
-  minuteReturnSource=false,
+  minuteReturnSource=false,singleKeeperInjurySource=false,
 ): M1V29CausalSourceRun {
   return simulateTreatmentCore(prematch, policy, halfTimeCommands,
     inPlayCommands, true, undefined, denseShotSource,
     goalkeeperOnFieldSource,multiPatientSource,collisionSource,
-    autonomousCollisionSource,minuteReturnSource);
+    autonomousCollisionSource,minuteReturnSource,
+    singleKeeperInjurySource);
 }
 type M1V29InternalRejectionTrace={
   sourceError:Extract<M1V23RefereeRun,{ok:false}>['error']|null;
@@ -284,7 +294,7 @@ function simulateTreatmentCore(
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
   goalkeeperOnFieldSource?:boolean,multiPatientSource?:boolean,
   collisionSource?:boolean,autonomousCollisionSource?:boolean,
-  minuteReturnSource?:boolean,
+  minuteReturnSource?:boolean,singleKeeperInjurySource?:boolean,
 ): M1V23CoachRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
@@ -292,7 +302,7 @@ function simulateTreatmentCore(
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
   goalkeeperOnFieldSource?:boolean,multiPatientSource?:boolean,
   collisionSource?:boolean,autonomousCollisionSource?:boolean,
-  minuteReturnSource?:boolean,
+  minuteReturnSource?:boolean,singleKeeperInjurySource?:boolean,
 ): M1V29CausalSourceRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
@@ -300,7 +310,7 @@ function simulateTreatmentCore(
   trace?:M1V29InternalRejectionTrace,denseShotSource=false,
   goalkeeperOnFieldSource=false,multiPatientSource=false,
   collisionSource=false,autonomousCollisionSource=false,
-  minuteReturnSource=false,
+  minuteReturnSource=false,singleKeeperInjurySource=false,
 ): M1V23CoachRun | M1V29CausalSourceRun {
   if (!isPlainJsonTree(prematch) || !isPlainJsonTree(policy) ||
       !isPlainJsonTree(halfTimeCommands) ||
@@ -327,7 +337,9 @@ function simulateTreatmentCore(
   if((collisionSource&&!multiPatientSource)||
       (autonomousCollisionSource&&(!causalMode||!denseShotSource))||
       (minuteReturnSource&&(!causalMode||!denseShotSource||
-        !autonomousCollisionSource)))
+        !autonomousCollisionSource))||
+      (singleKeeperInjurySource&&(!minuteReturnSource||
+        !goalkeeperOnFieldSource)))
     return fail('INVALID_SOURCE');
   const gate = startM1Clock(input);
   if (!gate.ok) return fail('INVALID_SOURCE');
@@ -422,6 +434,8 @@ function simulateTreatmentCore(
   const autonomousPairs:{
     id:string;elapsedSeconds:number;teamId:string;
     firstPlayerId:string;secondPlayerId:string}[]=[];
+  const standaloneKeeperInjuries:{
+    id:string;elapsedSeconds:number;teamId:string;playerId:string}[]=[];
   let acceptedInPlayCommands = 0;
   function applyGeneratedStopCommands(second:number):boolean{
     for(const action of extraByTime.get(second)??[]){
@@ -507,6 +521,7 @@ function simulateTreatmentCore(
           return fail('INVALID_INPLAY_COMMANDS');
       }
       if(autonomousCollisionSource&&autonomousPairs.length===0&&
+          standaloneKeeperInjuries.length===0&&
           phase>0&&second!==2700&&!injuryIncident&&
           !extraByTime.has(second)&&
           independentTrigger<AUTONOMOUS_COLLISION_TRIGGER){
@@ -514,7 +529,13 @@ function simulateTreatmentCore(
         const playersHere=[...active[victimSide]].sort();
         const outfield=playersHere.filter(id=>players.get(id)!=='GK');
         const goalkeepers=playersHere.filter(id=>players.get(id)==='GK');
-        if(outfield.length>=2&&goalkeepers.length===1){
+        if(singleKeeperInjurySource&&goalkeepers.length===1&&
+            independentKeeper<0.5){
+          standaloneKeeperInjuries.push({
+            id:'m1-v36-keeper-'+(phase+1),
+            elapsedSeconds:second,teamId:clubIds[victimSide],
+            playerId:goalkeepers[0]!});
+        }else if(outfield.length>=2&&goalkeepers.length===1){
           const first=independentKeeper<0.5?
             goalkeepers[0]!:
             outfield[Math.floor(independentFirst*outfield.length)]!;
@@ -710,7 +731,7 @@ function simulateTreatmentCore(
     M1_MODELLED_HALF_TIME_STOP_SECONDS,foulTimes,
     M1_MODELLED_FOUL_STOP_SECONDS,sourceTrace,denseShotSource,
     collisionPairs,autonomousPairs,intraphaseTreatment,
-    minuteReturnSource,
+    minuteReturnSource,standaloneKeeperInjuries,
   );
   if(trace){
     trace.sourceSubreason=sourceTrace.subreason;
@@ -841,6 +862,32 @@ function simulateTreatmentCore(
         externalMedicalAuthorityAuthenticated:false});
     }
   }
+  const keeperEvidence:M1V36IndependentKeeperInjuryWitness[]=[];
+  if(causalMode&&singleKeeperInjurySource){
+    for(const keeper of standaloneKeeperInjuries){
+      const triple=match.events.filter(e=>
+        e.sourceEventId===keeper.id&&
+        e.runningSeconds===keeper.elapsedSeconds);
+      const [whistle,injury,restart]=triple;
+      const side=keeper.teamId===clubIds.home?'home':'away';
+      if(triple.length!==3||!whistle||!injury||!restart||
+          whistle.kind!=='synthetic-medical-whistle'||
+          injury.kind!=='synthetic-single-keeper-injury'||
+          restart.kind!=='synthetic-medical-restart'||
+          !(whistle.sequence<injury.sequence&&
+            injury.sequence<restart.sequence)||
+          [whistle,injury,restart].some(e=>
+            e.teamId!==keeper.teamId||
+            e.playerId!==keeper.playerId||
+            !e.onField[side].includes(keeper.playerId)||
+            !sameCanonicalValue(e.onField,whistle.onField)))
+        return fail('REFEREE_REPLAY_MISMATCH');
+      keeperEvidence.push({...keeper,whistleEventId:whistle.id,
+        injuryEventId:injury.id,restartEventId:restart.id,
+        modelledNeedsOnFieldAttention:true,
+        externalMedicalAuthorityAuthenticated:false});
+    }
+  }
   const baseRun: Extract<M1V23CoachRun, {ok:true}> = {
     ok: true, schemaVersion: M1_V23_COACH_SCHEMA,
     rulesId: M1_V23_COACH_RULES,
@@ -873,7 +920,9 @@ function simulateTreatmentCore(
   return causalMode ?
     {...baseRun, causalAssessments: assessments,
       ...(autonomousCollisionSource?
-        {autonomousCollisions:independentEvidence}:{})} : baseRun;
+        {autonomousCollisions:independentEvidence}:{}),
+      ...(singleKeeperInjurySource?
+        {autonomousSingleKeeperInjuries:keeperEvidence}:{})} : baseRun;
 }
 export function verifyM1V23TemporaryTreatment(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,

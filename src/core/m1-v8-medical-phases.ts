@@ -98,9 +98,10 @@ function scoreDecision(stats: MutableStats, decision: M1V7Decision): void {
 export function simulateM1V8MedicalPhases(
   prematch: unknown, policy: unknown, plannedCommands: unknown = [],
   trustedDecisions: unknown = [], medicalActions: unknown = [],
+  intraphaseReturns: unknown = [],
 ): M1V8Run {
   return calculateMedicalPhases(prematch, policy, plannedCommands,
-    trustedDecisions, medicalActions, false);
+    trustedDecisions, medicalActions, false, intraphaseReturns);
 }
 
 /**
@@ -120,6 +121,7 @@ function calculateMedicalPhases(
   prematch: unknown, policy: unknown, plannedCommands: unknown,
   trustedDecisions: unknown, medicalActions: unknown,
   allowSubstituteForOffFieldPatient: boolean,
+  intraphaseReturns: unknown = [],
 ): M1V8Run {
   const baseline = simulateM1V7Phases(prematch, policy, plannedCommands, trustedDecisions);
   if (!baseline.ok || !Array.isArray(plannedCommands)) return fail('INVALID_MATCH_SOURCE');
@@ -160,6 +162,31 @@ function calculateMedicalPhases(
     previous = action.elapsedSeconds;
     medical.push({ ...action });
   }
+  // The sub-checkpoint return is an input to v8's later checkpoint
+  // presence, not a second physical transition: v103 records that event.
+  if(!Array.isArray(intraphaseReturns)||intraphaseReturns.length>36)
+    return fail('INVALID_MEDICAL_SCHEDULE');
+  const minuteReturns:Extract<M1V7TemporaryMedicalAction,
+    {kind:'treatment-return'}>[]=[];
+  const minuteTouched=new Set<string>();
+  let minutePrevious=-1;
+  for(const raw of intraphaseReturns){
+    const action=readM1V7TemporaryMedicalAction(raw,true);
+    if(!action||action.kind!=='treatment-return'||
+        action.fixtureId!==input.fixture.id||
+        (action.teamId!==input.fixture.homeClubId&&
+          action.teamId!==input.fixture.awayClubId)||
+        action.elapsedSeconds<minutePrevious||
+        (action.elapsedSeconds===minutePrevious&&
+          minuteTouched.has(action.playerId)))
+      return fail('INVALID_MEDICAL_SCHEDULE');
+    if(action.elapsedSeconds!==minutePrevious)minuteTouched.clear();
+    minutePrevious=action.elapsedSeconds;
+    minuteTouched.add(action.playerId);
+    if(seen.has(action.id))return fail('DUPLICATE_ID');
+    seen.add(action.id);
+    minuteReturns.push({...action});
+  }
   const teams = { home: [...input.homeLineup.starters], away: [...input.awayLineup.starters] };
   const starters = new Set([...teams.home, ...teams.away]);
   const players = new Map(input.catalog.players.map(p => [p.id, p]));
@@ -169,13 +196,35 @@ function calculateMedicalPhases(
   const totals: { home: MutableStats; away: MutableStats } = { home: blank(), away: blank() };
   const rng = new SeededRng(input.rngSeed);
   let controlled = started.state, commandIndex = 0, availabilityIndex = 0;
-  let medicalIndex = 0, decisionIndex = 0;
+  let medicalIndex = 0, decisionIndex = 0,minuteIndex=0;
   const events: M1V8Event[] = [];
   function append(item: M1V8Event extends infer T ? T extends M1V8Event ? Omit<T, 'sequence'> : never : never): void {
     events.push({ ...item, sequence: events.length + 1 } as M1V8Event);
   }
   for (let phase = 0; phase < M1_CLOCK_MAX_EVENTS; phase++) {
     const second = phase * M1_CLOCK_STEP_SECONDS;
+    while(minuteReturns[minuteIndex]?.elapsedSeconds<second){
+      const action=minuteReturns[minuteIndex]!;
+      const departed=absent.get(action.playerId);
+      if(!departed||departed.teamId!==action.teamId||
+          action.elapsedSeconds-departed.restartAtRunningSeconds!==60)
+        return fail('MEDICAL_RETURN_REJECTED');
+      const admitted=admitM1OffFieldMedicalReturn(input,{
+        schemaVersion:1,fixtureId:action.fixtureId,
+        teamId:action.teamId,playerId:action.playerId,
+        reason:departed.reason,
+        offFieldAtRunningSeconds:departed.elapsedSeconds,
+        restartAtRunningSeconds:departed.restartAtRunningSeconds,
+        requestedAtRunningSeconds:action.elapsedSeconds,
+        returnContext:action.returnContext,ballInPlay:action.ballInPlay,
+        entryBoundary:action.entryBoundary,
+        refereeSignalId:action.refereeSignalId,
+      });
+      if(!admitted.ok)
+        return fail('MEDICAL_RETURN_REJECTED',admitted.error);
+      absent.delete(action.playerId);
+      minuteIndex++;
+    }
     while (commandIndex < plannedCommands.length) {
       const raw: unknown = plannedCommands[commandIndex];
       if (!record(raw) || raw.elapsedSeconds !== second) break;
@@ -287,7 +336,8 @@ function calculateMedicalPhases(
   }
   if (commandIndex !== plannedCommands.length ||
       availabilityIndex !== availability.length ||
-      medicalIndex !== medical.length || decisionIndex !== decisions.length) {
+      medicalIndex !== medical.length || decisionIndex !== decisions.length||
+      minuteIndex!==minuteReturns.length) {
     return fail('INVALID_MATCH_SOURCE');
   }
   append({ schemaVersion: 8, id: 'm1-v8-full-time', elapsedSeconds: 5400,

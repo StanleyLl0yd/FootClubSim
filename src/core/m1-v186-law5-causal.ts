@@ -28,7 +28,8 @@ export interface M1V186Law5Evidence {
     'source-modelled-same-team-collision'|
     'source-modelled-keeper-outfield-collision'|
     'independent-same-team-collision'|
-    'independent-keeper-outfield-collision';
+    'independent-keeper-outfield-collision'|
+    'independent-single-goalkeeper-injury';
   readonly sameWhistlePairOrdinal?:2;
   readonly sourceCollisionEventId?:string;
   readonly modelledDisposition:'may-remain-after-assessment'|
@@ -73,11 +74,15 @@ export function deriveM1V186Law5FromCausalSource(
       !Array.isArray(result.events)||
       source.autonomousCollisions!==undefined&&
         (!Array.isArray(source.autonomousCollisions)||
-          source.autonomousCollisions.length>1))
+          source.autonomousCollisions.length>1)||
+      source.autonomousSingleKeeperInjuries!==undefined&&
+        (!Array.isArray(source.autonomousSingleKeeperInjuries)||
+          source.autonomousSingleKeeperInjuries.length>1))
     return fail('INVALID_CAUSAL_SOURCE');
   const keeperEvidenceRequired=source.causalAssessments.some(a=>
     a.goalkeeperExceptionSource===true||a.collisionOriginSource===true)||
-    (source.autonomousCollisions?.length??0)>0;
+    (source.autonomousCollisions?.length??0)>0||
+    (source.autonomousSingleKeeperInjuries?.length??0)>0;
   let keepers:ReadonlySet<string>=new Set();
   if(keeperEvidenceRequired){
     if(!isPlainJsonTree(prematch)||!startM1Clock(prematch).ok)
@@ -378,10 +383,62 @@ export function deriveM1V186Law5FromCausalSource(
         minimumRunningSecondsSatisfied:true});
     }
   }
+  const singleKeepers=source.autonomousSingleKeeperInjuries??[];
+  if(singleKeepers.length>0&&standalone.length>0)
+    return fail('UNSUPPORTED_LAW5_ORIGIN');
+  for(const keeper of singleKeepers){
+    if(!keeper||Object.keys(keeper).length!==9||
+        !['id','teamId','playerId','elapsedSeconds',
+          'whistleEventId','injuryEventId','restartEventId',
+          'modelledNeedsOnFieldAttention',
+          'externalMedicalAuthorityAuthenticated'].every(k=>
+            Object.hasOwn(keeper,k))||
+        keeper.modelledNeedsOnFieldAttention!==true||
+        keeper.externalMedicalAuthorityAuthenticated!==false||
+        !keepers.has(keeper.playerId)||
+        source.generatedIncidents.some(i=>
+          i.elapsedSeconds===keeper.elapsedSeconds))
+      return fail('UNSUPPORTED_LAW5_ORIGIN');
+    const input=prematch as M1PrematchInput;
+    const side=keeper.teamId===input.fixture.homeClubId?'home':
+      keeper.teamId===input.fixture.awayClubId?'away':null;
+    if(!side)return fail('UNSUPPORTED_LAW5_ORIGIN');
+    const opponent=side==='home'?'away':'home';
+    const triple=source.match.events.filter(e=>
+      e.sourceEventId===keeper.id);
+    const [whistle,injury,restart]=triple;
+    if(triple.length!==3||!whistle||!injury||!restart||
+        whistle.id!==keeper.whistleEventId||
+        injury.id!==keeper.injuryEventId||
+        restart.id!==keeper.restartEventId||
+        whistle.kind!=='synthetic-medical-whistle'||
+        injury.kind!=='synthetic-single-keeper-injury'||
+        restart.kind!=='synthetic-medical-restart'||
+        !/^m1-v36-keeper-[0-9]+$/.test(keeper.id)||
+        ![whistle,injury,restart].every(e=>
+          e.runningSeconds===keeper.elapsedSeconds&&
+          e.teamId===keeper.teamId&&e.playerId===keeper.playerId&&
+          e.onField[side].includes(keeper.playerId)&&
+          !e.onField[opponent].includes(keeper.playerId)&&
+          sameCanonicalValue(e.onField,whistle.onField))||
+        !(whistle.sequence<injury.sequence&&
+          injury.sequence<restart.sequence)||
+        restart.wallSeconds-whistle.wallSeconds<1)
+      return fail('INVALID_MEDICAL_CHRONOLOGY');
+    evidence.push({incidentId:keeper.id,decisionEventId:null,
+      whistleEventId:whistle.id,restartEventId:restart.id,
+      offenderTeamId:null,offenderPlayerId:null,
+      patientTeamId:keeper.teamId,patientPlayerId:keeper.playerId,
+      runningSeconds:keeper.elapsedSeconds,
+      exception:'independent-single-goalkeeper-injury',
+      modelledDisposition:'may-remain-after-assessment',
+      exitEventId:null,returnEventId:null,
+      minimumRunningSecondsSatisfied:true});
+  }
   const departures=evidence.filter(e=>e.exitEventId!==null).length;
   if(departures!==exits.length||departures!==returns.length||
       evidence.length!==source.causalAssessments.length+
-        standalone.length*2||
+        standalone.length*2+singleKeepers.length||
       inspectedCollisions.size!==collisionEvents.length)
     return fail('INVALID_MEDICAL_CHRONOLOGY');
   return {ok:true,schemaVersion:M1_V186_LAW5_SCHEMA,

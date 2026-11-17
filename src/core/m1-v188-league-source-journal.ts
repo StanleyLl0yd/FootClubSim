@@ -71,7 +71,7 @@ type Source={managedXI?:M1V188ManagedXI;
   plannedCommands:unknown[];checkpointMedical:unknown[];
   disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5|6;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
-  intraphaseMedical?:unknown[];
+  intraphaseMedical?:readonly unknown[];
   specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1|2;
   fixtureCalendarPolicyVersion?:2;inMatchOrdersVersion?:1};
 export type M1V188Entry={fixtureId:string;round:number;
@@ -86,7 +86,7 @@ export type M1V188Request={schemaVersion:188;careerId:string;
   checkpointMedical:unknown[];result:unknown;
   medicalPolicyVersion?:2|3|4|5|6;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
-  intraphaseMedical?:unknown[];
+  intraphaseMedical?:readonly unknown[];
   specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1|2;
   fixtureCalendarPolicyVersion?:2;inMatchOrdersVersion?:1};
 export type M1V188Error='INVALID_INITIAL'|'INVALID_JOURNAL'|
@@ -570,7 +570,7 @@ function read(i:InitialCareerSave,value:unknown){
   let condition=startM1V188Condition(i);
   if(schedule.length!==LIMIT)return null;
   let versionedSeen=false,conditionVersion:0|1|2=0,
-    medicalVersionSeen:0|2|3|4|5=0;
+    medicalVersionSeen:0|2|3|4|5|6=0;
   let specialGoalVersion:0|1|2|null=null;
   for(let n=0;n<journal.entries.length;n++){
     const entry=journal.entries[n]!;

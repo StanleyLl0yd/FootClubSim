@@ -536,7 +536,8 @@ function simulateTreatmentCore(
             elapsedSeconds:second,teamId:clubIds[victimSide],
             playerId:goalkeepers[0]!});
         }else if(outfield.length>=2&&goalkeepers.length===1){
-          const first=independentKeeper<0.625?
+          const first=independentKeeper<
+            (singleKeeperInjurySource?0.625:0.5)?
             goalkeepers[0]!:
             outfield[Math.floor(independentFirst*outfield.length)]!;
           const rest=outfield.filter(id=>id!==first);

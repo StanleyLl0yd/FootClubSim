@@ -664,9 +664,8 @@ export function simulateM1V23RefereeWithTreatment(
         collisionClaims.length?338:320)+intraphase.length||
       completedIndependent.size!==independentByTime.size||
       foulSeen.size!==foulTimes.size||
-      (intraphase.length>0?absent.size!==0:
-        !sameCanonicalValue(sorted(absent),source.offFieldAtFullTime)||
-        !sameCanonicalValue(finalOnField,source.onFieldAtFullTime))||
+      !sameCanonicalValue(sorted(absent),source.offFieldAtFullTime)||
+      !sameCanonicalValue(finalOnField,source.onFieldAtFullTime)||
       opportunities.home.size>3||opportunities.away.size>3){
     return fail('ROSTER_REPLAY_MISMATCH');
   }

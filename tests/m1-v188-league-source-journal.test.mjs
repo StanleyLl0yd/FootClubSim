@@ -1542,6 +1542,7 @@ test('P3-2: generated fictional injuries physically withdraw and block later own
 
 test('P3-2: v6 actual 60-running-second off-field return shares saved v188 physical source',()=>{
   let witness=null;
+  const rejected=new Map();
   for(let seed=1;seed<=96&&!witness;seed++){
     const career=createInitialCareer(catalog,catalog.clubs[0].id,
       seed,'v188-minute-return-'+seed);
@@ -1549,12 +1550,20 @@ test('P3-2: v6 actual 60-running-second off-field return shares saved v188 physi
     if(!zero.ok)continue;
     const proposal=prepareM1V188LeagueMatch(
       career,zero.journal,[],undefined,6);
-    if(!proposal?.ok)continue;
+    if(!proposal?.ok){
+      const reason=proposal?
+        [proposal.error,proposal.stage,proposal.cause]
+          .filter(Boolean).join(':'):'NO_PROPOSAL';
+      rejected.set(reason,(rejected.get(reason)??0)+1);
+      continue;
+    }
     const medical=proposal.sourceLaw5Evidence?.find(e=>
       e.modelledDisposition==='voluntary-extended-off-field-assessment');
     if(medical)witness={career,zero,proposal,medical};
   }
-  assert.ok(witness,'no seeded playable medical-return witness');
+  assert.ok(witness,
+    'no seeded playable medical-return witness; '+
+    JSON.stringify(Object.fromEntries(rejected)));
   const {career,zero,proposal,medical}=witness;
   const original=proposal.request;
   assert.equal(original.medicalPolicyVersion,6);

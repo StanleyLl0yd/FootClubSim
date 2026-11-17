@@ -221,9 +221,11 @@ export function simulateM1V101PhysicalIntraphase(
 export function verifyM1V101PhysicalIntraphase(
   prematch:unknown,policy:unknown,plannedCommands:unknown,
   medicalActions:unknown,candidate:unknown,
+  intraphaseReturns:unknown=[],
 ):boolean{
   if(!isPlainJsonTree(candidate))return false;
   const replay=simulateM1V101PhysicalIntraphase(
-    prematch,policy,plannedCommands,medicalActions);
+    prematch,policy,plannedCommands,medicalActions,
+    intraphaseReturns);
   return replay.ok&&sameCanonicalValue(replay,candidate);
 }

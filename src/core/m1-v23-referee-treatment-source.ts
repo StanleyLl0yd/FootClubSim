@@ -707,10 +707,15 @@ export function verifyM1V23RefereeWithTreatment(
   medicalActions:unknown,goalPauseWallSeconds:unknown,
   halfTimeWallSeconds:unknown,foulStopSeconds:unknown,
   foulPauseWallSeconds:unknown,candidate:unknown,
+  useDenseShotSource=false,collisionSource:unknown=[],
+  independentCollisionSource:unknown=[],intraphaseMedical:unknown=[],
+  allowCheckpointIntraphaseReturn=false,
 ):boolean{
   if(!isPlainJsonTree(candidate))return false;
   const source=simulateM1V23RefereeWithTreatment(
     prematch,policy,commands,medicalActions,goalPauseWallSeconds,
-    halfTimeWallSeconds,foulStopSeconds,foulPauseWallSeconds);
+    halfTimeWallSeconds,foulStopSeconds,foulPauseWallSeconds,
+    undefined,useDenseShotSource,collisionSource,independentCollisionSource,
+    intraphaseMedical,allowCheckpointIntraphaseReturn);
   return source.ok&&sameCanonicalValue(source,candidate);
 }

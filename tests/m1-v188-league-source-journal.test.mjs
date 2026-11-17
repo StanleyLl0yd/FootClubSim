@@ -15,6 +15,8 @@ import {regenerateM1V184CausalSource}
   from '../dist/core/m1-v182-unified-source.js';
 import {deriveM1V186Law5FromCausalSource}
   from '../dist/core/m1-v186-law5-causal.js';
+import {verifyM1V105SpecialGoalChronology}
+  from '../dist/core/m1-v105-special-goal-chronology.js';
 import {M1_MODELLED_GOAL_STOP_SECONDS,
   M1_MODELLED_FOUL_STOP_SECONDS,
   M1_MODELLED_HALF_TIME_STOP_SECONDS}
@@ -1579,6 +1581,11 @@ test('P3-2: v6 actual 60-running-second off-field return shares saved v188 physi
   assert.ok(returned);
   assert.equal(returned.refereeSignalId,
     'm1-v23-unverified-synthetic-signal');
+  assert.equal(verifyM1V105SpecialGoalChronology(
+    original.prematch,original.policy,original.plannedCommands,
+    original.checkpointMedical,original.intraphaseMedical,[],
+    original.result,undefined,true),true,
+  'public verifier must accept the same physical minute source as v188');
   const physical=original.result.events.filter(e=>
     e.type==='source'&&e.source.type==='intraphase-medical'&&
     e.source.action.id===returned.id);

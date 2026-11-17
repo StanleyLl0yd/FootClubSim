@@ -319,10 +319,11 @@ export function verifyM1V103IntraphaseMedical(
   prematch:unknown,policy:unknown,plannedCommands:unknown,
   checkpointMedical:unknown,intraphaseMedical:unknown,candidate:unknown,
   shotParameters:unknown=undefined,
+  allowCheckpointIntraphaseReturn=false,
 ):boolean{
   if(!isPlainJsonTree(candidate))return false;
   const replay=simulateM1V103IntraphaseMedical(
     prematch,policy,plannedCommands,checkpointMedical,intraphaseMedical,
-    shotParameters);
+    shotParameters,allowCheckpointIntraphaseReturn);
   return replay.ok&&sameCanonicalValue(replay,candidate);
 }

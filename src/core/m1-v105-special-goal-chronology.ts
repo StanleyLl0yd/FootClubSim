@@ -202,10 +202,11 @@ export function verifyM1V105SpecialGoalChronology(
   checkpointMedical:unknown,intraphaseMedical:unknown,
   trustedDecisions:unknown,candidate:unknown,
   shotParameters:unknown=undefined,
+  allowCheckpointIntraphaseReturn=false,
 ):boolean{
   if(!isPlainJsonTree(candidate))return false;
   const replay=simulateM1V105SpecialGoalChronology(prematch,policy,
     plannedCommands,checkpointMedical,intraphaseMedical,trustedDecisions,
-    shotParameters);
+    shotParameters,allowCheckpointIntraphaseReturn);
   return replay.ok&&sameCanonicalValue(replay,candidate);
 }

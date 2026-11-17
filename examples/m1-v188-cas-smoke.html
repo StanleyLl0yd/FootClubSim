@@ -25,6 +25,8 @@
   const catalog=createSyntheticRplScaleCatalog(2026);
   const career=seed=>createInitialCareer(
     catalog,catalog.clubs[0].id,seed,'m1-v188-native-cas');
+  const minuteCareer=seed=>createInitialCareer(
+    catalog,catalog.clubs[0].id,seed,'m1-v188-native-minute');
   const params=new URL(location.href).searchParams;
   async function rejected(op,code){
     try{await op;}catch(error){
@@ -57,6 +59,26 @@
     }
     throw Error('no source-bound two-patient two-fixture league seed');
   }
+  async function sampleMinute(){
+    for(let seed=1;seed<=48;seed++){
+      await yieldPage();
+      const initial=minuteCareer(seed);
+      const zero=startM1V188LeagueJournal(initial);
+      if(!zero.ok)continue;
+      const first=prepareM1V188LeagueMatch(
+        initial,zero.journal,[],undefined,6,undefined,2,[],2);
+      if(!first?.ok||!first.selectedClubFixture)continue;
+      const witness=first.sourceLaw5Evidence?.find(e=>
+        e.modelledDisposition===
+          'voluntary-extended-off-field-assessment');
+      if(!witness||!first.request.intraphaseMedical?.some(a=>
+        a.kind==='treatment-return'&&
+        a.playerId===witness.patientPlayerId&&
+        a.elapsedSeconds===witness.runningSeconds+60))continue;
+      return {seed,initial,first};
+    }
+    throw Error('no source-timed minute-return native fixture witness');
+  }
   async function run(){
     if(params.get('stage')===null){
       const {seed,initial,first}=await sample();
@@ -74,7 +96,24 @@
       check(one.revision===1&&one.entries.length===1&&
         one.entries[0].fixtureId===first.fixture.id,
         'source verified first fixture not persisted');
+      const minute=await sampleMinute();
+      await saveNewInitialCareer(minute.initial);
+      const minuteZero=await create(minute.initial.careerId);
+      check(minuteZero.revision===0,'new minute journal not empty');
+      const forgedMinute=structuredClone(minute.first.request);
+      forgedMinute.intraphaseMedical[0].elapsedSeconds--;
+      await rejected(commit(minute.initial.careerId,0,forgedMinute),
+        'DOMAIN_REJECTED');
+      check((await load(minute.initial.careerId)).revision===0,
+        'forged 59-second return changed native history');
+      const minuteSaved=await commit(minute.initial.careerId,0,
+        minute.first.request);
+      check(minuteSaved.entries[0].source.medicalPolicyVersion===6&&
+        minuteSaved.entries[0].source.intraphaseMedical.length>0,
+        'native CAS did not persist minute-source physical return');
       const target=new URL(location.href);
+      target.searchParams.set('minuteSeed',String(minute.seed));
+      target.searchParams.set('minuteFirst',minute.first.fixture.id);
       target.searchParams.set('stage','verify');
       target.searchParams.set('seed',String(seed));
       target.searchParams.set('first',first.fixture.id);
@@ -136,6 +175,43 @@
       'chronological two-team journal lost entries');
     check((await loadInitialCareer(initial.careerId)).careerId===
       initial.careerId,'full-league CAS rewrote M0');
+    const minuteSeed=Number(params.get('minuteSeed'));
+    check(Number.isSafeInteger(minuteSeed)&&minuteSeed>=1&&
+      minuteSeed<=48,'invalid minute-return seed');
+    const minuteInitial=minuteCareer(minuteSeed);
+    const restoredMinuteInitial=await loadInitialCareer(
+      minuteInitial.careerId);
+    check(restoredMinuteInitial.careerId===minuteInitial.careerId&&
+      restoredMinuteInitial.rngState===minuteInitial.rngState,
+      'minute-return career initial changed on reload');
+    const minutePrior=await load(minuteInitial.careerId);
+    check(minutePrior.revision===1&&
+      minutePrior.entries[0].fixtureId===params.get('minuteFirst')&&
+      minutePrior.entries[0].source.medicalPolicyVersion===6,
+      'minute-return native history not restored');
+    const minuteSource=minutePrior.entries[0].source;
+    check(minuteSource.intraphaseMedical.some(action=>
+      action.kind==='treatment-return'&&
+      minuteSource.checkpointMedical.some(exit=>
+        exit.kind==='treatment-exit'&&
+        exit.playerId===action.playerId&&
+        exit.teamId===action.teamId&&
+        action.elapsedSeconds-exit.elapsedSeconds===60)),
+    'restored native physical return is not at T+60');
+    check(validateM1V188LeagueJournal(
+      minuteInitial,minutePrior).ok,
+      'minute-return native history fails exact replay');
+    const nextMinute=prepareM1V188LeagueMatch(
+      minuteInitial,minutePrior,[],undefined,undefined,undefined,
+      2,[],2);
+    check(nextMinute?.ok&&nextMinute.request.medicalPolicyVersion===6,
+      'minute-return native policy failed to survive reload');
+    const minuteDone=await commit(minuteInitial.careerId,1,
+      nextMinute.request);
+    check(minuteDone.revision===2&&
+      minuteDone.entries.every(e=>e.source.medicalPolicyVersion===6)&&
+      validateM1V188LeagueJournal(minuteInitial,minuteDone).ok,
+      'minute-return full two-fixture CAS failed');
     status.textContent='M1_V188_BROWSER_CAS_PASS';
   }
   run().catch(error=>{

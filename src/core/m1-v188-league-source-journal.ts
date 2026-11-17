@@ -667,7 +667,8 @@ export function prepareM1V188LeagueMatch(
     return {ok:false,error:'INVALID_REQUEST'};
   if(medicalPolicyVersion!==undefined&&medicalPolicyVersion!==2&&
       medicalPolicyVersion!==3&&medicalPolicyVersion!==4&&
-      medicalPolicyVersion!==5&&medicalPolicyVersion!==6)
+      medicalPolicyVersion!==5&&medicalPolicyVersion!==6&&
+      medicalPolicyVersion!==7)
     return {ok:false,error:'INVALID_REQUEST'};
   if(fixtureCalendarPolicyVersion!==undefined&&
       fixtureCalendarPolicyVersion!==2)
@@ -686,15 +687,18 @@ export function prepareM1V188LeagueMatch(
   if(accepted.journal.revision>0&&
      firstGoal!==specialGoalSourceVersion)
     return {ok:false,error:'INVALID_REQUEST'};
-  if(previous===6&&medicalPolicyVersion!==undefined&&
-      medicalPolicyVersion!==6||
+  if(previous===7&&medicalPolicyVersion!==undefined&&
+      medicalPolicyVersion!==7||
+      previous===6&&medicalPolicyVersion!==undefined&&
+      medicalPolicyVersion!==6&&medicalPolicyVersion!==7||
       previous===5&&(medicalPolicyVersion===2||
       medicalPolicyVersion===3||medicalPolicyVersion===4)||
       previous===4&&(medicalPolicyVersion===2||
       medicalPolicyVersion===3)||
       previous===3&&medicalPolicyVersion===2)
     return {ok:false,error:'INVALID_REQUEST'};
-  const effective:2|3|4|5|6|undefined=
+  const effective:2|3|4|5|6|7|undefined=
+    medicalPolicyVersion===7||previous===7?7:
     medicalPolicyVersion===6||previous===6?6:
     medicalPolicyVersion===5||previous===5?5:
     medicalPolicyVersion===4||previous===4?4:
@@ -728,9 +732,11 @@ export function prepareM1V188LeagueMatch(
     return {ok:false,error:'GENERATOR_REJECTED',stage:'CONDITION'};
   const generated=regenerateM1V184CausalSource(
     simulationInput,POLICY,managerCommandsForFixture,true,medicalSource,
-    effective===3||effective===4||effective===5||effective===6,
-    effective===4||effective===5||effective===6,
-    effective===5||effective===6,coachOrders,effective===6);
+    effective===3||effective===4||effective===5||effective===6||
+      effective===7,
+    effective===4||effective===5||effective===6||effective===7,
+    effective===5||effective===6||effective===7,coachOrders,
+    effective===6||effective===7,effective===7);
   if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED',
     stage:'CAUSAL',cause:generated.error};
   const special=(specialGoalSourceVersion===1||
@@ -757,10 +763,13 @@ export function prepareM1V188LeagueMatch(
     ...(specialGoalSourceVersion===1||specialGoalSourceVersion===2?
       {specialGoalSourceVersion}:{}),
     ...(effective?{medicalPolicyVersion:effective}:{}),
-    ...(effective===5||effective===6?{
+    ...(effective===5||effective===6||effective===7?{
       autonomousMedicalOrigin:generated.autonomousCollisions??[]}: {}),
-    ...(effective===6?{
-      intraphaseMedical:generated.intraphaseMedical??[]}: {})},
+    ...(effective===6||effective===7?{
+      intraphaseMedical:generated.intraphaseMedical??[]}: {}),
+    ...(effective===7?{
+      autonomousKeeperInjuryOrigin:
+        generated.autonomousSingleKeeperInjuries??[]}: {})},
     ...(medicalSource?{sourceLaw5Evidence:generated.law5Evidence}:{}),
     externalMedicalAuthorityAuthenticated:false,
     remainingFixtures:LIMIT-index-1,

@@ -95,7 +95,8 @@ export function simulateM1V101PhysicalIntraphase(
   let controlled=start.state,cursor=0,orderIndex=0;
   for(let phase=0;phase<M1_CLOCK_MAX_EVENTS;phase++){
     const second=phase*M1_CLOCK_STEP_SECONDS;
-    while(minuteReturns[minuteIndex]?.elapsedSeconds<second){
+    while(minuteIndex<minuteReturns.length&&
+        minuteReturns[minuteIndex]!.elapsedSeconds<second){
       const action=minuteReturns[minuteIndex]!;
       if(!absent.delete(action.playerId))
         return {ok:false,error:'INVALID_PHYSICAL_TRANSITION'};

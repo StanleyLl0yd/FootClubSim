@@ -51,6 +51,7 @@ export function simulateM1V105SpecialGoalChronology(
   prematch:unknown,policy:unknown,plannedCommands:unknown=[],
   checkpointMedical:unknown=[],intraphaseMedical:unknown=[],
   trustedDecisions:unknown=[],shotParameters:unknown=undefined,
+  allowCheckpointIntraphaseReturn=false,
 ):M1V105Run{
   if(![prematch,policy,plannedCommands,checkpointMedical,
       intraphaseMedical,trustedDecisions].every(isPlainJsonTree)||
@@ -58,10 +59,11 @@ export function simulateM1V105SpecialGoalChronology(
     return {ok:false,error:'INVALID_INPUT'};
   const physical=simulateM1V103IntraphaseMedical(prematch,policy,
     plannedCommands,checkpointMedical,intraphaseMedical,
-    shotParameters);
+    shotParameters,allowCheckpointIntraphaseReturn);
   if(!physical.ok)return {ok:false,error:'V103_SOURCE_REJECTED'};
   const adjudicated=simulateM1V8MedicalPhases(prematch,policy,
-    plannedCommands,trustedDecisions,checkpointMedical);
+    plannedCommands,trustedDecisions,checkpointMedical,
+    allowCheckpointIntraphaseReturn?intraphaseMedical:[]);
   if(!adjudicated.ok)return {ok:false,error:'V8_ADJUDICATION_REJECTED'};
   const sourceTransitions=physical.events.filter(
     (e):e is Transition=>e.type==='physical-transition');
@@ -200,10 +202,11 @@ export function verifyM1V105SpecialGoalChronology(
   checkpointMedical:unknown,intraphaseMedical:unknown,
   trustedDecisions:unknown,candidate:unknown,
   shotParameters:unknown=undefined,
+  allowCheckpointIntraphaseReturn=false,
 ):boolean{
   if(!isPlainJsonTree(candidate))return false;
   const replay=simulateM1V105SpecialGoalChronology(prematch,policy,
     plannedCommands,checkpointMedical,intraphaseMedical,trustedDecisions,
-    shotParameters);
+    shotParameters,allowCheckpointIntraphaseReturn);
   return replay.ok&&sameCanonicalValue(replay,candidate);
 }

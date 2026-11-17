@@ -47,16 +47,18 @@ export function simulateM1V190ExperimentalSpecialGoals(
   prematch:unknown,policy:unknown,
   plannedCommands:unknown=[],checkpointMedical:unknown=[],
   shotSourceVersion:1|2=1,
+  intraphaseMedical:unknown=[],
 ):M1V190ExperimentalResult{
   if((shotSourceVersion!==1&&shotSourceVersion!==2)||
-      ![prematch,policy,plannedCommands,checkpointMedical]
-        .every(isPlainJsonTree))
+      ![prematch,policy,plannedCommands,checkpointMedical,
+        intraphaseMedical].every(isPlainJsonTree))
     return{ok:false,error:'INVALID_SOURCE'};
   const shotParameters=shotSourceVersion===2?
     M1_V191_SHOT_HYPOTHESIS:undefined;
   const source=simulateM1V105SpecialGoalChronology(
-    prematch,policy,plannedCommands,checkpointMedical,[],[],
-    shotParameters);
+    prematch,policy,plannedCommands,checkpointMedical,
+    intraphaseMedical,[],shotParameters,
+    Array.isArray(intraphaseMedical)&&intraphaseMedical.length>0);
   if(!source.ok)return{ok:false,error:'INVALID_SOURCE'};
   const input=prematch as M1PrematchInput;
   if(!validRngSeed(input.rngSeed)||
@@ -125,8 +127,9 @@ export function simulateM1V190ExperimentalSpecialGoals(
   let finished:Good=source;
   for(const candidate of decisions){
     const proposed=simulateM1V105SpecialGoalChronology(input,policy,
-      plannedCommands,checkpointMedical,[],[...admitted,candidate],
-      shotParameters);
+      plannedCommands,checkpointMedical,intraphaseMedical,
+      [...admitted,candidate],shotParameters,
+      Array.isArray(intraphaseMedical)&&intraphaseMedical.length>0);
     if(!proposed.ok||proposed.specialDecisionCount!==admitted.length+1||
        proposed.rngState!==source.rngState||
        proposed.rngDraws!==source.rngDraws)continue;
@@ -163,9 +166,11 @@ export function verifyM1V190ExperimentalSpecialGoals(
   prematch:unknown,policy:unknown,
   plannedCommands:unknown,checkpointMedical:unknown,
   claimed:unknown,shotSourceVersion:1|2=1,
+  intraphaseMedical:unknown=[],
 ):boolean{
   if(!isPlainJsonTree(claimed))return false;
   const replay=simulateM1V190ExperimentalSpecialGoals(
-    prematch,policy,plannedCommands,checkpointMedical,shotSourceVersion);
+    prematch,policy,plannedCommands,checkpointMedical,
+    shotSourceVersion,intraphaseMedical);
   return replay.ok&&sameCanonicalValue(replay,claimed);
 }

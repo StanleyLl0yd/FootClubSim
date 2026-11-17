@@ -9,10 +9,15 @@ import {startM1V188LeagueJournal,prepareM1V188LeagueMatch,
 
 import {simulateM1V29CausalMedicalSource}
   from '../dist/core/m1-v23-temporary-treatment.js';
+import {createM1V188PauseDraft,recoverM1V188PauseDraft}
+  from '../dist/core/m1-v188-pause-draft.js';
 import {regenerateM1V184CausalSource}
   from '../dist/core/m1-v182-unified-source.js';
 import {deriveM1V186Law5FromCausalSource}
   from '../dist/core/m1-v186-law5-causal.js';
+import {verifyM1V105SpecialGoalChronology}
+  from '../dist/core/m1-v105-special-goal-chronology.js';
+import {isPlainJsonTree} from '../dist/core/plain-json-tree.js';
 import {M1_MODELLED_GOAL_STOP_SECONDS,
   M1_MODELLED_FOUL_STOP_SECONDS,
   M1_MODELLED_HALF_TIME_STOP_SECONDS}
@@ -1535,4 +1540,173 @@ test('P3-2: generated fictional injuries physically withdraw and block later own
     {id:'forged-medical-origin'}];
   assert.equal(validateM1V188LeagueJournal(career,tampered).ok,false,
     'Forged medical-model downgrade cannot rewrite the actual source');
+});
+
+
+test('P3-2: v6 actual 60-running-second off-field return shares saved v188 physical source',()=>{
+  let witness=null;
+  const rejected=new Map();
+  for(let seed=1;seed<=96&&!witness;seed++){
+    const career=createInitialCareer(catalog,catalog.clubs[0].id,
+      seed,'v188-minute-return-'+seed);
+    const zero=startM1V188LeagueJournal(career);
+    if(!zero.ok)continue;
+    const proposal=prepareM1V188LeagueMatch(
+      career,zero.journal,[],undefined,6);
+    if(!proposal?.ok){
+      const reason=proposal?
+        [proposal.error,proposal.stage,proposal.cause]
+          .filter(Boolean).join(':'):'NO_PROPOSAL';
+      rejected.set(reason,(rejected.get(reason)??0)+1);
+      continue;
+    }
+    const medical=proposal.sourceLaw5Evidence?.find(e=>
+      e.modelledDisposition==='voluntary-extended-off-field-assessment');
+    if(medical)witness={career,zero,proposal,medical};
+  }
+  assert.ok(witness,
+    'no seeded playable medical-return witness; '+
+    JSON.stringify(Object.fromEntries(rejected)));
+  const {career,zero,proposal,medical}=witness;
+  const original=proposal.request;
+  assert.equal(isPlainJsonTree(original),true,
+    'v6 request must not alias any nested physical source event');
+  assert.equal(original.medicalPolicyVersion,6);
+  assert.equal(proposal.externalMedicalAuthorityAuthenticated,false);
+  assert.ok(original.intraphaseMedical.length>0);
+  const exit=original.checkpointMedical.find(a=>
+    a.kind==='treatment-exit'&&a.playerId===medical.patientPlayerId&&
+    a.elapsedSeconds===medical.runningSeconds);
+  const returned=original.intraphaseMedical.find(a=>
+    a.kind==='treatment-return'&&a.playerId===medical.patientPlayerId&&
+    a.elapsedSeconds===medical.runningSeconds+60);
+  assert.ok(exit);
+  assert.ok(returned);
+  assert.equal(returned.refereeSignalId,
+    'm1-v23-unverified-synthetic-signal');
+  assert.equal(verifyM1V105SpecialGoalChronology(
+    original.prematch,original.policy,original.plannedCommands,
+    original.checkpointMedical,original.intraphaseMedical,[],
+    original.result,undefined,true),true,
+  'public verifier must accept the same physical minute source as v188');
+  const physical=original.result.events.filter(e=>
+    e.type==='source'&&e.source.type==='intraphase-medical'&&
+    e.source.action.id===returned.id);
+  assert.equal(physical.length,1);
+  assert.equal(physical[0].elapsedSeconds,medical.runningSeconds+60);
+  assert.ok(proposal.clock.snapshots.some(s=>
+    s.runningSeconds===medical.runningSeconds+60&&
+    (s.homePresent.includes(medical.patientPlayerId)||
+      s.awayPresent.includes(medical.patientPlayerId))));
+  const causal=simulateM1V29CausalMedicalSource(
+    original.prematch,original.policy,[],[],true,true,true,true,true,true);
+  assert.equal(causal.ok,true);
+  const verified=deriveM1V186Law5FromCausalSource(
+    causal,original.result,original.prematch);
+  assert.equal(verified.ok,true,verified.ok?'':verified.error);
+  const sourceEvidence=verified.evidence.find(e=>
+    e.patientPlayerId===medical.patientPlayerId&&
+    e.runningSeconds===medical.runningSeconds);
+  assert.deepEqual(sourceEvidence,medical);
+  for(const delta of [-1,1]){
+    const tampered=structuredClone(original);
+    const forged=tampered.intraphaseMedical.find(a=>
+      a.id===returned.id);
+    forged.elapsedSeconds+=delta;
+    assert.deepEqual(applyM1V188LeagueMatch(
+      career,zero.journal,tampered),
+      {ok:false,error:'SOURCE_MISMATCH'},
+      'T+59 and T+61 forged returns must be rejected');
+  }
+  const fakeSignal=structuredClone(causal);
+  fakeSignal.syntheticIntraphaseTreatmentActions.find(a=>
+    a.id===returned.id).refereeSignalId='m1-v23-unverified-spoof';
+  assert.equal(deriveM1V186Law5FromCausalSource(
+    fakeSignal,original.result,original.prematch).ok,false);
+  const committed=applyM1V188LeagueMatch(career,zero.journal,original);
+  assert.equal(committed.ok,true,committed.ok?'':committed.error);
+  assert.equal(committed.journal.entries[0].source.medicalPolicyVersion,6);
+  assert.ok(committed.journal.entries[0].source.intraphaseMedical.length>0);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(committed.journal)).ok,true);
+  const follow=prepareM1V188LeagueMatch(career,committed.journal);
+  assert.equal(follow?.ok,true);
+  assert.equal(follow.request.medicalPolicyVersion,6);
+  const lower=prepareM1V188LeagueMatch(
+    career,committed.journal,[],undefined,5);
+  assert.deepEqual(lower,{ok:false,error:'INVALID_REQUEST'});
+  const next=applyM1V188LeagueMatch(
+    career,committed.journal,follow.request);
+  assert.equal(next.ok,true,next.ok?'':next.error);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(next.journal)).ok,true);
+  const combined=prepareM1V188LeagueMatch(
+    career,zero.journal,[],undefined,6,undefined,2,[],2);
+  assert.equal(combined?.ok,true,
+    '60-second source must coexist with official calendar and special goals');
+  const draft=createM1V188PauseDraft(combined,45);
+  assert.ok(draft,'version-6 selected-club pause must be durable');
+  const resumed=recoverM1V188PauseDraft(career,zero.journal,draft);
+  assert.ok(resumed,'version-6 pause and event prefix must replay');
+  assert.deepEqual(resumed.proposal.request,combined.request);
+  const appliedCombined=applyM1V188LeagueMatch(
+    career,zero.journal,combined.request);
+  assert.equal(appliedCombined.ok,true);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(appliedCombined.journal)).ok,true);
+});
+
+
+test('P3-2: medical v5 to v6 migration retains every historical fixture and uses latest source',()=>{
+  let witness=null;
+  const refusals=new Map();
+  for(let seed=1;seed<=32&&!witness;seed++){
+    const initial=createInitialCareer(catalog,catalog.clubs[0].id,
+      seed,'v188-medical-v5-v6-migration-'+seed);
+    const started=startM1V188LeagueJournal(initial);
+    if(!started.ok)continue;
+    const first=prepareM1V188LeagueMatch(initial,started.journal,
+      [],undefined,5,undefined,2,[],2);
+    if(!first?.ok)continue;
+    const old=applyM1V188LeagueMatch(initial,started.journal,first.request);
+    if(!old.ok)continue;
+    const second=prepareM1V188LeagueMatch(initial,old.journal,
+      [],undefined,6,undefined,2,[],2);
+    if(!second?.ok){
+      const code=second?[second.error,second.stage,second.cause]
+        .filter(Boolean).join(':'):'NO_PROPOSAL';
+      refusals.set(code,(refusals.get(code)??0)+1);
+      continue;
+    }
+    const upgraded=applyM1V188LeagueMatch(
+      initial,old.journal,second.request);
+    if(!upgraded.ok)continue;
+    witness={initial,started,first,old,second,upgraded};
+  }
+  assert.ok(witness,'no v5 to v6 legal migration: '+
+    JSON.stringify(Object.fromEntries(refusals)));
+  const {initial,first,old,second,upgraded}=witness;
+  assert.equal(upgraded.journal.entries[0].source.medicalPolicyVersion,5);
+  assert.equal(upgraded.journal.entries[1].source.medicalPolicyVersion,6);
+  assert.equal(upgraded.journal.entries[0].fixtureId,first.fixture.id);
+  assert.equal(upgraded.journal.entries[1].fixtureId,second.fixture.id);
+  assert.equal(validateM1V188LeagueJournal(
+    initial,structuredClone(upgraded.journal)).ok,true);
+  assert.deepEqual(prepareM1V188LeagueMatch(
+    initial,upgraded.journal,[],undefined,5,undefined,2,[],2),
+    {ok:false,error:'INVALID_REQUEST'});
+  const third=prepareM1V188LeagueMatch(
+    initial,upgraded.journal,[],undefined,
+    upgraded.journal.entries.at(-1).source.medicalPolicyVersion,
+    undefined,2,[],2);
+  assert.equal(third?.ok,true);
+  assert.equal(third.request.medicalPolicyVersion,6);
+  const committed=applyM1V188LeagueMatch(
+    initial,upgraded.journal,third.request);
+  assert.equal(committed.ok,true);
+  assert.equal(validateM1V188LeagueJournal(
+    initial,structuredClone(committed.journal)).ok,true);
+  assert.deepEqual(old.journal.entries[0].source,
+    upgraded.journal.entries[0].source,
+    'upgrading policy must never rewrite prior events');
 });

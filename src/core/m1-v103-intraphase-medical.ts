@@ -97,15 +97,18 @@ export function simulateM1V103IntraphaseMedical(
   prematch:unknown,policy:unknown,plannedCommands:unknown=[],
   checkpointMedical:unknown=[],intraphaseMedical:unknown=[],
   shotParameters:unknown=undefined,
+  allowCheckpointIntraphaseReturn=false,
 ):M1V103Run{
   if(![prematch,policy,plannedCommands,checkpointMedical,
       intraphaseMedical].every(isPlainJsonTree)||
       !Array.isArray(intraphaseMedical)||intraphaseMedical.length>36||
       shotParameters!==undefined&&
-        !validM1V104ResearchParameters(shotParameters))
+        !validM1V104ResearchParameters(shotParameters)||
+      typeof allowCheckpointIntraphaseReturn!=='boolean')
     return {ok:false,error:'INVALID_INPUT'};
   const source=simulateM1V101PhysicalIntraphase(
-    prematch,policy,plannedCommands,checkpointMedical);
+    prematch,policy,plannedCommands,checkpointMedical,
+    allowCheckpointIntraphaseReturn?intraphaseMedical:[]);
   if(!source.ok)return {ok:false,error:'SOURCE_REJECTED'};
   const started=startM1PlayerControl(prematch,policy);
   if(!started.ok)return {ok:false,error:'SOURCE_REJECTED'};
@@ -125,16 +128,23 @@ export function simulateM1V103IntraphaseMedical(
   const actions:M1V7TemporaryMedicalAction[]=[];
   const ids=new Set<string>();
   let prev=-1;
+  const touchedAtSecond=new Set<string>();
   for(const raw of intraphaseMedical){
     const a=readIntraphaseMedical(raw);
     if(!a||a.fixtureId!==input.fixture.id||
         (a.teamId!==input.fixture.homeClubId&&
           a.teamId!==input.fixture.awayClubId)||
-        a.elapsedSeconds<=prev||ids.has(a.id)||sourceActionIds.has(a.id))
+        a.elapsedSeconds<prev||
+        (a.elapsedSeconds===prev&&touchedAtSecond.has(a.playerId))||
+        ids.has(a.id)||sourceActionIds.has(a.id))
       return {ok:false,error:'INVALID_INTRAPHASE_SCHEDULE'};
+    if(a.elapsedSeconds!==prev)touchedAtSecond.clear();
+    touchedAtSecond.add(a.playerId);
     prev=a.elapsedSeconds;
     ids.add(a.id);
-    actions.push(a);
+    // The saved request and the replayed event journal must be independent
+    // plain JSON trees: shared references are rejected at v188 CAS admission.
+    actions.push({...a});
   }
   const players=new Map<string,Player>(
     input.catalog.players.map(p=>[p.id,p]));
@@ -206,7 +216,9 @@ export function simulateM1V103IntraphaseMedical(
       absent.set(action.playerId,{origin:'v103',exit:action});
     }else{
       const old=absent.get(action.playerId);
-      if(!old||old.origin!=='v103')return false;
+      if(!old||old.origin!=='v103'&&
+          !(allowCheckpointIntraphaseReturn&&old.origin==='v8'))
+        return false;
       const decision=admitM1OffFieldMedicalReturn(input,{
         schemaVersion:1,fixtureId:action.fixtureId,
         teamId:action.teamId,playerId:action.playerId,
@@ -309,10 +321,11 @@ export function verifyM1V103IntraphaseMedical(
   prematch:unknown,policy:unknown,plannedCommands:unknown,
   checkpointMedical:unknown,intraphaseMedical:unknown,candidate:unknown,
   shotParameters:unknown=undefined,
+  allowCheckpointIntraphaseReturn=false,
 ):boolean{
   if(!isPlainJsonTree(candidate))return false;
   const replay=simulateM1V103IntraphaseMedical(
     prematch,policy,plannedCommands,checkpointMedical,intraphaseMedical,
-    shotParameters);
+    shotParameters,allowCheckpointIntraphaseReturn);
   return replay.ok&&sameCanonicalValue(replay,candidate);
 }

@@ -139,6 +139,8 @@ export function simulateM1V23RefereeWithTreatment(
   useDenseShotSource=false,
   collisionSource:unknown=[],
   independentCollisionSource:unknown=[],
+  intraphaseMedical:unknown=[],
+  allowCheckpointIntraphaseReturn=false,
 ):M1V23RefereeRun{
   const unsupported=(subreason:M1V23UnsupportedSubreason):M1V23RefereeRun=>{
     if(trace)trace.subreason=subreason;
@@ -155,6 +157,10 @@ export function simulateM1V23RefereeWithTreatment(
   const authorized=clone(foulStopSeconds,1024);
   const collisionClaims=clone(collisionSource,2048);
   const independentClaims=clone(independentCollisionSource,1024);
+  const intraphase=clone(intraphaseMedical,1_000_000);
+  if(!Array.isArray(intraphase)||intraphase.length>36||
+      intraphase.length>0&&!useDenseShotSource)
+    return fail('INVALID_SOURCE');
   if(!Array.isArray(independentClaims)||independentClaims.length>1)
     return fail('INVALID_SOURCE');
   if(!Array.isArray(collisionClaims)||collisionClaims.length>18)
@@ -235,10 +241,13 @@ export function simulateM1V23RefereeWithTreatment(
   if(raw.some(x=>record(x)&&x.kind==='substitute-normal'&&
       x.elapsedSeconds===2700)&&
       halfTimeWallSeconds===0)return fail('INVALID_INTERVAL');
-  const v8=simulateM1V8MedicalPhases(input,control,raw,[],medical);
+  const v8=simulateM1V8MedicalPhases(input,control,raw,[],medical,
+    allowCheckpointIntraphaseReturn?intraphase:[]);
   if(!v8.ok)return fail('SOURCE_MATCH_REJECTED');
   const dense=useDenseShotSource?
-    simulateM1V103IntraphaseMedical(input,control,raw,medical,[]):null;
+    simulateM1V103IntraphaseMedical(
+      input,control,raw,medical,intraphase,undefined,
+      allowCheckpointIntraphaseReturn):null;
   if(useDenseShotSource&&(!dense||!dense.ok||
       dense.fixtureId!==v8.fixtureId))return fail('SOURCE_MATCH_REJECTED');
   if(dense?.ok){
@@ -250,11 +259,13 @@ export function simulateM1V23RefereeWithTreatment(
       return fail('ROSTER_REPLAY_MISMATCH');
   }
   type DenseShot=Extract<M1V103Event,{type:'shot'|'full-time'}>;
-  const sourceEvents:(M1V8Event|DenseShot)[]=[];
+  const sourceEvents:(M1V8Event|DenseShot|
+    Extract<M1V103Event,{type:'intraphase-medical'}>)[]=[];
   if(dense?.ok){
     for(const event of dense.events){
       if(event.type==='physical-transition')sourceEvents.push(event.source);
-      else if(event.type==='shot'||event.type==='full-time')
+      else if(event.type==='shot'||event.type==='full-time'||
+          event.type==='intraphase-medical')
         sourceEvents.push(event);
       else return fail('UNSUPPORTED_SOURCE_EVENT');
     }
@@ -284,6 +295,12 @@ export function simulateM1V23RefereeWithTreatment(
       return fail('ROSTER_REPLAY_MISMATCH');
     }
   }
+  const sourceIntraphase=source.events.filter(e=>
+    e.type==='intraphase-medical');
+  if(sourceIntraphase.length!==intraphase.length||
+      sourceIntraphase.some((e,i)=>
+        !sameCanonicalValue(e.action,intraphase[i])))
+    return fail('ROSTER_REPLAY_MISMATCH');
   const available=source.events.filter(e=>e.type==='availability');
   if(available.length!==raw.length)return fail('ROSTER_REPLAY_MISMATCH');
   for(let i=0;i<raw.length;i++){
@@ -564,7 +581,7 @@ export function simulateM1V23RefereeWithTreatment(
       }
       continue;
     }
-    if(event.type==='medical'){
+    if(event.type==='medical'||event.type==='intraphase-medical'){
       const action=event.action;
       const side:Side|null=action.teamId===f.homeClubId?'home':
         action.teamId===f.awayClubId?'away':null;
@@ -644,7 +661,7 @@ export function simulateM1V23RefereeWithTreatment(
     }
   }
   if(events.length>(independentClaims.length?341:
-        collisionClaims.length?338:320)||
+        collisionClaims.length?338:320)+intraphase.length||
       completedIndependent.size!==independentByTime.size||
       foulSeen.size!==foulTimes.size||
       !sameCanonicalValue(sorted(absent),source.offFieldAtFullTime)||
@@ -670,7 +687,8 @@ export function simulateM1V23RefereeWithTreatment(
       foulPauseWallSeconds as number,generatedFoulStoppages:foulSeen.size,
     inPlayOpportunitiesUsed:{home:opportunities.home.size,
       away:opportunities.away.size},
-    halfTimeSubstitutions:halfChanges,medicalActionCount:medical.length,
+    halfTimeSubstitutions:halfChanges,
+    medicalActionCount:medical.length+intraphase.length,
     sourceRefereeEffects:effects,
     offFieldAtFullTime:sorted(absent),events,finalOnField,
     finalScore:{home:source.report.home.goals,away:source.report.away.goals},
@@ -689,10 +707,15 @@ export function verifyM1V23RefereeWithTreatment(
   medicalActions:unknown,goalPauseWallSeconds:unknown,
   halfTimeWallSeconds:unknown,foulStopSeconds:unknown,
   foulPauseWallSeconds:unknown,candidate:unknown,
+  useDenseShotSource=false,collisionSource:unknown=[],
+  independentCollisionSource:unknown=[],intraphaseMedical:unknown=[],
+  allowCheckpointIntraphaseReturn=false,
 ):boolean{
   if(!isPlainJsonTree(candidate))return false;
   const source=simulateM1V23RefereeWithTreatment(
     prematch,policy,commands,medicalActions,goalPauseWallSeconds,
-    halfTimeWallSeconds,foulStopSeconds,foulPauseWallSeconds);
+    halfTimeWallSeconds,foulStopSeconds,foulPauseWallSeconds,
+    undefined,useDenseShotSource,collisionSource,independentCollisionSource,
+    intraphaseMedical,allowCheckpointIntraphaseReturn);
   return source.ok&&sameCanonicalValue(source,candidate);
 }

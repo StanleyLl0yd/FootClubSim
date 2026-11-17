@@ -9,6 +9,8 @@ import {M1_CLOCK_MAX_EVENTS,M1_CLOCK_STEP_SECONDS,
   type M1PrematchInput} from './m1-clock.js';
 import {simulateM1V8MedicalPhases,type M1V8Event}
   from './m1-v8-medical-phases.js';
+import type {M1V7TemporaryMedicalAction}
+  from './m1-v7-temporary-medical.js';
 import {M1_V99_SLOTS_PER_CHECKPOINT,M1_V99_SECONDS_PER_SLOT}
   from './m1-v99-intraphase-shots.js';
 import {SeededRng,RNG_VERSION} from './rng.js';
@@ -49,10 +51,12 @@ export type M1V101Run=
 
 export function simulateM1V101PhysicalIntraphase(
   prematch:unknown,policy:unknown,plannedCommands:unknown=[],
-  medicalActions:unknown=[],
+  medicalActions:unknown=[],intraphaseReturns:unknown=[],
 ):M1V101Run{
-  if(![prematch,policy,plannedCommands,medicalActions].every(isPlainJsonTree)||
+  if(![prematch,policy,plannedCommands,medicalActions,
+      intraphaseReturns].every(isPlainJsonTree)||
       !Array.isArray(plannedCommands)||!Array.isArray(medicalActions)||
+      !Array.isArray(intraphaseReturns)||
       plannedCommands.some(x=>!x||typeof x!=='object'||
         !['substitute-normal','caution','direct-red','injury-withdrawal',
           'set-tactics','set-player-focus'].includes(x.kind)))
@@ -60,7 +64,8 @@ export function simulateM1V101PhysicalIntraphase(
   // v8 verifies physical and coaching commands first; the intraphase
   // bridge applies approved coach orders at the same clock boundaries.
   const source=simulateM1V8MedicalPhases(
-    prematch,policy,plannedCommands,[],medicalActions);
+    prematch,policy,plannedCommands,[],medicalActions,
+    intraphaseReturns);
   if(!source.ok)return {ok:false,error:'SOURCE_REJECTED'};
   const start=startM1PlayerControl(prematch,policy);
   if(!start.ok)return {ok:false,error:'SOURCE_REJECTED'};
@@ -71,6 +76,11 @@ export function simulateM1V101PhysicalIntraphase(
     away:[...input.awayLineup.starters],
   };
   const absent=new Set<string>();
+  // Project the already validated T+60 re-entry onto future 300s source
+  // checkpoints; the actual event is emitted only by the v103 timeline.
+  const minuteReturns=intraphaseReturns as
+    Extract<M1V7TemporaryMedicalAction,{kind:'treatment-return'}>[];
+  let minuteIndex=0;
   const transitions:PhysicalTransition[]=source.events.filter(
     (e):e is PhysicalTransition=>
       e.type==='availability'||e.type==='medical');
@@ -85,6 +95,13 @@ export function simulateM1V101PhysicalIntraphase(
   let controlled=start.state,cursor=0,orderIndex=0;
   for(let phase=0;phase<M1_CLOCK_MAX_EVENTS;phase++){
     const second=phase*M1_CLOCK_STEP_SECONDS;
+    while(minuteIndex<minuteReturns.length&&
+        minuteReturns[minuteIndex]!.elapsedSeconds<second){
+      const action=minuteReturns[minuteIndex]!;
+      if(!absent.delete(action.playerId))
+        return {ok:false,error:'INVALID_PHYSICAL_TRANSITION'};
+      minuteIndex++;
+    }
     const upcoming=transitions[cursor];
     if(upcoming&&upcoming.elapsedSeconds<second)
       return {ok:false,error:'INVALID_PHYSICAL_TRANSITION'};
@@ -174,7 +191,8 @@ export function simulateM1V101PhysicalIntraphase(
     if(!next.ok)return {ok:false,error:'INVALID_CLOCK_TRANSITION'};
     controlled=next.state;
   }
-  if(cursor!==transitions.length||orderIndex!==coachOrders.length)
+  if(cursor!==transitions.length||orderIndex!==coachOrders.length||
+      minuteIndex!==minuteReturns.length)
     return {ok:false,error:'INVALID_PHYSICAL_TRANSITION'};
   events.push({schemaVersion:101,type:'full-time',
     id:'m1-v101-full-time',sequence:events.length+1,elapsedSeconds:5400});
@@ -204,9 +222,11 @@ export function simulateM1V101PhysicalIntraphase(
 export function verifyM1V101PhysicalIntraphase(
   prematch:unknown,policy:unknown,plannedCommands:unknown,
   medicalActions:unknown,candidate:unknown,
+  intraphaseReturns:unknown=[],
 ):boolean{
   if(!isPlainJsonTree(candidate))return false;
   const replay=simulateM1V101PhysicalIntraphase(
-    prematch,policy,plannedCommands,medicalActions);
+    prematch,policy,plannedCommands,medicalActions,
+    intraphaseReturns);
   return replay.ok&&sameCanonicalValue(replay,candidate);
 }

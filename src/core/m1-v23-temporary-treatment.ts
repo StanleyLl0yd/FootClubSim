@@ -68,6 +68,7 @@ export type M1V23CoachRun =
     acceptedHalfTimeCommands: number;
     acceptedInPlayCommands: number;
     syntheticTreatmentActions: readonly M1V7TemporaryMedicalAction[];
+    syntheticIntraphaseTreatmentActions?:readonly M1V7TemporaryMedicalAction[];
     syntheticTemporaryExitCount: number;
     syntheticTemporaryReturnCount: number;
     treatmentRngSeed: number;
@@ -153,11 +154,12 @@ export function simulateM1V29CausalMedicalSource(
   inPlayCommands: unknown = [], denseShotSource=false,
   goalkeeperOnFieldSource=false,multiPatientSource=false,
   collisionSource=false,autonomousCollisionSource=false,
+  minuteReturnSource=false,
 ): M1V29CausalSourceRun {
   return simulateTreatmentCore(prematch, policy, halfTimeCommands,
     inPlayCommands, true, undefined, denseShotSource,
     goalkeeperOnFieldSource,multiPatientSource,collisionSource,
-    autonomousCollisionSource);
+    autonomousCollisionSource,minuteReturnSource);
 }
 type M1V29InternalRejectionTrace={
   sourceError:Extract<M1V23RefereeRun,{ok:false}>['error']|null;
@@ -282,6 +284,7 @@ function simulateTreatmentCore(
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
   goalkeeperOnFieldSource?:boolean,multiPatientSource?:boolean,
   collisionSource?:boolean,autonomousCollisionSource?:boolean,
+  minuteReturnSource?:boolean,
 ): M1V23CoachRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
@@ -289,6 +292,7 @@ function simulateTreatmentCore(
   trace?:M1V29InternalRejectionTrace,denseShotSource?:boolean,
   goalkeeperOnFieldSource?:boolean,multiPatientSource?:boolean,
   collisionSource?:boolean,autonomousCollisionSource?:boolean,
+  minuteReturnSource?:boolean,
 ): M1V29CausalSourceRun;
 function simulateTreatmentCore(
   prematch: unknown, policy: unknown, halfTimeCommands: unknown,
@@ -296,6 +300,7 @@ function simulateTreatmentCore(
   trace?:M1V29InternalRejectionTrace,denseShotSource=false,
   goalkeeperOnFieldSource=false,multiPatientSource=false,
   collisionSource=false,autonomousCollisionSource=false,
+  minuteReturnSource=false,
 ): M1V23CoachRun | M1V29CausalSourceRun {
   if (!isPlainJsonTree(prematch) || !isPlainJsonTree(policy) ||
       !isPlainJsonTree(halfTimeCommands) ||
@@ -320,7 +325,9 @@ function simulateTreatmentCore(
     return fail('INVALID_SOURCE');
   }
   if((collisionSource&&!multiPatientSource)||
-      (autonomousCollisionSource&&(!causalMode||!denseShotSource)))
+      (autonomousCollisionSource&&(!causalMode||!denseShotSource))||
+      (minuteReturnSource&&(!causalMode||!denseShotSource||
+        !autonomousCollisionSource)))
     return fail('INVALID_SOURCE');
   const gate = startM1Clock(input);
   if (!gate.ok) return fail('INVALID_SOURCE');
@@ -377,24 +384,29 @@ function simulateTreatmentCore(
   type Pending={side:Side;playerId:string;returnAt:number};
   let pending:Pending|null=null,extraPending:Pending|null=null;
   const treatment: M1V7TemporaryMedicalAction[] = [];
+  const intraphaseTreatment:M1V7TemporaryMedicalAction[]=[];
   let treatmentExits = 0;
   let treatmentReturns = 0;
   function completeDueReturn(second: number, phase: number): void {
     // The primary action stays first, preserving every legacy event ID.
     for(const ordinal of [1,2] as const){
       const due=ordinal===1?pending:extraPending;
-      if(due===null||due.returnAt!==second)continue;
+      if(due===null||
+          (minuteReturnSource?due.returnAt>second:due.returnAt!==second))
+        continue;
+      const at=minuteReturnSource?due.returnAt:second;
       const action:M1V7TemporaryMedicalAction={
         schemaVersion:1,
         id:(ordinal===1?(causalMode?'m1-v29-return-':'m1-v23-return-'):
           'm1-v30-pair-return-')+(phase+1),
         fixtureId:input.fixture.id,teamId:clubIds[due.side],
-        playerId:due.playerId,elapsedSeconds:second,
+        playerId:due.playerId,elapsedSeconds:at,
         kind:'treatment-return',returnContext:'running-clock',
         ballInPlay:true,entryBoundary:'touchline',
         refereeSignalId:'m1-v23-unverified-synthetic-signal',
       };
-      treatment.push(action);
+      if(minuteReturnSource)intraphaseTreatment.push(action);
+      else treatment.push(action);
       active[due.side].add(due.playerId);
       if(ordinal===1)pending=null;else extraPending=null;
       treatmentReturns++;
@@ -429,6 +441,8 @@ function simulateTreatmentCore(
   }
   for (let phase = 0; phase < M1_CLOCK_MAX_EVENTS; phase++) {
     const second = phase * M1_CLOCK_STEP_SECONDS;
+    // Return at T+60 before selecting the next checkpoint's actors.
+    if(minuteReturnSource)completeDueReturn(second,phase);
     // Fixed draw budget even if there is no offence or an ineligible team.
     const trigger = rng.nextFloat();
     const teamDraw = rng.nextFloat();
@@ -484,7 +498,8 @@ function simulateTreatmentCore(
           input,policy,commands,treatment,
           causalMode?M1_MODELLED_GOAL_STOP_SECONDS:0,
           M1_MODELLED_HALF_TIME_STOP_SECONDS,foulTimes,
-          M1_MODELLED_FOUL_STOP_SECONDS,undefined,denseShotSource);
+          M1_MODELLED_FOUL_STOP_SECONDS,undefined,denseShotSource,
+          [],[],intraphaseTreatment,minuteReturnSource);
         if(!prior.ok||!prior.events.some(e=>
           e.kind==='goal-whistle'&&e.runningSeconds===second-1))
           return fail('NO_GENERATED_FOUL_STOPPAGE');
@@ -598,7 +613,8 @@ function simulateTreatmentCore(
                 });
                 active[victimSide].delete(patient);
                 pending = {side: victimSide, playerId: patient,
-                  returnAt: second + M1_CLOCK_STEP_SECONDS};
+                  returnAt:second+(minuteReturnSource?60:
+                    M1_CLOCK_STEP_SECONDS)};
                 treatmentExits++;
               }
               // Version-3 hypothetical two-patient *same-whistle* event.
@@ -639,7 +655,8 @@ function simulateTreatmentCore(
                   });
                   active[victimSide].delete(nextPatient);
                   extraPending={side:victimSide,playerId:nextPatient,
-                    returnAt:second+M1_CLOCK_STEP_SECONDS};
+                    returnAt:second+(minuteReturnSource?60:
+                      M1_CLOCK_STEP_SECONDS)};
                   treatmentExits++;
                 }
               }
@@ -692,7 +709,8 @@ function simulateTreatmentCore(
     causalMode?M1_MODELLED_GOAL_STOP_SECONDS:0,
     M1_MODELLED_HALF_TIME_STOP_SECONDS,foulTimes,
     M1_MODELLED_FOUL_STOP_SECONDS,sourceTrace,denseShotSource,
-    collisionPairs,autonomousPairs,
+    collisionPairs,autonomousPairs,intraphaseTreatment,
+    minuteReturnSource,
   );
   if(trace){
     trace.sourceSubreason=sourceTrace.subreason;
@@ -759,7 +777,8 @@ function simulateTreatmentCore(
         e.teamId === draft.patientTeamId);
       const returnEvent = match.events.find(e =>
         e.kind === 'treatment-return' &&
-        e.runningSeconds === draft.elapsedSeconds + M1_CLOCK_STEP_SECONDS &&
+        e.runningSeconds === draft.elapsedSeconds +
+          (minuteReturnSource?60:M1_CLOCK_STEP_SECONDS) &&
         e.playerId === draft.patientPlayerId &&
         e.teamId === draft.patientTeamId);
       if (!incident || !decision || !whistle || !restart ||
@@ -832,6 +851,8 @@ function simulateTreatmentCore(
     generatedIncidents, acceptedHalfTimeCommands: requested.length,
     acceptedInPlayCommands,
     syntheticTreatmentActions: treatment,
+    ...(minuteReturnSource?{
+      syntheticIntraphaseTreatmentActions:intraphaseTreatment}:{}),
     syntheticTemporaryExitCount: treatmentExits,
     syntheticTemporaryReturnCount: treatmentReturns,
     treatmentRngSeed: treatmentSeed,

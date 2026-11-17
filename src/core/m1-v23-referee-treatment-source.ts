@@ -1,5 +1,6 @@
 import { sameCanonicalValue } from './canonical-value.js';
-import { M1_CLOCK_END_SECONDS, M1_CLOCK_STEP_SECONDS } from './m1-clock.js';
+import { M1_CLOCK_END_SECONDS, M1_CLOCK_STEP_SECONDS,
+  type M1PrematchInput } from './m1-clock.js';
 import {simulateM1V8MedicalPhases,type M1V8Event}
   from './m1-v8-medical-phases.js';
 import {simulateM1V103IntraphaseMedical,type M1V103Event}

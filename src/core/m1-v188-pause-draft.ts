@@ -144,7 +144,7 @@ export function recoverM1V188PauseDraft(
     [undefined,1],[2,1],[3,1],[4,1],[5,1],[6,1],
   ];
   const models:readonly Model[]=journal.revision===0?
-    [[5,2,2],...oldFirst.map(([medical,goal])=>
+    [[5,2,2],[6,2,2],...oldFirst.map(([medical,goal])=>
       [medical,goal,undefined] as const)]:
     [[journal.entries.at(-1)?.source.medicalPolicyVersion,
       journal.entries[0]?.source.specialGoalSourceVersion,

@@ -9,6 +9,8 @@ import {startM1V188LeagueJournal,prepareM1V188LeagueMatch,
 
 import {simulateM1V29CausalMedicalSource}
   from '../dist/core/m1-v23-temporary-treatment.js';
+import {createM1V188PauseDraft,recoverM1V188PauseDraft}
+  from '../dist/core/m1-v188-pause-draft.js';
 import {regenerateM1V184CausalSource}
   from '../dist/core/m1-v182-unified-source.js';
 import {deriveM1V186Law5FromCausalSource}
@@ -1587,11 +1589,16 @@ test('P3-2: v6 actual 60-running-second off-field return shares saved v188 physi
     e.patientPlayerId===medical.patientPlayerId&&
     e.runningSeconds===medical.runningSeconds);
   assert.deepEqual(sourceEvidence,medical);
-  const tampered=structuredClone(original);
-  const forged= tampered.intraphaseMedical.find(a=>a.id===returned.id);
-  forged.elapsedSeconds--;
-  assert.deepEqual(applyM1V188LeagueMatch(
-    career,zero.journal,tampered),{ok:false,error:'SOURCE_MISMATCH'});
+  for(const delta of [-1,1]){
+    const tampered=structuredClone(original);
+    const forged=tampered.intraphaseMedical.find(a=>
+      a.id===returned.id);
+    forged.elapsedSeconds+=delta;
+    assert.deepEqual(applyM1V188LeagueMatch(
+      career,zero.journal,tampered),
+      {ok:false,error:'SOURCE_MISMATCH'},
+      'T+59 and T+61 forged returns must be rejected');
+  }
   const fakeSignal=structuredClone(causal);
   fakeSignal.syntheticIntraphaseTreatmentActions.find(a=>
     a.id===returned.id).refereeSignalId='m1-v23-unverified-spoof';
@@ -1614,4 +1621,18 @@ test('P3-2: v6 actual 60-running-second off-field return shares saved v188 physi
   assert.equal(next.ok,true,next.ok?'':next.error);
   assert.equal(validateM1V188LeagueJournal(
     career,structuredClone(next.journal)).ok,true);
+  const combined=prepareM1V188LeagueMatch(
+    career,zero.journal,[],undefined,6,undefined,2,[],2);
+  assert.equal(combined?.ok,true,
+    '60-second source must coexist with official calendar and special goals');
+  const draft=createM1V188PauseDraft(combined,45);
+  assert.ok(draft,'version-6 selected-club pause must be durable');
+  const resumed=recoverM1V188PauseDraft(career,zero.journal,draft);
+  assert.ok(resumed,'version-6 pause and event prefix must replay');
+  assert.deepEqual(resumed.proposal.request,combined.request);
+  const appliedCombined=applyM1V188LeagueMatch(
+    career,zero.journal,combined.request);
+  assert.equal(appliedCombined.ok,true);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(appliedCombined.journal)).ok,true);
 });

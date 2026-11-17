@@ -62,7 +62,8 @@ export function simulateM1V105SpecialGoalChronology(
     shotParameters,allowCheckpointIntraphaseReturn);
   if(!physical.ok)return {ok:false,error:'V103_SOURCE_REJECTED'};
   const adjudicated=simulateM1V8MedicalPhases(prematch,policy,
-    plannedCommands,trustedDecisions,checkpointMedical);
+    plannedCommands,trustedDecisions,checkpointMedical,
+    allowCheckpointIntraphaseReturn?intraphaseMedical:[]);
   if(!adjudicated.ok)return {ok:false,error:'V8_ADJUDICATION_REJECTED'};
   const sourceTransitions=physical.events.filter(
     (e):e is Transition=>e.type==='physical-transition');

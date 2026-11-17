@@ -1,6 +1,7 @@
 import {sameCanonicalValue} from './canonical-value.js';
 import {isPlainJsonTree} from './plain-json-tree.js';
-import {startM1Clock,type M1PrematchInput} from './m1-clock.js';
+import {M1_CLOCK_STEP_SECONDS,startM1Clock,
+  type M1PrematchInput} from './m1-clock.js';
 import type {M1V29CausalSourceRun}
   from './m1-v23-temporary-treatment.js';
 import type {M1V23RefereeEvent}
@@ -414,7 +415,12 @@ export function deriveM1V186Law5FromCausalSource(
         whistle.kind!=='synthetic-medical-whistle'||
         injury.kind!=='synthetic-single-keeper-injury'||
         restart.kind!=='synthetic-medical-restart'||
-        !/^m1-v36-keeper-[0-9]+$/.test(keeper.id)||
+        keeper.elapsedSeconds<M1_CLOCK_STEP_SECONDS||
+        keeper.elapsedSeconds>=5400||
+        keeper.elapsedSeconds===2700||
+        keeper.elapsedSeconds%M1_CLOCK_STEP_SECONDS!==0||
+        keeper.id!=='m1-v36-keeper-'+
+          (keeper.elapsedSeconds/M1_CLOCK_STEP_SECONDS+1)||
         ![whistle,injury,restart].every(e=>
           e.runningSeconds===keeper.elapsedSeconds&&
           e.teamId===keeper.teamId&&e.playerId===keeper.playerId&&
@@ -423,7 +429,9 @@ export function deriveM1V186Law5FromCausalSource(
           sameCanonicalValue(e.onField,whistle.onField))||
         !(whistle.sequence<injury.sequence&&
           injury.sequence<restart.sequence)||
-        restart.wallSeconds-whistle.wallSeconds<1)
+        whistle.wallSeconds!==injury.wallSeconds||
+        restart.wallSeconds-injury.wallSeconds!==
+          source.match.foulStoppageWallSeconds)
       return fail('INVALID_MEDICAL_CHRONOLOGY');
     evidence.push({incidentId:keeper.id,decisionEventId:null,
       whistleEventId:whistle.id,restartEventId:restart.id,

@@ -126,6 +126,11 @@ test('Law5 source binds every patient, signal and transition to its referee jour
     a.patientPlayerId===original.patientPlayerId)
     .medicalReturnEventId=original.foulRestartEventId;
   assertRefused(badRef);
+  const mismatchedRef=structuredClone(causal);
+  mismatchedRef.match.events.find(e=>
+    e.id===original.medicalReturnEventId).sourceEventId=
+    'fabricated-medical-origin';
+  assertRefused(mismatchedRef);
 
   const forgedSignal=structuredClone(causal);
   const originalReturn=forgedSignal.syntheticTreatmentActions.find(a=>

@@ -271,6 +271,9 @@ export function deriveM1V186Law5FromCausalSource(
     if(!exitRef||!returnRef||
         exitRef.kind!=='treatment-exit'||
         returnRef.kind!=='treatment-return'||
+        exitRef.sourceEventId!=='m1-v8-med-'+exit.id||
+        returnRef.sourceEventId!==(minuteReturn?
+          'm1-v103-med-':'m1-v8-med-')+entry.id||
         exitRef.teamId!==assessment.patientTeamId||
         returnRef.teamId!==assessment.patientTeamId||
         exitRef.playerId!==assessment.patientPlayerId||

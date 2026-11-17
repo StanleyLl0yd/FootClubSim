@@ -1655,3 +1655,58 @@ test('P3-2: v6 actual 60-running-second off-field return shares saved v188 physi
   assert.equal(validateM1V188LeagueJournal(
     career,structuredClone(appliedCombined.journal)).ok,true);
 });
+
+
+test('P3-2: medical v5 to v6 migration retains every historical fixture and uses latest source',()=>{
+  let witness=null;
+  const refusals=new Map();
+  for(let seed=1;seed<=32&&!witness;seed++){
+    const initial=createInitialCareer(catalog,catalog.clubs[0].id,
+      seed,'v188-medical-v5-v6-migration-'+seed);
+    const started=startM1V188LeagueJournal(initial);
+    if(!started.ok)continue;
+    const first=prepareM1V188LeagueMatch(initial,started.journal,
+      [],undefined,5,undefined,2,[],2);
+    if(!first?.ok)continue;
+    const old=applyM1V188LeagueMatch(initial,started.journal,first.request);
+    if(!old.ok)continue;
+    const second=prepareM1V188LeagueMatch(initial,old.journal,
+      [],undefined,6,undefined,2,[],2);
+    if(!second?.ok){
+      const code=second?[second.error,second.stage,second.cause]
+        .filter(Boolean).join(':'):'NO_PROPOSAL';
+      refusals.set(code,(refusals.get(code)??0)+1);
+      continue;
+    }
+    const upgraded=applyM1V188LeagueMatch(
+      initial,old.journal,second.request);
+    if(!upgraded.ok)continue;
+    witness={initial,started,first,old,second,upgraded};
+  }
+  assert.ok(witness,'no v5 to v6 legal migration: '+
+    JSON.stringify(Object.fromEntries(refusals)));
+  const {initial,first,old,second,upgraded}=witness;
+  assert.equal(upgraded.journal.entries[0].source.medicalPolicyVersion,5);
+  assert.equal(upgraded.journal.entries[1].source.medicalPolicyVersion,6);
+  assert.equal(upgraded.journal.entries[0].fixtureId,first.fixture.id);
+  assert.equal(upgraded.journal.entries[1].fixtureId,second.fixture.id);
+  assert.equal(validateM1V188LeagueJournal(
+    initial,structuredClone(upgraded.journal)).ok,true);
+  assert.deepEqual(prepareM1V188LeagueMatch(
+    initial,upgraded.journal,[],undefined,5,undefined,2,[],2),
+    {ok:false,error:'INVALID_REQUEST'});
+  const third=prepareM1V188LeagueMatch(
+    initial,upgraded.journal,[],undefined,
+    upgraded.journal.entries.at(-1).source.medicalPolicyVersion,
+    undefined,2,[],2);
+  assert.equal(third?.ok,true);
+  assert.equal(third.request.medicalPolicyVersion,6);
+  const committed=applyM1V188LeagueMatch(
+    initial,upgraded.journal,third.request);
+  assert.equal(committed.ok,true);
+  assert.equal(validateM1V188LeagueJournal(
+    initial,structuredClone(committed.journal)).ok,true);
+  assert.deepEqual(old.journal.entries[0].source,
+    upgraded.journal.entries[0].source,
+    'upgrading policy must never rewrite prior events');
+});

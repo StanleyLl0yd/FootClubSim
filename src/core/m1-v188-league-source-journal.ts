@@ -798,7 +798,15 @@ export function applyM1V188LeagueMatch(
         Array.isArray(raw.autonomousMedicalOrigin)&&
         raw.autonomousMedicalOrigin.length<=1&&
         Array.isArray(raw.intraphaseMedical)&&
-        raw.intraphaseMedical.length<=36)||
+        raw.intraphaseMedical.length<=36||
+      goalShape(raw,requestKeysMedicalV7)&&
+        raw.medicalPolicyVersion===7&&
+        Array.isArray(raw.autonomousMedicalOrigin)&&
+        raw.autonomousMedicalOrigin.length<=1&&
+        Array.isArray(raw.intraphaseMedical)&&
+        raw.intraphaseMedical.length<=36&&
+        Array.isArray(raw.autonomousKeeperInjuryOrigin)&&
+        raw.autonomousKeeperInjuryOrigin.length<=1)||
       raw.schemaVersion!==188||
       !Number.isSafeInteger(raw.expectedRevision)||
       typeof raw.commandId!=='string'||!rec(raw.prematch)||
@@ -826,20 +834,26 @@ export function applyM1V188LeagueMatch(
     raw.conditionPolicyVersion===1?1:0;
   if(incomingCondition<priorCondition)
     return fail('SOURCE_MISMATCH');
-  if(priorMedical===6&&raw.medicalPolicyVersion!==6||
+  if(priorMedical===7&&raw.medicalPolicyVersion!==7||
+      priorMedical===6&&raw.medicalPolicyVersion!==6&&
+        raw.medicalPolicyVersion!==7||
       priorMedical===5&&raw.medicalPolicyVersion!==5&&
-        raw.medicalPolicyVersion!==6||
+        raw.medicalPolicyVersion!==6&&
+        raw.medicalPolicyVersion!==7||
       priorMedical===4&&raw.medicalPolicyVersion!==4&&
         raw.medicalPolicyVersion!==5&&
-        raw.medicalPolicyVersion!==6||
+        raw.medicalPolicyVersion!==6&&
+        raw.medicalPolicyVersion!==7||
       priorMedical===3&&raw.medicalPolicyVersion!==3&&
         raw.medicalPolicyVersion!==4&&
         raw.medicalPolicyVersion!==5&&
-        raw.medicalPolicyVersion!==6||
+        raw.medicalPolicyVersion!==6&&
+        raw.medicalPolicyVersion!==7||
       priorMedical===2&&raw.medicalPolicyVersion!==2&&
         raw.medicalPolicyVersion!==3&&raw.medicalPolicyVersion!==4&&
         raw.medicalPolicyVersion!==5&&
-        raw.medicalPolicyVersion!==6)
+        raw.medicalPolicyVersion!==6&&
+        raw.medicalPolicyVersion!==7)
     return fail('SOURCE_MISMATCH');
   if(raw.expectedRevision!==accepted.journal.revision)
     return fail('STALE_REVISION');
@@ -875,12 +889,17 @@ export function applyM1V188LeagueMatch(
         raw.medicalPolicyVersion===3?{medicalPolicyVersion:3 as const}:
         raw.medicalPolicyVersion===4?{medicalPolicyVersion:4 as const}:
         raw.medicalPolicyVersion===5?{medicalPolicyVersion:5 as const}:
-        raw.medicalPolicyVersion===6?{medicalPolicyVersion:6 as const}:{}),
-      ...(raw.medicalPolicyVersion===5||raw.medicalPolicyVersion===6?{
+        raw.medicalPolicyVersion===6?{medicalPolicyVersion:6 as const}:
+        raw.medicalPolicyVersion===7?{medicalPolicyVersion:7 as const}:{}),
+      ...(raw.medicalPolicyVersion===5||raw.medicalPolicyVersion===6||
+        raw.medicalPolicyVersion===7?{
         autonomousMedicalOrigin:raw.autonomousMedicalOrigin as
           M1V35IndependentCollisionWitness[]}: {}),
-      ...(raw.medicalPolicyVersion===6?{
-        intraphaseMedical:raw.intraphaseMedical as unknown[]}: {})},
+      ...(raw.medicalPolicyVersion===6||raw.medicalPolicyVersion===7?{
+        intraphaseMedical:raw.intraphaseMedical as unknown[]}: {}),
+      ...(raw.medicalPolicyVersion===7?{
+        autonomousKeeperInjuryOrigin:
+          raw.autonomousKeeperInjuryOrigin as unknown[]}: {})},
     result:raw.result as Good};
   const holds=[...accepted.holds];
   // New commits cannot claim the legacy shot/referee authority.

@@ -530,13 +530,13 @@ function simulateTreatmentCore(
         const outfield=playersHere.filter(id=>players.get(id)!=='GK');
         const goalkeepers=playersHere.filter(id=>players.get(id)==='GK');
         if(singleKeeperInjurySource&&goalkeepers.length===1&&
-            independentKeeper<0.5){
+            independentKeeper<0.25){
           standaloneKeeperInjuries.push({
             id:'m1-v36-keeper-'+(phase+1),
             elapsedSeconds:second,teamId:clubIds[victimSide],
             playerId:goalkeepers[0]!});
         }else if(outfield.length>=2&&goalkeepers.length===1){
-          const first=independentKeeper<0.5?
+          const first=independentKeeper<0.625?
             goalkeepers[0]!:
             outfield[Math.floor(independentFirst*outfield.length)]!;
           const rest=outfield.filter(id=>id!==first);

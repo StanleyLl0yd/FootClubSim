@@ -241,7 +241,8 @@ export function simulateM1V23RefereeWithTreatment(
   if(raw.some(x=>record(x)&&x.kind==='substitute-normal'&&
       x.elapsedSeconds===2700)&&
       halfTimeWallSeconds===0)return fail('INVALID_INTERVAL');
-  const v8=simulateM1V8MedicalPhases(input,control,raw,[],medical);
+  const v8=simulateM1V8MedicalPhases(input,control,raw,[],medical,
+    allowCheckpointIntraphaseReturn?intraphase:[]);
   if(!v8.ok)return fail('SOURCE_MATCH_REJECTED');
   const dense=useDenseShotSource?
     simulateM1V103IntraphaseMedical(

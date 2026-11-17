@@ -702,7 +702,7 @@ export function prepareM1V188LeagueMatch(
     return {ok:false,error:'GENERATOR_REJECTED',stage:'CONDITION'};
   const generated=regenerateM1V184CausalSource(
     simulationInput,POLICY,managerCommandsForFixture,true,medicalSource,
-    effective===3||effective===4||effective===5,
+    effective===3||effective===4||effective===5||effective===6,
     effective===4||effective===5||effective===6,
     effective===5||effective===6,coachOrders,effective===6);
   if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED',

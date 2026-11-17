@@ -27,6 +27,8 @@
     catalog,catalog.clubs[0].id,seed,'m1-v188-native-cas');
   const minuteCareer=seed=>createInitialCareer(
     catalog,catalog.clubs[0].id,seed,'m1-v188-native-minute');
+  const keeperCareer=seed=>createInitialCareer(
+    catalog,catalog.clubs[0].id,seed,'m1-v188-native-keeper');
   const params=new URL(location.href).searchParams;
   async function rejected(op,code){
     try{await op;}catch(error){
@@ -79,6 +81,22 @@
     }
     throw Error('no source-timed minute-return native fixture witness');
   }
+  async function sampleKeeper(){
+    for(let seed=1;seed<=64;seed++){
+      await yieldPage();
+      const initial=keeperCareer(seed);
+      const zero=startM1V188LeagueJournal(initial);
+      if(!zero.ok)continue;
+      const first=prepareM1V188LeagueMatch(
+        initial,zero.journal,[],undefined,7,undefined,2,[],2);
+      if(!first?.ok||!first.selectedClubFixture||
+          !first.sourceLaw5Evidence?.some(e=>
+            e.exception==='independent-single-goalkeeper-injury')||
+          first.request.autonomousKeeperInjuryOrigin?.length!==1)continue;
+      return {seed,initial,first};
+    }
+    throw Error('no independent-keeper native fixture witness');
+  }
   async function run(){
     if(params.get('stage')===null){
       const {seed,initial,first}=await sample();
@@ -111,7 +129,25 @@
       check(minuteSaved.entries[0].source.medicalPolicyVersion===6&&
         minuteSaved.entries[0].source.intraphaseMedical.length>0,
         'native CAS did not persist minute-source physical return');
+      const keeper=await sampleKeeper();
+      await saveNewInitialCareer(keeper.initial);
+      const keeperZero=await create(keeper.initial.careerId);
+      check(keeperZero.revision===0,'new keeper journal not empty');
+      const forgedKeeper=structuredClone(keeper.first.request);
+      forgedKeeper.autonomousKeeperInjuryOrigin[0].injuryEventId=
+        'forged-keeper-source';
+      await rejected(commit(keeper.initial.careerId,0,forgedKeeper),
+        'DOMAIN_REJECTED');
+      check((await load(keeper.initial.careerId)).revision===0,
+        'forged keeper source changed native journal');
+      const keeperSaved=await commit(keeper.initial.careerId,0,
+        keeper.first.request);
+      check(keeperSaved.entries[0].source.medicalPolicyVersion===7&&
+        keeperSaved.entries[0].source.autonomousKeeperInjuryOrigin.length===1,
+        'native CAS did not persist keeper origin');
       const target=new URL(location.href);
+      target.searchParams.set('keeperSeed',String(keeper.seed));
+      target.searchParams.set('keeperFirst',keeper.first.fixture.id);
       target.searchParams.set('minuteSeed',String(minute.seed));
       target.searchParams.set('minuteFirst',minute.first.fixture.id);
       target.searchParams.set('stage','verify');
@@ -212,6 +248,34 @@
       minuteDone.entries.every(e=>e.source.medicalPolicyVersion===6)&&
       validateM1V188LeagueJournal(minuteInitial,minuteDone).ok,
       'minute-return full two-fixture CAS failed');
+    const keeperSeed=Number(params.get('keeperSeed'));
+    check(Number.isSafeInteger(keeperSeed)&&keeperSeed>=1&&
+      keeperSeed<=64,'invalid keeper seed');
+    const keeperInitial=keeperCareer(keeperSeed);
+    const restoredKeeperInitial=await loadInitialCareer(
+      keeperInitial.careerId);
+    check(restoredKeeperInitial.careerId===keeperInitial.careerId,
+      'independent keeper initial not restored');
+    const keeperPrior=await load(keeperInitial.careerId);
+    check(keeperPrior.revision===1&&
+      keeperPrior.entries[0].fixtureId===params.get('keeperFirst')&&
+      keeperPrior.entries[0].source.medicalPolicyVersion===7&&
+      keeperPrior.entries[0].source.autonomousKeeperInjuryOrigin.length===1,
+      'independent goalkeeper history not restored');
+    check(validateM1V188LeagueJournal(
+      keeperInitial,keeperPrior).ok,
+      'independent goalkeeper journal failed exact replay');
+    const keeperNext=prepareM1V188LeagueMatch(
+      keeperInitial,keeperPrior,[],undefined,undefined,undefined,
+      2,[],2);
+    check(keeperNext?.ok&&keeperNext.request.medicalPolicyVersion===7,
+      'native keeper policy downgraded after reload');
+    const keeperDone=await commit(keeperInitial.careerId,1,
+      keeperNext.request);
+    check(keeperDone.revision===2&&
+      keeperDone.entries.every(e=>e.source.medicalPolicyVersion===7)&&
+      validateM1V188LeagueJournal(keeperInitial,keeperDone).ok,
+      'independent keeper two-fixture browser CAS failed');
     status.textContent='M1_V188_BROWSER_CAS_PASS';
   }
   run().catch(error=>{

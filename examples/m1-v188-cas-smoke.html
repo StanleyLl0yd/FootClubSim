@@ -16,7 +16,8 @@
     commitM1V188PersistedLeagueMatch as commit}
     from '../dist/browser/m1-v188-league-store.js';
   import {startM1V188LeagueJournal,prepareM1V188LeagueMatch,
-    applyM1V188LeagueMatch,validateM1V188LeagueJournal}
+    applyM1V188LeagueMatch,validateM1V188LeagueJournal,
+    inspectM1V188FictionalHolds}
     from '../dist/core/m1-v188-league-source-journal.js';
 
   const status=document.getElementById('status');
@@ -29,6 +30,8 @@
     catalog,catalog.clubs[0].id,seed,'m1-v188-native-minute');
   const keeperCareer=seed=>createInitialCareer(
     catalog,catalog.clubs[0].id,seed,'m1-v188-native-keeper');
+  const headCareer=seed=>createInitialCareer(
+    catalog,catalog.clubs[0].id,seed,'m1-v188-native-head');
   const params=new URL(location.href).searchParams;
   async function rejected(op,code){
     try{await op;}catch(error){
@@ -97,6 +100,20 @@
     }
     throw Error('no independent-keeper native fixture witness');
   }
+  async function sampleHead(){
+    for(let seed=1;seed<=96;seed++){
+      await yieldPage();
+      const initial=headCareer(seed);
+      const zero=startM1V188LeagueJournal(initial);
+      if(!zero.ok)continue;
+      const first=prepareM1V188LeagueMatch(
+        initial,zero.journal,[],undefined,8,undefined,2,[],2);
+      if(!first?.ok||!first.selectedClubFixture||
+          first.request.autonomousHeadTraumaOrigin?.length!==1)continue;
+      return {seed,initial,first};
+    }
+    throw Error('no native source-bound suspected head trauma witness');
+  }
   async function run(){
     if(params.get('stage')===null){
       const {seed,initial,first}=await sample();
@@ -145,7 +162,31 @@
       check(keeperSaved.entries[0].source.medicalPolicyVersion===7&&
         keeperSaved.entries[0].source.autonomousKeeperInjuryOrigin.length===1,
         'native CAS did not persist keeper origin');
+      const head=await sampleHead();
+      await saveNewInitialCareer(head.initial);
+      const headZero=await create(head.initial.careerId);
+      check(headZero.revision===0,'new head journal not empty');
+      const forgedHead=structuredClone(head.first.request);
+      forgedHead.autonomousHeadTraumaOrigin[0].clinicalDiagnosisAuthenticated=
+        true;
+      await rejected(commit(head.initial.careerId,0,forgedHead),
+        'DOMAIN_REJECTED');
+      check((await load(head.initial.careerId)).revision===0,
+        'forged clinical claim mutated native head journal');
+      const headSaved=await commit(head.initial.careerId,0,
+        head.first.request);
+      check(headSaved.entries[0].source.medicalPolicyVersion===8&&
+        headSaved.entries[0].source.autonomousHeadTraumaOrigin.length===1,
+        'native CAS lost unresolved head source');
+      const held=inspectM1V188FictionalHolds(head.initial,headSaved);
+      const victim=head.first.request.autonomousHeadTraumaOrigin[0];
+      check(held.ok&&held.holds.some(h=>
+        h.reason==='unresolved-head-trauma'&&
+        h.playerId===victim.playerId&&h.missedOwnFixtures===null),
+        'native head source unexpectedly granted medical clearance');
       const target=new URL(location.href);
+      target.searchParams.set('headSeed',String(head.seed));
+      target.searchParams.set('headFirst',head.first.fixture.id);
       target.searchParams.set('keeperSeed',String(keeper.seed));
       target.searchParams.set('keeperFirst',keeper.first.fixture.id);
       target.searchParams.set('minuteSeed',String(minute.seed));
@@ -276,6 +317,38 @@
       keeperDone.entries.every(e=>e.source.medicalPolicyVersion===7)&&
       validateM1V188LeagueJournal(keeperInitial,keeperDone).ok,
       'independent keeper two-fixture browser CAS failed');
+    const headSeed=Number(params.get('headSeed'));
+    check(Number.isSafeInteger(headSeed)&&headSeed>=1&&
+      headSeed<=96,'invalid head seed');
+    const headInitial=headCareer(headSeed);
+    const restoredHeadInitial=await loadInitialCareer(headInitial.careerId);
+    check(restoredHeadInitial.careerId===headInitial.careerId,
+      'head initial not restored across page reload');
+    const headPrior=await load(headInitial.careerId);
+    check(headPrior.revision===1&&
+      headPrior.entries[0].fixtureId===params.get('headFirst')&&
+      headPrior.entries[0].source.medicalPolicyVersion===8&&
+      headPrior.entries[0].source.autonomousHeadTraumaOrigin.length===1,
+      'native head source lost on restart');
+    check(validateM1V188LeagueJournal(headInitial,headPrior).ok,
+      'cold native head source replay mismatch');
+    const headVictim=headPrior.entries[0].source.
+      autonomousHeadTraumaOrigin[0];
+    const headHolds=inspectM1V188FictionalHolds(headInitial,headPrior);
+    check(headHolds.ok&&headHolds.holds.some(h=>
+      h.reason==='unresolved-head-trauma'&&
+      h.playerId===headVictim.playerId&&
+      h.remainingOwnFixtures===null),
+      'native head clearance was accidentally persisted');
+    const nextHead=prepareM1V188LeagueMatch(
+      headInitial,headPrior,[],undefined,undefined,undefined,2,[],2);
+    check(nextHead?.ok&&nextHead.request.medicalPolicyVersion===8,
+      'native head policy downgraded after reload');
+    const headDone=await commit(headInitial.careerId,1,nextHead.request);
+    check(headDone.revision===2&&
+      headDone.entries.every(e=>e.source.medicalPolicyVersion===8)&&
+      validateM1V188LeagueJournal(headInitial,headDone).ok,
+      'native head two-fixture CAS and replay failed');
     status.textContent='M1_V188_BROWSER_CAS_PASS';
   }
   run().catch(error=>{

@@ -98,6 +98,10 @@ interface SyntheticCollision {
 interface SingleKeeperInjury {
   id:string;elapsedSeconds:number;teamId:string;playerId:string;
 }
+interface HeadTraumaClaim {
+  id:string;injuryDecisionId:string;
+  elapsedSeconds:number;teamId:string;playerId:string;
+}
 export interface M1V35IndependentCollision {
   readonly id:string;
   readonly elapsedSeconds:number;readonly teamId:string;
@@ -146,6 +150,7 @@ export function simulateM1V23RefereeWithTreatment(
   intraphaseMedical:unknown=[],
   allowCheckpointIntraphaseReturn=false,
   singleKeeperInjurySource:unknown=[],
+  suspectedHeadTraumaSource:unknown=[],
 ):M1V23RefereeRun{
   const unsupported=(subreason:M1V23UnsupportedSubreason):M1V23RefereeRun=>{
     if(trace)trace.subreason=subreason;
@@ -163,13 +168,15 @@ export function simulateM1V23RefereeWithTreatment(
   const collisionClaims=clone(collisionSource,2048);
   const independentClaims=clone(independentCollisionSource,1024);
   const keeperClaims=clone(singleKeeperInjurySource,1024);
+  const headClaims=clone(suspectedHeadTraumaSource,1024);
   const intraphase=clone(intraphaseMedical,1_000_000);
   if(!Array.isArray(intraphase)||intraphase.length>36||
       intraphase.length>0&&!useDenseShotSource)
     return fail('INVALID_SOURCE');
   if(!Array.isArray(independentClaims)||independentClaims.length>1||
       !Array.isArray(keeperClaims)||keeperClaims.length>1||
-      independentClaims.length+keeperClaims.length>1)
+      independentClaims.length+keeperClaims.length>1||
+      !Array.isArray(headClaims)||headClaims.length>1)
     return fail('INVALID_SOURCE');
   if(!Array.isArray(collisionClaims)||collisionClaims.length>18)
     return fail('INVALID_SOURCE');
@@ -219,6 +226,26 @@ export function simulateM1V23RefereeWithTreatment(
       return fail('INVALID_SOURCE');
     keeperByTime.set(rawKeeper.elapsedSeconds,
       rawKeeper as unknown as SingleKeeperInjury);
+  }
+  const headByDecision=new Map<string,HeadTraumaClaim>();
+  for(const head of headClaims){
+    if(!record(head)||Object.keys(head).length!==5||
+        !['id','injuryDecisionId','elapsedSeconds','teamId',
+          'playerId'].every(k=>Object.hasOwn(head,k))||
+        typeof head.elapsedSeconds!=='number'||
+        !clockStep(head.elapsedSeconds)||
+        head.elapsedSeconds===2700||
+        head.id!=='m1-v37-head-'+
+          (head.elapsedSeconds/M1_CLOCK_STEP_SECONDS+1)||
+        head.injuryDecisionId!=='m1-v23-ref-'+
+          (head.elapsedSeconds/M1_CLOCK_STEP_SECONDS+1)||
+        typeof head.teamId!=='string'||
+        typeof head.playerId!=='string'||
+        foulTimes.has(head.elapsedSeconds)||
+        headByDecision.has(head.injuryDecisionId))
+      return fail('INVALID_SOURCE');
+    headByDecision.set(head.injuryDecisionId,
+      head as unknown as HeadTraumaClaim);
   }
   const collisionByTime=new Map<number,SyntheticCollision>();
   for(const rawPair of collisionClaims){
@@ -403,6 +430,7 @@ export function simulateM1V23RefereeWithTreatment(
   let running=0,wall=0,half=false,kickoffPending=false;
   const completedIndependent=new Set<number>();
   const completedKeeper=new Set<number>();
+  const completedHead=new Set<string>();
   const foulSeen=new Set<number>();
   let pendingFoulRestart:{
     time:number; beneficiary:string; sourceId:string|null;
@@ -616,8 +644,25 @@ export function simulateM1V23RefereeWithTreatment(
             collision.secondPlayerId);
         }
       }
+      const head=headByDecision.get(action.id);
+      if(head){
+        if(kind!=='injury-withdrawal'||
+            head.elapsedSeconds!==running||
+            head.teamId!==action.teamId||
+            head.playerId!==action.playerId||
+            completedHead.has(action.id))
+          return fail('ROSTER_REPLAY_MISMATCH');
+        emit('synthetic-medical-whistle',running,wall,event.id,
+          action.teamId,action.playerId);
+        completedHead.add(action.id);
+      }
       if(kind!=='caution')teams[side].delete(action.playerId);
       emit(kind,running,wall,event.id,action.teamId,action.playerId);
+      if(head){
+        wall+=foulPauseWallSeconds as number;
+        emit('synthetic-medical-restart',running,wall,event.id,
+          action.teamId,action.playerId);
+      }
       if(foulTimes.has(running)){
         if(pendingFoulRestart!==null){
           return fail('ROSTER_REPLAY_MISMATCH');
@@ -709,9 +754,11 @@ export function simulateM1V23RefereeWithTreatment(
     }
   }
   if(events.length>((independentClaims.length||keeperClaims.length)?341:
-        collisionClaims.length?338:320)+intraphase.length||
+        collisionClaims.length?338:320)+intraphase.length+
+        headClaims.length*2||
       completedIndependent.size!==independentByTime.size||
       completedKeeper.size!==keeperByTime.size||
+      completedHead.size!==headByDecision.size||
       foulSeen.size!==foulTimes.size||
       !sameCanonicalValue(sorted(absent),source.offFieldAtFullTime)||
       !sameCanonicalValue(finalOnField,source.onFieldAtFullTime)||
@@ -760,6 +807,7 @@ export function verifyM1V23RefereeWithTreatment(
   independentCollisionSource:unknown=[],intraphaseMedical:unknown=[],
   allowCheckpointIntraphaseReturn=false,
   singleKeeperInjurySource:unknown=[],
+  suspectedHeadTraumaSource:unknown=[],
 ):boolean{
   if(!isPlainJsonTree(candidate))return false;
   const source=simulateM1V23RefereeWithTreatment(
@@ -767,6 +815,6 @@ export function verifyM1V23RefereeWithTreatment(
     halfTimeWallSeconds,foulStopSeconds,foulPauseWallSeconds,
     undefined,useDenseShotSource,collisionSource,independentCollisionSource,
     intraphaseMedical,allowCheckpointIntraphaseReturn,
-    singleKeeperInjurySource);
+    singleKeeperInjurySource,suspectedHeadTraumaSource);
   return source.ok&&sameCanonicalValue(source,candidate);
 }

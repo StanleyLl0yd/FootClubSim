@@ -1858,3 +1858,192 @@ test('P3-2: opt-in v6 to v7 migration is monotone and keeps original fixture byt
       {ok:false,error:'INVALID_REQUEST'});
   }
 });
+
+
+test('P3-2: medical v8 suspected head trauma is source-bound and never auto-cleared',()=>{
+  let witness=null;
+  const rejected=new Map();
+  for(let seed=1;seed<=128&&!witness;seed++){
+    const career=createInitialCareer(catalog,catalog.clubs[0].id,
+      seed,'v188-head-no-return-'+seed);
+    const zero=startM1V188LeagueJournal(career);
+    if(!zero.ok)continue;
+    const proposal=prepareM1V188LeagueMatch(
+      career,zero.journal,[],undefined,8);
+    if(!proposal?.ok){
+      const code=proposal?[proposal.error,proposal.stage,proposal.cause]
+        .filter(Boolean).join(':'):'NO_PROPOSAL';
+      rejected.set(code,(rejected.get(code)??0)+1);
+      continue;
+    }
+    if(proposal.request.autonomousHeadTraumaOrigin?.length===1)
+      witness={career,zero,proposal};
+  }
+  assert.ok(witness,'No seeded head-trauma source witness: '+
+    JSON.stringify(Object.fromEntries(rejected)));
+  const {career,zero,proposal}=witness;
+  const {request}=proposal,origin=request.autonomousHeadTraumaOrigin[0];
+  assert.equal(request.medicalPolicyVersion,8);
+  assert.equal(origin.modelledDisposition,'unresolved-no-return');
+  assert.equal(origin.clinicalDiagnosisAuthenticated,false);
+  assert.equal(origin.externalRefereeAuthorityAuthenticated,false);
+  assert.equal(proposal.externalMedicalAuthorityAuthenticated,false);
+  assert.equal(isPlainJsonTree(request),true);
+
+  const causal=simulateM1V29CausalMedicalSource(request.prematch,
+    request.policy,[],[],true,true,true,true,true,true,true,true);
+  assert.equal(causal.ok,true,causal.ok?'':causal.error);
+  assert.deepEqual(causal.autonomousHeadTrauma,
+    request.autonomousHeadTraumaOrigin);
+  const law5=deriveM1V186Law5FromCausalSource(
+    causal,request.result,request.prematch);
+  assert.equal(law5.ok,true,law5.ok?'':law5.error);
+  assert.deepEqual(law5.suspectedHeadTrauma,
+    request.autonomousHeadTraumaOrigin);
+  const forgedChronology=structuredClone(causal);
+  forgedChronology.match.events.find(e=>
+    e.id===origin.whistleEventId).sourceEventId='forged-whistle';
+  assert.equal(deriveM1V186Law5FromCausalSource(
+    forgedChronology,request.result,request.prematch).ok,false);
+  const forgedWall=structuredClone(causal);
+  forgedWall.match.events.find(e=>e.id===origin.restartEventId)
+    .wallSeconds++;
+  assert.equal(deriveM1V186Law5FromCausalSource(
+    forgedWall,request.result,request.prematch).ok,false);
+  // A consistently forged source ID must still fail v105 correlation.
+  const forgedSharedSource=structuredClone(causal);
+  for(const id of [origin.whistleEventId,origin.injuryEventId,
+    origin.restartEventId]){
+    const event=forgedSharedSource.match.events.find(e=>e.id===id);
+    assert.ok(event);
+    event.sourceEventId='forged-consistent-availability-origin';
+  }
+  assert.equal(deriveM1V186Law5FromCausalSource(
+    forgedSharedSource,request.result,request.prematch).ok,false);
+  const forgedPhysicalSource=structuredClone(request.result);
+  const physical=forgedPhysicalSource.events.find(e=>
+    e.type==='source'&&e.source.type==='physical-transition'&&
+    e.source.source.type==='availability'&&
+    e.source.source.source.entry.action.id===origin.injuryDecisionId);
+  assert.ok(physical);
+  physical.source.source.id='forged-v105-availability-id';
+  assert.equal(deriveM1V186Law5FromCausalSource(
+    causal,forgedPhysicalSource,request.prematch).ok,false);
+  const forgedClinical=structuredClone(causal);
+  forgedClinical.autonomousHeadTrauma[0]
+    .clinicalDiagnosisAuthenticated=true;
+  assert.equal(deriveM1V186Law5FromCausalSource(
+    forgedClinical,request.result,request.prematch).ok,false);
+  const [whistle,injury,restart]=[
+    origin.whistleEventId,origin.injuryEventId,origin.restartEventId]
+    .map(id=>causal.match.events.find(e=>e.id===id));
+  assert.ok(whistle&&injury&&restart);
+  assert.deepEqual([whistle.kind,injury.kind,restart.kind],[
+    'synthetic-medical-whistle','injury-withdrawal',
+    'synthetic-medical-restart']);
+  assert.ok(whistle.sequence<injury.sequence&&
+    injury.sequence<restart.sequence);
+  assert.equal(whistle.runningSeconds,origin.elapsedSeconds);
+  assert.equal(restart.runningSeconds,origin.elapsedSeconds);
+  assert.equal(restart.wallSeconds>injury.wallSeconds,true);
+  assert.ok([whistle,injury,restart].every(e=>
+    e.teamId===origin.teamId&&e.playerId===origin.playerId));
+  const side=origin.teamId===request.prematch.fixture.homeClubId?
+    'home':'away';
+  assert.ok(whistle.onField[side].includes(origin.playerId));
+  assert.equal(causal.match.events.some(e=>
+    e.sequence>=injury.sequence&&
+    e.onField[side].includes(origin.playerId)),false,
+  'Suspected head trauma must never auto-return at T+60 or T+300');
+
+  for(const field of ['injuryDecisionId','injuryEventId',
+    'whistleEventId','restartEventId','playerId','teamId']){
+    const forged=structuredClone(request);
+    forged.autonomousHeadTraumaOrigin[0][field]='forged-origin';
+    assert.deepEqual(applyM1V188LeagueMatch(
+      career,zero.journal,forged),
+      {ok:false,error:'SOURCE_MISMATCH'},
+      'Forged head trauma '+field+' must fail exact-source CAS');
+  }
+  const forgedPermission=structuredClone(request);
+  forgedPermission.autonomousHeadTraumaOrigin[0]
+    .clinicalDiagnosisAuthenticated=true;
+  assert.deepEqual(applyM1V188LeagueMatch(
+    career,zero.journal,forgedPermission),
+    {ok:false,error:'SOURCE_MISMATCH'});
+  const forgedDisposition=structuredClone(request);
+  forgedDisposition.autonomousHeadTraumaOrigin[0]
+    .modelledDisposition='cleared-after-one-minute';
+  assert.deepEqual(applyM1V188LeagueMatch(
+    career,zero.journal,forgedDisposition),
+    {ok:false,error:'SOURCE_MISMATCH'});
+
+  const pause=createM1V188PauseDraft(proposal,45);
+  assert.ok(pause,'v8 in-progress journal must be pause-safe');
+  const recovered=recoverM1V188PauseDraft(
+    career,zero.journal,pause);
+  assert.ok(recovered);
+  assert.deepEqual(recovered.proposal.request,request);
+
+  const applied=applyM1V188LeagueMatch(
+    career,zero.journal,request);
+  assert.equal(applied.ok,true,applied.ok?'':applied.error);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(applied.journal)).ok,true);
+  const holds=inspectM1V188FictionalHolds(career,applied.journal);
+  assert.equal(holds.ok,true);
+  assert.ok(holds.holds.some(h=>
+    h.reason==='unresolved-head-trauma'&&
+    h.playerId===origin.playerId&&h.clubId===origin.teamId&&
+    h.missedOwnFixtures===null&&h.remainingOwnFixtures===null),
+  'Head suspicion may not be released by finite fictional hold expiry');
+  const fakeSaved=structuredClone(applied.journal);
+  fakeSaved.entries[0].source.autonomousHeadTraumaOrigin[0]
+    .whistleEventId='forged-saved-head-source';
+  assert.equal(validateM1V188LeagueJournal(career,fakeSaved).ok,false);
+  assert.deepEqual(prepareM1V188LeagueMatch(
+    career,applied.journal,[],undefined,7),
+    {ok:false,error:'INVALID_REQUEST'});
+  const combined=prepareM1V188LeagueMatch(
+    career,zero.journal,[],undefined,8,undefined,2,[],2);
+  assert.equal(combined?.ok,true,combined?.ok?'':combined?.cause);
+  assert.equal(combined.request.medicalPolicyVersion,8);
+  const next=prepareM1V188LeagueMatch(
+    career,applied.journal);
+  assert.equal(next?.ok,true,next?.ok?'':next?.cause);
+  assert.equal(next.request.medicalPolicyVersion,8);
+  if(next.fixture.homeClubId===origin.teamId||
+      next.fixture.awayClubId===origin.teamId){
+    const xi=next.fixture.homeClubId===origin.teamId?
+      next.request.prematch.homeLineup:next.request.prematch.awayLineup;
+    assert.ok(!xi.starters.includes(origin.playerId)&&
+      !xi.bench.includes(origin.playerId));
+  }
+});
+
+test('P3-2: migration from medical v7 to v8 keeps old fixture bytes',()=>{
+  const career=createInitialCareer(catalog,catalog.clubs[0].id,
+    7,'v188-v7-to-v8-head');
+  const zero=startM1V188LeagueJournal(career);
+  assert.equal(zero.ok,true);
+  const first=prepareM1V188LeagueMatch(
+    career,zero.journal,[],undefined,7,undefined,2,[],2);
+  assert.equal(first?.ok,true,first?.ok?'':first?.cause);
+  const old=applyM1V188LeagueMatch(career,zero.journal,first.request);
+  assert.equal(old.ok,true);
+  const second=prepareM1V188LeagueMatch(
+    career,old.journal,[],undefined,8,undefined,2,[],2);
+  assert.equal(second?.ok,true,second?.ok?'':second?.cause);
+  const saved=applyM1V188LeagueMatch(career,old.journal,second.request);
+  assert.equal(saved.ok,true,saved.ok?'':saved.error);
+  assert.equal(saved.journal.entries[0].source.medicalPolicyVersion,7);
+  assert.equal(saved.journal.entries[1].source.medicalPolicyVersion,8);
+  assert.deepEqual(saved.journal.entries[0],old.journal.entries[0]);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(saved.journal)).ok,true);
+  for(const version of [2,3,4,5,6,7]){
+    assert.deepEqual(prepareM1V188LeagueMatch(
+      career,saved.journal,[],undefined,version,undefined,2,[],2),
+      {ok:false,error:'INVALID_REQUEST'});
+  }
+});

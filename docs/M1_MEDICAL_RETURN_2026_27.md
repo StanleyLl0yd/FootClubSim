@@ -71,3 +71,40 @@ and [optional goalkeeper-injury trial](https://www.theifab.com/trials/goalkeeper
 
 P3-2 and the M1 exit gate remain open. M2 is prohibited; holdout
 2024/25 stays sealed.
+
+
+## Opt-in medical policy 8: unresolved suspected head trauma (November 2026)
+
+A new career or an existing v7 career may explicitly select
+`medicalPolicyVersion: 8`. This reuses the existing physical
+`injury-withdrawal` source and samples **a suspicion, not a diagnosis**,
+from an independent seeded domain. At most one existing withdrawn
+participant receives a source-bound medical whistle, an original
+injury-withdrawal event and a restart, in that order. A matching v188
+`autonomousHeadTraumaOrigin` records exact injury decision and event
+IDs, participant, team, running second and unresolved/no-return state.
+The physical engine removes that participant from the match and never
+automatically returns them, regardless of the ordinary 60-second rule.
+
+The fictional match ledger adds an **indefinite unresolved head-trauma
+eligibility hold** for subsequent XI and bench selections. It cannot be
+removed by expiry of the independent 1–4 fixture synthetic injury hold.
+No clinical diagnosis, external referee authentication, medical clearance,
+permanent-concussion substitute or opponent's additional substitution is
+invented; the optional IFAB concussion-substitution protocol remains
+disabled until competition-specific adoption is verified. This is
+**fail closed** and can eventually produce a `NO_LEGAL_LINEUP` if a
+career has no valid remaining players. No claimant-provided medical
+clearance is accepted.
+
+The existing v23/v29 referee and physical stream, v105 chronology, v188
+canonical replay, IndexedDB CAS and pause recovery remain authoritative.
+Old medical v2–v7 entries and RNG are not rewritten. A full successful
+P3-2 gate still requires bleeding clearance, injured designated penalty
+taker and externally verifiable referee/medical permissions.
+
+Official sources: [IFAB Law 5](https://www.theifab.com/laws/latest/the-referee/),
+[off-field treatment protocol](https://www.theifab.com/laws/latest/off-field-treatment-and-assessment-protocol/),
+[optional permanent concussion substitutions](https://www.theifab.com/laws/latest/additional-permanent-concussion-substitutions-protocol/).
+
+P3-2 OPEN; M1 3/9; audits 0/2; 2024/25 holdout SEALED; M2 prohibited.

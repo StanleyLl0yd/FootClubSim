@@ -96,3 +96,54 @@ test('substitution and tactical instructions coexist at the same pause',()=>{
   assert.ok(validateM1V188LeagueJournal(
     s.career,committed.journal).ok);
 });
+
+
+test('halftime candidate pairs reflect actual physical XI and foreigner cap',()=>{
+  const {career,baseline}=make(101);
+  const input=baseline.request.prematch;
+  const side=input.fixture.homeClubId===career.selectedClubId?
+    'home':'away';
+  const lineup=side==='home'?input.homeLineup:input.awayLineup;
+  const snapshot=baseline.clock.snapshots
+    .filter(s=>s.runningSeconds<=2700).at(-1);
+  assert.ok(snapshot,'Need source-replayed halftime physical presence');
+  const present=side==='home'?snapshot.homePresent:snapshot.awayPresent;
+  const active=new Set(present);
+  const bench=new Set(lineup.bench);
+  const players=new Map(input.catalog.players.map(p=>[p.id,p]));
+  const foreigners=present.filter(id=>
+    players.get(id)?.foreignerForCompetition).length;
+  const options=inspectM1V188PauseSubstitutions(
+    baseline,career.selectedClubId,2700);
+  assert.ok(options?.canSubstitute);
+  for(const pair of options.pairs){
+    const outgoing=players.get(pair.outPlayerId);
+    const incoming=players.get(pair.inPlayerId);
+    assert.ok(outgoing&&incoming);
+    assert.ok(active.has(pair.outPlayerId),
+      'Do not offer an already injured/dismissed original starter');
+    assert.ok(bench.has(pair.inPlayerId)&&
+      !active.has(pair.inPlayerId));
+    assert.equal(outgoing.primaryPosition==='GK',
+      incoming.primaryPosition==='GK');
+    assert.ok(foreigners-Number(outgoing.foreignerForCompetition)+
+      Number(incoming.foreignerForCompetition)<=
+      input.rosterRules.maxForeignersOnField,
+    'Halftime selector must not offer a foreigner cap violation');
+  }
+  // This deliberate fake is used ONLY to test the read-only advisory.
+  // No generated result or career CAS may trust this tampered snapshot.
+  const target=present.find(id=>
+    players.get(id)?.primaryPosition!=='GK');
+  assert.ok(target,'Need a source-present outfield player to remove');
+  const missing=structuredClone(baseline);
+  const at=missing.clock.snapshots.findLast(s=>s.runningSeconds<=2700);
+  assert.ok(at);
+  at[side==='home'?'homePresent':'awayPresent']=
+    present.filter(id=>id!==target);
+  const filtered=inspectM1V188PauseSubstitutions(
+    missing,career.selectedClubId,2700);
+  assert.ok(filtered);
+  assert.equal(filtered.pairs.some(p=>p.outPlayerId===target),false,
+    'A player absent before halftime cannot be shown as outgoing');
+});

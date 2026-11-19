@@ -157,16 +157,23 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const ownNextNow=Boolean(next&&(
     next.homeClubId===career.selectedClubId||
     next.awayClubId===career.selectedClubId));
-  const managerInput=managerSetup?.request.prematch as
-    M1PrematchInput|undefined;
-  const managerLineup=managerInput?(
-    managerInput.fixture.homeClubId===career.selectedClubId?
-      managerInput.homeLineup:managerInput.awayLineup):null;
-  const outOptions=managerLineup?.starters.filter(id=>
-    playersById.get(id)?.primaryPosition!=='GK')??[];
+  // Halftime choices must come from the actual source replay, not the
+  // original XI/bench: a starter may have been sent off or withdrawn
+  // before minute 45, and an incoming player may breach the foreigner cap.
+  // This inspector is advisory only; calculate()/CAS still reverify.
+  const managerHalfTimeOptions=managerSetup?
+    inspectM1V188PauseSubstitutions(
+      managerSetup,career.selectedClubId,2700):null;
+  const managerHalfTimePairs=(managerHalfTimeOptions?.pairs??[])
+    .filter(pair=>
+      playersById.get(pair.outPlayerId)?.primaryPosition!=='GK'&&
+      playersById.get(pair.inPlayerId)?.primaryPosition!=='GK');
+  const outOptions=[...new Set(
+    managerHalfTimePairs.map(pair=>pair.outPlayerId))];
   const actualOut=outOptions.includes(outId)?outId:outOptions[0]??'';
-  const inOptions=managerLineup?.bench.filter(id=>
-    playersById.get(id)?.primaryPosition!=='GK')??[];
+  const inOptions=managerHalfTimePairs
+    .filter(pair=>pair.outPlayerId===actualOut)
+    .map(pair=>pair.inPlayerId);
   const actualIn=inOptions.includes(inId)?inId:inOptions[0]??'';
   const xiPrematch=xiSetup?.request.prematch as M1PrematchInput|undefined;
   const xiBase=xiPrematch?(

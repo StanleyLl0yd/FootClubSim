@@ -2,7 +2,7 @@ import {sameCanonicalValue} from './canonical-value.js';
 import {isPlainJsonTree} from './plain-json-tree.js';
 import {M1_CLOCK_STEP_SECONDS,startM1Clock,
   type M1PrematchInput} from './m1-clock.js';
-import type {M1V29CausalSourceRun}
+import type {M1V29CausalSourceRun,M1V37HeadTraumaWitness}
   from './m1-v23-temporary-treatment.js';
 import type {M1V23RefereeEvent}
   from './m1-v23-referee-treatment-source.js';
@@ -45,6 +45,7 @@ export type M1V186Law5Result=
   | Readonly<{ok:true;schemaVersion:186;
     status:'SOURCE_BOUND_LAW5_PHYSICAL_OFFENCE_SUBSET';
     evidence:readonly M1V186Law5Evidence[];
+    suspectedHeadTrauma?:readonly M1V37HeadTraumaWitness[];
     physicalOffenceExceptionSourceVerified:true;
     otherLaw5ExceptionsSupported:false;
     bleedingClearanceAuthenticated:false;
@@ -78,7 +79,10 @@ export function deriveM1V186Law5FromCausalSource(
           source.autonomousCollisions.length>1)||
       source.autonomousSingleKeeperInjuries!==undefined&&
         (!Array.isArray(source.autonomousSingleKeeperInjuries)||
-          source.autonomousSingleKeeperInjuries.length>1))
+          source.autonomousSingleKeeperInjuries.length>1)||
+      source.autonomousHeadTrauma!==undefined&&
+        (!Array.isArray(source.autonomousHeadTrauma)||
+          source.autonomousHeadTrauma.length>1))
     return fail('INVALID_CAUSAL_SOURCE');
   const keeperEvidenceRequired=source.causalAssessments.some(a=>
     a.goalkeeperExceptionSource===true||a.collisionOriginSource===true)||
@@ -443,6 +447,92 @@ export function deriveM1V186Law5FromCausalSource(
       exitEventId:null,returnEventId:null,
       minimumRunningSecondsSatisfied:true});
   }
+  const heads=source.autonomousHeadTrauma??[];
+  const headWhistles=source.match.events.filter(e=>
+    e.kind==='synthetic-medical-whistle'&&
+    source.generatedIncidents.some(i=>
+      i.sanction==='injury-withdrawal'&&
+      source.match.events.some(decision=>
+        decision.id===i.sourceEventId&&
+        decision.kind==='injury-withdrawal'&&
+        typeof decision.sourceEventId==='string'&&
+        decision.sourceEventId===e.sourceEventId)));
+  if(headWhistles.length!==heads.length)
+    return fail('INVALID_MEDICAL_CHRONOLOGY');
+  for(const head of heads){
+    if(!head||Object.keys(head).length!==11||
+        !['id','injuryDecisionId','teamId','playerId','elapsedSeconds',
+          'whistleEventId','injuryEventId','restartEventId',
+          'modelledDisposition','clinicalDiagnosisAuthenticated',
+          'externalRefereeAuthorityAuthenticated'].every(k=>
+            Object.hasOwn(head,k))||
+        head.modelledDisposition!=='unresolved-no-return'||
+        head.clinicalDiagnosisAuthenticated!==false||
+        head.externalRefereeAuthorityAuthenticated!==false||
+        head.elapsedSeconds<M1_CLOCK_STEP_SECONDS||
+        head.elapsedSeconds>=5400||
+        head.elapsedSeconds===2700||
+        head.elapsedSeconds%M1_CLOCK_STEP_SECONDS!==0||
+        head.id!=='m1-v37-head-'+
+          (head.elapsedSeconds/M1_CLOCK_STEP_SECONDS+1)||
+        head.injuryDecisionId!=='m1-v23-ref-'+
+          (head.elapsedSeconds/M1_CLOCK_STEP_SECONDS+1))
+      return fail('UNSUPPORTED_LAW5_ORIGIN');
+    if(!isPlainJsonTree(prematch)||!startM1Clock(prematch).ok)
+      return fail('UNSUPPORTED_LAW5_ORIGIN');
+    const input=prematch as M1PrematchInput;
+    const side=head.teamId===input.fixture.homeClubId?'home':
+      head.teamId===input.fixture.awayClubId?'away':null;
+    if(!side)return fail('UNSUPPORTED_LAW5_ORIGIN');
+    const incident=source.generatedIncidents.find(i=>
+      i.decisionId===head.injuryDecisionId&&
+      i.sanction==='injury-withdrawal'&&
+      i.elapsedSeconds===head.elapsedSeconds&&
+      i.teamId===head.teamId&&i.playerId===head.playerId);
+    if(!incident)return fail('UNSUPPORTED_LAW5_ORIGIN');
+    const decision=source.match.events.find(e=>
+      e.id===incident.sourceEventId&&e.kind==='injury-withdrawal');
+    // Independently bind the medical events to the v105 physical
+    // injury transition, never only to their shared source-id string.
+    const physicalInjuries=result.events.filter(e=>
+      e.type==='source'&&
+      e.source.type==='physical-transition'&&
+      e.source.source.type==='availability'&&
+      e.source.source.id===decision?.sourceEventId&&
+      e.elapsedSeconds===head.elapsedSeconds&&
+      e.source.source.source.entry.action.kind==='injury-withdrawal'&&
+      e.source.source.source.entry.action.id===head.injuryDecisionId&&
+      e.source.source.source.entry.action.teamId===head.teamId&&
+      e.source.source.source.entry.action.playerId===head.playerId);
+    const triple=source.match.events.filter(e=>
+      typeof decision?.sourceEventId==='string'&&
+      e.sourceEventId===decision.sourceEventId&&
+      (e.kind==='synthetic-medical-whistle'||
+       e.kind==='injury-withdrawal'||
+       e.kind==='synthetic-medical-restart'));
+    const [whistle,injury,restart]=triple;
+    if(physicalInjuries.length!==1||
+        triple.length!==3||!whistle||!injury||!restart||
+        whistle.id!==head.whistleEventId||
+        injury.id!==head.injuryEventId||
+        restart.id!==head.restartEventId||
+        whistle.kind!=='synthetic-medical-whistle'||
+        injury.kind!=='injury-withdrawal'||
+        restart.kind!=='synthetic-medical-restart'||
+        !(whistle.sequence<injury.sequence&&
+          injury.sequence<restart.sequence)||
+        ![whistle,injury,restart].every(e=>
+          e.runningSeconds===head.elapsedSeconds&&
+          e.teamId===head.teamId&&e.playerId===head.playerId)||
+        !whistle.onField[side].includes(head.playerId)||
+        source.match.events.some(e=>
+          e.sequence>=injury.sequence&&
+          e.onField[side].includes(head.playerId))||
+        whistle.wallSeconds!==injury.wallSeconds||
+        restart.wallSeconds-injury.wallSeconds!==
+          source.match.foulStoppageWallSeconds)
+      return fail('INVALID_MEDICAL_CHRONOLOGY');
+  }
   const departures=evidence.filter(e=>e.exitEventId!==null).length;
   if(departures!==exits.length||departures!==returns.length||
       evidence.length!==source.causalAssessments.length+
@@ -451,7 +541,10 @@ export function deriveM1V186Law5FromCausalSource(
     return fail('INVALID_MEDICAL_CHRONOLOGY');
   return {ok:true,schemaVersion:M1_V186_LAW5_SCHEMA,
     status:'SOURCE_BOUND_LAW5_PHYSICAL_OFFENCE_SUBSET',
-    evidence,physicalOffenceExceptionSourceVerified:true,
+    evidence,
+    ...(source.autonomousHeadTrauma!==undefined?
+      {suspectedHeadTrauma:source.autonomousHeadTrauma}:{}),
+    physicalOffenceExceptionSourceVerified:true,
     otherLaw5ExceptionsSupported:false,
     bleedingClearanceAuthenticated:false,
     refereeAuthorityAuthenticated:false,

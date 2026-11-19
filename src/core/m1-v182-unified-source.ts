@@ -100,6 +100,7 @@ function regenerateUnifiedSource(
   multiPatientSource=false,collisionSource=false,
   autonomousCollisionSource=false,coachingOrders:unknown=[],
   minuteReturnSource=false,singleKeeperInjurySource=false,
+  headTraumaSource=false,
 ){
   if(!isPlainJsonTree(prematch)||!isPlainJsonTree(policy)||
       !isPlainJsonTree(manager)||!Array.isArray(manager)||
@@ -110,6 +111,7 @@ function regenerateUnifiedSource(
       minuteReturnSource&&(!causal||!denseShotSource)||
       singleKeeperInjurySource&&(!minuteReturnSource||
         !goalkeeperOnFieldSource)||
+      headTraumaSource&&(!singleKeeperInjurySource||!causal)||
       manager.length>5||manager.some(command=>
         !valid(command)||command.kind!=='substitute-normal'))
     return {ok:false as const,error:'INVALID_MANAGER_SOURCE' as const};
@@ -121,7 +123,7 @@ function regenerateUnifiedSource(
       prematch,policy,half,inPlay,denseShotSource,
       goalkeeperOnFieldSource,multiPatientSource,collisionSource,
       autonomousCollisionSource,minuteReturnSource,
-      singleKeeperInjurySource):
+      singleKeeperInjurySource,headTraumaSource):
     simulateM1V23TemporaryTreatment(prematch,policy,half,inPlay);
   if(!generated.ok)
     return {ok:false as const,error:'UNIFIED_GENERATION_REJECTED' as const};
@@ -167,6 +169,8 @@ function regenerateUnifiedSource(
         ...(causalGenerated.autonomousSingleKeeperInjuries?
           {autonomousSingleKeeperInjuries:
             causalGenerated.autonomousSingleKeeperInjuries}:{}),
+        ...(causalGenerated.autonomousHeadTrauma?
+          {autonomousHeadTrauma:causalGenerated.autonomousHeadTrauma}:{}),
         law5Evidence:law5?.ok?law5.evidence:[]}:{}),
   };
 }
@@ -186,12 +190,13 @@ export function regenerateM1V184CausalSource(
   multiPatientSource=false,collisionSource=false,
   autonomousCollisionSource=false,coachingOrders:unknown=[],
   minuteReturnSource=false,singleKeeperInjurySource=false,
+  headTraumaSource=false,
 ){
   return regenerateUnifiedSource(
     prematch,policy,manager,true,denseShotSource,
     goalkeeperOnFieldSource,multiPatientSource,collisionSource,
     autonomousCollisionSource,coachingOrders,minuteReturnSource,
-    singleKeeperInjurySource);
+    singleKeeperInjurySource,headTraumaSource);
 }
 
 /** Canonical v182 claim is independently replayed before v120 CAS.

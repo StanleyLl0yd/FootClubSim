@@ -31,7 +31,7 @@ import type {InitialCareerSave} from './save.js';
 import type {MatchRosterRules} from './model.js';
 import type {M1V105Run} from './m1-v105-special-goal-chronology.js';
 import type {M1V186Law5Evidence} from './m1-v186-law5-causal.js';
-import type {M1V35IndependentCollisionWitness}
+import type {M1V35IndependentCollisionWitness,M1V37HeadTraumaWitness}
   from './m1-v23-temporary-treatment.js';
 
 export const M1_V188_LEAGUE_SCHEMA=188 as const;
@@ -47,7 +47,7 @@ type Incident=Extract<
   ReturnType<typeof regenerateM1V184CausalSource>,
   {ok:true}>['generatedIncidents'][number];
 type HoldReason='straight-red'|'fictional-injury'|'second-yellow'|
-  'simple-caution-history'|'four-cautions';
+  'simple-caution-history'|'four-cautions'|'unresolved-head-trauma';
 type Hold={clubId:string;playerId:string;sourceIndex:number;
   missedGames:number|null;reason:HoldReason};
 export type M1V188FictionalHold=Readonly<{
@@ -69,10 +69,11 @@ export type M1V188ManagedXI=Readonly<{
 type Source={managedXI?:M1V188ManagedXI;
   prematch:Record<string,unknown>;policy:unknown;
   plannedCommands:unknown[];checkpointMedical:unknown[];
-  disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5|6|7;
+  disciplinePolicyVersion?:2;medicalPolicyVersion?:2|3|4|5|6|7|8;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
   intraphaseMedical?:readonly unknown[];
   autonomousKeeperInjuryOrigin?:readonly unknown[];
+  autonomousHeadTraumaOrigin?:readonly M1V37HeadTraumaWitness[];
   specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1|2;
   fixtureCalendarPolicyVersion?:2;inMatchOrdersVersion?:1};
 export type M1V188Entry={fixtureId:string;round:number;
@@ -85,10 +86,11 @@ export type M1V188Request={schemaVersion:188;careerId:string;
   managedXI?:M1V188ManagedXI;
   policy:unknown;plannedCommands:unknown[];
   checkpointMedical:unknown[];result:unknown;
-  medicalPolicyVersion?:2|3|4|5|6|7;
+  medicalPolicyVersion?:2|3|4|5|6|7|8;
   autonomousMedicalOrigin?:readonly M1V35IndependentCollisionWitness[];
   intraphaseMedical?:readonly unknown[];
   autonomousKeeperInjuryOrigin?:readonly unknown[];
+  autonomousHeadTraumaOrigin?:readonly M1V37HeadTraumaWitness[];
   specialGoalSourceVersion?:1|2;conditionPolicyVersion?:1|2;
   fixtureCalendarPolicyVersion?:2;inMatchOrdersVersion?:1};
 export type M1V188Error='INVALID_INITIAL'|'INVALID_JOURNAL'|
@@ -130,6 +132,8 @@ const sourceKeysMedicalV5=[...sourceKeysMedical,'autonomousMedicalOrigin'];
 const sourceKeysMedicalV6=[...sourceKeysMedicalV5,'intraphaseMedical'];
 const sourceKeysMedicalV7=[...sourceKeysMedicalV6,
   'autonomousKeeperInjuryOrigin'];
+const sourceKeysMedicalV8=[...sourceKeysMedicalV7,
+  'autonomousHeadTraumaOrigin'];
 const goalShape=(value:Record<string,unknown>,keys:readonly string[])=>
   hasManagedShape(value,[
     ...keys,
@@ -149,6 +153,8 @@ const requestKeysMedicalV5=[...requestKeysMedical,'autonomousMedicalOrigin'];
 const requestKeysMedicalV6=[...requestKeysMedicalV5,'intraphaseMedical'];
 const requestKeysMedicalV7=[...requestKeysMedicalV6,
   'autonomousKeeperInjuryOrigin'];
+const requestKeysMedicalV8=[...requestKeysMedicalV7,
+  'autonomousHeadTraumaOrigin'];
 const fail=(error:M1V188Error):Extract<M1V188Gate,{ok:false}>=>
   ({ok:false,error});
 /** The managed XI must use ONLY already eligible fixture players.
@@ -245,7 +251,8 @@ function missed(fixtureId:string,incidentId:string,playerId:string){
   return 1+hash%4;
 }
 function addHolds(holds:Hold[],incidents:readonly Incident[],
-  f:Fixture,index:number,versioned=false){
+  f:Fixture,index:number,versioned=false,
+  head:readonly M1V37HeadTraumaWitness[]=[]){
   const cautions=new Map<string,{clubId:string;playerId:string;count:number}>();
   const reds=new Set<string>();
   for(const inc of incidents){
@@ -286,6 +293,13 @@ function addHolds(holds:Hold[],incidents:readonly Incident[],
       holds.push({clubId:warning.clubId,playerId:warning.playerId,
         sourceIndex:index,missedGames:1,reason:'four-cautions'});
     }
+  }
+  // A modelled head-trauma suspicion is unresolved until an authenticated
+  // medical clearance pathway exists. Fictional 1–4 match injury expiry
+  // must never silently restore its player's eligibility.
+  for(const origin of head){
+    holds.push({clubId:origin.teamId,playerId:origin.playerId,
+      sourceIndex:index,missedGames:null,reason:'unresolved-head-trauma'});
   }
 }
 function excluded(team:string,index:number,holds:Hold[],
@@ -450,7 +464,18 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
           Array.isArray(e.source.intraphaseMedical)&&
           e.source.intraphaseMedical.length<=36&&
           Array.isArray(e.source.autonomousKeeperInjuryOrigin)&&
-          e.source.autonomousKeeperInjuryOrigin.length<=1))||
+          e.source.autonomousKeeperInjuryOrigin.length<=1)||
+        (goalShape(e.source,sourceKeysMedicalV8)&&
+          e.source.disciplinePolicyVersion===2&&
+          e.source.medicalPolicyVersion===8&&
+          Array.isArray(e.source.autonomousMedicalOrigin)&&
+          e.source.autonomousMedicalOrigin.length<=1&&
+          Array.isArray(e.source.intraphaseMedical)&&
+          e.source.intraphaseMedical.length<=36&&
+          Array.isArray(e.source.autonomousKeeperInjuryOrigin)&&
+          e.source.autonomousKeeperInjuryOrigin.length<=1&&
+          Array.isArray(e.source.autonomousHeadTraumaOrigin)&&
+          e.source.autonomousHeadTraumaOrigin.length<=1))||
       !rec(e.source.prematch)||
       Object.hasOwn(e.source.prematch,'catalog')||
       !Array.isArray(e.source.plannedCommands)||
@@ -489,22 +514,23 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
         e.source.medicalPolicyVersion===4||
         e.source.medicalPolicyVersion===5||
         e.source.medicalPolicyVersion===6||
-        e.source.medicalPolicyVersion===7,
+        (e.source.medicalPolicyVersion===7||e.source.medicalPolicyVersion===8),
       e.source.medicalPolicyVersion===3||
         e.source.medicalPolicyVersion===4||
         e.source.medicalPolicyVersion===5||
         e.source.medicalPolicyVersion===6||
-        e.source.medicalPolicyVersion===7,
+        (e.source.medicalPolicyVersion===7||e.source.medicalPolicyVersion===8),
       e.source.medicalPolicyVersion===4||
         e.source.medicalPolicyVersion===5||
         e.source.medicalPolicyVersion===6||
-        e.source.medicalPolicyVersion===7,
+        (e.source.medicalPolicyVersion===7||e.source.medicalPolicyVersion===8),
       e.source.medicalPolicyVersion===5||
         e.source.medicalPolicyVersion===6||
-        e.source.medicalPolicyVersion===7,coach,
+        (e.source.medicalPolicyVersion===7||e.source.medicalPolicyVersion===8),coach,
       e.source.medicalPolicyVersion===6||
-        e.source.medicalPolicyVersion===7,
-      e.source.medicalPolicyVersion===7);
+        (e.source.medicalPolicyVersion===7||e.source.medicalPolicyVersion===8),
+      (e.source.medicalPolicyVersion===7||e.source.medicalPolicyVersion===8),
+      e.source.medicalPolicyVersion===8);
     const version=e.source.specialGoalSourceVersion;
     const special=(version===1||version===2)&&replay.ok?
       simulateM1V190ExperimentalSpecialGoals(simulationInput,POLICY,
@@ -520,16 +546,19 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
         e.source.checkpointMedical)&&
       ((e.source.medicalPolicyVersion!==5&&
           e.source.medicalPolicyVersion!==6&&
-          e.source.medicalPolicyVersion!==7)||
+          (e.source.medicalPolicyVersion!==7&&e.source.medicalPolicyVersion!==8))||
         sameCanonicalValue(replay.autonomousCollisions??[],
           e.source.autonomousMedicalOrigin))&&
       ((e.source.medicalPolicyVersion!==6&&
-          e.source.medicalPolicyVersion!==7)||
+          (e.source.medicalPolicyVersion!==7&&e.source.medicalPolicyVersion!==8))||
         sameCanonicalValue(replay.intraphaseMedical??[],
           e.source.intraphaseMedical))&&
-      (e.source.medicalPolicyVersion!==7||
+      ((e.source.medicalPolicyVersion!==7&&e.source.medicalPolicyVersion!==8)||
         sameCanonicalValue(replay.autonomousSingleKeeperInjuries??[],
           e.source.autonomousKeeperInjuryOrigin))&&
+      (e.source.medicalPolicyVersion!==8||
+        sameCanonicalValue(replay.autonomousHeadTrauma??[],
+          e.source.autonomousHeadTraumaOrigin))&&
       sameCanonicalValue(result,e.result)&&
       replayedPhysicalClock(input,result,manager)?replay:null;
   };
@@ -541,7 +570,9 @@ function verifyEntry(i:InitialCareerSave,e:M1V188Entry,
       sourceAttempt(false):null);
   if(!replay)return false;
   addHolds(holds,replay.generatedIncidents,f,index,
-    e.source.disciplinePolicyVersion===2);
+    e.source.disciplinePolicyVersion===2,
+    e.source.medicalPolicyVersion===8?
+      replay.autonomousHeadTrauma??[]:[]);
   return true;
 }
 /** One process only. Match exact serialized input AND immutable M0 initial.
@@ -596,7 +627,7 @@ function read(i:InitialCareerSave,value:unknown){
   let condition=startM1V188Condition(i);
   if(schedule.length!==LIMIT)return null;
   let versionedSeen=false,conditionVersion:0|1|2=0,
-    medicalVersionSeen:0|2|3|4|5|6|7=0;
+    medicalVersionSeen:0|2|3|4|5|6|7|8=0;
   let specialGoalVersion:0|1|2|null=null;
   for(let n=0;n<journal.entries.length;n++){
     const entry=journal.entries[n]!;
@@ -668,7 +699,7 @@ export function prepareM1V188LeagueMatch(
   if(medicalPolicyVersion!==undefined&&medicalPolicyVersion!==2&&
       medicalPolicyVersion!==3&&medicalPolicyVersion!==4&&
       medicalPolicyVersion!==5&&medicalPolicyVersion!==6&&
-      medicalPolicyVersion!==7)
+      medicalPolicyVersion!==7&&medicalPolicyVersion!==8)
     return {ok:false,error:'INVALID_REQUEST'};
   if(fixtureCalendarPolicyVersion!==undefined&&
       fixtureCalendarPolicyVersion!==2)
@@ -687,17 +718,21 @@ export function prepareM1V188LeagueMatch(
   if(accepted.journal.revision>0&&
      firstGoal!==specialGoalSourceVersion)
     return {ok:false,error:'INVALID_REQUEST'};
-  if(previous===7&&medicalPolicyVersion!==undefined&&
-      medicalPolicyVersion!==7||
+  if(previous===8&&medicalPolicyVersion!==undefined&&
+      medicalPolicyVersion!==8||
+      previous===7&&medicalPolicyVersion!==undefined&&
+      medicalPolicyVersion!==7&&medicalPolicyVersion!==8||
       previous===6&&medicalPolicyVersion!==undefined&&
-      medicalPolicyVersion!==6&&medicalPolicyVersion!==7||
+      medicalPolicyVersion!==6&&medicalPolicyVersion!==7&&
+      medicalPolicyVersion!==8||
       previous===5&&(medicalPolicyVersion===2||
       medicalPolicyVersion===3||medicalPolicyVersion===4)||
       previous===4&&(medicalPolicyVersion===2||
       medicalPolicyVersion===3)||
       previous===3&&medicalPolicyVersion===2)
     return {ok:false,error:'INVALID_REQUEST'};
-  const effective:2|3|4|5|6|7|undefined=
+  const effective:2|3|4|5|6|7|8|undefined=
+    medicalPolicyVersion===8||previous===8?8:
     medicalPolicyVersion===7||previous===7?7:
     medicalPolicyVersion===6||previous===6?6:
     medicalPolicyVersion===5||previous===5?5:
@@ -733,10 +768,10 @@ export function prepareM1V188LeagueMatch(
   const generated=regenerateM1V184CausalSource(
     simulationInput,POLICY,managerCommandsForFixture,true,medicalSource,
     effective===3||effective===4||effective===5||effective===6||
-      effective===7,
-    effective===4||effective===5||effective===6||effective===7,
-    effective===5||effective===6||effective===7,coachOrders,
-    effective===6||effective===7,effective===7);
+      effective===7||effective===8,
+    effective===4||effective===5||effective===6||effective===7||effective===8,
+    effective===5||effective===6||effective===7||effective===8,coachOrders,
+    effective===6||effective===7||effective===8,effective===7||effective===8,effective===8);
   if(!generated.ok)return {ok:false,error:'GENERATOR_REJECTED',
     stage:'CAUSAL',cause:generated.error};
   const special=(specialGoalSourceVersion===1||
@@ -763,13 +798,16 @@ export function prepareM1V188LeagueMatch(
     ...(specialGoalSourceVersion===1||specialGoalSourceVersion===2?
       {specialGoalSourceVersion}:{}),
     ...(effective?{medicalPolicyVersion:effective}:{}),
-    ...(effective===5||effective===6||effective===7?{
+    ...(effective===5||effective===6||effective===7||effective===8?{
       autonomousMedicalOrigin:generated.autonomousCollisions??[]}: {}),
-    ...(effective===6||effective===7?{
+    ...(effective===6||effective===7||effective===8?{
       intraphaseMedical:generated.intraphaseMedical??[]}: {}),
-    ...(effective===7?{
+    ...(effective===7||effective===8?{
       autonomousKeeperInjuryOrigin:
-        generated.autonomousSingleKeeperInjuries??[]}: {})},
+        generated.autonomousSingleKeeperInjuries??[]}: {}),
+    ...(effective===8?{
+      autonomousHeadTraumaOrigin:
+        generated.autonomousHeadTrauma??[]}: {})},
     ...(medicalSource?{sourceLaw5Evidence:generated.law5Evidence}:{}),
     externalMedicalAuthorityAuthenticated:false,
     remainingFixtures:LIMIT-index-1,
@@ -806,7 +844,17 @@ export function applyM1V188LeagueMatch(
         Array.isArray(raw.intraphaseMedical)&&
         raw.intraphaseMedical.length<=36&&
         Array.isArray(raw.autonomousKeeperInjuryOrigin)&&
-        raw.autonomousKeeperInjuryOrigin.length<=1)||
+        raw.autonomousKeeperInjuryOrigin.length<=1||
+      goalShape(raw,requestKeysMedicalV8)&&
+        raw.medicalPolicyVersion===8&&
+        Array.isArray(raw.autonomousMedicalOrigin)&&
+        raw.autonomousMedicalOrigin.length<=1&&
+        Array.isArray(raw.intraphaseMedical)&&
+        raw.intraphaseMedical.length<=36&&
+        Array.isArray(raw.autonomousKeeperInjuryOrigin)&&
+        raw.autonomousKeeperInjuryOrigin.length<=1&&
+        Array.isArray(raw.autonomousHeadTraumaOrigin)&&
+        raw.autonomousHeadTraumaOrigin.length<=1)||
       raw.schemaVersion!==188||
       !Number.isSafeInteger(raw.expectedRevision)||
       typeof raw.commandId!=='string'||!rec(raw.prematch)||
@@ -834,26 +882,33 @@ export function applyM1V188LeagueMatch(
     raw.conditionPolicyVersion===1?1:0;
   if(incomingCondition<priorCondition)
     return fail('SOURCE_MISMATCH');
-  if(priorMedical===7&&raw.medicalPolicyVersion!==7||
+  if(priorMedical===8&&raw.medicalPolicyVersion!==8||
+      priorMedical===7&&raw.medicalPolicyVersion!==7&&
+        raw.medicalPolicyVersion!==8||
       priorMedical===6&&raw.medicalPolicyVersion!==6&&
-        raw.medicalPolicyVersion!==7||
+        raw.medicalPolicyVersion!==7&&
+        raw.medicalPolicyVersion!==8||
       priorMedical===5&&raw.medicalPolicyVersion!==5&&
         raw.medicalPolicyVersion!==6&&
-        raw.medicalPolicyVersion!==7||
+        raw.medicalPolicyVersion!==7&&
+        raw.medicalPolicyVersion!==8||
       priorMedical===4&&raw.medicalPolicyVersion!==4&&
         raw.medicalPolicyVersion!==5&&
         raw.medicalPolicyVersion!==6&&
-        raw.medicalPolicyVersion!==7||
+        raw.medicalPolicyVersion!==7&&
+        raw.medicalPolicyVersion!==8||
       priorMedical===3&&raw.medicalPolicyVersion!==3&&
         raw.medicalPolicyVersion!==4&&
         raw.medicalPolicyVersion!==5&&
         raw.medicalPolicyVersion!==6&&
-        raw.medicalPolicyVersion!==7||
+        raw.medicalPolicyVersion!==7&&
+        raw.medicalPolicyVersion!==8||
       priorMedical===2&&raw.medicalPolicyVersion!==2&&
         raw.medicalPolicyVersion!==3&&raw.medicalPolicyVersion!==4&&
         raw.medicalPolicyVersion!==5&&
         raw.medicalPolicyVersion!==6&&
-        raw.medicalPolicyVersion!==7)
+        raw.medicalPolicyVersion!==7&&
+        raw.medicalPolicyVersion!==8)
     return fail('SOURCE_MISMATCH');
   if(raw.expectedRevision!==accepted.journal.revision)
     return fail('STALE_REVISION');
@@ -890,16 +945,21 @@ export function applyM1V188LeagueMatch(
         raw.medicalPolicyVersion===4?{medicalPolicyVersion:4 as const}:
         raw.medicalPolicyVersion===5?{medicalPolicyVersion:5 as const}:
         raw.medicalPolicyVersion===6?{medicalPolicyVersion:6 as const}:
-        raw.medicalPolicyVersion===7?{medicalPolicyVersion:7 as const}:{}),
+        raw.medicalPolicyVersion===7?{medicalPolicyVersion:7 as const}:
+        raw.medicalPolicyVersion===8?{medicalPolicyVersion:8 as const}:{}),
       ...(raw.medicalPolicyVersion===5||raw.medicalPolicyVersion===6||
-        raw.medicalPolicyVersion===7?{
+        raw.medicalPolicyVersion===7||raw.medicalPolicyVersion===8?{
         autonomousMedicalOrigin:raw.autonomousMedicalOrigin as
           M1V35IndependentCollisionWitness[]}: {}),
-      ...(raw.medicalPolicyVersion===6||raw.medicalPolicyVersion===7?{
+      ...(raw.medicalPolicyVersion===6||raw.medicalPolicyVersion===7||
+        raw.medicalPolicyVersion===8?{
         intraphaseMedical:raw.intraphaseMedical as unknown[]}: {}),
-      ...(raw.medicalPolicyVersion===7?{
+      ...(raw.medicalPolicyVersion===7||raw.medicalPolicyVersion===8?{
         autonomousKeeperInjuryOrigin:
-          raw.autonomousKeeperInjuryOrigin as unknown[]}: {})},
+          raw.autonomousKeeperInjuryOrigin as unknown[]}: {}),
+      ...(raw.medicalPolicyVersion===8?{
+        autonomousHeadTraumaOrigin:
+          raw.autonomousHeadTraumaOrigin as M1V37HeadTraumaWitness[]}: {})},
     result:raw.result as Good};
   const holds=[...accepted.holds];
   // New commits cannot claim the legacy shot/referee authority.

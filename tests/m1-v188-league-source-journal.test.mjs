@@ -2047,3 +2047,105 @@ test('P3-2: migration from medical v7 to v8 keeps old fixture bytes',()=>{
       {ok:false,error:'INVALID_REQUEST'});
   }
 });
+
+
+test('P3-2: unresolved head hold survives fictional injury expiry across six source rounds',()=>{
+  let witness=null;
+  for(let seed=1;seed<=128&&!witness;seed++){
+    const career=createInitialCareer(catalog,catalog.clubs[0].id,
+      seed,'v188-head-six-round-hold-'+seed);
+    const start=startM1V188LeagueJournal(career);
+    if(!start.ok)continue;
+    const first=prepareM1V188LeagueMatch(
+      career,start.journal,[],undefined,8,undefined,2,[],2);
+    if(first?.ok&&first.request.autonomousHeadTraumaOrigin?.length===1)
+      witness={career,start,first};
+  }
+  assert.ok(witness,'Need a real source-generated head injury for 48 fixtures');
+  const {career,start,first}=witness;
+  const origin=first.request.autonomousHeadTraumaOrigin[0];
+  const initialCommit=applyM1V188LeagueMatch(
+    career,start.journal,first.request);
+  assert.ok(initialCommit.ok,'Source-generated head incident must commit');
+  let journal=initialCommit.journal;
+  let affectedOwnFixtures=0,observedFiniteExpiry=false;
+  let testedForgedClearance=false,blockedAppearances=0;
+  const played=new Set([first.fixture.id]);
+  for(let index=1;index<48;index++){
+    const inspected=inspectM1V188FictionalHolds(career,journal);
+    assert.ok(inspected.ok,'Verified medical history at index '+index);
+    assert.equal(inspected.externalKdkAuthenticated,false);
+    assert.equal(inspected.officialClearanceAuthenticated,false);
+    const unresolved=inspected.holds.find(h=>
+      h.reason==='unresolved-head-trauma'&&h.sourceIndex===0&&
+      h.clubId===origin.teamId&&h.playerId===origin.playerId);
+    const ordinary=inspected.holds.find(h=>
+      h.reason==='fictional-injury'&&h.sourceIndex===0&&
+      h.clubId===origin.teamId&&h.playerId===origin.playerId);
+    assert.ok(unresolved&&ordinary,
+      'Both independently sourced hold reasons must survive cold replay');
+    assert.equal(unresolved.missedOwnFixtures,null);
+    assert.equal(unresolved.remainingOwnFixtures,null);
+    if(ordinary.remainingOwnFixtures===0)observedFiniteExpiry=true;
+    const proposed=prepareM1V188LeagueMatch(
+      career,journal,[],undefined,undefined,undefined,2,[],2);
+    assert.ok(proposed?.ok,'v8 fixture must remain playable: '+index+
+      (proposed?.ok?'':': '+JSON.stringify(proposed)));
+    assert.equal(proposed.request.medicalPolicyVersion,8);
+    assert.equal(played.has(proposed.fixture.id),false);
+    played.add(proposed.fixture.id);
+    for(const side of ['home','away']){
+      const clubId=proposed.fixture[side==='home'?
+        'homeClubId':'awayClubId'];
+      const lineup=proposed.request.prematch[side+'Lineup'];
+      const selected=new Set([...lineup.starters,...lineup.bench]);
+      assert.equal(selected.size,
+        lineup.starters.length+lineup.bench.length);
+      for(const hold of inspected.holds.filter(h=>
+        h.clubId===clubId&&h.reason==='unresolved-head-trauma')){
+        blockedAppearances++;
+        assert.equal(selected.has(hold.playerId),false,
+          'Never auto-clear unresolved head trauma at '+proposed.fixture.id);
+      }
+      if(clubId===origin.teamId){
+        affectedOwnFixtures++;
+        assert.equal(selected.has(origin.playerId),false,
+          'Ordinary expiry cannot admit original suspected concussion');
+      }
+    }
+    if(ordinary.remainingOwnFixtures===0&&!testedForgedClearance){
+      const forged=structuredClone(proposed.request);
+      forged.officialMedicalClearance={playerId:origin.playerId,
+        bleedingStopped:true,equipmentClean:true,refereeAllowed:true};
+      assert.deepEqual(applyM1V188LeagueMatch(
+        career,journal,forged),
+        {ok:false,error:'INVALID_REQUEST'},
+        'Unauthenticated external medical claims cannot bypass CAS');
+      testedForgedClearance=true;
+    }
+    const accepted=applyM1V188LeagueMatch(
+      career,journal,proposed.request);
+    assert.ok(accepted.ok,'Both-team canonical v8 commit '+index);
+    assert.equal(accepted.journal.revision,index+1);
+    journal=accepted.journal;
+    if((index+1)%16===0){
+      assert.equal(validateM1V188LeagueJournal(
+        career,structuredClone(journal)).ok,true,
+        'Cold source replay after '+(index+1)+' real fixtures');
+    }
+  }
+  assert.equal(played.size,48);
+  assert.ok(affectedOwnFixtures>=5,
+    'Require multiple subsequent fixtures of the injured player club');
+  assert.ok(blockedAppearances>0,
+    'Require a real positive blocked-player witness');
+  assert.equal(observedFiniteExpiry,true,
+    'Original 1-4 match hold must expire while v8 head hold survives');
+  assert.equal(testedForgedClearance,true);
+  const forgedSaved=structuredClone(journal);
+  forgedSaved.entries[0].source.autonomousHeadTraumaOrigin[0]
+    .injuryDecisionId='forged-old-physical-decision';
+  assert.equal(validateM1V188LeagueJournal(
+    career,forgedSaved).ok,false,
+    'Later fixtures cannot launder forged historical injury authority');
+});

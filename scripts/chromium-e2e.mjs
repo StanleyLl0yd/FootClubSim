@@ -648,7 +648,7 @@ async function run() {
         JSON.stringify(medicalVersions.options)!==
           JSON.stringify(['5','6','7','8']))
       throw new Error('Expected explicit medical v5 default / v6-v8 opt-in');
-    for(const version of [8,5]){
+    for(const version of [8,5,8]){
       const selected=await evaluate(`(() => {
         const input=document.querySelector('#season-medical-policy');
         if(!input||input.disabled)return false;
@@ -762,6 +762,7 @@ async function run() {
           result = {
             revision: journal?.revision,
             calendarVersion: journal?.entries?.[0]?.source?.fixtureCalendarPolicyVersion,
+            medicalVersion: journal?.entries?.[0]?.source?.medicalPolicyVersion,
             firstFixture: journal?.entries?.[0]?.fixtureId,
             change: journal?.entries?.[0]?.source?.plannedCommands
               ?.find(cmd => cmd.kind === 'substitute-normal') ?? null,
@@ -773,6 +774,7 @@ async function run() {
     })`);
     if (storedChange?.revision !== secondSeasonRevision ||
         storedChange.calendarVersion !== 2 ||
+        storedChange.medicalVersion !== 8 ||
         !storedChange.firstFixture ||
         storedChange.change?.outPlayerId !== seasonChoice.outgoing ||
         storedChange.change?.inPlayerId !== seasonChoice.incoming ||

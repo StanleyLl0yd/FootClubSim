@@ -998,6 +998,11 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         {managerSetup&&ownNextNow&&!preview&&!halfTime&&<fieldset
           className="season-substitution" disabled={busy||disabled}>
           <legend>Замена в перерыве вашего матча</legend>
+          {managerHalfTimePairs.length===0&&<p className="subtle" role="status">
+            По фактическому протоколу матча нет допустимой замены
+            в перерыве. Исходный стартовый состав мог измениться
+            из-за удаления или травмы.
+          </p>}
           <div className="season-sub-fields">
             <label htmlFor="season-sub-out">Уходит с поля
               <select id="season-sub-out" value={actualOut}

@@ -107,4 +107,35 @@ Official sources: [IFAB Law 5](https://www.theifab.com/laws/latest/the-referee/)
 [off-field treatment protocol](https://www.theifab.com/laws/latest/off-field-treatment-and-assessment-protocol/),
 [optional permanent concussion substitutions](https://www.theifab.com/laws/latest/additional-permanent-concussion-substitutions-protocol/).
 
+## Explicit player-facing medical model opt-in (draft integration, November 2026)
+
+A newly opened browser career can select **medical v5, v6, v7 or v8**
+before its first committed fixture, using the `M1LeagueSeason`
+`#season-medical-policy` control. **The default remains v5.**
+Only source-backed models already implemented in the canonical v188
+journal are offered. The option is locked while a preview, manager
+configuration or a paused match is active.
+
+After the first successful source-replayed IndexedDB/CAS match commit,
+the selector disappears; the next fixture inherits the last persisted
+medical policy. Historical match bytes and earlier policy versions
+remain unchanged. This UI does **not** yet provide interactive
+mid-career upgrades, even though isolated versioned source APIs can
+verify their monotonic migration.
+
+Policy v8 explicitly warns that suspected head trauma creates a
+potentially indefinite no-return/no-XI/no-bench hold until a future
+**trusted** medical clearance pathway is implemented. It is a fictional
+source model, **not** a clinical diagnosis, physician signature or
+authenticated referee decision. A career can legitimately become
+unplayable if too few eligible players remain; no medical exception or
+forced return may be invented to bypass that fail-closed condition.
+
+Browser regression must exercise the v5 default, v8 opt-in, actual v8
+first-fixture calculation, browser persistence and restore, and
+source-journal policy pinning. Full P3-2 acceptance still additionally
+requires source-bound bleeding, designated penalty-taker exception and
+verified referee/medical permissions. This draft does not move M1 or M2
+gates.
+
 P3-2 OPEN; M1 3/9; audits 0/2; 2024/25 holdout SEALED; M2 prohibited.

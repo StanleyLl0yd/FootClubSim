@@ -57,14 +57,18 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   readonly onCareerStored:()=>void;
 }){
   const [journal,setJournal]=useState<M1V188Journal|null>(null);
-  // New careers start on medical v5 and special-goal source 2.
+  // Explicit experimental source opt-in for an uncommitted career only.
+  // App.tsx keys this component by immutable career ID, so selections
+  // cannot leak between unrelated saved careers.
+  const [newMedicalPolicy,setNewMedicalPolicy]=useState<5|6|7|8>(5);
+  // New careers default to medical v5 and special-goal source 2.
   // Medical policy upgrades are monotonic: use the most recently verified
   // fixture. Goal source and calendar stay pinned to the first fixture.
   const prepareSource=(saved:M1V188Journal,manager:unknown=[],
     selection:unknown=undefined,coaching:unknown[]=[])=>
     prepareM1V188LeagueMatch(career,saved,manager,
       undefined,saved.revision===0?
-        5:saved.entries.at(-1)?.source.medicalPolicyVersion,
+        newMedicalPolicy:saved.entries.at(-1)?.source.medicalPolicyVersion,
       selection,saved.revision===0?
         2:saved.entries[0]?.source.specialGoalSourceVersion,coaching,
       saved.revision===0?
@@ -694,6 +698,38 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       <>
         <progress className="season-progress" max={240}
           value={journal.revision} aria-label="Прогресс сезона" />
+        {journal.revision===0&&ownNextNow&&!preview&&!halfTime&&
+          !managerSetup&&!xiSetup&&
+          <fieldset className="season-substitution"
+            disabled={busy||disabled||advancing}>
+            <legend>Медицинская модель новой карьеры</legend>
+            <label htmlFor="season-medical-policy">Режим симуляции
+              <select id="season-medical-policy" value={newMedicalPolicy}
+                onChange={e=>setNewMedicalPolicy(
+                  Number(e.target.value) as 5|6|7|8)}>
+                <option value={5}>v5 · столкновения (по умолчанию)</option>
+                <option value={6}>v6 · лечение и возврат через минуту</option>
+                <option value={7}>v7 · отдельная травма вратаря</option>
+                <option value={8}>v8 · подозрение на травму головы</option>
+              </select>
+            </label>
+            <p className="subtle">
+              Выбрана модель v{newMedicalPolicy}. Выбор действует только
+              для будущих матчей. В режиме v8 подозрение на травму головы
+              блокирует возвращение игрока и участие в следующих играх,
+              пока в симуляции нет проверяемого медицинского допуска.
+              Это игровая модель, не диагноз и не разрешение судьи.
+              После первого сохранённого матча версия закрепляется.
+            </p>
+          </fieldset>}
+        {journal.revision>0&&<p className="subtle">
+          Медицинская модель сохранённой карьеры:
+          {' '}{journal.entries.at(-1)?.source.medicalPolicyVersion===
+            undefined?'историческая':
+            'v'+journal.entries.at(-1)?.source.medicalPolicyVersion}.
+          {' '}Версия следующего матча наследуется из проверенного
+          сохранения, предыдущие протоколы не меняются.
+        </p>}
         {champion&&champion.clubId===career.selectedClubId&&
           <section className="season-champion" aria-label="Чемпионство">
             <h3>🏆 Поздравляем! {clubs.get(champion.clubId)}

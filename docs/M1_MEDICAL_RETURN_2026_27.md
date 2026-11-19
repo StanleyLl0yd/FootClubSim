@@ -37,3 +37,37 @@ single-keeper injury or injured penalty-taker decision is implied.
 
 This is a partial P3-2 integration, not acceptance of the complete gate.
 The 2024/25 holdout remains sealed and M2 remains prohibited.
+
+
+## Opt-in medical policy 7: independent goalkeeper injury (November 2026)
+
+A new career or an existing v6 career may explicitly request
+`medicalPolicyVersion: 7`. This extends v6 without changing historical
+v2–v6 fixture bytes, RNG streams, referee decisions or source journals.
+It creates one bounded, independently seeded **single-goalkeeper injury**
+witness, distinct from the existing paired keeper/outfield collision.
+The existing v23 referee time source must contain a matching original
+`synthetic-medical-whistle`, `synthetic-single-keeper-injury`, and
+`synthetic-medical-restart` in that order, bound to the same unique ID,
+team, goalkeeper and match second. The modelled goalkeeper remains on
+the physical field before, during and after the on-field assessment.
+
+Policy 7 stores the replay-verified
+`autonomousKeeperInjuryOrigin` in the same v188 journal and rejects
+wrong keeper/team, forged source IDs, missing or reordered events, or
+a downgrade to an earlier medical policy. It supports two-fixture
+progression, existing experimental special-goal source and pause
+recovery; older matches are never rewritten. **A synthetic incident is
+not a clinical finding or evidence of successful treatment.** No
+independent head trauma, severe injury diagnosis, blood clearance,
+penalty-taker exception, external referee signature or recovery
+authorization is asserted. The IFAB goalkeeper-injury *trial* that
+requires a teammate to leave for one minute is separate and has **not**
+been adopted in the fictional competition.
+
+Primary rules: [IFAB Law 5](https://www.theifab.com/laws/latest/the-referee/),
+[off-field protocol](https://www.theifab.com/laws/latest/off-field-treatment-and-assessment-protocol/),
+and [optional goalkeeper-injury trial](https://www.theifab.com/trials/goalkeeper-injury/).
+
+P3-2 and the M1 exit gate remain open. M2 is prohibited; holdout
+2024/25 stays sealed.

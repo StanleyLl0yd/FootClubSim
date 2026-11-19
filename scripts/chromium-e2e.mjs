@@ -657,7 +657,35 @@ async function run() {
       throw new Error('No valid manual halftime substitution available');
     }
     await clickSeason('Рассчитать с заменой');
-    await waitText('Замена в перерыве включена в расчёт матча.');
+    // Keep the original assertion and deadline. A rare Windows Chrome
+    // timeout must report the actual UI rejection instead of an opaque
+    // missing-text error; never retry or silently accept the calculation.
+    try {
+      await waitText('Замена в перерыве включена в расчёт матча.');
+    } catch (error) {
+      let diagnostic;
+      try {
+        diagnostic = await evaluate(`(() => ({
+          status: document.querySelector('.season-panel > p[role=status]')
+            ?.textContent ?? null,
+          preview: document.querySelector('.season-preview')?.textContent
+            ?.slice(0, 500) ?? null,
+          substitutionVisible: Boolean(document.querySelector(
+            '.season-substitution')),
+          choice: {
+            outgoing: document.querySelector('#season-sub-out')?.value,
+            incoming: document.querySelector('#season-sub-in')?.value,
+          },
+          revision: document.querySelector('.season-progress')?.value,
+          alerts: [...document.querySelectorAll('.season-panel [role=alert]')]
+            .map(node => node.textContent?.slice(0, 200)),
+        }))()`);
+      } catch (snapshotError) {
+        diagnostic = { snapshotError: String(snapshotError) };
+      }
+      throw new Error('Halftime source preview was not verified: ' +
+        String(error) + '; UI diagnostic: ' + JSON.stringify(diagnostic));
+    }
     const scoreVisible = await evaluate(
       "document.querySelector('.season-preview-score')?.innerText ?? ''");
     if (!scoreVisible.includes(':')) {

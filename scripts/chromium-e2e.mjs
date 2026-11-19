@@ -637,6 +637,33 @@ async function run() {
     // Automatic opponent fixtures are verified AFTER that first own match.
     await clickSeason('Начать или продолжить сезон');
     await waitText('Сезон проверен и загружен. Сыграно матчей: 0 из 240.');
+    // No medical policy change is implicit. The new-career picker must
+    // explicitly opt in to an experimental source before the first CAS.
+    const medicalVersions=await evaluate(`(() => {
+      const input=document.querySelector('#season-medical-policy');
+      return input?{value:input.value,options:
+        Array.from(input.options).map(option=>option.value)}:null;
+    })()`);
+    if(medicalVersions?.value!=='5'||
+        JSON.stringify(medicalVersions.options)!==
+          JSON.stringify(['5','6','7','8']))
+      throw new Error('Expected explicit medical v5 default / v6-v8 opt-in');
+    for(const version of [8,5]){
+      const selected=await evaluate(`(() => {
+        const input=document.querySelector('#season-medical-policy');
+        if(!input||input.disabled)return false;
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')
+          .set.call(input, '${version}');
+        input.dispatchEvent(new Event('change',{bubbles:true}));
+        return true;
+      })()`);
+      if(!selected)throw new Error('Cannot select medical policy '+version);
+      await until(async()=>evaluate(`(() => {
+        const input=document.querySelector('#season-medical-policy');
+        return input?.closest('fieldset')?.textContent
+          ?.includes('Выбрана модель v${version}')===true;
+      })()`),'controlled medical policy v'+version+' visibly applied');
+    }
     const opening=await evaluate(`(() => ({
       revision:Number(document.querySelector('.season-progress')?.value),
       played:[...document.querySelectorAll('.season-columns table.season-table > tbody > tr')]
@@ -706,6 +733,9 @@ async function run() {
         result.status.startsWith('Теперь очередь вашего клуба.')?
           result.revision:null;
     },'owned halftime result and automatic opponents complete',120_000);
+    if(await evaluate(
+      "Boolean(document.querySelector('#season-medical-policy'))"))
+      throw new Error('Medical source selector remained mutable after CAS');
     const tableAfterAuto=await evaluate(`(() => {
       const rows=[...document.querySelectorAll('.season-columns table.season-table > tbody > tr')];
       const played=rows.map(row=>Number(

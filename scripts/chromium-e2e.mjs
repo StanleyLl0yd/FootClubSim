@@ -653,6 +653,25 @@ async function run() {
           .length!==2)
       throw new Error('Opening opponent brief leaked results or is missing: '+
         opponentBrief.slice(0,400));
+    const selectedFutureRound=await evaluate(`(() => {
+      const select=document.querySelector('#season-calendar-round');
+      if(!select||select.options.length!==30)return false;
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')
+        .set.call(select,'30');
+      select.dispatchEvent(new Event('change',{bubbles:true}));
+      return true;
+    })()`);
+    if(!selectedFutureRound)
+      throw new Error('Expected all 30 rounds in the season calendar');
+    await until(async()=>evaluate(`(() => {
+      const rows=[...document.querySelectorAll('.season-fixtures li > strong')];
+      return document.querySelector('#season-calendar-round')?.value==='30'&&
+        rows.length===8&&rows.every(row=>row.textContent.trim()==='—');
+    })()`),'future round navigation without leaking unplayed results');
+    await clickSeason('К текущему туру');
+    await until(async()=>evaluate(
+      "document.querySelector('#season-calendar-round')?.value==='1'"),
+    'current season round restored after browsing future fixture');
     await clickSeason('Настроить замену');
     await waitText('Замена в перерыве вашего матча');
     const seasonChoice = await evaluate(`(() => ({

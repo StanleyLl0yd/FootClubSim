@@ -1307,7 +1307,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                   aria-label="Предыдущий тур"
                   disabled={visibleRound===1}
                   onClick={()=>{setCalendarReportId('');
-                    setCalendarRound(visibleRound-1);}>←</button>
+                    setCalendarRound(visibleRound-1);}}>←</button>
                 <label htmlFor="season-calendar-round">Тур
                   <select id="season-calendar-round" value={visibleRound}
                     onChange={event=>{setCalendarReportId('');
@@ -1320,11 +1320,11 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                   aria-label="Следующий тур"
                   disabled={visibleRound===30}
                   onClick={()=>{setCalendarReportId('');
-                    setCalendarRound(visibleRound+1);}>→</button>
+                    setCalendarRound(visibleRound+1);}}>→</button>
                 {calendarRound!==null&&
                   <button type="button" className="secondary-button"
                     onClick={()=>{setCalendarReportId('');
-                      setCalendarRound(null);}>К текущему туру</button>}
+                      setCalendarRound(null);}}>К текущему туру</button>}
               </div>
             </div>
             <p className="subtle season-calendar-progress">

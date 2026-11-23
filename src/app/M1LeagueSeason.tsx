@@ -158,10 +158,9 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const lastOwnPlayed=ownReports.at(-1);
   const opponentId=ownNext?ownNext.homeClubId===career.selectedClubId?
     ownNext.awayClubId:ownNext.homeClubId:null;
-  const prematchBrief=useMemo(()=>journal&&opponentId?
+  const prematchBrief=journal&&opponentId?
     deriveM1V188PrematchBrief(
-      fixtures,journal.entries,career.selectedClubId,opponentId):null,
-  [fixtures,journal,career.selectedClubId,opponentId]);
+      fixtures,journal.entries,career.selectedClubId,opponentId):null;
   const ownRank=table?.findIndex(row=>
     row.clubId===career.selectedClubId)??-1;
   const opponentRank=table?.findIndex(row=>

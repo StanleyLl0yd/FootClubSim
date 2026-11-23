@@ -1352,6 +1352,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                   <th scope="col" title="Победы">В</th>
                   <th scope="col" title="Ничьи">Н</th>
                   <th scope="col" title="Поражения">П</th>
+                  <th scope="col" title="Забитые мячи">ЗМ</th>
+                  <th scope="col" title="Пропущенные мячи">ПМ</th>
                   <th scope="col" title="Разница голов">РМ</th>
                   <th scope="col" title="Очки">О</th>
                 </tr></thead>
@@ -1368,6 +1370,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                     <td>{row.won}</td>
                     <td>{row.drawn}</td>
                     <td>{row.lost}</td>
+                    <td>{row.goalsFor}</td>
+                    <td>{row.goalsAgainst}</td>
                     <td>{row.goalDifference>0?'+':''}{row.goalDifference}</td>
                     <td><strong>{row.points}</strong></td>
                   </tr>)}</tbody>
@@ -1375,7 +1379,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               <p role="alert">Таблица недоступна: журнал не соответствует календарю.</p>}
           </div>
         </div>
-        <M1ClubOverview career={career} journal={journal} fixtures={fixtures}/>
+        <M1ClubOverview career={career} journal={journal} fixtures={fixtures}
+          conditionById={readinessById}/>
       </>}
     <p className="subtle" role="status" aria-live="polite">{status}</p>
   </section>;

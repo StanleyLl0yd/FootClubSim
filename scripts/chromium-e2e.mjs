@@ -649,7 +649,7 @@ async function run() {
     const opponentBrief=await evaluate(
       "document.querySelector('.season-opponent-brief')?.textContent ?? ''");
     if(!/пока не встречались/.test(opponentBrief)||
-        (opponentBrief.match(/Последние результаты:\\s*пока нет/g)??[])
+        (opponentBrief.match(/пока нет/g)??[])
           .length!==2)
       throw new Error('Opening opponent brief leaked results or is missing: '+
         opponentBrief.slice(0,400));

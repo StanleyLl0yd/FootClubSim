@@ -1,5 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {M1ClubOverview} from './M1ClubOverview.js';
+import {deriveM1V188PrematchBrief,type M1V188RecentResult}
+  from '../core/m1-v188-prematch-brief.js';
 import {M1MatchReport} from './M1MatchReport.js';
 import {LigaClubLabel} from './LigaClubLabel.js';
 import {deriveM1V188Champion} from '../core/m1-v188-championship.js';
@@ -47,6 +49,9 @@ const FORMATIONS=['4-2-3-1','4-3-3','4-4-2','4-1-4-1',
   '3-5-2','3-4-3','5-3-2'] as const;
 const errorText=(error:unknown)=>
   error instanceof Error?error.message:String(error);
+const recentFormText=(form:readonly M1V188RecentResult[])=>
+  form.length?form.map(row=>row.outcome==='win'?'В':
+    row.outcome==='draw'?'Н':'П').join(' · '):'пока нет';
 
 /**
  * First player-facing browser season slice. Uses the existing two-team
@@ -151,6 +156,17 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   // Keep the scorecard focused on the club the manager actually controls.
   // The final committed league fixture may belong to two other teams.
   const lastOwnPlayed=ownReports.at(-1);
+  const opponentId=ownNext?ownNext.homeClubId===career.selectedClubId?
+    ownNext.awayClubId:ownNext.homeClubId:null;
+  const prematchBrief=journal&&opponentId?
+    deriveM1V188PrematchBrief(
+      fixtures,journal.entries,career.selectedClubId,opponentId):null;
+  const ownRank=table?.findIndex(row=>
+    row.clubId===career.selectedClubId)??-1;
+  const opponentRank=table?.findIndex(row=>
+    row.clubId===opponentId)??-1;
+  const ownStanding=table?.[ownRank];
+  const opponentStanding=table?.[opponentRank];
   const round=next?.round??30;
   const roundFixtures=journal?fixtures.filter(f=>f.round===round):[];
   const previewResult=preview?.request.result as Good|undefined;
@@ -789,6 +805,52 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             <LigaClubLabel clubId={next.awayClubId}
               name={clubs.get(next.awayClubId)??next.awayClubId}/>
           </strong>
+          {prematchBrief&&opponentId&&
+            <details className="season-club-details season-opponent-brief">
+              <summary>Предматчевый обзор · форма и очные встречи</summary>
+              <div className="season-scoreboard">
+                <div>
+                  <strong>Ваш клуб</strong>
+                  <p className="subtle">
+                    {ownStanding?.played?
+                      'Предварительное место: '+(ownRank+1):
+                      'Место пока не определено'}
+                    {' · '}{ownStanding?.points??0} очков
+                    {' · '}{ownStanding?.played??0} матчей
+                  </p>
+                  <p>Последние результаты: {' '}
+                    <strong>{recentFormText(prematchBrief.ownForm)}</strong>
+                  </p>
+                </div>
+                <div>
+                  <strong>Соперник: {clubs.get(opponentId)??opponentId}</strong>
+                  <p className="subtle">
+                    {opponentStanding?.played?
+                      'Предварительное место: '+(opponentRank+1):
+                      'Место пока не определено'}
+                    {' · '}{opponentStanding?.points??0} очков
+                    {' · '}{opponentStanding?.played??0} матчей
+                  </p>
+                  <p>Последние результаты: {' '}
+                    <strong>{recentFormText(prematchBrief.opponentForm)}</strong>
+                  </p>
+                </div>
+              </div>
+              <p className="subtle">
+                Очные встречи в этом сезоне: {' '}
+                {prematchBrief.headToHead.played?
+                  prematchBrief.headToHead.played+' · побед вашего клуба: '+
+                  prematchBrief.headToHead.won+' · ничьих: '+
+                  prematchBrief.headToHead.drawn+' · побед соперника: '+
+                  prematchBrief.headToHead.lost:
+                  'пока не встречались'}.
+              </p>
+              <p className="subtle">
+                Форма — до пяти завершённых матчей, от старого к новому.
+                В: победа, Н: ничья, П: поражение. Только сохранённые
+                результаты, без прогноза исхода.
+              </p>
+            </details>}
           <div className="button-stack">
             <button type="button" disabled={busy||disabled||!!preview||!!halfTime||!xiLegal}
               onClick={()=>calculate()}>Рассчитать матч</button>

@@ -646,6 +646,13 @@ async function run() {
     if(opening.revision!==0||opening.played!==0||opening.own!==0)
       throw new Error('New managed opening fixture was unexpectedly auto-committed: '+
         JSON.stringify(opening));
+    const opponentBrief=await evaluate(
+      "document.querySelector('.season-opponent-brief')?.textContent ?? ''");
+    if(!/пока не встречались/.test(opponentBrief)||
+        (opponentBrief.match(/пока нет/g)??[])
+          .length!==2)
+      throw new Error('Opening opponent brief leaked results or is missing: '+
+        opponentBrief.slice(0,400));
     await clickSeason('Настроить замену');
     await waitText('Замена в перерыве вашего матча');
     const seasonChoice = await evaluate(`(() => ({

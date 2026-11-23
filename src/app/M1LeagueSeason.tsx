@@ -91,6 +91,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const [starterIds,setStarterIds]=useState<string[]>([]);
   const [forceAutoXI,setForceAutoXI]=useState(false);
   const [matchInspectId,setMatchInspectId]=useState('');
+  const [calendarRound,setCalendarRound]=useState<number|null>(null);
   const [xiFormation,setXiFormation]=useState('4-2-3-1');
   const [xiMentality,setXiMentality]=useState(0);
   const [xiPressing,setXiPressing]=useState(50);
@@ -167,8 +168,10 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     row.clubId===opponentId)??-1;
   const ownStanding=table?.[ownRank];
   const opponentStanding=table?.[opponentRank];
-  const round=next?.round??30;
-  const roundFixtures=journal?fixtures.filter(f=>f.round===round):[];
+  const currentRound=next?.round??30;
+  const visibleRound=calendarRound??currentRound;
+  const roundFixtures=journal?fixtures.filter(f=>f.round===visibleRound):[];
+  const completedInRound=roundFixtures.filter(f=>saved.has(f.id)).length;
   const previewResult=preview?.request.result as Good|undefined;
   const ownNextNow=Boolean(next&&(
     next.homeClubId===career.selectedClubId||
@@ -281,7 +284,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     setPauseSubEnabled(false);setManagerSetup(null);
     setXiSetup(null);setStarterIds([]);
     setCoachEnabled(false);setFocusEnabled(false);
-    setForceAutoXI(false);setMatchInspectId('');
+    setForceAutoXI(false);setMatchInspectId('');setCalendarRound(null);
     try{
       let stored:InitialCareerSave;
       try{stored=await loadInitialCareer(career.careerId);}
@@ -1288,7 +1291,33 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
         </p>}
         <div className="season-columns">
           <div>
-            <h3>Тур {round}</h3>
+            <div className="season-calendar-toolbar">
+              <h3>Календарь · тур {visibleRound}</h3>
+              <div className="season-calendar-controls">
+                <button type="button" className="secondary-button"
+                  aria-label="Предыдущий тур"
+                  disabled={visibleRound===1}
+                  onClick={()=>setCalendarRound(visibleRound-1)}>←</button>
+                <label htmlFor="season-calendar-round">Тур
+                  <select id="season-calendar-round" value={visibleRound}
+                    onChange={event=>setCalendarRound(Number(event.target.value))}>
+                    {Array.from({length:30},(_,index)=>index+1).map(value=>
+                      <option key={value} value={value}>{value} из 30</option>)}
+                  </select>
+                </label>
+                <button type="button" className="secondary-button"
+                  aria-label="Следующий тур"
+                  disabled={visibleRound===30}
+                  onClick={()=>setCalendarRound(visibleRound+1)}>→</button>
+                {calendarRound!==null&&
+                  <button type="button" className="secondary-button"
+                    onClick={()=>setCalendarRound(null)}>К текущему туру</button>}
+              </div>
+            </div>
+            <p className="subtle season-calendar-progress">
+              Сыграно матчей тура: {completedInRound} из {roundFixtures.length}.
+              {' '}Будущие результаты не раскрываются.
+            </p>
             <ol className="season-fixtures">
               {roundFixtures.map(f=>{
                 const entry=saved.get(f.id);

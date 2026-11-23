@@ -91,6 +91,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const [starterIds,setStarterIds]=useState<string[]>([]);
   const [forceAutoXI,setForceAutoXI]=useState(false);
   const [matchInspectId,setMatchInspectId]=useState('');
+  const [calendarReportId,setCalendarReportId]=useState('');
+  const leagueReportRef=useRef<HTMLElement>(null);
   const [calendarRound,setCalendarRound]=useState<number|null>(null);
   const [xiFormation,setXiFormation]=useState('4-2-3-1');
   const [xiMentality,setXiMentality]=useState(0);
@@ -172,6 +174,12 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const visibleRound=calendarRound??currentRound;
   const roundFixtures=journal?fixtures.filter(f=>f.round===visibleRound):[];
   const completedInRound=roundFixtures.filter(f=>saved.has(f.id)).length;
+  const selectedLeagueFixture=roundFixtures.find(f=>f.id===calendarReportId);
+  const selectedLeagueEntry=selectedLeagueFixture?
+    saved.get(selectedLeagueFixture.id):null;
+  useEffect(()=>{
+    if(calendarReportId)leagueReportRef.current?.focus();
+  },[calendarReportId]);
   const previewResult=preview?.request.result as Good|undefined;
   const ownNextNow=Boolean(next&&(
     next.homeClubId===career.selectedClubId||
@@ -284,7 +292,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     setPauseSubEnabled(false);setManagerSetup(null);
     setXiSetup(null);setStarterIds([]);
     setCoachEnabled(false);setFocusEnabled(false);
-    setForceAutoXI(false);setMatchInspectId('');setCalendarRound(null);
+    setForceAutoXI(false);setMatchInspectId('');
+    setCalendarReportId('');setCalendarRound(null);
     try{
       let stored:InitialCareerSave;
       try{stored=await loadInitialCareer(career.careerId);}
@@ -1297,10 +1306,12 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 <button type="button" className="secondary-button"
                   aria-label="Предыдущий тур"
                   disabled={visibleRound===1}
-                  onClick={()=>setCalendarRound(visibleRound-1)}>←</button>
+                  onClick={()=>{setCalendarReportId('');
+                    setCalendarRound(visibleRound-1);}>←</button>
                 <label htmlFor="season-calendar-round">Тур
                   <select id="season-calendar-round" value={visibleRound}
-                    onChange={event=>setCalendarRound(Number(event.target.value))}>
+                    onChange={event=>{setCalendarReportId('');
+                      setCalendarRound(Number(event.target.value));}}>
                     {Array.from({length:30},(_,index)=>index+1).map(value=>
                       <option key={value} value={value}>{value} из 30</option>)}
                   </select>
@@ -1308,10 +1319,12 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                 <button type="button" className="secondary-button"
                   aria-label="Следующий тур"
                   disabled={visibleRound===30}
-                  onClick={()=>setCalendarRound(visibleRound+1)}>→</button>
+                  onClick={()=>{setCalendarReportId('');
+                    setCalendarRound(visibleRound+1);}>→</button>
                 {calendarRound!==null&&
                   <button type="button" className="secondary-button"
-                    onClick={()=>setCalendarRound(null)}>К текущему туру</button>}
+                    onClick={()=>{setCalendarReportId('');
+                      setCalendarRound(null);}>К текущему туру</button>}
               </div>
             </div>
             <p className="subtle season-calendar-progress">
@@ -1337,6 +1350,13 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
                   <strong>{entry?
                     entry.result.report.home.goals+' : '+
                     entry.result.report.away.goals:'—'}</strong>
+                  {entry&&<button type="button" className="secondary-button"
+                    aria-label={'Показать протокол: '+
+                      (clubs.get(f.homeClubId)??f.homeClubId)+' — '+
+                      (clubs.get(f.awayClubId)??f.awayClubId)}
+                    aria-expanded={selectedLeagueFixture?.id===f.id}
+                    onClick={()=>setCalendarReportId(
+                      calendarReportId===f.id?'':f.id)}>Протокол</button>}
                 </li>;
               })}
             </ol>
@@ -1379,6 +1399,18 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               <p role="alert">Таблица недоступна: журнал не соответствует календарю.</p>}
           </div>
         </div>
+        {selectedLeagueFixture&&selectedLeagueEntry&&
+          <section className="season-match-centre season-league-match-report"
+            aria-label="Протокол матча из календаря"
+            tabIndex={-1} ref={leagueReportRef}>
+            <div className="season-match-centre-heading">
+              <h3>Протокол матча · тур {selectedLeagueFixture.round}</h3>
+              <button type="button" className="secondary-button"
+                onClick={()=>setCalendarReportId('')}>Закрыть протокол</button>
+            </div>
+            <M1MatchReport entry={selectedLeagueEntry}
+              catalog={career.catalog}/>
+          </section>}
         <M1ClubOverview career={career} journal={journal} fixtures={fixtures}
           conditionById={readinessById}/>
       </>}

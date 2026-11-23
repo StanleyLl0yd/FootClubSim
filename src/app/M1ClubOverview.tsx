@@ -10,10 +10,11 @@ const POSITION_LABELS:Readonly<Record<Position,string>>={
   AMR:'ПВ',ST:'Н',
 };
 
-export function M1ClubOverview({career,journal,fixtures}:{
+export function M1ClubOverview({career,journal,fixtures,conditionById}:{
   readonly career:InitialCareerSave;
   readonly journal:M1V188Journal;
   readonly fixtures:readonly Fixture[];
+  readonly conditionById:ReadonlyMap<string,number>;
 }){
   const team=career.catalog.clubs.find(
     club=>club.id===career.selectedClubId);
@@ -73,11 +74,13 @@ export function M1ClubOverview({career,journal,fixtures}:{
       <div className="season-table-scroll">
         <table className="season-table season-squad">
           <caption className="subtle">
-            Пока синтетические характеристики, без подтверждённых заявок реальных клубов
+            Синтетические характеристики. Готовность — условная
+            игровая нагрузка к следующему матчу, не медицинский допуск.
           </caption>
           <thead><tr>
             <th scope="col">Футболист</th>
             <th scope="col" title="Амплуа">Поз.</th>
+            <th scope="col" title="Игровая готовность к следующему матчу">Гот.</th>
             <th scope="col" title="Короткий пас">Пас</th>
             <th scope="col" title="Завершение атак">Удар</th>
             <th scope="col" title="Отбор мяча">Отб.</th>
@@ -86,9 +89,13 @@ export function M1ClubOverview({career,journal,fixtures}:{
           </tr></thead>
           <tbody>{team.registeredPlayerIds.map(id=>{
             const player=playerById.get(id);
+            const condition=conditionById.get(id);
             return player?<tr key={player.id}>
               <th scope="row">{player.displayName}</th>
               <td>{POSITION_LABELS[player.primaryPosition]}</td>
+              <td title="Игровая готовность к следующему матчу">
+                {condition===undefined?'—':condition+'%'}
+              </td>
               <td>{player.attributes.shortPassing}</td>
               <td>{player.attributes.finishing}</td>
               <td>{player.attributes.tackling}</td>

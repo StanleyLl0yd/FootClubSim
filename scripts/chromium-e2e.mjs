@@ -653,6 +653,21 @@ async function run() {
           .length!==2)
       throw new Error('Opening opponent brief leaked results or is missing: '+
         opponentBrief.slice(0,400));
+    const managerOverview=await evaluate(`(() => {
+      const standings=[...document.querySelectorAll(
+        '.season-columns .season-table thead th')]
+        .map(node=>node.textContent.trim());
+      const readiness=[...document.querySelectorAll(
+        '.season-squad td[title="Игровая готовность к следующему матчу"]')]
+        .map(node=>node.textContent.trim());
+      return {standings,readiness};
+    })()`);
+    if(!managerOverview.standings.includes('ЗМ')||
+        !managerOverview.standings.includes('ПМ')||
+        managerOverview.readiness.length<11||
+        !managerOverview.readiness.every(value=>value==='100%'))
+      throw new Error('Opening standings or source readiness unavailable: '+
+        JSON.stringify(managerOverview).slice(0,400));
     const selectedFutureRound=await evaluate(`(() => {
       const select=document.querySelector('#season-calendar-round');
       if(!select||select.options.length!==30)return false;
@@ -744,6 +759,32 @@ async function run() {
         tableAfterAuto.totalPlayed!==2*secondSeasonRevision)
       throw new Error('Automatic fixtures broke two-team table conservation: '+
         JSON.stringify(tableAfterAuto));
+    const squadAndGoalsAfter=await evaluate(`(() => {
+      const readiness=[...document.querySelectorAll(
+        '.season-squad td[title="Игровая готовность к следующему матчу"]')]
+        .map(cell=>Number.parseInt(cell.textContent.trim(),10));
+      const teams=[...document.querySelectorAll(
+        '.season-columns .season-table tbody tr')];
+      const goalsFor=teams.map(row=>Number(row.querySelectorAll('td')[5]?.textContent));
+      const goalsAgainst=teams.map(row=>Number(row.querySelectorAll('td')[6]?.textContent));
+      return {
+        players:readiness.length,
+        allBounded:readiness.every(value=>Number.isInteger(value)&&
+          value>=35&&value<=100),
+        fatigueVisible:readiness.some(value=>value<100),
+        allGoalsNonnegative:[...goalsFor,...goalsAgainst].every(value=>
+          Number.isInteger(value)&&value>=0),
+        totalGoalsFor:goalsFor.reduce((a,b)=>a+b,0),
+        totalGoalsAgainst:goalsAgainst.reduce((a,b)=>a+b,0),
+      };
+    })()`);
+    if(squadAndGoalsAfter.players<11||
+        !squadAndGoalsAfter.allBounded||
+        !squadAndGoalsAfter.fatigueVisible||
+        !squadAndGoalsAfter.allGoalsNonnegative||
+        squadAndGoalsAfter.totalGoalsFor!==squadAndGoalsAfter.totalGoalsAgainst)
+      throw new Error('Committed season squad readiness or goals drifted: '+
+        JSON.stringify(squadAndGoalsAfter));
     const storedChange = await evaluate(`new Promise((resolve, reject) => {
       const opening = indexedDB.open('footclubsim-m1-v188', 1);
       opening.onerror = () => reject(opening.error);

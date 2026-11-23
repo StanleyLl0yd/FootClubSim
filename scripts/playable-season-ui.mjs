@@ -155,7 +155,7 @@ function verifyArchive(json, careerId, snapshot) {
 
   const clubs = new Map(initial.catalog.clubs.map(club => [club.id, {
     id: club.id, name: club.displayName, played: 0,won: 0,drawn: 0,lost: 0,
-    goals: 0, difference: 0, points: 0,
+    goals: 0, conceded: 0, difference: 0, points: 0,
   }]));
   const calendar = [];
   const finalRound = [];
@@ -176,6 +176,8 @@ function verifyArchive(json, careerId, snapshot) {
     away.played++;
     home.goals += hg;
     away.goals += ag;
+    home.conceded += ag;
+    away.conceded += hg;
     home.difference += hg - ag;
     away.difference += ag - hg;
     home.points += hg > ag ? 3 : Number(hg === ag);
@@ -231,7 +233,8 @@ function verifyArchive(json, careerId, snapshot) {
     b.points - a.points || b.difference - a.difference || b.goals - a.goals ||
     a.id.localeCompare(b.id)).map((row, index) => [
     String(index + 1), row.name, String(row.played),String(row.won),
-    String(row.drawn),String(row.lost),
+    String(row.drawn),String(row.lost),String(row.goals),
+    String(row.conceded),
     (row.difference > 0 ? '+' : '') + row.difference, String(row.points),
   ]);
   assert.deepEqual(snapshot.table, table);

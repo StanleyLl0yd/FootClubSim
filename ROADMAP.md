@@ -6,6 +6,31 @@
 
 The sole active player explicitly approved substantial changes to **gameplay algorithms, rules, data parameters, UI structure and persistence schemas**, including incompatible new versions. [ADR-0012](docs/adr/0012-owner-approved-architecture-evolution.md) supersedes the assumption that v188 and its save schema are permanent constraints. The preferred path is **one improved new playable engine**, not indefinite side-by-side experimental models. **Prototype game saves may be lost, reset or made incompatible without migration during this single-user development phase**, as explicitly authorized by the owner. Keep deterministic gameplay and full-season CI, but do not let legacy v188 career preservation block new algorithms or schema redesign. When approaching final ROADMAP acceptance and any stable release, freeze the save contract and complete real-browser persistence/recovery/quota/eviction tests in #155. **This is implementation authorization, not acceptance**: M1 #3, M2 #4, calibration #31 and storage #155 remain OPEN.
 
+## Game-first scope freeze · 2026-11-23
+
+**Owner direction:** FootClubSim is a football manager. Stop expanding the medical
+model beyond what is required for ordinary, playable football. Keep the current
+**medical v5 default** for new careers: injuries, eligibility, substitutions and
+persistent results continue to work through the existing replay/CAS path. Do not
+expose medical v6-v8 as user-selectable onboarding experiments or build new
+concussion, clinical clearance and referee-authentication exceptions absent a
+demonstrated game-breaking problem. Existing versions and regression tests remain
+in the repository for compatibility; no unverified exception is enabled.
+
+Draft [#544](https://github.com/StanleyLl0yd/FootClubSim/pull/544) and
+documentation-only [#542](https://github.com/StanleyLl0yd/FootClubSim/pull/542)
+were closed unmerged. Product work now prioritizes useful manager actions and
+feedback: squad/tactics, opponent scouting, league season flow, match reports and
+the later club-management loop. The first bounded improvement is a read-only,
+source-backed pre-match form/head-to-head overview, not another match engine.
+
+**Formal boundaries remain unchanged:** P3-2 / #29 and M1 exit #3 stay OPEN;
+the nine-block matrix is not silently re-accepted. Two full repository audits,
+source/rights checks and exact-head CI are not waived. M2 acceptance and any
+stable release are prohibited until their explicit gates are satisfied; 2024/25
+holdout stays sealed. The eventual choice between implementing or explicitly
+re-baselining deferred gate requirements belongs to a separate owner decision.
+
 ## Product-first reorientation · 2026-11-05
 
 The owner directed active development toward a **working game**, not more low-frequency referee, medical, or disciplinary edge cases. [ADR-0011](docs/adr/0011-playable-first.md), [product task #478](https://github.com/StanleyLl0yd/FootClubSim/issues/478).

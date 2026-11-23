@@ -169,6 +169,18 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
   margin-top: 1.5rem;
 }
 .season-columns h3 { font-size: 1.12rem; margin: 0 0 .8rem; }
+.season-calendar-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: space-between; gap: .6rem; margin-bottom: .4rem;
+}
+.season-calendar-toolbar h3 { margin: 0; }
+.season-calendar-controls { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+.season-calendar-controls label {
+  display: inline-flex; align-items: center; gap: .35rem; margin: 0;
+}
+.season-calendar-controls select { width: auto; min-width: 6rem; padding: .4rem; }
+.season-calendar-controls button { padding: .45rem .65rem; min-height: 2.45rem; }
+.season-calendar-progress { margin: 0 0 .5rem; }
 .season-fixtures { list-style: none; margin: 0; padding: 0; }
 .season-fixtures li {
   display: flex;

@@ -1,5 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {M1ClubOverview} from './M1ClubOverview.js';
+import {deriveM1V188ScorerStandings}
+  from '../core/m1-v188-scorers.js';
 import {deriveM1V188PrematchBrief,type M1V188RecentResult}
   from '../core/m1-v188-prematch-brief.js';
 import {M1MatchReport} from './M1MatchReport.js';
@@ -119,13 +121,16 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
     journal.entries[0]?.source.fixtureCalendarPolicyVersion:2;
   const calendar=useMemo(()=>inspectM1V188LeagueCalendar(
     career,undefined,calendarVersion),[career,calendarVersion]);
-  const fixtures=calendar.ok?calendar.fixtures:[];
+  const fixtures=useMemo(()=>calendar.ok?calendar.fixtures:[],[calendar]);
   const postponed=new Set(calendar.ok?
     calendar.internalFictionalPostponements:[]);
   const clubs=useMemo(()=>new Map(
     career.catalog.clubs.map(club=>[club.id,club.displayName])),[career]);
   const table=useMemo(()=>journal?
     deriveM1V188ProvisionalTable(career,journal):null,[career,journal]);
+  const scorers=useMemo(()=>journal?
+    deriveM1V188ScorerStandings(career,fixtures,journal.entries):null,
+  [career,fixtures,journal]);
   const champion=useMemo(()=>journal?
     deriveM1V188Champion(career,journal):null,[career,journal]);
   const saved=useMemo(()=>new Map(
@@ -1411,6 +1416,39 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             <M1MatchReport entry={selectedLeagueEntry}
               catalog={career.catalog}/>
           </section>}
+        <section className="season-scorers" aria-label="Бомбардиры лиги">
+          <h3>Бомбардиры лиги</h3>
+          <p className="subtle">Только завершённые матчи из игрового журнала.
+            Автоголы не засчитываются футболистам.</p>
+          {scorers?scorers.rows.length?
+            <div className="season-table-scroll">
+              <table className="season-table season-scorers-table">
+                <caption className="subtle">Десять лучших бомбардиров.
+                  Пен. — голы с пенальти, входят в общее число голов.</caption>
+                <thead><tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Футболист</th>
+                  <th scope="col">Клуб</th>
+                  <th scope="col">Голы</th>
+                  <th scope="col">Пен.</th>
+                </tr></thead>
+                <tbody>{scorers.rows.slice(0,10).map((row,index)=>
+                  <tr key={row.playerId}
+                    className={row.clubId===career.selectedClubId?
+                      'season-my-row':undefined}>
+                    <td>{index+1}</td>
+                    <th scope="row">{playerNames.get(row.playerId)??row.playerId}</th>
+                    <td><LigaClubLabel clubId={row.clubId}
+                      name={clubs.get(row.clubId)??row.clubId} size={20}/></td>
+                    <td><strong>{row.goals}</strong></td>
+                    <td>{row.penaltyGoals}</td>
+                  </tr>)}</tbody>
+              </table>
+            </div>:
+            <p className="subtle">В сыгранных матчах голов пока нет.</p>:
+            <p role="alert">Статистика бомбардиров недоступна:
+              журнал не соответствует календарю.</p>}
+        </section>
         <M1ClubOverview career={career} journal={journal} fixtures={fixtures}
           conditionById={readinessById}/>
       </>}

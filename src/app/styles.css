@@ -397,6 +397,9 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
 .season-form-win { color: #187145; }
 .season-form-draw { color: #866b23; }
 .season-form-loss { color: #a0443d; }
+.season-scorers { margin-top: 1.3rem; }
+.season-scorers h3 { margin: 0 0 .5rem; }
+.season-scorers-table { min-width: 29rem; }
 .season-squad { min-width: 43rem; }
 .season-squad th:first-child { text-align: left; }
 .season-squad tbody th { font-weight: 550; }

@@ -668,6 +668,15 @@ async function run() {
         !managerOverview.readiness.every(value=>value==='100%'))
       throw new Error('Opening standings or source readiness unavailable: '+
         JSON.stringify(managerOverview).slice(0,400));
+    const initialScorers=await evaluate(
+      "(() => { const root=document.querySelector('.season-scorers'); "+
+      "return {exists:!!root,empty:root?.textContent?.includes("+
+      "'В сыгранных матчах голов пока нет.'),"+
+      "rows:root?.querySelectorAll('tbody tr').length??0}; })()");
+    if(!initialScorers.exists||!initialScorers.empty||
+        initialScorers.rows!==0)
+      throw new Error('Opening scorer table leaked unplayed goals: '+
+        JSON.stringify(initialScorers));
     const selectedFutureRound=await evaluate(`(() => {
       const select=document.querySelector('#season-calendar-round');
       if(!select||select.options.length!==30)return false;
@@ -785,6 +794,18 @@ async function run() {
         squadAndGoalsAfter.totalGoalsFor!==squadAndGoalsAfter.totalGoalsAgainst)
       throw new Error('Committed season squad readiness or goals drifted: '+
         JSON.stringify(squadAndGoalsAfter));
+    const leagueScorers=await evaluate(
+      "(() => { const root=document.querySelector('.season-scorers'); "+
+      "const values=[...(root?.querySelectorAll('tbody tr')??[])].map("+
+      "row=>Number(row.querySelectorAll('td')[2]?.textContent));"+
+      "return {present:!!root,values,empty:root?.textContent?.includes("+
+      "'В сыгранных матчах голов пока нет.')}; })()");
+    if(!leagueScorers.present||
+        (!leagueScorers.values.length&&!leagueScorers.empty)||
+        leagueScorers.values.some((value,index)=>!Number.isInteger(value)||
+          value<1||(index>0&&value>leagueScorers.values[index-1])))
+      throw new Error('Committed scorer leaderboard invalid: '+
+        JSON.stringify(leagueScorers));
     const firstRoundReport=await evaluate(`(() => {
       const control=document.querySelector('#season-calendar-round');
       if(!control)return null;

@@ -190,6 +190,9 @@ footer { color: #667a6f; font-size: .86rem; margin-bottom: 2rem; }
   padding: .58rem 0;
   font-size: .9rem;
 }
+.season-fixtures li > span { flex: 1; min-width: 0; }
+.season-fixtures li > strong { white-space: nowrap; }
+.season-fixtures li > button { padding: .3rem .45rem; font-size: .82rem; }
 .my-club-fixture { color: #17634b; font-weight: 750; }
 .season-table-scroll { min-width: 0; overflow-x: auto; }
 .season-table {

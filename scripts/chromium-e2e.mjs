@@ -785,6 +785,37 @@ async function run() {
         squadAndGoalsAfter.totalGoalsFor!==squadAndGoalsAfter.totalGoalsAgainst)
       throw new Error('Committed season squad readiness or goals drifted: '+
         JSON.stringify(squadAndGoalsAfter));
+    const firstRoundReport=await evaluate(`(() => {
+      const control=document.querySelector('#season-calendar-round');
+      if(!control)return null;
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')
+        .set.call(control,'1');
+      control.dispatchEvent(new Event('change',{bubbles:true}));
+      return true;
+    })()`);
+    if(!firstRoundReport)throw new Error('Cannot inspect completed round');
+    const expectedLeagueScore=await until(async()=>evaluate(`(() => {
+      if(document.querySelector('#season-calendar-round')?.value!=='1')
+        return null;
+      const row=[...document.querySelectorAll('.season-fixtures li')]
+        .find(item=>!item.querySelector('.my-club-fixture')&&
+          item.querySelector('button'));
+      if(!row)return null;
+      const score=row.querySelector(':scope > strong')?.textContent.trim();
+      row.querySelector('button').click();
+      return score||null;
+    })()`),'committed opponent fixture available in first round');
+    await until(async()=>evaluate(`(() => {
+      const report=document.querySelector('.season-league-match-report');
+      const score=report?.querySelector('.season-report-score strong')
+        ?.textContent.replace(/\\s+/g,' ').trim();
+      return score===${JSON.stringify(expectedLeagueScore)};
+    })()`),'opponent score and source-backed report agree');
+    await clickSeason('Закрыть протокол');
+    await until(async()=>evaluate(
+      "!document.querySelector('.season-league-match-report')"),
+    'opponent report closes without affecting journal');
+    await clickSeason('К текущему туру');
     const storedChange = await evaluate(`new Promise((resolve, reject) => {
       const opening = indexedDB.open('footclubsim-m1-v188', 1);
       opening.onerror = () => reject(opening.error);

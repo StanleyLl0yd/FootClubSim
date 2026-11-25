@@ -103,6 +103,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
   const leagueReportRef=useRef<HTMLElement>(null);
   const [calendarRound,setCalendarRound]=useState<number|null>(null);
   const [xiFormation,setXiFormation]=useState('4-2-3-1');
+  const [xiFilter,setXiFilter]=useState('all');
   const [xiMentality,setXiMentality]=useState(0);
   const [xiPressing,setXiPressing]=useState(50);
   const [xiTempo,setXiTempo]=useState(50);
@@ -227,6 +228,18 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       mentality:xiMentality,pressing:xiPressing,tempo:xiTempo},
   }:undefined;
   const xiPlayers=new Set(starterIds);
+  const xiVisible=xiAvailable.filter(id=>{
+    if(xiFilter==='all')return true;
+    if(xiFilter==='selected')return xiPlayers.has(id);
+    const position=playersById.get(id)?.primaryPosition;
+    if(!position)return false;
+    if(xiFilter==='GK')return position==='GK';
+    const group=m1V2PositionGroup(position);
+    if(xiFilter==='DEF')return group==='defenders';
+    if(xiFilter==='MID')return group==='holding'||group==='midfield';
+    return xiFilter==='ATT'&&
+      (group==='advanced'||group==='strikers');
+  });
   const halfTimeInput=halfTime?.request.prematch as
     M1PrematchInput|undefined;
   const halfTimeOwn=halfTimeInput?(
@@ -584,6 +597,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
       prematch.fixture.homeClubId===career.selectedClubId?
         prematch.homeTactics:prematch.awayTactics);
     setXiFormation(tactics.formation);
+    setXiFilter('all');
     setXiMentality(tactics.mentality);
     setXiPressing(tactics.pressing);
     setXiTempo(tactics.tempo);setForceAutoXI(false);
@@ -911,6 +925,17 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
             одного вратаря. Дисквалифицированные и недоступные
             футболисты исключены.</p>
           <div className="season-xi-advice">
+            <label htmlFor="season-xi-filter">Показать
+              <select id="season-xi-filter" value={xiFilter}
+                onChange={event=>setXiFilter(event.target.value)}>
+                <option value="all">Весь состав</option>
+                <option value="selected">Выбранные 11</option>
+                <option value="GK">Вратари</option>
+                <option value="DEF">Защитники</option>
+                <option value="MID">Полузащитники</option>
+                <option value="ATT">Нападающие</option>
+              </select>
+            </label>
             <button type="button" className="secondary-button"
               onClick={autoChooseXI}>Подобрать XI под схему</button>
             <p aria-live="polite" className="subtle">
@@ -926,7 +951,7 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           </div>
           <div className="season-xi-layout">
             <div className="season-xi-grid">
-            {xiAvailable.map(id=><label key={id}>
+            {xiVisible.map(id=><label key={id}>
               <input type="checkbox" checked={xiPlayers.has(id)}
                 onChange={event=>{
                   setStarterIds(current=>event.target.checked?
@@ -1473,7 +1498,8 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               журнал не соответствует календарю.</p>}
         </section>
         <M1ClubOverview career={career} journal={journal} fixtures={fixtures}
-          conditionById={readinessById}/>
+          conditionById={readinessById}
+          scorerRows={scorers?.rows??null}/>
       </>}
     <p className="subtle" role="status" aria-live="polite">{status}</p>
   </section>;

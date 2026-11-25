@@ -1,9 +1,9 @@
 # M1 P3/P5 — nine-block functional closure matrix
 
 **Status: 3/9 ACCEPTED; P3 2/4, P5 1/5. M1 and exit #3 OPEN, M2 prohibited.**
-This is a *tracking subdivision* of existing [P3 #29](https://github.com/StanleyLl0yd/FootClubSim/issues/29) and [P5 #31](https://github.com/StanleyLl0yd/FootClubSim/issues/31), not a rewrite or relaxation of either issue's acceptance criteria. P1 #27, P2 #28, deferred P4 #30 and the two full repository-wide audits in exit #3 are **additional independent M1 obligations**, not silently included in the nine.
+This is a *tracking subdivision* of existing [P3 #29](https://github.com/StanleyLl0yd/FootClubSim/issues/29) and [P5 #31](https://github.com/StanleyLl0yd/FootClubSim/issues/31), with the explicitly owner-approved M1 scope rebaseline in [ADR-0013](adr/0013-m1-game-first-acceptance.md). The revised executable criteria supersede conflicting older M1 requirements only. P1 #27, P2 #28, deferred P4 #30 and the two full repository-wide audits in exit #3 are **additional independent M1 obligations**, not silently included in the nine.
 
-The executable source of the nine records is `data/m1-p3-p5-closure-gates.json`. Every record begins **open**, despite extensive partial implementations and previously successful CI. Only move a gate to `accepted` after its entire `criteria` list is demonstrated on the integrated playable engine, with exact-main SHA, evidence URLs and written acceptance; no increment of the counter from a research-only or regression-only PR.
+The executable source of the nine records is `data/m1-p3-p5-closure-gates.json`. Every record begins **open**, despite extensive partial implementations and previously successful CI. Only move a gate to `accepted` after its entire current `criteria` list is demonstrated on the integrated playable engine, with exact-main SHA, evidence URLs and written technical acceptance by the owner-delegated engineering agent; no increment from a research-only or regression-only PR.
 
 | Block | Acceptance area | Dependency | Current status |
 | --- | --- | --- | --- |
@@ -20,8 +20,8 @@ The executable source of the nine records is `data/m1-p3-p5-closure-gates.json`.
 ## Fastest safe execution order
 
 1. **Completed:** earlier gated #430/#431 work and P3-1 source integration #468 are on protected main. Do not reopen closed integration work without a demonstrated regression.
-2. **P3-1 and P3-3 ACCEPTED.** Complete P3-2 on the same v188 source, then close P3-4 recovery and rescheduling. Unauthenticated external KDK input stays refused. Preserve M0/v8 and persisted schema compatibility.
-3. Do not mark P3-4 accepted merely because 240-fixture Chromium replay passed: rescheduling and clinical/KDK-dependent restrictions still need positive and negative evidence.
+2. **P3-1 and P3-3 ACCEPTED.** Verify the frozen medical v5 default against revised P3-2, then close P3-4 ordinary recovery and rescheduling. External clinical/KDK input stays refused. Preserve existing tests and source history.
+3. Do not mark P3-4 accepted merely because 240-fixture Chromium replay passed: source-supported rescheduling, ordinary availability and rejected unsupported external claims still need positive and negative evidence.
 4. **P5-1 ACCEPTED** with only all-type goals comparable. In parallel, establish P5-4 final-engine adversarial harness and verify the predeclared P5-5 budgets. These tasks do not require opening the sealed 2024/25 holdout.
 5. After final P3 engine is frozen, carry out **P5-2** full-engine calibrated aggregate/cohort work. Only then, with frozen thresholds and rights, perform **P5-3** once. Finish P5-4/5 on the identical final engine and browser targets.
 6. Even after all nine gates are accepted, keep M1 exit #3 open until P1/P2/P4 acceptance and **two genuinely complete repository-wide audit passes**, review, security, source/rights check and exact-main CI are recorded.
@@ -31,19 +31,19 @@ The executable source of the nine records is `data/m1-p3-p5-closure-gates.json`.
 - Each functional PR must name one or more block IDs, cite which exact **criterion** it changes and include positive/negative cases. If no complete criterion changes, label it a supporting regression, not closure.
 - Keep source/referee event authority, fantasy medical recovery and real clinical/KDK evidence separate. An internally derived deterministic referee may authorize fictional gameplay; it cannot prove real external sports rulings.
 - Keep the synthetic outcome and published definitions separate: **open-play-only != all-goal**; generic blocked shots != provider-specific shots on target. No fabricated benchmark pass, invented source rights, external referee signature or approval.
-- Maintain original journals/seed determinism, protected squash-only `main`, strict exact-head CI and exact-main rechecks. Never open the 2024/25 holdout before freezing model, rights, categories and acceptance tolerances.
+- Maintain original journals/seed determinism, protected squash-only `main`, strict exact-head CI and exact-main rechecks. Keep formal 2024/25 evaluation sealed before freezing model, rights, categories and tolerances. Historical aggregate exposure is disclosed in ADR-0013; independent evaluation must not be described as strictly blind.
 - Record a gate's `verification` only after checking its content: `exactMainSha` (40-character SHA), `evidenceUrls` (real GitHub links) and `acceptedBy` (written acceptance source). A successful PR alone is insufficient.
 
 ## Next work (not closure claims)
 
 - **P3-1 ACCEPTED:** [#468](https://github.com/StanleyLl0yd/FootClubSim/pull/468) unified the dense physical source and replayed stopped clock; explicit [3/3 review](https://github.com/StanleyLl0yd/FootClubSim/issues/29#issuecomment-6603275980) on `1b801aeedb5c3f34dbe3b4c9b624f9335f724fb7`, 9/9 required exact-main PASS. Preserve this contract while implementing P3-2/3/4.
-- **P3-2:** Complete source-driven medical/return transitions and executable exception coverage.
+- **P3-2:** Verify frozen medical v5 ordinary injury/return, eligibility, substitution and both-team replay; retain typed refusals and defer unsupported rare exceptions.
 - **P3-3 ACCEPTED:** [all-three-criteria exact-main signoff](https://github.com/StanleyLl0yd/FootClubSim/issues/29#issuecomment-6826198408) on `21bfe37906a905f94900c9475e1694fc6a7fc767`, 9/9 PASS. Replay-derived fictional holds and expiry affect both teams; unsupported official KDK/appeal claims are typed-refused, never inferred authenticated. This does not complete P3-4 fixture rescheduling or real external KDK integration.
-- **P3-4:** Replace selected-club-only unknown opponent history with replay-verified two-team coverage and season gates.
+- **P3-4:** Verify all 240 fixtures, both-team chronology, supported rescheduling and ordinary save/retry; reject unsupported external orders.
 - **P5-1 ACCEPTED:** [exact-main all-three-criteria review](https://github.com/StanleyLl0yd/FootClubSim/issues/31#issuecomment-6799941107) on `80171eb86b5caeebf320a3a50e83c05ffbd0245c`, 9/9 PASS. The comparison covers 2025/26 published *all-type goals only*; every incompatible shot/xG/card/penalty/medical/outcome metric is explicitly excluded without claiming external license. Preserve this exact category freeze through later P5-2, not a blanket statistical calibration approval.
-- **P5-2:** Freeze integrated engine, measure its actual output and tune only legitimate development references.
-- **P5-3:** Execute one-time holdout protocol only after all prerequisites are evidence-verified.
+- **P5-2:** Freeze final default engine; measure 10,000+ balanced games, cluster uncertainty, tactical/player sensitivity and predeclared comparable aggregates. Exclusions are neither passes nor blockers in themselves.
+- **P5-3:** Execute one-time independent evaluation after freeze; disclose earlier aggregate exposure, use independent seeds and additional genuinely uninspected lawful reference if needed; no tuning on evaluation outcomes.
 - **P5-4:** Consolidate existing campaigns around the selected playable path; add missing cross-module and fault-injection cases.
-- **P5-5:** Define measurable limits, profile full integrated season and optimize only proven bottlenecks.
+- **P5-5:** Predeclare measurable limits, profile full integrated season on actual target browsers and optimize only proven bottlenecks. Extreme storage quota/eviction and release lifecycle stay in #155.
 
 Re-evaluate each gate when a genuinely integrated functional PR lands. Do not default to “nine remain” by habit, but do not decrement without complete and independently verified acceptance.

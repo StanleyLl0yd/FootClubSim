@@ -6,6 +6,10 @@
 
 The sole active player explicitly approved substantial changes to **gameplay algorithms, rules, data parameters, UI structure and persistence schemas**, including incompatible new versions. [ADR-0012](docs/adr/0012-owner-approved-architecture-evolution.md) supersedes the assumption that v188 and its save schema are permanent constraints. The preferred path is **one improved new playable engine**, not indefinite side-by-side experimental models. **Prototype game saves may be lost, reset or made incompatible without migration during this single-user development phase**, as explicitly authorized by the owner. Keep deterministic gameplay and full-season CI, but do not let legacy v188 career preservation block new algorithms or schema redesign. When approaching final ROADMAP acceptance and any stable release, freeze the save contract and complete real-browser persistence/recovery/quota/eviction tests in #155. **This is implementation authorization, not acceptance**: M1 #3, M2 #4, calibration #31 and storage #155 remain OPEN.
 
+## Owner-approved M1 acceptance rebaseline · 2026-11-25
+
+[ADR-0013](docs/adr/0013-m1-game-first-acceptance.md) is the controlling M1 acceptance scope. The owner approved all five game-first decisions: medical v5 sufficient subject to evidence, coherent 240-fixture season without external clinical/KDK authority, 10,000+ final-engine games and independent lawful aggregate validation, ordinary browser recovery and measured performance with extreme storage cases deferred to #155, and autonomous evidence-based technical signoff. P3/P5 remains **3/9 ACCEPTED**; neither M1 nor any remaining gate is accepted by this decision. Both full repository audits, security/source review, exact-head and exact-main CI remain mandatory. M2 and stable release remain prohibited.
+
 ## Game-first scope freeze · 2026-11-23
 
 **Owner direction:** FootClubSim is a football manager. Stop expanding the medical
@@ -28,8 +32,7 @@ source-backed pre-match form/head-to-head overview, not another match engine.
 the nine-block matrix is not silently re-accepted. Two full repository audits,
 source/rights checks and exact-head CI are not waived. M2 acceptance and any
 stable release are prohibited until their explicit gates are satisfied; 2024/25
-holdout stays sealed. The eventual choice between implementing or explicitly
-re-baselining deferred gate requirements belongs to a separate owner decision.
+holdout stays sealed. The separate owner decision was made on 2026-11-25 in ADR-0013; its revised criteria now control M1 while all other gate boundaries remain intact.
 
 ## Product-first reorientation · 2026-11-05
 

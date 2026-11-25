@@ -2,21 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createSyntheticRplScaleCatalog}
   from '../dist/core/synthetic.js';
+import {createLigaPrikolovPreviewCatalog}
+  from '../dist/app/ligaPrikolovPreviewCatalog.js';
 import {createInitialCareer}
   from '../dist/core/save.js';
 import {startM1V188LeagueJournal,prepareM1V188LeagueMatch,
   applyM1V188LeagueMatch,validateM1V188LeagueJournal}
   from '../dist/core/m1-v188-league-source-journal.js';
 
-const catalog=createSyntheticRplScaleCatalog(2026);
-const selected=catalog.clubs[0].id;
 const seeds=[11,23,37,41,53,67,73,89,97,101,113,127];
+const scenarios=[
+  {name:'legacy calendar',catalog:createSyntheticRplScaleCatalog(2026),
+    calendar:undefined},
+  {name:'default preview calendar v2',catalog:createLigaPrikolovPreviewCatalog(2026),
+    calendar:2},
+];
+
+const prepareFor=calendar=>(initial,journal,selection=undefined)=>
+  prepareM1V188LeagueMatch(initial,journal,[],undefined,5,selection,2,[],calendar);
 
 /** Paired real v188 playable proposals, not the old standalone v5/v57
  * research engine. Only the selected manager's tempo is changed.
  * Both sides retain the same source roster, club identities and seed.
  */
-test('P2: higher tempo produces directional playable-source shot opportunities across paired seeds',()=>{
+function checkTempo({name,catalog,calendar}){
+  const selected=catalog.clubs[0].id;
+  const prepare=prepareFor(calendar);
   const sums={slowShots:0,fastShots:0,slowXg:0,fastXg:0};
   let changed=0;
   for(const seed of seeds){
@@ -25,8 +36,7 @@ test('P2: higher tempo produces directional playable-source shot opportunities a
     const started=startM1V188LeagueJournal(initial);
     assert.ok(started.ok);
     const before=JSON.stringify(started.journal);
-    const baseline=prepareM1V188LeagueMatch(initial,started.journal,
-      [],undefined,5,undefined,2);
+    const baseline=prepare(initial,started.journal);
     assert.ok(baseline?.ok,'seed '+seed+' baseline');
     const fixture=baseline.request.prematch.fixture;
     assert.equal(baseline.selectedClubFixture,true);
@@ -39,12 +49,22 @@ test('P2: higher tempo produces directional playable-source shot opportunities a
       schemaVersion:1,clubId:selected,starters:[...lineup.starters],
       tactics:{...tactics,schemaVersion:2,tempo},
     });
-    const slow=prepareM1V188LeagueMatch(initial,started.journal,
-      [],undefined,5,managed(0),2);
-    const fast=prepareM1V188LeagueMatch(initial,started.journal,
-      [],undefined,5,managed(100),2);
+    const slow=prepare(initial,started.journal,managed(0));
+    const fast=prepare(initial,started.journal,managed(100));
     assert.ok(slow?.ok,'seed '+seed+' slow '+JSON.stringify(slow).slice(0,200));
     assert.ok(fast?.ok,'seed '+seed+' fast '+JSON.stringify(fast).slice(0,200));
+    for(const proposal of [slow,fast]){
+      assert.equal(proposal.request.medicalPolicyVersion,5);
+      assert.equal(proposal.request.specialGoalSourceVersion,2);
+      assert.equal(proposal.request.fixtureCalendarPolicyVersion,calendar);
+    }
+    assert.deepEqual(slow.request.prematch.fixture,fast.request.prematch.fixture);
+    assert.equal(slow.request.prematch.rngSeed,fast.request.prematch.rngSeed);
+    const own=ownHome?'home':'away';
+    assert.deepEqual(slow.request.prematch[own+'Lineup'].starters,
+      fast.request.prematch[own+'Lineup'].starters);
+    assert.deepEqual({...slow.request.prematch[own+'Tactics'],tempo:100},
+      fast.request.prematch[own+'Tactics']);
     const opposing=ownHome?'away':'home';
     assert.deepEqual(slow.request.prematch[opposing+'Tactics'],
       fast.request.prematch[opposing+'Tactics'],
@@ -84,15 +104,22 @@ test('P2: higher tempo produces directional playable-source shot opportunities a
   assert.ok(sums.fastXg>sums.slowXg,
     'high tempo must produce more selected-club open-play xG in aggregate: '+
       JSON.stringify(sums));
-});
+  console.log('M1_PAIRED_SENSITIVITY '+JSON.stringify({
+    scenario:name,kind:'tempo',medical:5,goals:2,calendar:calendar??null,
+    seedCount:seeds.length,changed,...sums,
+  }));
+}
 
 /** P5-2: paired original playable journal, not the legacy isolated model. */
-test('P5-2: source-replayed player attributes increase selected-club open-play xG',()=>{
+function checkAttributes({name,catalog,calendar}){
+  const selected=catalog.clubs[0].id;
+  const prepare=prepareFor(calendar);
   const selectedIds=new Set(catalog.clubs[0].registeredPlayerIds);
   const stronger=(skill)=>{
     const pack=structuredClone(catalog);
     pack.packVersion=catalog.packVersion+'-attack-'+skill;
-    pack.players=pack.players.map(p=>selectedIds.has(p.id)?
+    pack.players=pack.players.map(p=>selectedIds.has(p.id)&&
+      (calendar!==2||p.primaryPosition!=='GK')?
       {...p,attributes:{...p.attributes,
         finishing:skill,composure:skill,offBallMovement:skill}}:p);
     return pack;
@@ -106,8 +133,7 @@ test('P5-2: source-replayed player attributes increase selected-club open-play x
     const w0=startM1V188LeagueJournal(wi);
     const s0=startM1V188LeagueJournal(si);
     assert.ok(w0.ok&&s0.ok);
-    const baseline=prepareM1V188LeagueMatch(
-      wi,w0.journal,[],undefined,5,undefined,2);
+    const baseline=prepare(wi,w0.journal);
     assert.ok(baseline?.ok);
     assert.equal(baseline.selectedClubFixture,true);
     const ownHome=baseline.fixture.homeClubId===selected;
@@ -115,11 +141,14 @@ test('P5-2: source-replayed player attributes increase selected-club open-play x
     const preset={schemaVersion:1,clubId:selected,
       starters:[...baseline.request.prematch[side+'Lineup'].starters],
       tactics:structuredClone(baseline.request.prematch[side+'Tactics'])};
-    const wp=prepareM1V188LeagueMatch(wi,w0.journal,
-      [],undefined,5,preset,2);
-    const sp=prepareM1V188LeagueMatch(si,s0.journal,
-      [],undefined,5,preset,2);
+    const wp=prepare(wi,w0.journal,preset);
+    const sp=prepare(si,s0.journal,preset);
     assert.ok(wp?.ok&&sp?.ok,'source pair '+seed);
+    for(const proposal of [wp,sp]){
+      assert.equal(proposal.request.medicalPolicyVersion,5);
+      assert.equal(proposal.request.specialGoalSourceVersion,2);
+      assert.equal(proposal.request.fixtureCalendarPolicyVersion,calendar);
+    }
     assert.deepEqual(wp.request.prematch.fixture,sp.request.prematch.fixture);
     assert.equal(wp.request.prematch.rngSeed,sp.request.prematch.rngSeed);
     for(const key of ['homeTactics','awayTactics'])
@@ -144,4 +173,15 @@ test('P5-2: source-replayed player attributes increase selected-club open-play x
   assert.ok(strongXg>weakXg*1.05,
     'Paired predeclared +5% xG sensitivity gate: '+
     JSON.stringify({weakXg,strongXg,changed}));
-});
+  console.log('M1_PAIRED_SENSITIVITY '+JSON.stringify({
+    scenario:name,kind:'attacking-attributes',medical:5,goals:2,
+    calendar:calendar??null,seedCount:seeds.length,changed,weakXg,strongXg,
+  }));
+}
+for(const scenario of scenarios){
+  const suffix=scenario.calendar===2?' (default preview calendar v2)':'';
+  test('P2: higher tempo produces directional playable-source shot opportunities across paired seeds'+suffix,
+    ()=>checkTempo(scenario));
+  test('P5-2: source-replayed player attributes increase selected-club open-play xG'+suffix,
+    ()=>checkAttributes(scenario));
+}

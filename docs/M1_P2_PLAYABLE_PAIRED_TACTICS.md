@@ -31,7 +31,7 @@ The companion P5-2 test in the **existing** v188 paired-tactics suite
 uses the same 12 predetermined seed values and the same source-2
 special-goal and source-v5 medical generators used in current playable
 careers. Instead of changing a tactical slider, its pair changes only
-the selected fictional club's outfield `finishing`, `composure` and
+the selected synthetic club's `finishing`, `composure` and
 `offBallMovement` skills from 35 to 75, preserving the canonical club IDs,
 fixture, player IDs, seeded RNG, fixed selected XI, tactical plans and
 unmodified opposing club. Both variants must be valid source-replayed
@@ -45,3 +45,15 @@ This validates player *attribute response*, not external player
 ratings, physical fitness, calibrated match-score prediction or
 the sealed 2024/25 holdout. All P5-2 final model/metric prerequisite
 gates remain independent.
+
+## Default preview configuration evidence (2026-11-25, pending execution)
+
+Retain the original 12-seed paired tests and run their same predeclared
+thresholds again with the fixed Liga Prikolov preview catalog (seed 2026),
+medical v5, special-goal source 2 and fictional calendar v2. The new
+attribute variant changes only selected-club outfield skills, not the
+keeper. Preserve same-fixture RNG, tactics and starting XI comparisons.
+Each experiment logs actual aggregate shots/xG and changed-stream counts
+as `M1_PAIRED_SENSITIVITY`; no result is claimed before CI passes.
+The preview tests are directional mechanism evidence, not a second
+historical benchmark or a change to the frozen goal tolerance.

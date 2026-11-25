@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { exercisePlayableSeason } from './playable-season-ui.mjs';
+import {startSafariRssSampler} from './playable-season-memory.mjs';
 
 const [driver, session, appUrl] = process.argv.slice(2);
 const maxWait = 10 * 60_000;
@@ -78,12 +79,18 @@ async function importArchive({ filename, json, selector = '#import-full-file' })
     '})()'), true, 'Safari full-career input unavailable');
 }
 
-await wd('timeouts', { script: maxWait, pageLoad: maxWait });
-await wd('url', { url: appUrl });
-await exercisePlayableSeason({
-  evaluate,
-  reload: () => wd('refresh', {}),
-  download,
-  importArchive,
-  browser: 'macOS Safari (archive Blob and native file input)',
-});
+const memory=startSafariRssSampler();
+try{
+  await wd('timeouts', { script: maxWait, pageLoad: maxWait });
+  await wd('url', { url: appUrl });
+  await exercisePlayableSeason({
+    evaluate,
+    reload: () => wd('refresh', {}),
+    download,
+    importArchive,
+    browser: 'macOS Safari (archive Blob and native file input)',
+    readMemoryEvidence:memory.evidence,
+  });
+}finally{
+  memory.stop();
+}

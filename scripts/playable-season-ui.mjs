@@ -308,7 +308,7 @@ function verifyArchive(json, careerId, snapshot) {
   }else assert.equal(snapshot.title,null);
 }
 
-export async function exercisePlayableSeason({ evaluate, reload, download, importArchive, browser }) {
+export async function exercisePlayableSeason({ evaluate, reload, download, importArchive, browser, readMemoryEvidence }) {
   const run = (fn, ...args) => evaluate('(' + fn.toString() + ')(...' + JSON.stringify(args) + ')');
   const state = () => run(seasonState);
   const pageStatus = () => evaluate('document.querySelector(".shell > .status")?.textContent.trim() ?? ""');
@@ -759,12 +759,17 @@ export async function exercisePlayableSeason({ evaluate, reload, download, impor
     'Full 240-fixture career archive exceeded the 8 MiB budget');
   assert.ok(elapsedSeconds<=30*60,
     'Native browser season exceeded the 30-minute CI acceptance budget');
-  if(typeof heapBytes==='number')assert.ok(heapBytes<=512*1024*1024,
-    'Observed post-restore JS heap exceeded the 512 MiB budget');
+  if(heapBytes!==null)assert.ok(Number.isFinite(heapBytes)&&heapBytes>0&&
+    heapBytes<=512*1024*1024,
+    'Observed post-restore JS heap exceeded the 512 MiB budget or was invalid');
+  const browserMemoryEvidence=readMemoryEvidence?.()??null;
+  assert.ok(heapBytes!==null||browserMemoryEvidence!==null,
+    'Browser memory evidence unavailable');
   console.log('PASS: ' + JSON.stringify({
     browser, fixtures: TOTAL, own: OWN, opponents: TOTAL - OWN, pausedAt,
     restoredRevision: TOTAL, tableRows: before.table.length,
     archiveBytes,elapsedSeconds,postRestoreHeapBytes:heapBytes,
+    browserMemoryEvidence,
     budget:{maxArchiveBytes:8*1024*1024,maxElapsedSeconds:1800,
       maxObservedHeapBytes:512*1024*1024},
   }));

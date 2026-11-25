@@ -365,6 +365,30 @@ async function run() {
             JSON.stringify(layout));
       }
       await send('Emulation.clearDeviceMetricsOverride');
+      await clickSeason('Прессинг и атака');
+      const pressPreset=await evaluate(
+        "(() => ({mental:document.querySelector("+
+        "'.season-tactics-grid select')?.value,"+
+        "pressing:document.querySelector('#season-pressing')?.value,"+
+        "tempo:document.querySelector('#season-tempo')?.value,"+
+        "active:document.querySelector('.season-tactic-presets "+
+        "button[aria-pressed=true]')?.textContent}))()");
+      if(pressPreset.mental!=='1'||pressPreset.pressing!=='70'||
+          pressPreset.tempo!=='70'||pressPreset.active!=='Прессинг и атака')
+        throw new Error('Attack preset did not update real tactic controls: '+
+          JSON.stringify(pressPreset));
+      await clickSeason('Баланс');
+      const balancedPreset=await evaluate(
+        "(() => ({mental:document.querySelector("+
+        "'.season-tactics-grid select')?.value,"+
+        "pressing:document.querySelector('#season-pressing')?.value,"+
+        "tempo:document.querySelector('#season-tempo')?.value,"+
+        "active:document.querySelector('.season-tactic-presets "+
+        "button[aria-pressed=true]')?.textContent}))()");
+      if(balancedPreset.mental!=='0'||balancedPreset.pressing!=='50'||
+          balancedPreset.tempo!=='50'||balancedPreset.active!=='Баланс')
+        throw new Error('Balanced preset did not restore tactic controls: '+
+          JSON.stringify(balancedPreset));
       await clickSeason('Рассчитать матч');
       await waitText('Стартовый состав и тактика выбраны тренером');
       await waitText('Результат рассчитан. Подтвердите запись');

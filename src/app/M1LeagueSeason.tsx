@@ -49,6 +49,12 @@ type HalfTimeChange=Readonly<{
 }>;
 const FORMATIONS=['4-2-3-1','4-3-3','4-4-2','4-1-4-1',
   '3-5-2','3-4-3','5-3-2'] as const;
+
+const TACTIC_PRESETS=[
+  {id:'defend',label:'Сдерживать',mentality:-1,pressing:30,tempo:30},
+  {id:'balanced',label:'Баланс',mentality:0,pressing:50,tempo:50},
+  {id:'press',label:'Прессинг и атака',mentality:1,pressing:70,tempo:70},
+] as const;
 const errorText=(error:unknown)=>
   error instanceof Error?error.message:String(error);
 const recentFormText=(form:readonly M1V188RecentResult[])=>
@@ -965,6 +971,23 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
           </figure>
           </div>
           <h4 className="season-editor-title">Тактика на матч</h4>
+          <div className="season-tactic-presets" role="group"
+            aria-label="Быстрые установки тактики на матч">
+            {TACTIC_PRESETS.map(preset=>
+              <button key={preset.id} type="button"
+                className="secondary-button"
+                aria-pressed={xiMentality===preset.mentality&&
+                  xiPressing===preset.pressing&&xiTempo===preset.tempo}
+                onClick={()=>{
+                  setXiMentality(preset.mentality);
+                  setXiPressing(preset.pressing);
+                  setXiTempo(preset.tempo);
+                  setManagerSetup(null);
+                }}>{preset.label}</button>)}
+          </div>
+          <p className="subtle">Быстрая установка меняет только настрой,
+            прессинг и темп. Схему и футболистов выбирает тренер,
+            все параметры затем можно изменить вручную.</p>
           <div className="season-tactics-grid">
             <label>Настрой
               <select value={xiMentality}
@@ -987,12 +1010,12 @@ export function M1LeagueSeason({career,disabled,onCareerStored}:{
               </select>
             </label>
             <label>Прессинг · {xiPressing}
-              <input type="range" min="0" max="100" step="10"
+              <input id="season-pressing" type="range" min="0" max="100" step="10"
                 value={xiPressing}
                 onChange={event=>setXiPressing(Number(event.target.value))}/>
             </label>
             <label>Темп · {xiTempo}
-              <input type="range" min="0" max="100" step="10"
+              <input id="season-tempo" type="range" min="0" max="100" step="10"
                 value={xiTempo}
                 onChange={event=>setXiTempo(Number(event.target.value))}/>
             </label>

@@ -768,7 +768,7 @@ async function run() {
       input.dispatchEvent(new Event('input',{bubbles:true}));
     })()`);
     await until(async()=>evaluate(
-      "document.querySelector('.season-squad tbody td[colspan=10]')"+
+      "document.querySelector('.season-squad tbody td[colspan=\"10\"]')"+
         "?.textContent.includes('не найдены')"),
     'empty squad search is explicit');
     await evaluate(`(() => {

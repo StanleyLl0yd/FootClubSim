@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createSyntheticRplScaleCatalog} from '../dist/core/synthetic.js';
 import {createInitialCareer} from '../dist/core/save.js';
+import {createLigaPrikolovPreviewCatalog}
+  from '../dist/app/ligaPrikolovPreviewCatalog.js';
 import {startM1V188LeagueJournal,prepareM1V188LeagueMatch,
   applyM1V188LeagueMatch,validateM1V188LeagueJournal,
   inspectM1V188LeagueCalendar,inspectM1V188FictionalHolds}
@@ -1542,6 +1544,78 @@ test('P3-2: generated fictional injuries physically withdraw and block later own
     'Forged medical-model downgrade cannot rewrite the actual source');
 });
 
+
+test('P3-2: new-career v5 ordinary treatment and return replay on default sources',()=>{
+  const preview=createLigaPrikolovPreviewCatalog(2026);
+  let witness=null;
+  for(let seed=1;seed<=96&&!witness;seed++){
+    const career=createInitialCareer(preview,preview.clubs[0].id,
+      seed,'m1-default-v5-return-'+seed);
+    const zero=startM1V188LeagueJournal(career);
+    assert.equal(zero.ok,true);
+    const proposal=prepareM1V188LeagueMatch(
+      career,zero.journal,[],undefined,5,undefined,2,[],2);
+    if(!proposal?.ok||!proposal.selectedClubFixture)continue;
+    const medical=proposal.sourceLaw5Evidence?.find(e=>
+      e.exception==='opponent-carded-physical-offence'&&
+      e.modelledDisposition==='voluntary-extended-off-field-assessment');
+    if(medical)witness={career,zero,proposal,medical};
+  }
+  assert.ok(witness,'no ordinary off-field v5 witness in 96 default-source seeds');
+  const {career,zero,proposal,medical}=witness;
+  const request=proposal.request;
+  assert.equal(request.medicalPolicyVersion,5);
+  assert.equal(request.specialGoalSourceVersion,2);
+  assert.equal(request.fixtureCalendarPolicyVersion,2);
+  assert.equal(proposal.externalMedicalAuthorityAuthenticated,false);
+  assert.equal(medical.minimumRunningSecondsSatisfied,true);
+  const exit=request.checkpointMedical.find(a=>
+    a.kind==='treatment-exit'&&a.playerId===medical.patientPlayerId&&
+    a.elapsedSeconds===medical.runningSeconds);
+  const returned=request.checkpointMedical.find(a=>
+    a.kind==='treatment-return'&&a.playerId===medical.patientPlayerId&&
+    a.elapsedSeconds===medical.runningSeconds+300);
+  assert.ok(exit&&returned,'v5 must use its existing 300-second return');
+  assert.equal(returned.returnContext,'running-clock');
+  assert.equal(returned.ballInPlay,true);
+  assert.equal(returned.entryBoundary,'touchline');
+  assert.equal(returned.refereeSignalId,'m1-v23-unverified-synthetic-signal');
+  const physical=request.result.events.filter(e=>
+    e.type==='source'&&e.source.type==='physical-transition'&&
+    e.source.source.type==='medical');
+  assert.equal(physical.filter(e=>e.source.source.action.id===exit.id).length,1);
+  assert.equal(physical.filter(e=>e.source.source.action.id===returned.id).length,1);
+  assert.ok(!request.result.events.some(e=>
+    e.elapsedSeconds>=exit.elapsedSeconds&&e.elapsedSeconds<returned.elapsedSeconds&&
+    (e.type==='source'&&e.source.type==='shot'&&
+      e.source.playerId===medical.patientPlayerId||
+      e.type==='adjudication'&&e.decision.playerId===medical.patientPlayerId)),
+  'off-field patient cannot shoot or take a penalty');
+  const before=JSON.stringify(zero.journal);
+  for(const mutate of [
+    a=>{a.elapsedSeconds-=240;},
+    a=>{a.refereeSignalId='forged-clearance';},
+    a=>{a.ballInPlay=false;},
+  ]){
+    const forged=structuredClone(request);
+    mutate(forged.checkpointMedical.find(a=>a.id===returned.id));
+    assert.equal(applyM1V188LeagueMatch(career,zero.journal,forged).ok,false);
+    assert.equal(JSON.stringify(zero.journal),before);
+  }
+  const draft=createM1V188PauseDraft(proposal,45);
+  assert.ok(draft,'default-source selected-club pause must be durable');
+  const recovered=recoverM1V188PauseDraft(career,zero.journal,draft);
+  assert.ok(recovered,'default-source paused fixture must replay');
+  assert.deepEqual(recovered.proposal.request,request);
+  const applied=applyM1V188LeagueMatch(career,zero.journal,request);
+  assert.ok(applied.ok);
+  assert.equal(applied.journal.revision,1);
+  assert.equal(JSON.stringify(zero.journal),before);
+  assert.equal(validateM1V188LeagueJournal(
+    career,structuredClone(applied.journal)).ok,true);
+  assert.deepEqual(applyM1V188LeagueMatch(career,applied.journal,request),
+    {ok:false,error:'STALE_REVISION'});
+});
 
 test('P3-2: v6 actual 60-running-second off-field return shares saved v188 physical source',()=>{
   let witness=null;

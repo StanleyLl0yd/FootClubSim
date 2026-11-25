@@ -324,6 +324,39 @@ async function run() {
       const eleven=await evaluate(
         "document.querySelectorAll('.season-xi-grid input:checked').length");
       if(eleven!==11)throw new Error('Manual XI default is invalid');
+      const xiFilterSelected=await evaluate(`(() => {
+        const filter=document.querySelector('#season-xi-filter');
+        if(!filter||filter.value!=='all')return false;
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')
+          .set.call(filter,'selected');
+        filter.dispatchEvent(new Event('change',{bubbles:true}));
+        return true;
+      })()`);
+      if(!xiFilterSelected)throw new Error('XI position filter missing');
+      await until(async()=>evaluate(`(() => {
+        const inputs=[...document.querySelectorAll('.season-xi-grid input')];
+        return inputs.length===11&&inputs.every(input=>input.checked);
+      })()`),'selected XI filter preserves the eleven');
+      await evaluate(`(() => {
+        const filter=document.querySelector('#season-xi-filter');
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')
+          .set.call(filter,'GK');
+        filter.dispatchEvent(new Event('change',{bubbles:true}));
+      })()`);
+      await until(async()=>evaluate(`(() => {
+        const rows=[...document.querySelectorAll('.season-xi-grid label')];
+        return rows.length>0&&rows.length<11&&
+          rows.every(row=>row.textContent.includes('· GK'));
+      })()`),'XI filter shows goalkeepers only');
+      await evaluate(`(() => {
+        const filter=document.querySelector('#season-xi-filter');
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')
+          .set.call(filter,'all');
+        filter.dispatchEvent(new Event('change',{bubbles:true}));
+      })()`);
+      await until(async()=>evaluate(
+        "document.querySelectorAll('.season-xi-grid input:checked').length===11"),
+      'XI selection survives filtering and reset');
       const formationShown=await evaluate(
         "document.querySelector('#season-formation')?.value");
       if(formationShown!=='4-2-3-1')
@@ -692,6 +725,83 @@ async function run() {
         !managerOverview.readiness.every(value=>value==='100%'))
       throw new Error('Opening standings or source readiness unavailable: '+
         JSON.stringify(managerOverview).slice(0,400));
+    const openingRosterScorers=await evaluate(`(() => {
+      const rows=[...document.querySelectorAll('.season-squad tbody tr')];
+      return rows.length>0&&rows.every(row=>{
+        const cells=[...row.querySelectorAll('td')];
+        return cells.length===9&&cells[7]?.textContent.trim()==='0'&&
+          cells[8]?.textContent.trim()==='0';
+      });
+    })()`);
+    if(!openingRosterScorers)
+      throw new Error('Opening squad leaked future goals');
+    const rosterCount=await evaluate(
+      "document.querySelectorAll('.season-squad tbody tr').length");
+    const roleFilterReady=await evaluate(`(() => {
+      const control=document.querySelector('#season-roster-group');
+      if(!control||control.value!=='all')return false;
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')
+        .set.call(control,'GK');
+      control.dispatchEvent(new Event('change',{bubbles:true}));
+      return true;
+    })()`);
+    if(!roleFilterReady||rosterCount<11)
+      throw new Error('Squad roster filter is missing');
+    await until(async()=>evaluate(`(() => {
+      const rows=[...document.querySelectorAll('.season-squad tbody tr')];
+      return rows.length>0&&rows.length<${rosterCount}&&
+        rows.every(row=>row.querySelector('td')?.textContent==='ВР');
+    })()`),'goalkeeper roster filter');
+    await evaluate(`(() => {
+      const control=document.querySelector('#season-roster-group');
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')
+        .set.call(control,'all');
+      control.dispatchEvent(new Event('change',{bubbles:true}));
+    })()`);
+    await until(async()=>evaluate(
+      "document.querySelectorAll('.season-squad tbody tr').length==="+rosterCount),
+    'roster filter restores full squad');
+    await evaluate(`(() => {
+      const input=document.querySelector('#season-roster-search');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')
+        .set.call(input,'no-player-with-this-name-9999');
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    })()`);
+    await until(async()=>evaluate(
+      "document.querySelector('.season-squad tbody td[colspan=10]')"+
+        "?.textContent.includes('не найдены')"),
+    'empty squad search is explicit');
+    await evaluate(`(() => {
+      const input=document.querySelector('#season-roster-search');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')
+        .set.call(input,'');
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    })()`);
+    await until(async()=>evaluate(
+      "document.querySelectorAll('.season-squad tbody tr').length==="+rosterCount),
+    'cleared squad search restores all players');
+    const rosterSortReady=await evaluate(`(() => {
+      const control=document.querySelector('#season-roster-sort');
+      if(!control||control.value!=='default'||control.options.length!==3)
+        return false;
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')
+        .set.call(control,'goals');
+      control.dispatchEvent(new Event('change',{bubbles:true}));
+      return true;
+    })()`);
+    if(!rosterSortReady)throw new Error('Squad goals sort is missing');
+    await until(async()=>evaluate(`(() => {
+      const control=document.querySelector('#season-roster-sort');
+      const rows=[...document.querySelectorAll('.season-squad tbody tr')];
+      return control?.value==='goals'&&rows.length===${rosterCount}&&
+        rows.every(row=>row.querySelectorAll('td')[7]?.textContent==='0');
+    })()`),'source-backed goal sort on unplayed season');
+    await evaluate(`(() => {
+      const control=document.querySelector('#season-roster-sort');
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value')
+        .set.call(control,'default');
+      control.dispatchEvent(new Event('change',{bubbles:true}));
+    })()`);
     const initialScorers=await evaluate(
       "(() => { const root=document.querySelector('.season-scorers'); "+
       "return {exists:!!root,empty:root?.textContent?.includes("+

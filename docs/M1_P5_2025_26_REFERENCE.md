@@ -1,4 +1,7 @@
 # M1-P5: non-acceptance reference for 2025/26 Russian Premier League
+
+**2026-11-25 scope update:** [ADR-0013](adr/0013-m1-game-first-acceptance.md) controls final M1 calibration. P5-1 is ACCEPTED, P5-2/P5-3 remain OPEN. Excluded metrics have no numerical pass and are not blockers by themselves. Earlier 2024/25 aggregate exposure is documented in the ADR; formal evaluation remains sealed and must not be called strictly blind. No new reference or numerical tolerance is introduced here.
+
 ## Frozen P5-1 category boundary for the next final-engine evaluation
 
 The existing attributed aggregate reference now records its metric categories

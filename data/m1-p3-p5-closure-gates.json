@@ -5,7 +5,14 @@
     "holdout2024_25": "SEALED_UNTIL_PREDECLARED_FREEZE",
     "historicalScoreMatchingRequired": false,
     "fullRepositoryExitAuditsRequired": 2,
-    "m2Permitted": false
+    "m2Permitted": false,
+    "acceptanceBaseline": "ADR-0013",
+    "technicalAcceptance": "OWNER_DELEGATED_EVIDENCE_ONLY",
+    "medicalDefaultVersion": 5,
+    "minimumCalibrationGames": 10000,
+    "externalMetricExclusionsBlockM1": false,
+    "extremeStorageReleaseGate": 155,
+    "holdout2024_25PriorAggregateExposure": true
   },
   "blocks": [
     {
@@ -40,11 +47,11 @@
         "P3-1"
       ],
       "criteria": [
-        "Off-field treatment, return after running-time threshold, real-time player presence and all applicable 2026/27 Law 5 exceptions are represented coherently.",
-        "Fictional internal medical incidents are explicitly distinguished from external clinical clearance; unsupported diagnoses and evidence never authorize play.",
-        "Positive and forged-evidence scenarios cover goalkeeper, concussion, collision, severe injury and injured penalty taker."
+        "Frozen medical v5 ordinary injury withdrawal, supported treatment/return, active XI and legal substitutions share the playable authoritative source.",
+        "Both-team availability and replay/CAS preserve ordinary medical events; fictional incidents never authenticate external clinical clearance.",
+        "Positive and negative ordinary injury, eligibility and substitution tests pass; unsupported rare goalkeeper, concussion, collision, severe-injury and injured penalty-taker exceptions fail closed or remain explicitly deferred."
       ],
-      "next": "Complete source-driven medical/return transitions and executable exception coverage.",
+      "next": "Verify the frozen medical v5 default without expanding rare exceptions.",
       "state": "open",
       "verification": null
     },
@@ -85,11 +92,11 @@
         "P3-3"
       ],
       "criteria": [
-        "A coherent season source accounts for all 240 fixtures, both teams, rescheduling and known outstanding eligibility events without inventing missing opponent history.",
-        "Atomic journal apply, restart, duplicate/stale writes, out-of-order fixture claims and historical hold bypasses preserve replay and existing saves.",
-        "Full-season automatic and manual continuity agree on source events and never quietly re-enable ineligible players."
+        "Coherent authoritative season source covers all 240 fixtures, both teams, ordinary injuries/holds, discipline and supported rescheduling without invented history.",
+        "Current-format atomic apply, reload, retry, duplicate/stale/out-of-order writes and historical hold bypasses preserve replay and existing saves.",
+        "Automatic and manual season continuity agree on source events and eligibility; unsupported external clinical/KDK orders are typed-refused, not required implementations."
       ],
-      "next": "Replace selected-club-only unknown opponent history with replay-verified two-team coverage and season gates.",
+      "next": "Verify ordinary full-season continuity and recovery on the supported default.",
       "state": "open",
       "verification": null
     },
@@ -129,11 +136,11 @@
         "P5-1"
       ],
       "criteria": [
-        "Reproducible 10000-plus independently seeded balanced full-engine games with recorded versions and whole-career cluster uncertainty.",
-        "Goals, draws, home/away, shots, xG, cards and injuries are reported separately; missing or incompatible metrics cannot falsely pass.",
-        "Predeclared broad aggregate tolerance and tactical/player sensitivity gates pass on the exact playable engine, not an isolated research candidate."
+        "At least 10000 independently seeded balanced games on the final default playable engine, with recorded versions and whole-career cluster uncertainty.",
+        "Goals, draws, home/away, shots, xG, cards and injuries are reported separately; unavailable or incompatible external metrics are explicitly excluded, not claimed passed or blockers by themselves.",
+        "Frozen comparable aggregate tolerances (including the existing all-type goal envelope) and tactical/player sensitivity gates pass on the exact playable engine."
       ],
-      "next": "Freeze integrated engine, measure its actual output and tune only legitimate development references.",
+      "next": "Run final default engine calibration against lawful frozen comparable aggregates.",
       "state": "open",
       "verification": null
     },
@@ -145,11 +152,11 @@
         "P5-2"
       ],
       "criteria": [
-        "Model, metrics, rights and thresholds are frozen before any 2024/25 holdout inspection.",
-        "One independent evaluation records exact source/hash, populations, intervals, deviations and failed/unsupported gates without retuning to held-out outcomes.",
-        "No fixture-by-fixture score or historical winner matching is required; approved aggregate behavior is tested."
+        "Freeze model, independent evaluation seeds, comparable metrics, rights and thresholds before formal evaluation; disclose historical 2024/25 aggregate exposure.",
+        "One independent evaluation records exact source/hash, populations, intervals, deviations and failed/excluded gates; use an additional genuinely uninspected lawful reference if needed for independent external validation.",
+        "No tuning on evaluation outcomes, no individual score/winner matching, no claim of blind 2024/25 data; applicable comparable aggregate gates must pass."
       ],
-      "next": "Execute one-time holdout protocol only after all prerequisites are evidence-verified.",
+      "next": "Execute independent evaluation only after freeze with documented prior exposure.",
       "state": "open",
       "verification": null
     },
@@ -162,10 +169,10 @@
       ],
       "criteria": [
         "Versioned legal and invalid event sequences, property/fuzz seeds, replay, manual/automatic equivalence and source-tamper detection cover the final engine.",
-        "All failures preserve journal revisions and existing saves; native browser CAS/reload, duplicate and fault cases pass on exact commit.",
-        "Results include real sample denominators, failures and reproducible CI evidence without replacing repository-wide exit audit."
+        "Ordinary failures preserve journal revisions and current-format saves; native browser CAS/reload, duplicate and ordinary interruption/retry cases pass on the exact commit.",
+        "Results include actual sample denominators, failures and reproducible CI evidence; extreme storage lifecycle remains in #155 and both full audits remain mandatory."
       ],
-      "next": "Consolidate existing campaigns around the selected playable path; add missing cross-module and fault-injection cases.",
+      "next": "Consolidate default-engine adversarial and ordinary browser recovery evidence.",
       "state": "open",
       "verification": null
     },
@@ -177,11 +184,11 @@
         "P3-4"
       ],
       "criteria": [
-        "Predeclared full-season runtime, memory and journal-size budgets are documented with target desktop browser/platform conditions.",
-        "Real Chrome/Edge and Safari replay, 240-fixture persistence/reload, quota/eviction and interrupted operations are measured.",
+        "Predeclare full-season runtime, memory and journal-size budgets with target desktop browser/platform and measurement conditions before acceptance runs.",
+        "Real Chrome/Edge and Safari full-season replay, 240-fixture persistence/reload and ordinary interrupted operations are measured; extreme quota/eviction and release lifecycle remain in #155.",
         "Published exact-head CI/runner logs prove accepted budgets without mislabeling research safety abort caps as user SLAs."
       ],
-      "next": "Define measurable limits, profile full integrated season and optimize only proven bottlenecks.",
+      "next": "Predeclare and verify real-platform performance budgets; preserve #155 release scope.",
       "state": "open",
       "verification": null
     }

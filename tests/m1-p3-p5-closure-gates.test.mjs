@@ -6,6 +6,8 @@ const source = JSON.parse(readFileSync(
   new URL('../data/m1-p3-p5-closure-gates.json', import.meta.url), 'utf8'));
 const doc = readFileSync(
   new URL('../docs/M1_P3_P5_ACCEPTANCE_MATRIX.md', import.meta.url), 'utf8');
+const roadmap = readFileSync(
+  new URL('../ROADMAP.md', import.meta.url), 'utf8');
 const expected = ['P3-1','P3-2','P3-3','P3-4',
   'P5-1','P5-2','P5-3','P5-4','P5-5'];
 test('M1 P3/P5 nine gates are complete, nonduplicated and evidence-bound', () => {
@@ -18,6 +20,16 @@ test('M1 P3/P5 nine gates are complete, nonduplicated and evidence-bound', () =>
   assert.equal(source.policy.historicalScoreMatchingRequired, false);
   assert.equal(source.policy.m2Permitted, false);
   assert.equal(source.policy.fullRepositoryExitAuditsRequired, 2);
+  assert.equal(source.policy.acceptanceBaseline, 'ADR-0013');
+  assert.equal(source.policy.technicalAcceptance, 'OWNER_DELEGATED_EVIDENCE_ONLY');
+  assert.equal(source.policy.medicalDefaultVersion, 5);
+  assert.equal(source.policy.minimumCalibrationGames, 10000);
+  assert.equal(source.policy.externalMetricExclusionsBlockM1, false);
+  assert.equal(source.policy.extremeStorageReleaseGate, 155);
+  assert.equal(source.policy.holdout2024_25PriorAggregateExposure, true);
+  const acceptedCount = source.blocks.filter(g => g.state === 'accepted').length;
+  assert.ok(doc.includes(acceptedCount + '/9 ACCEPTED'));
+  assert.ok(roadmap.includes('P3/P5 ' + acceptedCount + '/9 accepted'));
   const ids = new Set(expected);
   for (const gate of source.blocks) {
     assert.equal(gate.issue, gate.id.startsWith('P3') ? 29 : 31);

@@ -80,7 +80,7 @@ The [Playable Preview acceptance specification](docs/PLAYABLE_PREVIEW_ACCEPTANCE
 
 | Track | Acceptance basis | Current status |
 | --- | --- | --- |
-| **M1 technical engine** | All P1–P5 criteria, P3/P5 matrix and two full whole-repository exit audit passes in [#3](https://github.com/StanleyLl0yd/FootClubSim/issues/3) | OPEN; P3/P5 1/9 accepted, exit audits not completed |
+| **M1 technical engine** | All P1–P5 criteria, P3/P5 matrix and two full whole-repository exit audit passes in [#3](https://github.com/StanleyLl0yd/FootClubSim/issues/3) | OPEN; P3/P5 3/9 accepted, exit audits not completed |
 | **Playable Preview product** | Coherent single-season manager journey, save/recovery, real-browser evidence and separate owner manual sign-off | **ACCEPTED / CLOSED #488**, independent of M1/M2 and release gate #155 |
 | **M2 formal competition** | Verified sporting rules/provenance/rights, league restrictions, full M2 acceptance and two exit audit passes in [#4](https://github.com/StanleyLl0yd/FootClubSim/issues/4) | OPEN; not inferred from the prototype |
 
